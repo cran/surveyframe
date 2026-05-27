@@ -1,0 +1,157 @@
+---
+title: "Analysing survey responses"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Analysing survey responses}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+library(surveyframe)
+```
+
+This vignette walks through response import, missing-data checks, quality
+checks, scale scoring, descriptives, and planned analyses.
+
+## Load the demo
+
+```{r load}
+demo <- sframe_demo_data()
+instr <- demo$instrument
+responses <- demo$responses
+
+dim(responses)
+```
+
+## Expected response columns
+
+Response data should use instrument item IDs as column names. Metadata columns
+such as respondent ID, start time, and submission time should be declared
+explicitly.
+
+```{r expected}
+item_ids <- vapply(instr$items, function(x) x$id, character(1))
+head(item_ids)
+
+names(responses)[1:8]
+```
+
+## Import responses
+
+Use `strict = TRUE` when the response file should contain only known item and
+metadata columns. Use `strict = FALSE` when the file may contain additional
+survey platform columns that should be retained with a warning.
+
+```{r import}
+strict_responses <- read_responses(
+  demo$responses_path,
+  instr,
+  respondent_id = "respondent_id",
+  submitted_at = "submitted_at",
+  meta_cols = "started_at",
+  strict = TRUE
+)
+
+relaxed_responses <- read_responses(
+  demo$responses_path,
+  instr,
+  respondent_id = "respondent_id",
+  submitted_at = "submitted_at",
+  meta_cols = "started_at",
+  strict = FALSE
+)
+
+identical(names(strict_responses), names(relaxed_responses))
+```
+
+## Missing data
+
+```{r missing}
+missing <- missing_data_report(responses, instr)
+
+missing$item_missing
+head(missing$respondent_missing)
+```
+
+## Data quality
+
+```{r quality}
+quality <- quality_report(
+  responses,
+  instr,
+  respondent_id = "respondent_id",
+  submitted_at = "submitted_at",
+  started_at = "started_at"
+)
+
+quality
+```
+
+## Score scales
+
+`score_scales()` uses the scale definitions in the instrument. It applies
+reverse coding and minimum valid item rules.
+
+```{r score}
+scored <- score_scales(responses, instr, keep_items = TRUE, keep_meta = TRUE)
+
+scale_ids <- vapply(instr$scales, function(x) x$id, character(1))
+head(scored[, intersect(scale_ids, names(scored)), drop = FALSE])
+```
+
+## Descriptive statistics
+
+```{r descriptives}
+descriptives_report(
+  scored,
+  variables = intersect(scale_ids, names(scored))
+)
+```
+
+## Run an analysis plan
+
+Analysis plans are stored in the instrument. The current structure uses
+method-specific roles. Earlier `variables` and `test` blocks remain compatible.
+
+```{r analysis-plan}
+instr$analysis_plan <- list(
+  list(
+    id = "RQ1",
+    research_question = "Is digital marketing associated with satisfaction?",
+    family = "association",
+    method = "correlation_spearman",
+    roles = list(x = "digital_marketing", y = "satisfaction"),
+    options = list(alpha = 0.05),
+    status = "valid_plan",
+    requires_data = TRUE
+  ),
+  list(
+    id = "RQ2",
+    research_question = "Do visit types differ in satisfaction?",
+    family = "group_comparison",
+    method = "mann_whitney",
+    roles = list(group = "visit_type", outcome = "satisfaction"),
+    options = list(alpha = 0.05),
+    status = "valid_plan",
+    requires_data = TRUE
+  )
+)
+
+results <- run_analysis_plan(responses, instr)
+results
+```
+
+## GUI workflow
+
+SurveyStudio can preload both the instrument and responses.
+
+```{r gui, eval = FALSE}
+launch_studio(
+  instrument = instr,
+  responses = responses,
+  screen = "analysis",
+  launch.browser = FALSE
+)
+```

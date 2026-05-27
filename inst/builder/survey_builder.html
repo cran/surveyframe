@@ -1,0 +1,1533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SurveyBuilder: surveyframe</title>
+<style>
+/* â”€â”€ Design tokens â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+:root{
+  --cp:#2563eb;--cp-l:#dbeafe;--cp-d:#1d4ed8;
+  --cd:#dc2626;--cd-l:#fee2e2;--cs:#16a34a;
+  --cw:#d97706;--cw-l:#fef3c7;
+  --cf:#fff;--cg:#f1f5f9;--cb:#e2e8f0;
+  --t1:#0f172a;--t2:#475569;--t3:#94a3b8;
+  --sb:#1e293b;--st:#cbd5e1;--sh:#2d3f57;--sa:#3b82f6;
+  --font:"Segoe UI",system-ui,-apple-system,sans-serif;
+  --th:48px;--sw:224px;--iw:320px;
+  --d1:100ms;--d2:180ms;--ease:cubic-bezier(.16,1,.3,1);
+  --r:8px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{font-family:var(--font);font-size:13px;color:var(--t1);background:var(--cg);line-height:1.5}
+button{font-family:inherit;cursor:pointer;border:none;background:none}
+input,textarea,select{font-family:inherit;font-size:13px}
+
+/* â”€â”€ App shell â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.app{display:flex;flex-direction:column;height:100vh}
+.shell{display:flex;flex:1;overflow:hidden}
+
+/* â”€â”€ Topbar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.topbar{display:flex;align-items:center;gap:10px;height:var(--th);
+  padding:0 16px;background:var(--cf);border-bottom:1px solid var(--cb);
+  flex-shrink:0;z-index:100;box-shadow:0 1px 0 var(--cb)}
+.tb-brand{font-size:14px;font-weight:700;padding-right:12px;
+  border-right:1px solid var(--cb);white-space:nowrap;color:var(--t1)}
+.tb-brand span{color:var(--cp)}
+.tb-modes{display:flex;gap:2px;background:var(--cg);border-radius:10px;padding:3px}
+.m-btn{padding:5px 14px;border-radius:6px;font-size:12px;font-weight:500;
+  color:var(--t2);transition:all var(--d1)}
+.m-btn[aria-pressed=true]{background:var(--cf);color:var(--cp);font-weight:600;
+  box-shadow:0 1px 3px rgba(0,0,0,.1)}
+.m-btn:hover:not([aria-pressed=true]){color:var(--t1)}
+.tb-r{margin-left:auto;display:flex;align-items:center;gap:8px}
+.tb-hist{display:flex;gap:2px}
+.tb-hist button{padding:4px 7px;border-radius:5px;color:var(--t3);
+  font-size:11px;transition:all var(--d1)}
+.tb-hist button:hover:not(:disabled){background:var(--cg);color:var(--t1)}
+.tb-hist button:disabled{opacity:.3;cursor:not-allowed}
+.save-st{font-size:11px;color:var(--t3)}
+.save-st.dirty{color:var(--cw)}.save-st.saved{color:var(--cs)}
+
+/* â”€â”€ Buttons â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:5px;
+  padding:6px 14px;border-radius:6px;font-size:12px;font-weight:500;
+  transition:all var(--d1);white-space:nowrap;border:1.5px solid transparent;cursor:pointer}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn-p{background:var(--cp);color:#fff;border-color:var(--cp)}
+.btn-p:hover:not(:disabled){background:var(--cp-d)}
+.btn-s{background:var(--cf);color:var(--t1);border-color:var(--cb)}
+.btn-s:hover:not(:disabled){background:var(--cg)}
+.btn-d{background:var(--cd);color:#fff;border-color:var(--cd)}
+.btn-d:hover:not(:disabled){background:#b91c1c}
+.btn-g{background:transparent;color:var(--t2);border-color:transparent}
+.btn-g:hover:not(:disabled){background:var(--cg);color:var(--t1)}
+.btn-sm{padding:4px 10px;font-size:11px}
+
+/* â”€â”€ Sidebar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.sidebar{width:var(--sw);flex-shrink:0;background:var(--sb);
+  display:flex;flex-direction:column;overflow:hidden}
+.sb-top{padding:10px;border-bottom:1px solid rgba(255,255,255,.07)}
+.sb-title-btn{width:100%;display:flex;align-items:center;gap:6px;padding:6px 8px;
+  border-radius:6px;color:var(--st);font-size:12px;font-weight:500;
+  transition:background var(--d1);text-align:left}
+.sb-title-btn:hover{background:var(--sh)}
+.sb-title-txt{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sb-search{position:relative;margin-top:7px}
+.sb-search input{width:100%;background:rgba(255,255,255,.08);
+  border:1px solid rgba(255,255,255,.1);border-radius:6px;
+  padding:5px 8px 5px 26px;color:var(--st);font-size:12px}
+.sb-search input::placeholder{color:rgba(255,255,255,.3)}
+.sb-search input:focus{outline:none;background:rgba(255,255,255,.12)}
+.sb-si{position:absolute;left:8px;top:50%;transform:translateY(-50%);
+  color:rgba(255,255,255,.3);font-size:11px;pointer-events:none}
+.setup-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px}
+.setup-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:3px;min-height:46px;border:1px solid rgba(255,255,255,.08);
+  border-radius:6px;background:rgba(255,255,255,.04);color:rgba(255,255,255,.72);
+  font-size:10px;font-weight:600;transition:all var(--d1)}
+.setup-btn:hover{background:rgba(255,255,255,.1);color:#fff;border-color:rgba(255,255,255,.16)}
+.setup-btn span{font-size:15px;line-height:1}
+.sb-body{flex:1;overflow-y:auto;padding:6px}
+.sb-body::-webkit-scrollbar{width:3px}
+.sb-body::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12);border-radius:3px}
+
+/* â”€â”€ Add-item footer â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.sb-footer{padding:10px;border-top:1px solid rgba(255,255,255,.07)}
+.fab-row{display:flex;gap:6px}
+.fab{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;
+  padding:9px;border-radius:6px;background:var(--cp);color:#fff;
+  font-size:12px;font-weight:600;transition:background var(--d1)}
+.fab:hover{background:var(--cp-d)}
+.fab-more{padding:9px 11px;border-radius:6px;background:rgba(255,255,255,.1);
+  color:var(--st);font-size:14px;transition:background var(--d1)}
+.fab-more:hover,.fab-more.active{background:rgba(255,255,255,.18);color:#fff}
+.fab-menu{display:none;background:var(--sh);border-radius:6px;overflow:hidden;
+  border:1px solid rgba(255,255,255,.08);max-height:260px;overflow-y:auto;
+  margin-bottom:6px}
+.fab-menu.open{display:block}
+.fab-menu::-webkit-scrollbar{width:3px}
+.fab-menu::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15);border-radius:3px}
+.fg{padding:2px 0}.fg+.fg{border-top:1px solid rgba(255,255,255,.06)}
+.fg-lbl{padding:4px 10px 2px;font-size:10px;font-weight:600;
+  color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.05em}
+.fi{width:100%;display:flex;align-items:center;gap:6px;padding:5px 10px;
+  color:var(--st);font-size:12px;transition:background var(--d1);text-align:left}
+.fi:hover{background:rgba(255,255,255,.07);color:#fff}
+.fi-ic{width:14px;text-align:center;flex-shrink:0;opacity:.6;font-size:11px}
+
+/* â”€â”€ Item cards â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.pg-div{font-size:10px;font-weight:600;color:rgba(255,255,255,.25);
+  text-transform:uppercase;letter-spacing:.05em;
+  padding:8px 6px 2px;border-top:1px solid rgba(255,255,255,.05);margin-top:2px}
+.ic{display:flex;align-items:flex-start;gap:5px;padding:7px 6px;border-radius:6px;
+  cursor:pointer;margin-bottom:2px;transition:background var(--d1);
+  position:relative;border-left:2px solid transparent}
+.ic:hover{background:var(--sh)}
+.ic.sel{background:rgba(59,130,246,.18);border-left-color:var(--sa)}
+.ic.sel .ic-lbl{color:#fff}
+.ic.drag-t{border-top:2px solid var(--cp)}.ic.drag-b{border-bottom:2px solid var(--cp)}
+.ic.dragging{opacity:.4}
+.ic-h{color:rgba(255,255,255,.18);cursor:grab;font-size:11px;padding-top:2px;
+  flex-shrink:0;transition:color var(--d1)}
+.ic:hover .ic-h{color:rgba(255,255,255,.45)}
+.ic-body{flex:1;min-width:0}
+.ic-lbl{font-size:12px;color:var(--st);white-space:nowrap;overflow:hidden;
+  text-overflow:ellipsis;line-height:1.4}
+.ic-lbl.sec{color:#93c5fd;font-style:italic}
+.ic-lbl.blk{color:rgba(255,255,255,.35);font-style:italic}
+.ic-meta{display:flex;gap:3px;margin-top:3px;flex-wrap:wrap}
+.ic-acts{display:flex;gap:1px;opacity:0;transition:opacity var(--d1);flex-shrink:0}
+.ic:hover .ic-acts{opacity:1}
+.ib{padding:2px 4px;border-radius:3px;color:rgba(255,255,255,.3);
+  font-size:11px;transition:all var(--d1)}
+.ib:hover{background:rgba(255,255,255,.1);color:#fff}
+.ib.del:hover{background:rgba(220,38,38,.25);color:#fca5a5}
+
+/* â”€â”€ Badges â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.badge{display:inline-flex;align-items:center;padding:1px 5px;
+  border-radius:9999px;font-size:10px;font-weight:600;line-height:1.6}
+.b-li{background:rgba(37,99,235,.3);color:#93c5fd}
+.b-si{background:rgba(124,58,237,.3);color:#c4b5fd}
+.b-mu{background:rgba(124,58,237,.3);color:#c4b5fd}
+.b-nu{background:rgba(8,145,178,.3);color:#67e8f9}
+.b-te{background:rgba(8,145,178,.3);color:#67e8f9}
+.b-ma{background:rgba(5,150,105,.3);color:#6ee7b7}
+.b-sl{background:rgba(5,150,105,.3);color:#6ee7b7}
+.b-ra{background:rgba(5,150,105,.3);color:#6ee7b7}
+.b-se{background:rgba(100,116,139,.3);color:#94a3b8}
+.b-req{background:rgba(220,38,38,.3);color:#fca5a5}
+.b-sc{background:rgba(16,163,74,.3);color:#86efac}
+.b-rv{background:rgba(217,119,6,.3);color:#fcd34d}
+.b-ck{background:rgba(139,92,246,.3);color:#c4b5fd}
+.sb-empty{display:flex;flex-direction:column;align-items:center;
+  text-align:center;padding:28px 12px;gap:7px}
+.sb-empty-ic{font-size:26px;opacity:.25}
+.sb-empty-t{font-size:12px;font-weight:600;color:rgba(255,255,255,.35)}
+.sb-empty-b{font-size:11px;color:rgba(255,255,255,.22);line-height:1.5}
+
+/* â”€â”€ Main panels â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.main{flex:1;display:flex;overflow:hidden}
+.mp{display:none;flex:1;overflow:hidden}
+.mp.active{display:flex}
+
+/* â”€â”€ Build â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.build-shell{display:flex;flex:1;overflow:hidden}
+.canvas{flex:1;overflow-y:auto;padding:24px;display:flex;
+  flex-direction:column;align-items:center}
+.canvas::-webkit-scrollbar{width:4px}
+.canvas::-webkit-scrollbar-thumb{background:var(--cb);border-radius:4px}
+.c-prompt{display:flex;flex-direction:column;align-items:center;
+  text-align:center;gap:10px;padding:48px 24px;color:var(--t3);
+  max-width:300px;margin:auto}
+.c-prompt-ic{font-size:36px;opacity:.25}
+.c-prompt-t{font-size:14px;font-weight:600;color:var(--t2)}
+.c-prompt-b{font-size:13px;line-height:1.6}
+
+/* â”€â”€ Inspector â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.inspector{width:var(--iw);flex-shrink:0;background:var(--cf);
+  border-left:1px solid var(--cb);display:flex;flex-direction:column;
+  overflow:hidden;transform:translateX(var(--iw));
+  transition:transform var(--d2) var(--ease)}
+.inspector.open{transform:translateX(0)}
+.insp-hdr{padding:10px 14px;border-bottom:1px solid var(--cb);
+  display:flex;align-items:center;gap:7px;flex-shrink:0}
+.insp-id{font-size:11px;font-weight:600;color:var(--t2);
+  background:var(--cg);padding:2px 7px;border-radius:3px;
+  font-family:monospace;flex-shrink:0}
+.insp-type-lbl{flex:1;font-size:11px;color:var(--t3);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.insp-x{padding:3px;border-radius:4px;color:var(--t3);font-size:15px;
+  transition:all var(--d1);flex-shrink:0}
+.insp-x:hover{background:var(--cg);color:var(--t1)}
+.insp-body{flex:1;overflow-y:auto}
+.insp-body::-webkit-scrollbar{width:4px}
+.insp-body::-webkit-scrollbar-thumb{background:var(--cb);border-radius:4px}
+.insp-foot{padding:10px 14px;border-top:1px solid var(--cb);
+  display:flex;align-items:center;flex-shrink:0}
+
+/* â”€â”€ Field groups â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.fgs{border-bottom:1px solid var(--cb)}
+.fgs-hdr{display:flex;align-items:center;justify-content:space-between;
+  padding:7px 14px;cursor:pointer;background:#f8fafc;user-select:none}
+.fgs-hdr:hover{background:var(--cg)}
+.fgs-t{font-size:10px;font-weight:700;color:var(--t2);
+  text-transform:uppercase;letter-spacing:.05em}
+.fgs-tog{font-size:9px;color:var(--t3);transition:transform var(--d1)}
+.fgs.col .fgs-tog{transform:rotate(-90deg)}
+.fgs-body{padding:10px 14px;display:flex;flex-direction:column;gap:10px}
+.fgs.col .fgs-body{display:none}
+
+/* â”€â”€ Form fields â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.field{display:flex;flex-direction:column;gap:3px}
+.fl{font-size:11px;font-weight:600;color:var(--t2);
+  display:flex;align-items:center;gap:3px}
+.fr{color:var(--cd);font-size:10px}
+.fc input,.fc textarea,.fc select{width:100%;border:1.5px solid var(--cb);
+  border-radius:6px;padding:6px 8px;font-size:12px;color:var(--t1);
+  background:var(--cf);transition:border-color var(--d1),box-shadow var(--d1)}
+.fc input:focus,.fc textarea:focus,.fc select:focus{outline:none;
+  border-color:var(--cp);box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+.fc textarea{resize:vertical;min-height:52px}
+.fc select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%2394a3b8' d='M0 0l5 6 5-6z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;padding-right:22px}
+.fhint{font-size:10px;color:var(--t3);line-height:1.4}
+.ferr{font-size:10px;color:var(--cd);display:none;align-items:center;gap:3px}
+.ferr.show{display:flex}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.color-row{display:grid;grid-template-columns:44px 1fr;gap:8px;align-items:center}
+.color-row input[type=color]{height:32px;padding:2px;cursor:pointer}
+.fcheck{display:flex;align-items:center;gap:6px;font-size:12px;
+  color:var(--t2);cursor:pointer}
+.fcheck input[type=checkbox]{accent-color:var(--cp);width:13px;height:13px}
+
+/* â”€â”€ Choice rows â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.crow-wrap{border:1.5px solid var(--cb);border-radius:6px;
+  overflow:hidden;margin-bottom:6px}
+.crow{display:flex;align-items:center;gap:4px;padding:4px 8px;
+  border-bottom:1px solid var(--cb)}
+.crow:last-child{border-bottom:none}
+.crow-dh{color:var(--t3);cursor:grab;font-size:10px}
+.crow input{flex:1;border:none;padding:3px 4px;font-size:11px;
+  color:var(--t1);background:transparent}
+.crow input:focus{outline:none}
+.crow-rm{color:var(--t3);font-size:13px;border-radius:3px;padding:1px 3px;
+  transition:all var(--d1)}
+.crow-rm:hover{color:var(--cd);background:var(--cd-l)}
+.cq{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px}
+.cq button{padding:2px 7px;border-radius:9999px;border:1px solid var(--cb);
+  font-size:10px;color:var(--t2);transition:all var(--d1)}
+.cq button:hover{border-color:var(--cp);color:var(--cp);background:var(--cp-l)}
+
+/* â”€â”€ Variable checkboxes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.vcbs{max-height:150px;overflow-y:auto;border:1.5px solid var(--cb);
+  border-radius:6px;padding:7px;display:flex;flex-direction:column;gap:4px}
+
+/* â”€â”€ Modals â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.mov{display:none;position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:200;
+  align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(2px)}
+.mov.open{display:flex}
+.modal{background:var(--cf);border-radius:12px;
+  box-shadow:0 20px 60px rgba(0,0,0,.2);width:100%;max-width:500px;
+  max-height:88vh;display:flex;flex-direction:column;
+  animation:mIn var(--d2) var(--ease)}
+.modal.wide{max-width:640px}
+@keyframes mIn{from{opacity:0;transform:scale(.96) translateY(-4px)}to{opacity:1;transform:none}}
+.mhdr{padding:14px 18px;border-bottom:1px solid var(--cb);display:flex;
+  align-items:center;justify-content:space-between;flex-shrink:0}
+.mtitle{font-size:15px;font-weight:600;color:var(--t1)}
+.mx{padding:3px;border-radius:4px;color:var(--t3);font-size:17px;
+  transition:all var(--d1)}
+.mx:hover{background:var(--cg);color:var(--t1)}
+.mbody{padding:18px;overflow-y:auto;display:flex;flex-direction:column;gap:12px}
+.mbody::-webkit-scrollbar{width:4px}
+.mbody::-webkit-scrollbar-thumb{background:var(--cb);border-radius:4px}
+.mfoot{padding:10px 18px;border-top:1px solid var(--cb);
+  display:flex;align-items:center;gap:8px;flex-shrink:0}
+.sp{flex:1}
+
+/* â”€â”€ Settings tabs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.stabs{display:flex;gap:2px;background:var(--cg);border-radius:10px;
+  padding:3px;margin-bottom:12px;flex-wrap:wrap}
+.stab{padding:5px 10px;border-radius:6px;font-size:11px;font-weight:500;
+  color:var(--t2);cursor:pointer;transition:all var(--d1);white-space:nowrap}
+.stab.active{background:var(--cf);color:var(--cp);font-weight:600;
+  box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.stp{display:none;flex-direction:column;gap:10px}
+.stp.active{display:flex}
+.alert-i{background:var(--cp-l);color:#1e40af;border:1px solid #bfdbfe;
+  padding:9px 12px;border-radius:6px;font-size:12px;line-height:1.5}
+.alert-w{background:var(--cw-l);color:#78350f;border:1px solid #fde68a;
+  padding:9px 12px;border-radius:6px;font-size:12px;line-height:1.5}
+
+/* â”€â”€ Preview â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.pv-mode{flex-direction:column;background:var(--cg)}
+.pv-bar{padding:8px 20px;background:var(--cf);border-bottom:1px solid var(--cb);
+  display:flex;align-items:center;gap:12px;flex-shrink:0}
+.pv-bar-lbl{font-size:11px;color:var(--t3)}
+.pvtabs{display:flex;gap:2px;background:var(--cg);border-radius:10px;padding:3px}
+.pvtab{padding:4px 10px;border-radius:6px;font-size:11px;font-weight:500;
+  color:var(--t2);cursor:pointer;transition:all var(--d1)}
+.pvtab.active{background:var(--cf);color:var(--cp);font-weight:600;
+  box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.pv-frame{flex:1;overflow-y:auto;padding:24px}
+.pv-card{background:var(--cf);border-radius:12px;
+  box-shadow:0 2px 8px rgba(0,0,0,.07);padding:32px;
+  max-width:620px;margin:0 auto}
+.pv-title{font-size:20px;font-weight:700;margin-bottom:6px}
+.pv-desc{color:var(--t2);margin-bottom:20px;font-size:13px;line-height:1.6}
+.pv-intro{line-height:1.7;margin-bottom:14px;font-size:13px}
+.pv-consent{background:var(--cg);border:1.5px solid var(--cb);
+  border-radius:6px;padding:10px 12px;font-size:12px;color:var(--t2);margin-bottom:14px}
+.pv-sec{border-top:2px solid var(--cp);margin:24px 0 14px;padding-top:14px}
+.pv-sec-t{font-size:16px;font-weight:600}
+.pv-sec-sub{color:var(--t2);margin-top:4px;font-size:12px}
+.pv-txtblk{background:var(--cp-l);border-left:3px solid var(--cp);
+  padding:10px 12px;border-radius:0 6px 6px 0;margin-bottom:14px;
+  font-size:12px;line-height:1.6;color:#1e40af}
+.pv-item{margin-bottom:18px}
+.pv-ql{font-weight:600;margin-bottom:7px;display:flex;gap:5px;
+  align-items:flex-start;font-size:13px}
+.pv-req-mk{color:var(--cd);font-size:10px;margin-top:2px}
+.pv-help-t{font-size:11px;color:var(--t3);margin-top:2px;font-weight:400}
+.pv-opts{display:flex;flex-direction:column;gap:5px}
+.pv-opts.inl{flex-direction:row;flex-wrap:wrap;gap:12px}
+.pv-opt{display:flex;align-items:center;gap:6px;font-size:12px;cursor:default}
+.pv-inp{border:1.5px solid var(--cb);border-radius:6px;padding:6px 9px;
+  width:100%;font-size:12px;background:var(--cf)}
+.pv-matrix{border-collapse:collapse;width:100%;font-size:11px;margin-top:8px}
+.pv-matrix th{background:var(--cg);padding:6px 10px;text-align:center;
+  border:1px solid var(--cb);font-weight:600}
+.pv-matrix td{padding:6px 10px;border:1px solid var(--cb);text-align:center}
+.pv-matrix .rl{text-align:left!important;font-weight:500}
+.pv-slider-w{display:flex;flex-direction:column;gap:4px}
+.pv-slider{width:100%}
+.pv-slider-r{display:flex;justify-content:space-between;font-size:10px;color:var(--t3)}
+.pv-stars{display:flex;gap:4px;margin-top:5px;font-size:24px;color:var(--cb)}
+.pv-ranklist{border:1.5px solid var(--cb);border-radius:6px;padding:7px;margin-top:7px}
+.pv-rankitem{display:flex;align-items:center;gap:8px;padding:5px 7px;
+  background:var(--cg);border-radius:4px;margin-bottom:3px;
+  font-size:12px;color:var(--t2)}
+.pv-submit{margin-top:24px}
+.pv-submit button{width:100%;padding:11px;border-radius:10px;color:#fff;
+  font-size:14px;font-weight:600;cursor:default;border:none}
+.pv-nav{display:flex;align-items:center;gap:8px;margin-top:22px}
+.pv-nav button{border:1.5px solid var(--cb);background:var(--cf);
+  border-radius:8px;padding:8px 12px;font-size:12px;font-weight:600;color:var(--t2)}
+.pv-nav button:disabled{opacity:.45;cursor:default}
+.pv-nav .pv-count{flex:1;text-align:center;font-size:11px;color:var(--t3)}
+.pv-ty{text-align:center;padding:40px 20px}
+.pv-ty-ic{font-size:48px;margin-bottom:12px}
+.pv-ty-t{font-size:20px;font-weight:700;margin-bottom:7px}
+.pv-ty-m{color:var(--t2);font-size:13px;line-height:1.6}
+
+/* â”€â”€ Analyse â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.an-mode{overflow:hidden}
+.an-tabs{display:flex;gap:4px;padding:8px 10px;border-bottom:1px solid var(--cb);
+  background:var(--cf);flex-shrink:0}
+.an-tab{border:1px solid var(--cb);background:var(--cg);border-radius:7px;
+  padding:6px 10px;font-size:11px;font-weight:600;color:var(--t2);cursor:pointer}
+.an-tab.active{background:var(--t1);color:#fff;border-color:var(--t1)}
+.an-split{display:grid;grid-template-columns:270px minmax(320px,1fr) 320px;height:calc(100% - 44px);overflow:hidden}
+.an-vars{background:var(--cf);border-right:1px solid var(--cb);
+  display:flex;flex-direction:column;overflow:hidden}
+.an-rqs{display:flex;flex-direction:column;overflow:hidden;background:var(--cg)}
+.an-output{display:flex;flex-direction:column;overflow:hidden;background:var(--cf);
+  border-left:1px solid var(--cb)}
+.pan-hdr{padding:10px 14px;border-bottom:1px solid var(--cb);
+  display:flex;align-items:center;justify-content:space-between;
+  flex-shrink:0;background:var(--cf)}
+.pan-hdr-t{font-size:12px;font-weight:600;color:var(--t1)}
+.an-vars-body{flex:1;overflow-y:auto;padding:10px}
+.vchip{display:inline-flex;align-items:center;padding:3px 8px;
+  border-radius:9999px;background:var(--cg);border:1.5px solid var(--cb);
+  font-size:10px;font-weight:500;color:var(--t2);margin:2px;cursor:default}
+.vchip.sc{background:var(--cp-l);border-color:#bfdbfe;color:#1e40af}
+.vmeta{display:block;border:1px solid var(--cb);border-radius:8px;background:var(--cg);
+  padding:8px;margin-bottom:7px}
+.vmeta-id{font-size:12px;font-weight:700;color:var(--t1)}
+.vmeta-lbl{font-size:11px;color:var(--t2);line-height:1.35;margin-top:3px}
+.vmeta-badges{display:flex;flex-wrap:wrap;gap:3px;margin-top:6px}
+.vbadge{font-size:9px;font-weight:700;border-radius:9999px;padding:2px 5px;
+  background:#e5e7eb;color:#374151}
+.vbadge.nom{background:#fee2e2;color:#991b1b}.vbadge.ord{background:#fef3c7;color:#92400e}
+.vbadge.con{background:#dbeafe;color:#1e40af}.vbadge.id{background:#ede9fe;color:#5b21b6}
+.vbadge.lik{background:#dcfce7;color:#166534}.vbadge.scl{background:#cffafe;color:#155e75}
+.vbadge.txt{background:#f3f4f6;color:#4b5563}
+.role-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.role-card{border:1px solid var(--cb);border-radius:8px;background:var(--cg);padding:9px}
+.role-card .fl{margin-bottom:5px}
+.plan-msg{font-size:11px;margin-top:8px;padding:7px 9px;border-radius:6px;background:#fff7ed;color:#9a3412;border:1px solid #fed7aa}
+.plan-msg.ok{background:#f0fdf4;color:#166534;border-color:#bbf7d0}
+.preview-card{border:1px solid var(--cb);border-radius:8px;background:var(--cg);padding:10px;font-size:12px;color:var(--t2);line-height:1.5}
+.model-list{font-size:11px;color:var(--t2);margin-top:8px;display:flex;flex-direction:column;gap:5px}
+.model-row{border:1px solid var(--cb);border-radius:7px;background:#fff;padding:7px}
+.model-paths{margin-top:4px;display:flex;gap:3px;flex-wrap:wrap}
+.syntax-box{width:100%;min-height:120px;border:1px solid var(--cb);border-radius:7px;background:#0f172a;color:#e2e8f0;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;padding:8px}
+.rqs-body{flex:1;overflow-y:auto;padding:14px}
+.rq-card{background:var(--cf);border:1.5px solid var(--cb);border-radius:10px;
+  padding:14px;margin-bottom:10px;cursor:pointer;transition:border-color var(--d1)}
+.rq-card:hover{border-color:var(--cp)}
+.rq-num{display:inline-flex;align-items:center;justify-content:center;
+  width:20px;height:20px;border-radius:9999px;background:var(--t1);color:#fff;
+  font-size:10px;font-weight:700;margin-bottom:6px}
+.rq-q{font-size:12px;font-weight:500;margin-bottom:7px;line-height:1.5}
+.rq-meta{display:flex;gap:5px;flex-wrap:wrap;align-items:center}
+.tc{padding:2px 7px;border-radius:9999px;background:var(--cp-l);
+  color:#1e40af;font-size:10px;font-weight:600}
+.ac{padding:2px 7px;border-radius:9999px;background:var(--cg);
+  color:var(--t2);font-size:10px;font-weight:500}
+.cc{padding:2px 7px;border-radius:9999px;background:#f0fdf4;
+  color:#166534;font-size:10px;border:1px solid #bbf7d0}
+.rq-interp{margin-top:9px;padding:9px 11px;border-radius:6px;
+  background:var(--cg);font-size:11px;color:var(--t2);font-style:italic;
+  border-left:3px solid var(--cp)}
+.rq-no-int{margin-top:7px;font-size:10px;color:var(--t3);font-style:italic}
+.an-empty{display:flex;flex-direction:column;align-items:center;
+  text-align:center;padding:40px 20px;color:var(--t3)}
+.an-empty-ic{font-size:32px;margin-bottom:12px;opacity:.4}
+.an-empty-t{font-size:13px;font-weight:600;color:var(--t2);margin-bottom:5px}
+.an-empty-b{font-size:12px}
+/* suggestion box */
+.suggest-box{background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;
+  padding:8px 12px;font-size:12px;color:#1e40af;margin-top:4px;
+  display:flex;align-items:center;gap:6px}
+.suggest-box .sb-ic{font-size:13px;flex-shrink:0}
+
+/* â”€â”€ Toast â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.toast-r{position:fixed;bottom:20px;right:20px;z-index:400;
+  display:flex;flex-direction:column;gap:6px;pointer-events:none}
+.toast{display:flex;align-items:center;gap:8px;padding:8px 14px;
+  border-radius:10px;background:var(--t1);color:#fff;font-size:12px;
+  box-shadow:0 8px 24px rgba(0,0,0,.15);pointer-events:auto;max-width:300px;
+  animation:tIn 100ms var(--ease)}
+@keyframes tIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+.toast.ok{background:#14532d}.toast.err{background:#7f1d1d}
+.toast.inf{background:#1e3a8a}.toast.warn{background:#713f12}
+
+/* â”€â”€ Confirm â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.conf-ov{display:none;position:fixed;inset:0;z-index:300;
+  background:rgba(15,23,42,.35);align-items:center;justify-content:center}
+.conf-ov.open{display:flex}
+.conf-box{background:var(--cf);border-radius:12px;
+  box-shadow:0 20px 60px rgba(0,0,0,.2);padding:20px;
+  max-width:360px;width:90%;animation:mIn var(--d2) var(--ease)}
+.conf-t{font-size:14px;font-weight:600;margin-bottom:7px}
+.conf-m{font-size:12px;color:var(--t2);margin-bottom:14px;line-height:1.5}
+.conf-acts{display:flex;gap:7px;justify-content:flex-end}
+
+/* â”€â”€ Recovery banner â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.rec-ban{background:var(--cw-l);border-bottom:1px solid #fde68a;padding:7px 18px;
+  display:flex;align-items:center;gap:10px;font-size:12px;color:#78350f;flex-shrink:0}
+.rec-ban[hidden]{display:none}
+.rec-msg{flex:1}
+
+/* â”€â”€ Keyboard hint â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+kbd{display:inline-block;padding:1px 5px;border:1px solid var(--cb);
+  border-radius:3px;font-size:10px;font-family:monospace;color:var(--t2);
+  background:var(--cg)}
+</style>
+</head>
+<body>
+
+<!-- Recovery banner -->
+<div class="rec-ban" id="recBan" hidden>
+  <span class="rec-msg">Autosaved session found from <strong id="recTime"></strong> ago.</span>
+  <button type="button" class="btn btn-s btn-sm" onclick="restoreAuto()">Restore</button>
+  <button type="button" class="btn btn-g btn-sm" onclick="dismissRec()">Dismiss</button>
+</div>
+
+<div class="app">
+
+<!-- Topbar -->
+<header class="topbar">
+  <div class="tb-brand">Survey<span>Builder</span></div>
+  <div class="tb-modes" role="group" aria-label="Builder mode">
+    <button type="button" class="m-btn" aria-pressed="true"  data-mode="build"   onclick="setMode('build')">Build</button>
+    <button type="button" class="m-btn" aria-pressed="false" data-mode="preview" onclick="setMode('preview')">Preview</button>
+    <button type="button" class="m-btn" aria-pressed="false" data-mode="analyse" onclick="setMode('analyse')">Analyse</button>
+  </div>
+  <div class="tb-r">
+    <div class="tb-hist">
+      <button type="button" id="undoBtn" title="Undo (Ctrl+Z)" onclick="undo()" disabled>&#8630;</button>
+      <button type="button" id="redoBtn" title="Redo (Ctrl+Y)" onclick="redo()" disabled>&#8631;</button>
+    </div>
+    <span class="save-st" id="saveSt">No changes</span>
+    <button type="button" class="btn btn-g btn-sm" onclick="openSettings('meta')" title="Survey settings">&#9881;</button>
+    <button type="button" class="btn btn-s btn-sm" onclick="openFile()">Open</button>
+    <button type="button" class="btn btn-p btn-sm" onclick="saveSframe()">Save .sframe</button>
+  </div>
+</header>
+
+<div class="shell">
+
+<!-- Sidebar -->
+<aside class="sidebar" aria-label="Survey structure">
+  <div class="sb-top">
+    <button type="button" class="sb-title-btn" onclick="openSettings('meta')" aria-label="Edit survey settings">
+      <span class="sb-title-txt" id="sbTitle">Untitled Survey</span>
+      <span style="opacity:.4;font-size:10px">&#9881;</span>
+    </button>
+    <div class="sb-search">
+      <span class="sb-si">&#128269;</span>
+      <input type="search" id="itemSearch" placeholder="Search itemsâ€¦"
+             aria-label="Search items" oninput="renderItemList()">
+    </div>
+    <div class="setup-strip" aria-label="Survey page setup">
+      <button type="button" class="setup-btn" onclick="openSettings('welcome')" title="Edit welcome page"><span>&#128075;</span>Welcome</button>
+      <button type="button" class="setup-btn" onclick="openSettings('header')" title="Add logo and header"><span>&#128247;</span>Logo</button>
+      <button type="button" class="setup-btn" onclick="openSettings('thankyou')" title="Edit thank-you page"><span>&#10003;</span>Thank You</button>
+    </div>
+  </div>
+  <div class="sb-body" id="itemList" role="list" aria-label="Survey items"></div>
+  <div class="sb-footer">
+    <!-- Collapsible add-item menu (shown above the button row) -->
+    <div class="fab-menu" id="fabMenu">
+      <div class="fg"><div class="fg-lbl">Questions</div>
+        <button type="button" class="fi" onclick="qAdd('likert');closeFabMenu()"><span class="fi-ic">&#9679;</span>Likert scale</button>
+        <button type="button" class="fi" onclick="qAdd('single_choice');closeFabMenu()"><span class="fi-ic">&#9900;</span>Single choice</button>
+        <button type="button" class="fi" onclick="qAdd('multiple_choice');closeFabMenu()"><span class="fi-ic">&#9745;</span>Multiple choice</button>
+        <button type="button" class="fi" onclick="qAdd('matrix');closeFabMenu()"><span class="fi-ic">&#9632;</span>Matrix / grid</button>
+        <button type="button" class="fi" onclick="qAdd('numeric');closeFabMenu()"><span class="fi-ic">#</span>Numeric</button>
+        <button type="button" class="fi" onclick="qAdd('text');closeFabMenu()"><span class="fi-ic">T</span>Short text</button>
+        <button type="button" class="fi" onclick="qAdd('textarea');closeFabMenu()"><span class="fi-ic">&#182;</span>Long text</button>
+        <button type="button" class="fi" onclick="qAdd('slider');closeFabMenu()"><span class="fi-ic">&#8212;</span>Slider</button>
+        <button type="button" class="fi" onclick="qAdd('ranking');closeFabMenu()"><span class="fi-ic">&#8597;</span>Ranking</button>
+        <button type="button" class="fi" onclick="qAdd('rating');closeFabMenu()"><span class="fi-ic">&#9733;</span>Rating</button>
+        <button type="button" class="fi" onclick="qAdd('date');closeFabMenu()"><span class="fi-ic">&#128197;</span>Date</button>
+      </div>
+      <div class="fg"><div class="fg-lbl">Structure</div>
+        <button type="button" class="fi" onclick="qAdd('section_break');closeFabMenu()"><span class="fi-ic">&#8212;</span>Section break</button>
+        <button type="button" class="fi" onclick="qAdd('text_block');closeFabMenu()"><span class="fi-ic">&#128221;</span>Text block</button>
+      </div>
+      <div class="fg"><div class="fg-lbl">Configure</div>
+        <button type="button" class="fi" onclick="openChoiceModal();closeFabMenu()"><span class="fi-ic">&#9673;</span>Choice set</button>
+        <button type="button" class="fi" onclick="openScaleModal();closeFabMenu()"><span class="fi-ic">&#128208;</span>Scale</button>
+        <button type="button" class="fi" onclick="openBranchModal();closeFabMenu()"><span class="fi-ic">&#8627;</span>Branching rule</button>
+        <button type="button" class="fi" onclick="openCheckModal();closeFabMenu()"><span class="fi-ic">&#10003;</span>Attention check</button>
+      </div>
+    </div>
+    <div class="fab-row">
+      <button type="button" class="fab" onclick="qAdd('likert')" aria-label="Add Likert question">+ Add question</button>
+      <button type="button" class="fab-more" id="fabMoreBtn" title="More item types" onclick="toggleFabMenu()">&#8942;</button>
+    </div>
+  </div>
+</aside>
+
+<!-- Main content -->
+<main class="main" id="main">
+
+  <!-- BUILD mode -->
+  <div class="mp active" id="mp-build">
+    <div class="build-shell">
+      <div class="canvas" id="canvas">
+        <div class="c-prompt" id="cPrompt">
+          <div class="c-prompt-ic">&#128196;</div>
+          <div class="c-prompt-t">Select a question to edit</div>
+          <div class="c-prompt-b">Click any question in the sidebar, or add one using the panel on the left. Keyboard: <kbd>Ctrl+Z</kbd> undo, <kbd>Ctrl+S</kbd> save.</div>
+        </div>
+      </div>
+      <aside class="inspector" id="inspector" aria-label="Item editor">
+        <div class="insp-hdr">
+          <code class="insp-id" id="inspId"></code>
+          <span class="insp-type-lbl" id="inspTypeLbl"></span>
+          <button type="button" class="insp-x" onclick="closeInsp()" aria-label="Close editor">&#215;</button>
+        </div>
+        <div class="insp-body" id="inspBody"></div>
+        <div class="insp-foot">
+          <button type="button" class="btn btn-g btn-sm" onclick="dupSelItem()">Duplicate</button>
+          <div style="flex:1"></div>
+          <button type="button" class="btn btn-d btn-sm" onclick="delSelItem()">Delete</button>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <!-- PREVIEW mode -->
+  <div class="mp pv-mode" id="mp-preview">
+    <div class="pv-bar">
+      <span class="pv-bar-lbl">Viewing:</span>
+      <div class="pvtabs">
+        <div class="pvtab"        onclick="setPvTab('welcome')"  id="pvt-welcome">Welcome</div>
+        <div class="pvtab active" onclick="setPvTab('survey')"   id="pvt-survey">Survey</div>
+        <div class="pvtab"        onclick="setPvTab('thankyou')" id="pvt-thankyou">Thank You</div>
+      </div>
+    </div>
+    <div class="pv-frame" id="pvFrame"></div>
+  </div>
+
+  <!-- ANALYSE mode -->
+  <div class="mp an-mode" id="mp-analyse">
+    <div class="an-tabs">
+      <button type="button" class="an-tab active" data-an-tab="plan" onclick="setAnalyseTab('plan')">Plan</button>
+      <button type="button" class="an-tab" data-an-tab="run" onclick="setAnalyseTab('run')">Run</button>
+      <button type="button" class="an-tab" data-an-tab="report" onclick="setAnalyseTab('report')">Report</button>
+    </div>
+    <div class="an-split">
+      <div class="an-vars">
+        <div class="pan-hdr"><span class="pan-hdr-t">Variables and constructs</span></div>
+        <div class="an-vars-body" id="anVars"></div>
+      </div>
+      <div class="an-rqs">
+        <div class="pan-hdr">
+          <span class="pan-hdr-t" id="anMidTitle">Analysis plans</span>
+          <button type="button" class="btn btn-p btn-sm" onclick="openRQModal()">+ Add plan</button>
+        </div>
+        <div class="rqs-body" id="rqsBody"></div>
+      </div>
+      <div class="an-output">
+        <div class="pan-hdr"><span class="pan-hdr-t">Output preview and model builder</span></div>
+        <div class="rqs-body">
+          <div class="preview-card" id="anOutputPreview">Choose an analysis method to preview planned tables, decision rules, and reporting references.</div>
+          <div style="height:12px"></div>
+          <div class="preview-card">
+            <strong>Model Builder</strong>
+            <p style="margin:6px 0 10px">Create constructs from scales, choose lavaan or seminr syntax, and save model JSON into the .sframe file.</p>
+            <div class="field"><label class="fl" for="mb-type">Output engine</label><div class="fc"><select id="mb-type"><option value="cfa">lavaan CFA</option><option value="cb_sem">lavaan CB-SEM</option><option value="pls_sem">seminr PLS-SEM</option></select></div></div>
+            <button type="button" class="btn btn-s btn-sm" onclick="modelFromScales()">Create model from scales</button>
+            <div class="field"><label class="fl" for="mb-model">Saved model</label><div class="fc"><select id="mb-model" onchange="renderAnalyse()"></select></div></div>
+            <div class="frow">
+              <div class="field"><label class="fl" for="mb-from">Path from</label><div class="fc"><select id="mb-from"></select></div></div>
+              <div class="field"><label class="fl" for="mb-to">Path to</label><div class="fc"><select id="mb-to"></select></div></div>
+            </div>
+            <button type="button" class="btn btn-g btn-sm" onclick="addModelPath()">Add path</button>
+            <button type="button" class="btn btn-p btn-sm" onclick="exportModelSyntax()">Export syntax</button>
+            <div id="modelList" class="model-list"></div>
+            <textarea id="modelSyntaxOut" class="syntax-box" readonly placeholder="Model syntax or JSON appears here."></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+</div><!-- .shell -->
+</div><!-- .app -->
+
+<!-- â”€â”€ MODALS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+
+<!-- Settings -->
+<div class="mov" id="m-settings" onclick="if(event.target===this)closeModal('m-settings')">
+<div class="modal wide" role="dialog" aria-labelledby="set-title">
+  <div class="mhdr"><span class="mtitle" id="set-title">Survey Settings</span><button type="button" class="mx" onclick="closeModal('m-settings')">&#215;</button></div>
+  <div class="mbody">
+    <div class="stabs">
+      <div class="stab active" onclick="showST('meta')"     id="st-meta">General</div>
+      <div class="stab"        onclick="showST('welcome')"  id="st-welcome">Welcome</div>
+      <div class="stab"        onclick="showST('thankyou')" id="st-thankyou">Thank You</div>
+      <div class="stab"        onclick="showST('header')"   id="st-header">Header</div>
+      <div class="stab"        onclick="showST('gsheets')"  id="st-gsheets">Google Sheets</div>
+    </div>
+    <div class="stp active" id="sp-meta">
+      <div class="field"><label class="fl" for="s-title">Survey title <span class="fr">*</span></label><div class="fc"><input type="text" id="s-title"></div></div>
+      <div class="frow">
+        <div class="field"><label class="fl" for="s-ver">Version</label><div class="fc"><input type="text" id="s-ver"></div></div>
+        <div class="field"><label class="fl" for="s-lang">Language</label><div class="fc"><input type="text" id="s-lang"></div></div>
+      </div>
+      <div class="field"><label class="fl" for="s-authors">Authors</label><div class="fc"><input type="text" id="s-authors"></div></div>
+      <div class="field"><label class="fl" for="s-desc">Description</label><div class="fc"><textarea id="s-desc" rows="3"></textarea></div></div>
+      <div class="field"><label class="fl" for="s-mode">Presentation mode</label>
+        <div class="fc"><select id="s-mode"><option value="standard">Standard: all questions visible</option><option value="conversational">Conversational: one question at a time</option></select></div>
+      </div>
+      <div class="frow">
+        <div class="field"><label class="fl" for="s-submit">Submit label</label><div class="fc"><input type="text" id="s-submit"></div></div>
+        <div class="field"><label class="fl" for="s-theme">Theme colour</label><div class="fc color-row"><input type="color" id="s-theme-picker" value="#2563eb" oninput="syncThemeFromPicker()"><input type="text" id="s-theme" placeholder="#2563eb" oninput="syncThemeFromText()"></div></div>
+      </div>
+    </div>
+    <div class="stp" id="sp-welcome">
+      <div class="alert-i">The welcome page is shown before the first question. Use it to introduce the study and collect informed consent.</div>
+      <div class="field"><label class="fl" for="s-wt">Welcome title</label><div class="fc"><input type="text" id="s-wt" placeholder="Welcome to our survey"></div></div>
+      <div class="field"><label class="fl" for="s-wi">Introduction text</label><div class="fc"><textarea id="s-wi" rows="5"></textarea></div></div>
+      <div class="field"><label class="fl" for="s-wc">Consent statement (leave blank to skip)</label><div class="fc"><textarea id="s-wc" rows="4"></textarea></div></div>
+      <label class="fcheck"><input type="checkbox" id="s-wreq"><span>Require consent checkbox before starting</span></label>
+      <div class="field"><label class="fl" for="s-wsl">Start button label</label><div class="fc"><input type="text" id="s-wsl"></div></div>
+    </div>
+    <div class="stp" id="sp-thankyou">
+      <div class="field"><label class="fl" for="s-tym">Thank-you message</label><div class="fc"><textarea id="s-tym" rows="4"></textarea></div></div>
+      <div class="field"><label class="fl" for="s-tyu">Redirect URL (optional)</label><div class="fc"><input type="url" id="s-tyu" placeholder="https://â€¦"></div><span class="fhint">After submission, respondents are redirected to this URL.</span></div>
+      <label class="fcheck"><input type="checkbox" id="s-tydl"><span>Show "Download my response" button</span></label>
+    </div>
+    <div class="stp" id="sp-header">
+      <div class="field"><label class="fl" for="s-inst">Institution or study name</label><div class="fc"><input type="text" id="s-inst" placeholder="University: Department"></div></div>
+      <div class="field"><label class="fl">Logo image</label>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
+          <button type="button" class="btn btn-s btn-sm" onclick="document.getElementById('logoInput').click()">Upload image</button>
+          <span id="logoName" style="font-size:11px;color:var(--t3)">No logo</span>
+          <button type="button" class="btn btn-g btn-sm" id="logoRmBtn" style="display:none;color:var(--cd)" onclick="removeLogo()">Remove</button>
+        </div>
+        <img id="logoPrev" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==" style="max-height:36px;margin-top:6px;display:none" alt="Logo preview">
+      </div>
+      <label class="fcheck"><input type="checkbox" id="s-prog" checked><span>Show progress bar during survey</span></label>
+    </div>
+    <div class="stp" id="sp-gsheets">
+      <div class="alert-i">Connect to a Google Sheet for serverless response collection. After saving your .sframe file, run <code>export_google_sheet(instr, sheet_url="â€¦")</code> in R to generate the Apps Script collector.</div>
+      <div class="field"><label class="fl" for="s-gsu">Google Sheet URL</label><div class="fc"><input type="url" id="s-gsu" placeholder="https://docs.google.com/spreadsheets/d/â€¦"></div></div>
+      <div class="field"><label class="fl" for="s-gsep">Apps Script Web App URL</label><div class="fc"><input type="url" id="s-gsep" placeholder="https://script.google.com/macros/s/â€¦/exec"></div><span class="fhint">Extensions â€º Apps Script â€º Deploy â€º Web app â€º Anyone</span></div>
+    </div>
+  </div>
+  <div class="mfoot">
+    <button type="button" class="btn btn-s" onclick="closeModal('m-settings')">Cancel</button>
+    <div class="sp"></div>
+    <button type="button" class="btn btn-p" onclick="saveSettings()">Save settings</button>
+  </div>
+</div>
+</div>
+
+<!-- Choice modal -->
+<div class="mov" id="m-choice" onclick="if(event.target===this)closeModal('m-choice')">
+<div class="modal" role="dialog">
+  <div class="mhdr"><span class="mtitle">Define Choice Set</span><button type="button" class="mx" onclick="closeModal('m-choice')">&#215;</button></div>
+  <div class="mbody">
+    <div class="field"><label class="fl" for="c-id">Choice set ID <span class="fr">*</span></label><div class="fc"><input type="text" id="c-id" placeholder="agree5"></div></div>
+    <div>
+      <div class="crow-wrap" id="cRows"></div>
+      <div style="margin-bottom:6px"><button type="button" class="btn btn-g btn-sm" onclick="addCRow()">+ Add option</button></div>
+      <div class="cq">
+        <button type="button" onclick="fillL5()">5-pt agree</button>
+        <button type="button" onclick="fillL7()">7-pt agree</button>
+        <button type="button" onclick="fillYN()">Yes / No</button>
+        <button type="button" onclick="fillFr()">Frequency</button>
+        <button type="button" onclick="fillIm()">Importance</button>
+      </div>
+    </div>
+    <div style="display:flex;gap:14px">
+      <label class="fcheck"><input type="checkbox" id="c-other"><span>Include "Other" option</span></label>
+      <label class="fcheck"><input type="checkbox" id="c-rand"><span>Randomise order</span></label>
+    </div>
+  </div>
+  <div class="mfoot"><button type="button" class="btn btn-s" onclick="closeModal('m-choice')">Cancel</button><div class="sp"></div><button type="button" class="btn btn-p" onclick="saveChoice()">Save choice set</button></div>
+</div>
+</div>
+
+<!-- Scale modal -->
+<div class="mov" id="m-scale" onclick="if(event.target===this)closeModal('m-scale')">
+<div class="modal" role="dialog">
+  <div class="mhdr"><span class="mtitle">Define Scale</span><button type="button" class="mx" onclick="closeModal('m-scale')">&#215;</button></div>
+  <div class="mbody">
+    <div class="frow">
+      <div class="field"><label class="fl" for="sc-id">Scale ID <span class="fr">*</span></label><div class="fc"><input type="text" id="sc-id" placeholder="satisfaction"></div></div>
+      <div class="field"><label class="fl" for="sc-lbl">Label <span class="fr">*</span></label><div class="fc"><input type="text" id="sc-lbl" placeholder="Customer Satisfaction"></div></div>
+    </div>
+    <div class="frow">
+      <div class="field"><label class="fl" for="sc-meth">Method</label><div class="fc"><select id="sc-meth"><option value="mean">Mean</option><option value="sum">Sum</option></select></div></div>
+      <div class="field"><label class="fl" for="sc-minv">Min valid items</label><div class="fc"><input type="number" id="sc-minv" placeholder="All" min="1"></div></div>
+    </div>
+    <div class="field"><label class="fl">Items to include</label><div class="vcbs" id="scItemCBs"></div></div>
+    <div class="field"><label class="fl">Reverse-coded items within this scale</label><div class="vcbs" id="scRevCBs"><span style="font-size:11px;color:var(--t3)">Select items above first.</span></div></div>
+  </div>
+  <div class="mfoot"><button type="button" class="btn btn-s" onclick="closeModal('m-scale')">Cancel</button><div class="sp"></div><button type="button" class="btn btn-p" onclick="saveScale()">Save scale</button></div>
+</div>
+</div>
+
+<!-- Branch modal -->
+<div class="mov" id="m-branch" onclick="if(event.target===this)closeModal('m-branch')">
+<div class="modal" role="dialog">
+  <div class="mhdr"><span class="mtitle">Add Branching Rule</span><button type="button" class="mx" onclick="closeModal('m-branch')">&#215;</button></div>
+  <div class="mbody">
+    <div class="alert-i">Show or hide a question based on the answer to a preceding question.</div>
+    <div class="field"><label class="fl" for="br-tgt">Target question (will be shown or hidden)</label><div class="fc"><select id="br-tgt"></select></div></div>
+    <div class="field"><label class="fl" for="br-dep">Controlling question</label><div class="fc"><select id="br-dep"></select></div></div>
+    <div class="frow">
+      <div class="field"><label class="fl" for="br-op">Condition</label><div class="fc"><select id="br-op"><option value="==">equals</option><option value="!=">does not equal</option><option value="%in%">is one of</option><option value=">">greater than</option><option value=">=">at least</option><option value="<">less than</option><option value="<=">at most</option></select></div></div>
+      <div class="field"><label class="fl" for="br-val">Value</label><div class="fc"><input type="text" id="br-val" placeholder="e.g. yes"></div></div>
+    </div>
+    <div class="field"><label class="fl" for="br-act">Action</label><div class="fc"><select id="br-act"><option value="show">Show target question</option><option value="hide">Hide target question</option></select></div></div>
+  </div>
+  <div class="mfoot"><button type="button" class="btn btn-s" onclick="closeModal('m-branch')">Cancel</button><div class="sp"></div><button type="button" class="btn btn-p" onclick="saveBranch()">Save rule</button></div>
+</div>
+</div>
+
+<!-- Check modal -->
+<div class="mov" id="m-check" onclick="if(event.target===this)closeModal('m-check')">
+<div class="modal" role="dialog">
+  <div class="mhdr"><span class="mtitle">Add Attention Check</span><button type="button" class="mx" onclick="closeModal('m-check')">&#215;</button></div>
+  <div class="mbody">
+    <div class="frow">
+      <div class="field"><label class="fl" for="ck-id">Check ID <span class="fr">*</span></label><div class="fc"><input type="text" id="ck-id" placeholder="attn_1"></div></div>
+      <div class="field"><label class="fl" for="ck-item">Item</label><div class="fc"><select id="ck-item"></select></div></div>
+    </div>
+    <div class="frow">
+      <div class="field"><label class="fl" for="ck-type">Type</label><div class="fc"><select id="ck-type"><option value="attention">Attention</option><option value="instructional">Instructional</option><option value="trap">Trap</option></select></div></div>
+      <div class="field"><label class="fl" for="ck-fail">Fail action</label><div class="fc"><select id="ck-fail"><option value="flag">Flag respondent</option><option value="exclude">Exclude from analysis</option></select></div></div>
+    </div>
+    <div class="field"><label class="fl" for="ck-pass">Correct answer(s), comma-separated</label><div class="fc"><input type="text" id="ck-pass" placeholder="e.g. 4 or yes"></div></div>
+    <div class="field"><label class="fl" for="ck-lbl">Label</label><div class="fc"><input type="text" id="ck-lbl" placeholder="Attention check 1"></div></div>
+  </div>
+  <div class="mfoot"><button type="button" class="btn btn-s" onclick="closeModal('m-check')">Cancel</button><div class="sp"></div><button type="button" class="btn btn-p" onclick="saveCheck()">Save check</button></div>
+</div>
+</div>
+
+<!-- RQ modal -->
+<div class="mov" id="m-rq" onclick="if(event.target===this)closeModal('m-rq')">
+<div class="modal wide" role="dialog">
+  <div class="mhdr"><span class="mtitle" id="rq-modal-title">Add Research Question</span><button type="button" class="mx" onclick="closeModal('m-rq')">&#215;</button></div>
+  <div class="mbody">
+    <div class="field"><label class="fl" for="rq-q">Research question <span class="fr">*</span></label><div class="fc"><textarea id="rq-q" rows="3" placeholder="Is there a significant difference in satisfaction between groups?"></textarea></div></div>
+    <div class="field"><label class="fl">Variables and roles</label><div class="vcbs" id="rqVarCBs"></div><div class="role-grid" id="rqRoleFields"></div></div>
+    <!-- Suggestion box: populated and shown by JS when variables are selected -->
+    <div id="rqSuggest" class="suggest-box" style="display:none">
+      <span class="sb-ic">&#128161;</span>
+      <span id="rqSuggestMsg"></span>
+    </div>
+    <div class="frow">
+      <div class="field"><label class="fl" for="rq-test">Analysis method</label>
+        <div class="fc"><select id="rq-test" onchange="onTestChg()">
+          <optgroup label="Descriptive"><option value="frequency">Frequency table</option><option value="descriptives">Descriptives</option><option value="missing_data">Missing values</option><option value="quality">Quality report</option><option value="scale_descriptives">Scale descriptives</option><option value="crosstab">Cross-tab</option></optgroup>
+          <optgroup label="Difference"><option value="mann_whitney">Mann-Whitney U</option><option value="t_test_ind">Independent t-test</option><option value="t_test_pair">Paired t-test</option><option value="wilcoxon_pair">Wilcoxon signed-rank</option><option value="kruskal_wallis">Kruskal-Wallis</option><option value="anova_one">One-way ANOVA</option><option value="anova_two">Two-way ANOVA</option><option value="ancova">ANCOVA</option><option value="repeated_anova">Repeated-measures ANOVA</option><option value="friedman">Friedman</option></optgroup>
+          <optgroup label="Categorical"><option value="chi_square">Chi-square</option><option value="fisher_exact">Fisher's exact</option><option value="mcnemar">McNemar</option><option value="cochran_q">Cochran's Q</option></optgroup>
+          <optgroup label="Association"><option value="correlation_pearson">Pearson correlation</option><option value="correlation_spearman">Spearman correlation</option><option value="correlation_kendall">Kendall tau</option><option value="partial_correlation">Partial correlation</option></optgroup>
+          <optgroup label="Regression"><option value="regression_linear">Linear regression</option><option value="regression_logistic_binary">Binary logistic</option><option value="regression_logistic_ordinal">Ordinal logistic</option><option value="regression_logistic_multinomial">Multinomial logistic</option><option value="mediation">Mediation</option><option value="moderation">Moderation</option></optgroup>
+          <optgroup label="Measurement and models"><option value="reliability_alpha">Cronbach alpha</option><option value="reliability_omega">McDonald omega</option><option value="item_diagnostics">Item diagnostics</option><option value="efa_readiness">EFA readiness</option><option value="efa_solution">EFA solution</option><option value="cfa_lavaan_syntax">CFA lavaan syntax</option><option value="sem_lavaan_syntax">CB-SEM lavaan syntax</option><option value="seminr_syntax">PLS-SEM seminr syntax</option></optgroup>
+        </select></div>
+      </div>
+      <div class="field" id="rq-alpha-field"><label class="fl" for="rq-alpha">Significance level</label><div class="fc"><select id="rq-alpha"><option value="0.05">0.05</option><option value="0.01">0.01</option><option value="0.10">0.10</option></select></div></div>
+    </div>
+    <div class="field" id="rqCitDiv"></div>
+    <div id="rqPreview" class="preview-card"></div>
+    <div id="rqValidMsg" class="plan-msg"></div>
+    <div class="field"><label class="fl" for="rq-interp">Planned decision rule in Plan stage</label><div class="fc"><textarea id="rq-interp" rows="3" placeholder="State how the result will answer the research question."></textarea></div></div>
+  </div>
+  <div class="mfoot">
+    <button type="button" class="btn btn-d btn-sm" id="rqDelBtn" style="display:none" onclick="deleteRQ()">Delete</button>
+    <div class="sp"></div>
+    <button type="button" class="btn btn-s" onclick="closeModal('m-rq')">Cancel</button>
+    <button type="button" class="btn btn-p" id="rqSaveBtn" onclick="saveRQ()">Save analysis plan</button>
+  </div>
+</div>
+</div>
+
+<!-- Confirm -->
+<div class="conf-ov" id="confOv">
+  <div class="conf-box">
+    <div class="conf-t" id="confT"></div>
+    <div class="conf-m" id="confM"></div>
+    <div class="conf-acts">
+      <button type="button" class="btn btn-s btn-sm" onclick="resConf(false)">Cancel</button>
+      <button type="button" class="btn btn-d btn-sm" id="confOkBtn" onclick="resConf(true)">Delete</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-r" id="toastR" aria-live="assertive" role="alert"></div>
+<input type="file" id="fileInput" accept=".sframe,.json" hidden onchange="loadFile(event)">
+<input type="file" id="logoInput" accept="image/*" hidden onchange="loadLogo(event)">
+
+<script>
+'use strict';
+
+// â”€â”€ Pure-JS SHA-256 (RFC 6234) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Used as a fallback when crypto.subtle is unavailable (e.g. Firefox file://).
+(function(){
+  function rr(n,d){return(n>>>d)|(n<<(32-d));}
+  var K=[0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
+  window.sha256pure=function(msg){
+    var bytes=[];
+    for(var i=0;i<msg.length;i++){var c=msg.charCodeAt(i);if(c<128)bytes.push(c);else if(c<2048)bytes.push(192|(c>>6),128|(c&63));else bytes.push(224|(c>>12),128|((c>>6)&63),128|(c&63));}
+    var l=bytes.length;bytes.push(128);while(bytes.length%64!==56)bytes.push(0);
+    var blen=l*8;bytes.push(0,0,0,0,(blen>>>24)&255,(blen>>>16)&255,(blen>>>8)&255,blen&255);
+    var h=[0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
+    for(var b=0;b<bytes.length;b+=64){
+      var w=[];
+      for(var j=0;j<16;j++)w[j]=(bytes[b+j*4]<<24)|(bytes[b+j*4+1]<<16)|(bytes[b+j*4+2]<<8)|bytes[b+j*4+3];
+      for(var j=16;j<64;j++){var s0=rr(w[j-15],7)^rr(w[j-15],18)^(w[j-15]>>>3);var s1=rr(w[j-2],17)^rr(w[j-2],19)^(w[j-2]>>>10);w[j]=(w[j-16]+s0+w[j-7]+s1)>>>0;}
+      var a=h[0],bv=h[1],c2=h[2],d2=h[3],e=h[4],f=h[5],g=h[6],hh=h[7];
+      for(var j=0;j<64;j++){var S1=rr(e,6)^rr(e,11)^rr(e,25);var ch=(e&f)^(~e&g);var temp1=(hh+S1+ch+K[j]+w[j])>>>0;var S0=rr(a,2)^rr(a,13)^rr(a,22);var maj=(a&bv)^(a&c2)^(bv&c2);var temp2=(S0+maj)>>>0;hh=g;g=f;f=e;e=(d2+temp1)>>>0;d2=c2;c2=bv;bv=a;a=(temp1+temp2)>>>0;}
+      h[0]=(h[0]+a)>>>0;h[1]=(h[1]+bv)>>>0;h[2]=(h[2]+c2)>>>0;h[3]=(h[3]+d2)>>>0;h[4]=(h[4]+e)>>>0;h[5]=(h[5]+f)>>>0;h[6]=(h[6]+g)>>>0;h[7]=(h[7]+hh)>>>0;
+    }
+    return h.map(function(v){return('00000000'+v.toString(16)).slice(-8);}).join('');
+  };
+})();
+
+// â”€â”€ State â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+var S={meta:{title:'Untitled Survey',version:'1.0.0',description:'',authors:'',languages:'en'},choices:[],items:[],scales:[],branching:[],checks:[],analysis_plan:[],models:[],render:{mode:'standard',theme:'#2563eb',submit_label:'Submit',welcome:{title:'Welcome to this survey',intro_text:'Thank you for taking part. Your responses will be used for research and reporting purposes.',consent_text:'I understand the purpose of this survey and agree to participate.',consent_required:false,start_label:'Start Survey'},thankyou:{message:'Thank you for completing this survey.',redirect_url:'',show_download:false},header:{institution:'',logo_base64:'',show_progress:true},google_sheets_url:'',google_sheets_endpoint:''}};
+var hist=[],fut=[],selId=null,editRqId=null,pvTab='survey',pvPage=0,dirty=false,lastSaved=null,dragSrc=null,_cRes=null,anTab='plan';
+
+function snap(){hist.push(JSON.stringify(S));if(hist.length>60)hist.shift();fut=[];setDirty();updHistBtns();}
+function undo(){if(!hist.length)return;fut.push(JSON.stringify(S));S=JSON.parse(hist.pop());selId=null;ra();updHistBtns();}
+function redo(){if(!fut.length)return;hist.push(JSON.stringify(S));S=JSON.parse(fut.pop());selId=null;ra();updHistBtns();}
+function updHistBtns(){var u=document.getElementById('undoBtn'),r=document.getElementById('redoBtn');if(u)u.disabled=!hist.length;if(r)r.disabled=!fut.length;}
+function setDirty(){dirty=true;updSave();}
+function updSave(){var e=document.getElementById('saveSt');if(!dirty&&lastSaved){e.textContent='Saved '+tAgo(lastSaved);e.className='save-st saved';}else if(dirty){e.textContent='Unsaved changes';e.className='save-st dirty';}else{e.textContent='No changes';e.className='save-st';}}
+function tAgo(d){var s=Math.round((Date.now()-d)/1000);if(s<10)return'just now';if(s<60)return s+'s ago';return Math.round(s/60)+'m ago';}
+function uid(){return Math.random().toString(36).slice(2,9);}
+function ra(){renderItemList();renderAnalyse();updSave();document.getElementById('sbTitle').textContent=S.meta.title||'Untitled Survey';}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function gv(id){return(document.getElementById(id)||{}).value||'';}
+function sv(id,v){var e=document.getElementById(id);if(e)e.value=v||'';}
+
+// â”€â”€ Autosave â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+function autoSave(){if(!dirty)return;try{localStorage.setItem('sf_as',JSON.stringify({state:S,ts:Date.now()}));}catch(e){}}
+function chkAutoSave(){try{var d=localStorage.getItem('sf_as');if(!d)return;var p=JSON.parse(d),age=Math.round((Date.now()-p.ts)/60000);if(age>120)return;document.getElementById('recTime').textContent=age+'min';document.getElementById('recBan').hidden=false;window._as=p.state;}catch(e){}}
+function restoreAuto(){if(window._as){S=window._as;ra();setDirty();toast('Session restored','ok');}dismissRec();}
+function dismissRec(){document.getElementById('recBan').hidden=true;try{localStorage.removeItem('sf_as');}catch(e){}}
+setInterval(autoSave,30000);window.addEventListener('beforeunload',autoSave);
+
+// â”€â”€ Toast â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+function toast(msg,type,dur){type=type||'inf';dur=dur||3200;var e=document.createElement('div');e.className='toast '+type;e.textContent=msg;var r=document.getElementById('toastR');r.appendChild(e);setTimeout(function(){e.style.opacity='0';e.style.transition='opacity .25s';setTimeout(function(){e.remove();},250);},dur);}
+
+// â”€â”€ Confirm â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+function conf2(title,msg,okLbl){okLbl=okLbl||'Delete';document.getElementById('confT').textContent=title;document.getElementById('confM').textContent=msg;document.getElementById('confOkBtn').textContent=okLbl;document.getElementById('confOv').classList.add('open');return new Promise(function(res){_cRes=res;});}
+function resConf(v){document.getElementById('confOv').classList.remove('open');if(_cRes){_cRes(v);_cRes=null;}}
+
+// â”€â”€ Fab menu toggle â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+function toggleFabMenu(){var m=document.getElementById('fabMenu'),b=document.getElementById('fabMoreBtn');m.classList.toggle('open');b.classList.toggle('active');}
+function closeFabMenu(){document.getElementById('fabMenu').classList.remove('open');document.getElementById('fabMoreBtn').classList.remove('active');}
+// Close menu when clicking outside
+document.addEventListener('click',function(e){var m=document.getElementById('fabMenu'),b=document.getElementById('fabMoreBtn');if(m&&m.classList.contains('open')&&!m.contains(e.target)&&!b.contains(e.target))closeFabMenu();});
+
+// â”€â”€ Modes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+function setMode(m){document.querySelectorAll('.m-btn').forEach(function(b){b.setAttribute('aria-pressed',b.dataset.mode===m?'true':'false');});document.querySelectorAll('.mp').forEach(function(p){p.classList.remove('active');});document.getElementById('mp-'+m).classList.add('active');if(m==='preview')renderPreview();if(m==='analyse')renderAnalyse();}
+
+// â”€â”€ Modals â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+function openModal(id){document.getElementById(id).classList.add('open');}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+document.addEventListener('keydown',function(e){
+  if(e.key==='Escape')document.querySelectorAll('.mov.open').forEach(function(m){m.classList.remove('open');});
+  if((e.ctrlKey||e.metaKey)&&e.key==='s'){e.preventDefault();saveSframe();}
+  if((e.ctrlKey||e.metaKey)&&e.key==='z'){e.preventDefault();undo();}
+  if((e.ctrlKey||e.metaKey)&&(e.key==='y'||e.key==='Z')){e.preventDefault();redo();}
+  if((e.ctrlKey||e.metaKey)&&e.key==='o'){e.preventDefault();openFile();}
+});
+
+// â”€â”€ Settings â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+function openSettings(tab){
+  var r=S.render||{},w=r.welcome||{},ty=r.thankyou||{},h=r.header||{};
+  var theme=normHex(r.theme||'#2563eb');
+  sv('s-title',S.meta.title);sv('s-ver',S.meta.version||'1.0.0');
+  sv('s-lang',S.meta.languages||'en');sv('s-authors',S.meta.authors);
+  sv('s-desc',S.meta.description);sv('s-mode',r.mode||'standard');
+  sv('s-submit',r.submit_label||'Submit');sv('s-theme',theme);
+  var tp=document.getElementById('s-theme-picker');if(tp)tp.value=theme;
+  sv('s-wt',w.title||'');sv('s-wi',w.intro_text||'');sv('s-wc',w.consent_text||'');
+  sv('s-wsl',w.start_label||'Start Survey');
+  var wreq=document.getElementById('s-wreq');if(wreq)wreq.checked=!!w.consent_required;
+  sv('s-tym',ty.message||'Thank you for completing this survey.');sv('s-tyu',ty.redirect_url||'');
+  var tydl=document.getElementById('s-tydl');if(tydl)tydl.checked=!!ty.show_download;
+  sv('s-inst',h.institution||'');
+  var prog=document.getElementById('s-prog');if(prog)prog.checked=h.show_progress!==false;
+  sv('s-gsu',r.google_sheets_url||'');sv('s-gsep',r.google_sheets_endpoint||'');
+  if(h.logo_base64){var lp=document.getElementById('logoPrev');if(lp){lp.src='data:image/png;base64,'+h.logo_base64;lp.style.display='block';}document.getElementById('logoName').textContent='Logo loaded';var rb=document.getElementById('logoRmBtn');if(rb)rb.style.display='inline-flex';}
+  showST(tab||'meta');openModal('m-settings');
+}
+function showST(t){document.querySelectorAll('.stab').forEach(function(b){b.classList.remove('active');});document.querySelectorAll('.stp').forEach(function(p){p.classList.remove('active');});document.getElementById('st-'+t).classList.add('active');document.getElementById('sp-'+t).classList.add('active');}
+function normHex(v){
+  v=String(v||'').trim();
+  if(/^#[0-9a-fA-F]{6}$/.test(v))return v.toLowerCase();
+  if(/^#[0-9a-fA-F]{3}$/.test(v))return '#'+v[1]+v[1]+v[2]+v[2]+v[3]+v[3];
+  return '#2563eb';
+}
+function syncThemeFromPicker(){
+  var p=document.getElementById('s-theme-picker');if(p)sv('s-theme',p.value);
+}
+function syncThemeFromText(){
+  var v=gv('s-theme').trim();
+  if(/^#[0-9a-fA-F]{6}$/.test(v)){var p=document.getElementById('s-theme-picker');if(p)p.value=v;}
+}
+function saveSettings(){
+  snap();
+  S.meta.title=gv('s-title')||'Untitled Survey';S.meta.version=gv('s-ver')||'1.0.0';
+  S.meta.languages=gv('s-lang')||'en';S.meta.authors=gv('s-authors');S.meta.description=gv('s-desc');
+  if(!S.render)S.render={};
+  S.render.mode=gv('s-mode')||'standard';S.render.submit_label=gv('s-submit')||'Submit';S.render.theme=normHex(gv('s-theme'));
+  S.render.welcome={title:gv('s-wt'),intro_text:gv('s-wi'),consent_text:gv('s-wc'),consent_required:document.getElementById('s-wreq').checked,start_label:gv('s-wsl')||'Start Survey'};
+  S.render.thankyou={message:gv('s-tym'),redirect_url:gv('s-tyu'),show_download:document.getElementById('s-tydl').checked};
+  if(!S.render.header)S.render.header={};
+  S.render.header.institution=gv('s-inst');S.render.header.show_progress=document.getElementById('s-prog').checked;
+  S.render.google_sheets_url=gv('s-gsu');S.render.google_sheets_endpoint=gv('s-gsep');
+  closeModal('m-settings');ra();toast('Settings saved','ok');
+}
+function loadLogo(e){var f=e.target.files[0];if(!f)return;var r=new FileReader();r.onload=function(ev){var b64=ev.target.result.split(',')[1];if(!S.render.header)S.render.header={};S.render.header.logo_base64=b64;var lp=document.getElementById('logoPrev');if(lp){lp.src='data:image/png;base64,'+b64;lp.style.display='block';}document.getElementById('logoName').textContent=f.name;var rb=document.getElementById('logoRmBtn');if(rb)rb.style.display='inline-flex';};r.readAsDataURL(f);e.target.value='';}
+function removeLogo(){if(S.render.header)S.render.header.logo_base64='';var lp=document.getElementById('logoPrev');if(lp)lp.style.display='none';document.getElementById('logoName').textContent='No logo';var rb=document.getElementById('logoRmBtn');if(rb)rb.style.display='none';}
+
+// â”€â”€ File I/O â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+function openFile(){document.getElementById('fileInput').click();}
+function loadFile(e){
+  var f=e.target.files[0];if(!f)return;
+  var r=new FileReader();
+  r.onload=function(ev){
+    try{
+      var p=JSON.parse(ev.target.result),src=p.meta?p:(p.items?p:null);
+      if(!src){toast('Invalid .sframe file','err');return;}
+      S.meta=src.meta||S.meta;S.choices=src.choices||[];S.items=src.items||[];
+      S.scales=src.scales||[];S.branching=src.branching||[];S.checks=src.checks||[];
+      S.analysis_plan=src.analysis_plan||[];S.models=src.models||[];S.render=src.render||S.render;
+      ['welcome','thankyou','header'].forEach(function(k){if(!S.render[k])S.render[k]={};});
+      selId=null;ra();dirty=false;lastSaved=Date.now();updSave();
+      toast('Loaded: '+S.meta.title,'ok');
+    }catch(err){toast('Could not parse: '+err.message,'err');}
+  };
+  r.readAsText(f);e.target.value='';
+}
+
+// â”€â”€ SHA-256 helper (async, with pure-JS fallback) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+function sframeCanon(x){if(x===null)return{};if(Array.isArray(x))return x.map(sframeCanon);if(x&&typeof x==='object'){var o={};Object.keys(x).sort().forEach(function(k){o[k]=sframeCanon(x[k]);});return o;}return x;}
+async function sframeHash(payload){
+  var src=JSON.stringify(sframeCanon(payload));
+  if(window.crypto&&window.crypto.subtle){
+    try{
+      var dig=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(src));
+      return Array.from(new Uint8Array(dig)).map(function(b){return b.toString(16).padStart(2,'0');}).join('');
+    }catch(e){}
+  }
+  // Pure-JS fallback (always available)
+  return window.sha256pure(src);
+}
+async function saveSframe(){
+  var payload={hash:{algo:'sha256',value:''},version:S.meta.version,meta:S.meta,items:S.items,choices:S.choices,scales:S.scales,branching:S.branching,checks:S.checks,analysis_plan:S.analysis_plan,models:S.models||[],render:S.render};
+  payload.hash.value=await sframeHash(payload);
+  var blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+  var a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download=(S.meta.title||'survey').replace(/[^a-zA-Z0-9]/g,'_')+'.sframe';a.click();
+  dirty=false;lastSaved=Date.now();updSave();toast('Saved as '+a.download,'ok');
+}
+
+// â”€â”€ Item list â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+var TL={likert:'Likert',single_choice:'Single',multiple_choice:'Multi',numeric:'Number',text:'Text',textarea:'Long text',date:'Date',matrix:'Matrix',slider:'Slider',ranking:'Ranking',rating:'Rating',section_break:'Section',text_block:'Block'};
+var TB={likert:'b-li',single_choice:'b-si',multiple_choice:'b-mu',numeric:'b-nu',text:'b-te',textarea:'b-te',date:'b-nu',matrix:'b-ma',slider:'b-sl',ranking:'b-ra',rating:'b-ra',section_break:'b-se',text_block:'b-se'};
+function renderItemList(){
+  var el=document.getElementById('itemList'),q=(gv('itemSearch')||'').toLowerCase();
+  var items=S.items.filter(function(i){return!q||(i.label||'').toLowerCase().includes(q)||(i.id||'').toLowerCase().includes(q);});
+  if(!items.length){el.innerHTML='<div class="sb-empty"><div class="sb-empty-ic">&#128196;</div><div class="sb-empty-t">No questions yet</div><div class="sb-empty-b">Click "+ Add question" to get started, or use the &#8942; button for more item types.</div></div>';return;}
+  var cp=null;
+  el.innerHTML=items.map(function(item){
+    var ri=S.items.indexOf(item);
+    var sc=S.scales.find(function(s){return s.items&&s.items.includes(item.id);});
+    var ck=S.checks.find(function(c){return c.item_id===item.id;});
+    var isSec=item.type==='section_break',isTxt=item.type==='text_block';
+    var pd='';if(item.page&&item.page!==cp){pd='<div class="pg-div">Page '+item.page+'</div>';cp=item.page;}
+    var lc='ic-lbl'+(isSec?' sec':isTxt?' blk':'');
+    var bgs=[];
+    if(!isSec&&!isTxt)bgs.push('<span class="badge '+(TB[item.type]||'b-nu')+'">'+esc(TL[item.type]||item.type)+'</span>');
+    if(item.required)bgs.push('<span class="badge b-req">req</span>');
+    if(sc)bgs.push('<span class="badge b-sc">'+esc(sc.id)+'</span>');
+    if(item.reverse)bgs.push('<span class="badge b-rv">rev</span>');
+    if(ck)bgs.push('<span class="badge b-ck">attn</span>');
+    return pd+'<div class="ic'+(selId===item.id?' sel':'')+'" role="listitem" draggable="true" data-idx="'+ri+'" data-id="'+esc(item.id)+'" onclick="selItem(\''+item.id+'\')" ondragstart="dStart(event,'+ri+')" ondragover="dOver(event,'+ri+',event)" ondrop="dDrop(event,'+ri+')" ondragleave="this.classList.remove(\'drag-t\',\'drag-b\')"><div class="ic-h" title="Drag to reorder">&#8942;</div><div class="ic-body"><div class="'+lc+'">'+esc(item.label||'(no label)')+'</div><div class="ic-meta">'+bgs.join('')+'</div></div><div class="ic-acts"><button type="button" class="ib" title="Duplicate" onclick="event.stopPropagation();dupItem(\''+item.id+'\')">&#10697;</button><button type="button" class="ib del" title="Delete" onclick="event.stopPropagation();delItem(\''+item.id+'\')">&#128465;</button></div></div>';
+  }).join('');
+}
+function selItem(id){selId=id;renderItemList();openInsp(id);}
+
+// â”€â”€ Drag reorder â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+function dStart(e,idx){dragSrc=idx;e.currentTarget.classList.add('dragging');}
+function dOver(e,idx,ev){e.preventDefault();document.querySelectorAll('.ic').forEach(function(c){c.classList.remove('drag-t','drag-b','dragging');});var card=e.currentTarget,rect=card.getBoundingClientRect();card.classList.add(ev.clientY<rect.top+rect.height/2?'drag-t':'drag-b');}
+function dDrop(e,idx){e.preventDefault();document.querySelectorAll('.ic').forEach(function(c){c.classList.remove('drag-t','drag-b','dragging');});if(dragSrc===null||dragSrc===idx){dragSrc=null;return;}snap();var moved=S.items.splice(dragSrc,1)[0];var tgt=dragSrc<idx?idx-1:idx;S.items.splice(tgt,0,moved);dragSrc=null;renderItemList();}
+
+// â”€â”€ Inspector â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+var NCS=['likert','single_choice','multiple_choice','matrix','ranking'];
+function openInsp(id){
+  var item=S.items.find(function(i){return i.id===id;});if(!item)return;
+  document.getElementById('inspId').textContent=item.id;
+  document.getElementById('inspTypeLbl').textContent=TL[item.type]||item.type;
+  renderInspBody(item);
+  document.getElementById('inspector').classList.add('open');
+  document.getElementById('cPrompt').style.display='none';
+}
+function closeInsp(){document.getElementById('inspector').classList.remove('open');document.getElementById('cPrompt').style.display='flex';selId=null;renderItemList();}
+function fgs(title,body){return'<div class="fgs"><div class="fgs-hdr" onclick="this.parentElement.classList.toggle(\'col\')"><span class="fgs-t">'+title+'</span><span class="fgs-tog">&#9660;</span></div><div class="fgs-body">'+body+'</div></div>';}
+function safeId(s){return String(s||'choice').toLowerCase().replace(/[^a-z0-9_]+/g,'_').replace(/^_+|_+$/g,'')||'choice';}
+function itemChoiceLines(item){
+  var cs=S.choices.find(function(c){return c.id===(item.choice_set||'');});
+  if(!cs)return'';
+  return(cs.values||[]).map(function(v,i){return String(v)+' = '+String((cs.labels||[])[i]||v);}).join('\n');
+}
+function parseChoiceLines(txt){
+  var vals=[],lbls=[],used={};
+  String(txt||'').split('\n').map(function(x){return x.trim();}).filter(Boolean).forEach(function(line,i){
+    var m=line.match(/^([^=:]+)\s*[=:]\s*(.+)$/),v,l;
+    if(m){v=m[1].trim();l=m[2].trim();}
+    else{l=line;v=safeId(line);}
+    if(!l)return;
+    if(!v)v=String(i+1);
+    while(used[v])v=String(v)+'_'+(i+1);
+    used[v]=true;vals.push(isNaN(v)?v:Number(v));lbls.push(l);
+  });
+  return{values:vals,labels:lbls};
+}
+function saveItemChoices(){
+  if(!selId)return;
+  var idx=S.items.findIndex(function(i){return i.id===selId;});if(idx<0)return;
+  var parsed=parseChoiceLines(gv('fi-choice-lines'));
+  if(parsed.values.length<1){toast('Add at least one choice label','err');return;}
+  snap();
+  var item=S.items[idx],id=item.choice_set||safeId(item.id+'_choices');
+  item.choice_set=id;
+  var ex=S.choices.findIndex(function(c){return c.id===id;});
+  var prior=ex>=0?S.choices[ex]:{};
+  var cs={id:id,values:parsed.values,labels:parsed.labels,allow_other:!!prior.allow_other,randomise:!!prior.randomise};
+  if(ex>=0)S.choices[ex]=cs;else S.choices.push(cs);
+  renderItemList();renderInspBody(item);
+  toast('Choices updated','ok');
+}
+function renderInspBody(item){
+  var isSec=item.type==='section_break',isTxt=item.type==='text_block';
+  var csO=[['','select'],...S.choices.map(function(c){return[c.id,c.id+' ('+c.values.length+' opts)'];})];
+  var scO=[['','none'],...S.scales.map(function(s){return[s.id,s.id+': '+s.label];})];
+  var tO=[['likert','Likert'],['single_choice','Single choice'],['multiple_choice','Multiple choice'],['numeric','Numeric'],['text','Short text'],['textarea','Long text'],['date','Date'],['matrix','Matrix'],['slider','Slider'],['ranking','Ranking'],['rating','Rating']];
+  function fld(lbl,ctrl,hint,req){return'<div class="field"><label class="fl">'+lbl+(req?'<span class="fr">*</span>':'')+'</label><div class="fc">'+ctrl+'</div>'+(hint?'<span class="fhint">'+hint+'</span>':'')+'</div>';}
+  function inp(fid,val,ph,type){type=type||'text';return'<input type="'+type+'" id="'+fid+'" value="'+esc(val)+'" placeholder="'+(ph||'')+'" onblur="updF(\''+fid+'\')">';}
+  function ta(fid,val,ph,rows){rows=rows||3;return'<textarea id="'+fid+'" rows="'+rows+'" placeholder="'+(ph||'')+'" onblur="updF(\''+fid+'\')">'+esc(val)+'</textarea>';}
+  function sel(fid,opts,val){return'<select id="'+fid+'" onchange="updF(\''+fid+'\')">'+opts.map(function(p){return'<option value="'+esc(p[0])+'"'+(p[0]===val?' selected':'')+'>'+esc(p[1])+'</option>';}).join('')+'</select>';}
+  function chk(fid,checked,lbl){return'<label class="fcheck"><input type="checkbox" id="'+fid+'"'+(checked?' checked':'')+' onchange="updF(\''+fid+'\')"><span>'+lbl+'</span></label>';}
+  var identity=fgs('Identity',
+    fld('Item ID','<input type="text" id="fi-id" value="'+esc(item.id)+'" onblur="updIdF(this.value)"><div class="ferr" id="fi-id-err">&#9888; Invalid or duplicate ID</div>','Letters, numbers, and _ characters only.',true)+
+    fld('Question text',ta('fi-lbl',item.label||'','Question textâ€¦',2),'',true)+
+    (isSec?fld('Introduction text',ta('fi-intro',item.section_intro||'','Optional intro paragraphâ€¦')):'')
+  );
+  var config=isSec||isTxt?'':fgs('Configuration',
+    fld('Response type',sel('fi-type',tO,item.type))+
+    (NCS.includes(item.type)?fld('Choice set',sel('fi-cs',csO,item.choice_set||'')):'') +
+    (NCS.includes(item.type)?fld('Choice labels','<textarea id="fi-choice-lines" rows="5" placeholder="One option per line, or value = Label" onblur="saveItemChoices()">'+esc(itemChoiceLines(item))+'</textarea>','For single choice, these are the respondent-facing category labels.'):'') +
+    (item.type==='matrix'?fld('Matrix row labels',ta('fi-mrows',(item.matrix_items||[]).join('\n'),'One label per lineâ€¦'),'One per line.'):'') +
+    (item.type==='slider'?'<div class="frow">'+fld('Min',inp('fi-smin',item.slider_min||0,'','number'))+fld('Max',inp('fi-smax',item.slider_max||100,'','number'))+fld('Step',inp('fi-sstep',item.slider_step||1,'','number'))+'</div>':'') +
+    (item.type==='rating'?'<div class="frow">'+fld('Max stars',inp('fi-rmax',item.rating_max||5,'','number'))+fld('Icon',sel('fi-ricon',[['star','Star â˜…'],['heart','Heart â™¥']],item.rating_icon||'star'))+'</div>':'') +
+    fld('Scale',sel('fi-scale',scO,item.scale_id||''))+
+    fld('Page number',inp('fi-page',item.page||'','Leave blank','number'),'Group items across pages.')
+  );
+  var options=isSec||isTxt?'':fgs('Options',
+    chk('fi-req',item.required,'Required')+
+    (['likert','numeric','slider','rating'].includes(item.type)?chk('fi-rev',item.reverse,'Reverse code within scale'):'')+
+    fld('Help text',inp('fi-help',item.help||'','Optional hint shown below the question'))+
+    (['text','textarea'].includes(item.type)?fld('Placeholder',inp('fi-ph',item.placeholder||'','Placeholder text')):'')
+  );
+  document.getElementById('inspBody').innerHTML=identity+config+options;
+}
+var FMAP={'fi-lbl':'label','fi-intro':'section_intro','fi-type':'type','fi-cs':'choice_set','fi-scale':'scale_id','fi-help':'help','fi-ph':'placeholder','fi-req':'required','fi-rev':'reverse','fi-smin':'slider_min','fi-smax':'slider_max','fi-sstep':'slider_step','fi-rmax':'rating_max','fi-ricon':'rating_icon','fi-page':'page','fi-mrows':'matrix_items'};
+function updF(id){
+  if(!selId)return;var idx=S.items.findIndex(function(i){return i.id===selId;});if(idx<0)return;
+  var el=document.getElementById(id);if(!el)return;
+  var v=el.type==='checkbox'?el.checked:(el.value||''),f=FMAP[id];if(!f)return;
+  snap();
+  if(f==='matrix_items')v=v.split('\n').map(function(s){return s.trim();}).filter(Boolean);
+  else if(['slider_min','slider_max','slider_step','rating_max'].includes(f))v=parseFloat(v)||0;
+  else if(f==='page')v=v?parseInt(v):null;
+  else if(f==='choice_set'||f==='scale_id')v=v||null;
+  else if(f==='help'||f==='placeholder')v=v||null;
+  S.items[idx][f]=v;
+  if(f==='type'){
+    if(NCS.includes(v)&&!S.items[idx].choice_set){
+      S.items[idx].choice_set=['likert','matrix'].includes(v)?ensureChoiceSet('agree'):ensureChoiceSet('basic');
+    }
+    document.getElementById('inspTypeLbl').textContent=TL[v]||v;renderInspBody(S.items[idx]);
+  }
+  renderItemList();
+}
+function updIdF(nid){
+  if(!selId)return;var idx=S.items.findIndex(function(i){return i.id===selId;});if(idx<0)return;
+  var err=document.getElementById('fi-id-err');
+  if(!nid||!/^[a-zA-Z0-9_]+$/.test(nid)||S.items.find(function(i,j){return j!==idx&&i.id===nid;})){err&&err.classList.add('show');return;}
+  err&&err.classList.remove('show');snap();S.items[idx].id=nid;selId=nid;
+  document.getElementById('inspId').textContent=nid;renderItemList();
+}
+
+// â”€â”€ Item CRUD â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+function ensureChoiceSet(kind){
+  var id=kind==='binary'?'yes_no':kind==='basic'?'options_3':'agree5';
+  if(S.choices.find(function(c){return c.id===id;}))return id;
+  var cs;
+  if(id==='yes_no')cs={id:id,values:['yes','no'],labels:['Yes','No'],allow_other:false,randomise:false};
+  else if(id==='options_3')cs={id:id,values:['option_1','option_2','option_3'],labels:['Option 1','Option 2','Option 3'],allow_other:false,randomise:false};
+  else cs={id:id,values:[1,2,3,4,5],labels:['Strongly disagree','Disagree','Neither agree nor disagree','Agree','Strongly agree'],allow_other:false,randomise:false};
+  S.choices.push(cs);
+  return id;
+}
+function defaultLabel(type,n){
+  var labels={
+    likert:'Agreement item '+n,
+    single_choice:'Select one option',
+    multiple_choice:'Select all options that apply',
+    matrix:'Rate each statement',
+    numeric:'Enter a number',
+    text:'Short answer',
+    textarea:'Long answer',
+    slider:'Move the slider',
+    ranking:'Rank these options',
+    rating:'Rate this item',
+    date:'Select a date',
+    section_break:'New section',
+    text_block:'Instruction text'
+  };
+  return labels[type]||('Question '+n);
+}
+function qAdd(type){
+  var prefix={'section_break':'sec','text_block':'txt'}[type]||type.slice(0,3);
+  var n=S.items.filter(function(i){return i.type===type;}).length+1;
+  var nid=prefix+'_'+n;while(S.items.find(function(i){return i.id===nid;})){n++;nid=prefix+'_'+n;}
+  snap();
+  var choice=null;
+  if(['likert','matrix'].includes(type))choice=ensureChoiceSet('agree');
+  else if(['single_choice','multiple_choice','ranking'].includes(type))choice=ensureChoiceSet('basic');
+  var item={id:nid,label:defaultLabel(type,n),type:type,required:false,reverse:false,choice_set:choice,scale_id:null,help:null,placeholder:null,matrix_items:null,slider_min:0,slider_max:100,slider_step:1,rating_max:5,rating_icon:'star',section_intro:null,page:null};
+  if(type==='matrix')item.matrix_items=['Service quality','Sustainability','Overall experience'];
+  if(type==='section_break')item.section_intro='Use this section to introduce the next group of questions.';
+  if(type==='text_block')item.label='Add instructions or explanatory text here.';
+  S.items.push(item);
+  selId=nid;renderItemList();openInsp(nid);
+}
+function dupItem(id){var item=S.items.find(function(i){return i.id===id;});if(!item)return;snap();var copy=JSON.parse(JSON.stringify(item));copy.id=id+'_copy';var idx=S.items.findIndex(function(i){return i.id===id;});S.items.splice(idx+1,0,copy);renderItemList();toast('Duplicated','ok');}
+function dupSelItem(){if(selId)dupItem(selId);}
+function delItem(id){conf2('Delete item','This removes the item from all scales, branches, and checks.').then(function(ok){if(!ok)return;snap();rmItem(id);if(selId===id){selId=null;closeInsp();}renderItemList();toast('Deleted','inf');});}
+function delSelItem(){if(selId)delItem(selId);}
+function rmItem(id){
+  S.items=S.items.filter(function(i){return i.id!==id;});
+  S.scales=S.scales.map(function(s){return Object.assign({},s,{items:(s.items||[]).filter(function(x){return x!==id;}),reverse_items:(s.reverse_items||[]).filter(function(x){return x!==id;})});});
+  S.branching=S.branching.filter(function(b){return b.item_id!==id&&b.depends_on!==id;});
+  S.checks=S.checks.filter(function(c){return c.item_id!==id;});
+}
+
+// â”€â”€ Choices â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+function openChoiceModal(){sv('c-id','');document.getElementById('cRows').innerHTML='';document.getElementById('c-other').checked=false;document.getElementById('c-rand').checked=false;openModal('m-choice');}
+function addCRow(v,l){v=v||'';l=l||'';var d=document.createElement('div');d.className='crow';d.innerHTML='<span class="crow-dh">&#8942;</span><div style="display:flex;gap:4px;flex:1"><input type="text" placeholder="Value" value="'+esc(String(v))+'" style="flex:.35;border:none;font-size:11px;padding:3px 4px"><input type="text" placeholder="Label" value="'+esc(String(l))+'" style="flex:.65;border:none;font-size:11px;padding:3px 4px"></div><button type="button" class="crow-rm" onclick="this.parentElement.remove()">&#215;</button>';document.getElementById('cRows').appendChild(d);}
+function fillL5(){document.getElementById('cRows').innerHTML='';[[1,'Strongly disagree'],[2,'Disagree'],[3,'Neutral'],[4,'Agree'],[5,'Strongly agree']].forEach(function(p){addCRow(p[0],p[1]);});}
+function fillL7(){document.getElementById('cRows').innerHTML='';[[1,'Strongly disagree'],[2,'Disagree'],[3,'Somewhat disagree'],[4,'Neutral'],[5,'Somewhat agree'],[6,'Agree'],[7,'Strongly agree']].forEach(function(p){addCRow(p[0],p[1]);});}
+function fillYN(){document.getElementById('cRows').innerHTML='';[['yes','Yes'],['no','No']].forEach(function(p){addCRow(p[0],p[1]);});}
+function fillFr(){document.getElementById('cRows').innerHTML='';[[1,'Never'],[2,'Rarely'],[3,'Sometimes'],[4,'Often'],[5,'Always']].forEach(function(p){addCRow(p[0],p[1]);});}
+function fillIm(){document.getElementById('cRows').innerHTML='';[[1,'Not important'],[2,'Slightly'],[3,'Moderately'],[4,'Very'],[5,'Extremely']].forEach(function(p){addCRow(p[0],p[1]);});}
+function saveChoice(){
+  var id=gv('c-id').trim();if(!id){toast('Choice set ID required','err');return;}
+  var rows=Array.from(document.querySelectorAll('#cRows .crow'));
+  var vals=[],lbls=[];
+  rows.forEach(function(r){var ins=r.querySelectorAll('input');var v=ins[0].value.trim(),l=ins[1].value.trim();if(v&&l){vals.push(isNaN(v)?v:Number(v));lbls.push(l);}});
+  if(!vals.length){toast('Add at least one option','err');return;}
+  snap();
+  var cs={id:id,values:vals,labels:lbls,allow_other:document.getElementById('c-other').checked,randomise:document.getElementById('c-rand').checked};
+  var ex=S.choices.findIndex(function(c){return c.id===id;});
+  if(ex>=0)S.choices[ex]=cs;else S.choices.push(cs);
+  closeModal('m-choice');toast('Choice set saved','ok');
+}
+
+// â”€â”€ Scales â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+function openScaleModal(){
+  sv('sc-id','');sv('sc-lbl','');document.getElementById('sc-meth').value='mean';sv('sc-minv','');
+  var eli=S.items.filter(function(i){return['likert','numeric','slider','rating'].includes(i.type);});
+  document.getElementById('scItemCBs').innerHTML=eli.length?eli.map(function(i){return'<label class="fcheck"><input type="checkbox" id="sci_'+i.id+'" value="'+esc(i.id)+'" onchange="updRevCBs()"><span>'+esc(i.id)+': '+esc((i.label||'').slice(0,40))+'</span></label>';}).join(''):'<span style="font-size:11px;color:var(--t3)">Add scale-compatible items first.</span>';
+  document.getElementById('scRevCBs').innerHTML='<span style="font-size:11px;color:var(--t3)">Select items above first.</span>';
+  openModal('m-scale');
+}
+function updRevCBs(){
+  var sel=Array.from(document.querySelectorAll('#scItemCBs input:checked')).map(function(c){return c.value;});
+  var rv=document.getElementById('scRevCBs');
+  if(!sel.length){rv.innerHTML='<span style="font-size:11px;color:var(--t3)">Select items above first.</span>';return;}
+  rv.innerHTML=S.items.filter(function(i){return sel.includes(i.id);}).map(function(i){return'<label class="fcheck"><input type="checkbox" id="rev_'+i.id+'" value="'+esc(i.id)+'"><span>'+esc(i.id)+': '+esc((i.label||'').slice(0,40))+'</span></label>';}).join('');
+}
+function saveScale(){
+  var id=gv('sc-id').trim(),lbl=gv('sc-lbl').trim();if(!id||!lbl){toast('Scale ID and label required','err');return;}
+  var items=Array.from(document.querySelectorAll('#scItemCBs input:checked')).map(function(c){return c.value;});
+  var rev=Array.from(document.querySelectorAll('#scRevCBs input:checked')).map(function(c){return c.value;});
+  if(!items.length){toast('Select at least one item','err');return;}
+  var mv=parseInt(gv('sc-minv'));snap();
+  var sc={id:id,label:lbl,items:items,method:document.getElementById('sc-meth').value,min_valid:isNaN(mv)?null:mv,reverse_items:rev.length?rev:null,weights:null};
+  var ex=S.scales.findIndex(function(s){return s.id===id;});if(ex>=0)S.scales[ex]=sc;else S.scales.push(sc);
+  S.items=S.items.map(function(item){return Object.assign({},item,{scale_id:items.includes(item.id)?id:(item.scale_id===id?null:item.scale_id),reverse:items.includes(item.id)?rev.includes(item.id):item.reverse});});
+  closeModal('m-scale');renderItemList();toast('Scale saved','ok');if(selId)openInsp(selId);
+}
+
+// â”€â”€ Branching â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+function openBranchModal(){
+  var qItems=S.items.filter(function(i){return!['section_break','text_block'].includes(i.type);});
+  var opts=qItems.map(function(i){return'<option value="'+esc(i.id)+'">'+esc(i.id)+': '+esc((i.label||'').slice(0,40))+'</option>';}).join('');
+  document.getElementById('br-tgt').innerHTML=opts;document.getElementById('br-dep').innerHTML=opts;sv('br-val','');openModal('m-branch');
+}
+function saveBranch(){
+  var t=gv('br-tgt'),d=gv('br-dep');if(t===d){toast('Choose a different controlling item','err');return;}
+  var v=gv('br-val').trim();if(!v){toast('Enter a match value','err');return;}
+  snap();S.branching.push({id:uid(),item_id:t,depends_on:d,operator:gv('br-op'),value:v,action:gv('br-act')});
+  closeModal('m-branch');toast('Branching rule added','ok');
+}
+
+// â”€â”€ Attention checks â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+function openCheckModal(){
+  var n=S.checks.length+1;sv('ck-id','attn_'+n);sv('ck-pass','');sv('ck-lbl','');
+  var opts=S.items.filter(function(i){return!['section_break','text_block'].includes(i.type);}).map(function(i){return'<option value="'+esc(i.id)+'">'+esc(i.id)+': '+esc((i.label||'').slice(0,40))+'</option>';}).join('');
+  document.getElementById('ck-item').innerHTML=opts;openModal('m-check');
+}
+function saveCheck(){
+  var id=gv('ck-id').trim();if(!id){toast('Check ID required','err');return;}
+  var pv=gv('ck-pass').trim();var pvArr=pv?pv.split(',').map(function(x){return x.trim();}).map(function(x){return isNaN(x)?x:Number(x);}):null;
+  snap();S.checks.push({id:id,item_id:gv('ck-item'),type:gv('ck-type'),pass_values:pvArr,fail_action:gv('ck-fail'),label:gv('ck-lbl')||null,notes:null});
+  closeModal('m-check');toast('Attention check added','ok');
+}
+
+// Analyse registry and role-based plan editor
+var CSHORT={field_2018:'Field (2018)',cohen_1988:'Cohen (1988)',mann_1947:'Mann & Whitney (1947)',kruskal_1952:'Kruskal & Wallis (1952)',spearman_1904:'Spearman (1904)',kendall_1938:'Kendall (1938)',cronbach_1951:'Cronbach (1951)',hosmer_2013:'Hosmer et al. (2013)',mackinnon_2008:'MacKinnon (2008)',aiken_1991:'Aiken & West (1991)'};
+var ANALYSIS_REGISTRY={
+frequency:{family:'descriptive',label:'Frequency table',roles:[{id:'variable',label:'Variable',min:1,max:1,levels:['nominal','ordinal','likert']}],showAlpha:false,showHypotheses:false,showEffectSize:false,assumptions:[],output:'Counts, percentages, valid percentages, missing values.',refs:[]},
+descriptives:{family:'descriptive',label:'Descriptives',roles:[{id:'variables',label:'Variables',min:1,max:99,levels:['continuous','scale','ordinal','likert']},{id:'split_by',label:'Split by (optional)',min:0,max:1,levels:['nominal','ordinal']}],showAlpha:false,showHypotheses:false,showEffectSize:false,assumptions:[],output:'N, valid N, missing N, mean, SD, median, IQR, range, skewness, kurtosis, SE, CI.',refs:[]},
+missing_data:{family:'data_quality',label:'Missing values',roles:[{id:'variables',label:'Variables',min:0,max:99,levels:['any']}],showAlpha:false,showHypotheses:false,showEffectSize:false,assumptions:[],output:'Item missingness, respondent missingness, patterns, deletion summary.',refs:[]},
+quality:{family:'data_quality',label:'Quality report',roles:[{id:'variables',label:'Variables',min:0,max:99,levels:['any']}],showAlpha:false,showHypotheses:false,showEffectSize:false,assumptions:[],output:'Attention checks, response quality flags, and quality summary.',refs:[]},
+scale_descriptives:{family:'descriptive',label:'Scale descriptives',roles:[{id:'scales',label:'Scale scores',min:0,max:99,levels:['scale']}],showAlpha:false,showHypotheses:false,showEffectSize:false,assumptions:[],output:'Scale means, variability, missingness, and confidence intervals.',refs:[]},
+crosstab:{family:'categorical',label:'Cross-tab',roles:[{id:'row',label:'Row variable',min:1,max:1,levels:['nominal','ordinal']},{id:'column',label:'Column variable',min:1,max:1,levels:['nominal','ordinal']}],showAlpha:false,showHypotheses:false,showEffectSize:true,assumptions:['Expected cell counts'],output:'Cross-tabulation with association measures when run.',refs:['field_2018']},
+chi_square:{family:'categorical',label:'Chi-square',roles:[{id:'row',label:'Variable X',min:1,max:1,levels:['nominal','ordinal']},{id:'column',label:'Variable Y',min:1,max:1,levels:['nominal','ordinal']}],showAlpha:true,showHypotheses:true,showEffectSize:true,assumptions:['Expected-count check'],output:'Chi-square, p value, Cramer V or phi.',refs:['field_2018','cohen_1988']},
+fisher_exact:{family:'categorical',label:"Fisher's exact",roles:[{id:'row',label:'Variable X',min:1,max:1,levels:['nominal','ordinal']},{id:'column',label:'Variable Y',min:1,max:1,levels:['nominal','ordinal']}],showAlpha:true,showHypotheses:true,showEffectSize:true,assumptions:['Sparse-table handling'],output:"Fisher's exact p value and odds ratio for 2 x 2 tables.",refs:['field_2018']},
+mcnemar:{family:'related_samples',label:'McNemar',roles:[{id:'before',label:'Before/condition 1',min:1,max:1,levels:['nominal']},{id:'after',label:'After/condition 2',min:1,max:1,levels:['nominal']}],showAlpha:true,showHypotheses:true,showEffectSize:false,assumptions:['Paired binary categories'],output:'McNemar chi-square and p value.',refs:['field_2018']},
+cochran_q:{family:'related_samples',label:"Cochran's Q",roles:[{id:'measures',label:'Binary repeated measures',min:2,max:99,levels:['nominal']}],showAlpha:true,showHypotheses:true,showEffectSize:false,assumptions:['Related binary measures'],output:"Cochran's Q and pairwise McNemar plan.",refs:['field_2018']},
+mann_whitney:{family:'group_comparison',label:'Mann-Whitney U',roles:[{id:'group',label:'Grouping variable',min:1,max:1,levels:['nominal','ordinal']},{id:'outcome',label:'Outcome variable',min:1,max:1,levels:['ordinal','continuous','scale','likert']}],showAlpha:true,showHypotheses:true,showEffectSize:true,assumptions:['Exactly two groups'],output:'U statistic, p value, rank-biserial effect size.',refs:['mann_1947','cohen_1988']},
+t_test_ind:{family:'group_comparison',label:'Independent t-test',roles:[{id:'group',label:'Grouping variable',min:1,max:1,levels:['nominal']},{id:'outcome',label:'Outcome variable',min:1,max:1,levels:['continuous','scale']}],showAlpha:true,showHypotheses:true,showEffectSize:true,assumptions:['Normality','Equal variance'],output:'t, df, p value, Cohen d.',refs:['field_2018','cohen_1988']},
+t_test_pair:{family:'related_samples',label:'Paired t-test',roles:[{id:'before',label:'Measure 1',min:1,max:1,levels:['continuous','scale']},{id:'after',label:'Measure 2',min:1,max:1,levels:['continuous','scale']}],showAlpha:true,showHypotheses:true,showEffectSize:true,assumptions:['Normality of differences'],output:'Paired t, df, p value, dz.',refs:['field_2018']},
+wilcoxon_pair:{family:'related_samples',label:'Wilcoxon signed-rank',roles:[{id:'before',label:'Measure 1',min:1,max:1,levels:['ordinal','continuous','scale','likert']},{id:'after',label:'Measure 2',min:1,max:1,levels:['ordinal','continuous','scale','likert']}],showAlpha:true,showHypotheses:true,showEffectSize:true,assumptions:['Paired ordinal or continuous measures'],output:'V, p value, r effect size.',refs:['cohen_1988']},
+kruskal_wallis:{family:'group_comparison',label:'Kruskal-Wallis',roles:[{id:'group',label:'Grouping variable',min:1,max:1,levels:['nominal','ordinal']},{id:'outcome',label:'Outcome variable',min:1,max:1,levels:['ordinal','continuous','scale','likert']}],showAlpha:true,showHypotheses:true,showEffectSize:true,assumptions:['Independent groups'],output:'H, p value, eta-squared.',refs:['kruskal_1952','cohen_1988']},
+anova_one:{family:'group_comparison',label:'One-way ANOVA',roles:[{id:'group',label:'Grouping variable',min:1,max:1,levels:['nominal']},{id:'outcome',label:'Outcome variable',min:1,max:1,levels:['continuous','scale']}],showAlpha:true,showHypotheses:true,showEffectSize:true,assumptions:['Normality','Homogeneity of variance'],output:'F, p value, eta-squared, post-hoc plan.',refs:['field_2018','cohen_1988']},
+anova_two:{family:'group_comparison',label:'Two-way ANOVA',roles:[{id:'factor1',label:'Factor 1',min:1,max:1,levels:['nominal']},{id:'factor2',label:'Factor 2',min:1,max:1,levels:['nominal']},{id:'outcome',label:'Outcome',min:1,max:1,levels:['continuous','scale']}],showAlpha:true,showHypotheses:true,showEffectSize:true,assumptions:['Interaction interpretation','Homogeneity of variance'],output:'Main effects, interaction, partial eta-squared.',refs:['field_2018','cohen_1988']},
+ancova:{family:'group_comparison',label:'ANCOVA',roles:[{id:'group',label:'Group',min:1,max:1,levels:['nominal']},{id:'covariates',label:'Covariates',min:1,max:99,levels:['continuous','scale']},{id:'outcome',label:'Outcome',min:1,max:1,levels:['continuous','scale']}],showAlpha:true,showHypotheses:true,showEffectSize:true,assumptions:['Homogeneity of regression slopes'],output:'Adjusted group effects and slope warning.',refs:['field_2018']},
+repeated_anova:{family:'related_samples',label:'Repeated-measures ANOVA',roles:[{id:'measures',label:'Repeated measures',min:2,max:99,levels:['continuous','scale']}],showAlpha:true,showHypotheses:true,showEffectSize:true,assumptions:['Within-subject design'],output:'Within-subject ANOVA summary.',refs:['field_2018']},
+friedman:{family:'related_samples',label:'Friedman',roles:[{id:'measures',label:'Repeated ordinal measures',min:2,max:99,levels:['ordinal','continuous','scale','likert']}],showAlpha:true,showHypotheses:true,showEffectSize:false,assumptions:['Related measures'],output:'Friedman chi-square and p value.',refs:['field_2018']},
+correlation_pearson:{family:'association',label:'Pearson correlation',roles:[{id:'x',label:'Variable X',min:1,max:1,levels:['continuous','scale']},{id:'y',label:'Variable Y',min:1,max:1,levels:['continuous','scale']}],showAlpha:true,showHypotheses:true,showEffectSize:true,assumptions:['Linearity','Bivariate normality'],output:'r, p value, confidence interval where feasible.',refs:['field_2018','cohen_1988']},
+correlation_spearman:{family:'association',label:'Spearman correlation',roles:[{id:'x',label:'Variable X',min:1,max:1,levels:['ordinal','continuous','scale','likert']},{id:'y',label:'Variable Y',min:1,max:1,levels:['ordinal','continuous','scale','likert']}],showAlpha:true,showHypotheses:true,showEffectSize:true,assumptions:['Monotonic association'],output:'rho and p value.',refs:['spearman_1904','cohen_1988']},
+correlation_kendall:{family:'association',label:'Kendall tau',roles:[{id:'x',label:'Variable X',min:1,max:1,levels:['ordinal','likert']},{id:'y',label:'Variable Y',min:1,max:1,levels:['ordinal','likert']}],showAlpha:true,showHypotheses:true,showEffectSize:true,assumptions:['Ordinal association'],output:'tau and p value.',refs:['kendall_1938']},
+partial_correlation:{family:'association',label:'Partial correlation',roles:[{id:'x',label:'Variable X',min:1,max:1,levels:['continuous','scale']},{id:'y',label:'Variable Y',min:1,max:1,levels:['continuous','scale']},{id:'controls',label:'Control variables',min:1,max:99,levels:['continuous','scale']}],showAlpha:true,showHypotheses:true,showEffectSize:true,assumptions:['Linear control model'],output:'Partial r and p value.',refs:['field_2018']},
+regression_linear:{family:'regression',label:'Linear regression',roles:[{id:'dependent',label:'Dependent variable',min:1,max:1,levels:['continuous','scale']},{id:'predictors',label:'Predictors',min:1,max:99,levels:['nominal','ordinal','continuous','scale','likert']}],showAlpha:true,showHypotheses:true,showEffectSize:true,assumptions:['Residual normality','VIF','Cook distance'],output:'Model fit, coefficients, assumptions.',refs:['field_2018']},
+regression_logistic_binary:{family:'regression',label:'Binary logistic',roles:[{id:'dependent',label:'Binary outcome',min:1,max:1,levels:['nominal']},{id:'predictors',label:'Predictors',min:1,max:99,levels:['nominal','ordinal','continuous','scale']}],showAlpha:true,showHypotheses:true,showEffectSize:true,assumptions:['Sparse cells','Separation warning'],output:'Odds ratios, pseudo R-squared, classification table.',refs:['hosmer_2013']},
+regression_logistic_ordinal:{family:'regression',label:'Ordinal logistic',roles:[{id:'dependent',label:'Ordinal outcome',min:1,max:1,levels:['ordinal','likert']},{id:'predictors',label:'Predictors',min:1,max:99,levels:['nominal','ordinal','continuous','scale']}],showAlpha:true,showHypotheses:true,showEffectSize:true,assumptions:['Ordered outcome'],output:'MASS::polr model plan, odds ratios, fit table.',refs:['hosmer_2013']},
+regression_logistic_multinomial:{family:'regression',label:'Multinomial logistic',roles:[{id:'dependent',label:'Nominal outcome',min:1,max:1,levels:['nominal']},{id:'predictors',label:'Predictors',min:1,max:99,levels:['nominal','ordinal','continuous','scale']}],showAlpha:true,showHypotheses:true,showEffectSize:true,assumptions:['Reference category'],output:'nnet::multinom plan, odds ratios, classification table.',refs:['hosmer_2013']},
+mediation:{family:'regression',label:'Mediation',roles:[{id:'predictor',label:'Predictor',min:1,max:1,levels:['continuous','scale','nominal']},{id:'mediator',label:'Mediator',min:1,max:1,levels:['continuous','scale']},{id:'outcome',label:'Outcome',min:1,max:1,levels:['continuous','scale']}],showAlpha:true,showHypotheses:true,showEffectSize:true,assumptions:['Regression assumptions','Bootstrap CI'],output:'Direct, indirect, total effects, bootstrap CI.',refs:['mackinnon_2008']},
+moderation:{family:'regression',label:'Moderation',roles:[{id:'predictor',label:'Predictor',min:1,max:1,levels:['continuous','scale']},{id:'moderator',label:'Moderator',min:1,max:1,levels:['continuous','scale']},{id:'outcome',label:'Outcome',min:1,max:1,levels:['continuous','scale']}],showAlpha:true,showHypotheses:true,showEffectSize:true,assumptions:['Interaction model'],output:'Interaction coefficient and conditional effects.',refs:['aiken_1991']},
+reliability_alpha:{family:'measurement',label:'Reliability alpha',roles:[{id:'items',label:'Scale items',min:2,max:99,levels:['ordinal','likert','continuous']}],showAlpha:false,showHypotheses:false,showEffectSize:false,assumptions:[],output:'Alpha, item-total, alpha if deleted.',refs:['cronbach_1951']},
+reliability_omega:{family:'measurement',label:'Reliability omega',roles:[{id:'items',label:'Scale items',min:2,max:99,levels:['ordinal','likert','continuous']}],showAlpha:false,showHypotheses:false,showEffectSize:false,assumptions:[],output:'Omega estimate when the optional psych package is available.',refs:['cronbach_1951']},
+item_diagnostics:{family:'measurement',label:'Item diagnostics',roles:[{id:'items',label:'Items',min:1,max:99,levels:['ordinal','likert','continuous']}],showAlpha:false,showHypotheses:false,showEffectSize:false,assumptions:[],output:'Item distributions, item-total correlations, and floor or ceiling checks.',refs:['field_2018']},
+efa_readiness:{family:'measurement',label:'EFA readiness',roles:[{id:'items',label:'Items',min:3,max:99,levels:['ordinal','likert','continuous']}],showAlpha:false,showHypotheses:false,showEffectSize:false,assumptions:['KMO','Bartlett test'],output:'KMO, Bartlett, parallel-analysis planning.',refs:['field_2018']},
+efa_solution:{family:'measurement',label:'EFA solution',roles:[{id:'items',label:'Items',min:3,max:99,levels:['ordinal','likert','continuous']}],showAlpha:false,showHypotheses:false,showEffectSize:false,assumptions:['Factor retention','Cross-loadings'],output:'Loadings, communalities, uniqueness, cross-loading flags.',refs:['field_2018']},
+cfa_lavaan_syntax:{family:'model',label:'CFA lavaan syntax',roles:[{id:'model',label:'Saved model',min:0,max:1,levels:['model']}],showAlpha:false,showHypotheses:false,showEffectSize:false,assumptions:['Construct indicators'],output:'lavaan measurement model syntax.',refs:['field_2018']},
+sem_lavaan_syntax:{family:'model',label:'CB-SEM lavaan syntax',roles:[{id:'model',label:'Saved model',min:1,max:1,levels:['model']}],showAlpha:true,showHypotheses:true,showEffectSize:true,assumptions:['Measurement and structural paths'],output:'lavaan measurement, structural, indirect, and total-effect syntax.',refs:['field_2018']},
+seminr_syntax:{family:'model',label:'PLS-SEM seminr syntax',roles:[{id:'model',label:'Saved model',min:1,max:1,levels:['model']}],showAlpha:true,showHypotheses:true,showEffectSize:true,assumptions:['Construct modes and bootstrapping'],output:'seminr measurement, structural, bootstrap, reliability, AVE, and HTMT syntax.',refs:['field_2018']}
+};
+var TCITS={};var TLBLS={};Object.keys(ANALYSIS_REGISTRY).forEach(function(k){TCITS[k]=ANALYSIS_REGISTRY[k].refs||[];TLBLS[k]=ANALYSIS_REGISTRY[k].label;});
+var TEST_SUGGEST={'cat+cat':'chi_square','cat+cont':'mann_whitney','cont+cat':'mann_whitney','cont+cont':'correlation_pearson','many':'regression_linear'};
+function varLevel(id){var sc=S.scales.find(function(s){return s.id===id;});if(sc)return{level:'scale',code:'SCL',cls:'scl',type:'scale score'};var i=S.items.find(function(x){return x.id===id;});if(!i)return{level:'model',code:'MOD',cls:'id',type:'model'};if(i.type==='likert')return{level:'likert',code:'LIK',cls:'lik',type:i.type};if(['single_choice','multiple_choice','ranking'].includes(i.type))return{level:i.type==='ranking'?'ordinal':'nominal',code:i.type==='ranking'?'ORD':'NOM',cls:i.type==='ranking'?'ord':'nom',type:i.type};if(['numeric','slider','rating'].includes(i.type))return{level:'continuous',code:'CON',cls:'con',type:i.type};if(['text','textarea','date'].includes(i.type))return{level:i.type==='date'?'identifier':'text',code:i.type==='date'?'ID':'TXT',cls:i.type==='date'?'id':'txt',type:i.type};return{level:'identifier',code:'ID',cls:'id',type:i.type};}
+function roleOptions(role,selected){var useModels=role.levels&&role.levels.includes('model');var opts=useModels?(S.models||[]).map(function(m){return{id:m.id,label:m.id+' ('+(m.type||'model')+')'};}):getAllVars().filter(function(v){return role.levels.includes('any')||role.levels.includes(v.level)||role.levels.includes(v.kind);});return opts.map(function(v){return'<option value="'+esc(v.id)+'"'+(selected.includes(v.id)?' selected':'')+'>'+esc(v.label)+'</option>';}).join('');}
+function getAllVars(){var items=S.items.filter(function(i){return!['section_break','text_block'].includes(i.type);}).map(function(i){var m=varLevel(i.id);return{id:i.id,label:i.id+' - '+(i.label||'').slice(0,42),level:m.level,kind:'item',meta:m,item:i};});var scales=S.scales.map(function(s){var m=varLevel(s.id);return{id:s.id,label:s.id+' - '+(s.label||'scale score'),level:m.level,kind:'scale',meta:m,scale:s};});return items.concat(scales);}
+function getVarCat(id){var m=varLevel(id);return['nominal','ordinal','likert'].includes(m.level)?'cat':'cont';}
+function rolesFromLegacy(rq,method){if(rq&&rq.roles)return rq.roles;var v=(rq&&rq.variables)||[];if(!Array.isArray(v))v=[v];if(!method)return{};var r={},defs=(ANALYSIS_REGISTRY[method]||{}).roles||[];defs.forEach(function(role,idx){if(role.max===1)r[role.id]=v[idx]||'';else r[role.id]=v.slice(idx);});return r;}
+function openRQModal(id){
+  editRqId=id||null;var rq=id?S.analysis_plan.find(function(r){return r.id===id;}):null;
+  var method=rq?(rq.method||rq.test||'mann_whitney'):'mann_whitney';if(method==='efa')method='efa_readiness';if(method==='cfa')method='cfa_lavaan_syntax';
+  document.getElementById('rq-modal-title').textContent=id?'Edit Analysis Plan':'Add Analysis Plan';
+  sv('rq-q',rq?rq.research_question||'':'');sv('rq-interp',rq?rq.decision_rule||rq.interpretation||'':'');
+  document.getElementById('rq-test').value=method;
+  document.getElementById('rq-alpha').value=rq?String((rq.options&&rq.options.alpha)||rq.alpha||0.05):'0.05';
+  document.getElementById('rqDelBtn').style.display=id?'inline-flex':'none';
+  popRQVars(rolesFromLegacy(rq,method));onTestChg(false);
+  document.getElementById('rqSuggest').style.display='none';
+  openModal('m-rq');
+}
+function popRQVars(roleValues){
+  var vars=getAllVars();
+  document.getElementById('rqVarCBs').innerHTML=vars.length?'<span style="font-size:11px;color:var(--t3)">Assign variables below by methodological role. Variable checkboxes are no longer used for v0.3 plans.</span>':'<span style="font-size:11px;color:var(--t3)">Define items and scales first.</span>';
+  renderRoleFields(roleValues||{});
+}
+function renderRoleFields(roleValues){
+  var method=document.getElementById('rq-test').value,reg=ANALYSIS_REGISTRY[method]||ANALYSIS_REGISTRY.mann_whitney;
+  document.getElementById('rqRoleFields').innerHTML=(reg.roles||[]).map(function(role){var selected=roleValues[role.id]||[];if(!Array.isArray(selected))selected=selected?[selected]:[];var multi=role.max>1;return'<div class="role-card"><label class="fl" for="role_'+esc(role.id)+'">'+esc(role.label)+(role.min>0?' <span class="fr">*</span>':'')+'</label><select id="role_'+esc(role.id)+'" data-role-id="'+esc(role.id)+'" '+(multi?'multiple size="4"':'')+' onchange="validatePlanRoles()">'+roleOptions(role,selected)+'</select></div>';}).join('');
+  validatePlanRoles();
+}
+function collectRoles(){var roles={};document.querySelectorAll('[data-role-id]').forEach(function(sel){var id=sel.getAttribute('data-role-id');var vals=Array.from(sel.selectedOptions||[]).map(function(o){return o.value;}).filter(Boolean);roles[id]=sel.multiple?vals:(vals[0]||'');});return roles;}
+function flattenRoles(roles){var out=[];Object.keys(roles).forEach(function(k){var v=roles[k];if(Array.isArray(v))out=out.concat(v);else if(v)out.push(v);});return Array.from(new Set(out));}
+function validatePlanRoles(){
+  var method=document.getElementById('rq-test').value,reg=ANALYSIS_REGISTRY[method]||{},roles=collectRoles(),msgs=[];
+  (reg.roles||[]).forEach(function(role){var vals=roles[role.id];var n=Array.isArray(vals)?vals.filter(Boolean).length:(vals?1:0);if(n<role.min)msgs.push('Select '+role.min+' '+role.label.toLowerCase()+'.');if(role.max&&n>role.max)msgs.push(role.label+' allows at most '+role.max+' variable(s).');});
+  var guidance={
+    frequency:'Select one variable for the frequency table.',
+    mann_whitney:'Mann-Whitney U requires one grouping variable with exactly two groups and one ordinal or continuous outcome.',
+    chi_square:'Chi-square requires categorical variables.',
+    fisher_exact:'Fisher exact test requires categorical variables and is useful for sparse tables.',
+    correlation_pearson:'Pearson correlation requires continuous or scale-score variables.',
+    correlation_spearman:'Spearman or Kendall is safer for ordinal or Likert variables.',
+    correlation_kendall:'Spearman or Kendall is safer for ordinal or Likert variables.',
+    regression_linear:'Regression requires one dependent variable and at least one predictor.',
+    reliability_alpha:'Reliability requires at least two items in a scale.',
+    cfa_lavaan_syntax:'CFA requires at least one construct with two or more indicators; fewer than three indicators should be justified.',
+    seminr_syntax:'PLS-SEM requires at least one construct and one structural path.'
+  }[method]||'Review compatibility before saving.';
+  var complete=(reg.roles||[]).every(function(role){var vals=roles[role.id];var n=Array.isArray(vals)?vals.filter(Boolean).length:(vals?1:0);return n>=role.min;});
+  var msg=document.getElementById('rqValidMsg');if(msg){msg.className='plan-msg '+(complete?'ok':'');msg.textContent=complete?'Required roles are complete. '+guidance:msgs.join(' ');}
+  var btn=document.getElementById('rqSaveBtn');if(btn)btn.disabled=!complete;
+  var prev=document.getElementById('rqPreview');if(prev)prev.innerHTML='<strong>Planned output</strong><br>'+esc(reg.output||'Structured result')+(reg.assumptions&&reg.assumptions.length?'<br><strong>Assumptions</strong>: '+esc(reg.assumptions.join(', ')):'');
+}
+function onTestChg(renderRoles){
+  if(renderRoles!==false)renderRoleFields({});
+  var t=document.getElementById('rq-test').value,reg=ANALYSIS_REGISTRY[t]||{},cits=reg.refs||[];
+  var af=document.getElementById('rq-alpha-field');if(af)af.style.display=reg.showAlpha?'block':'none';
+  document.getElementById('rqCitDiv').innerHTML=cits.length?'<label class="fl">Reporting references</label><div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:4px">'+cits.map(function(k){return'<span class="cc">'+esc(CSHORT[k]||k)+'</span>';}).join('')+'</div>':'';
+  validatePlanRoles();
+}
+function suggestTest(){
+  var sel=flattenRoles(collectRoles()),box=document.getElementById('rqSuggest'),msg=document.getElementById('rqSuggestMsg');
+  if(sel.length<2){box.style.display='none';return;}
+  var cats=sel.map(getVarCat),sug=sel.length===2?(TEST_SUGGEST[cats[0]+'+'+cats[1]]||'correlation_pearson'):'regression_linear';
+  document.getElementById('rq-test').value=sug;onTestChg();
+  msg.textContent=(ANALYSIS_REGISTRY[sug]||{}).label+' is suggested from the selected variable types.';box.style.display='flex';
+}
+function saveRQ(){
+  var q=gv('rq-q').trim();if(!q){toast('Research question text required','err');return;}
+  var t=document.getElementById('rq-test').value,reg=ANALYSIS_REGISTRY[t]||{},roles=collectRoles(),vars=flattenRoles(roles);
+  var opts={};if(reg.showAlpha)opts.alpha=parseFloat(gv('rq-alpha'))||0.05;
+  var rq={id:editRqId||uid(),research_question:q,family:reg.family||'',method:t,test:t,roles:roles,variables:vars,options:opts,hypotheses:reg.showHypotheses?{null:'No effect or association is present.',alternative:'An effect or association is present.'}:null,decision_rule:gv('rq-interp').trim(),interpretation:gv('rq-interp').trim(),reporting_references:reg.refs||[],citations:reg.refs||[],status:'valid_plan',requires_data:!['cfa_lavaan_syntax','sem_lavaan_syntax','seminr_syntax'].includes(t),result:null};
+  snap();
+  if(editRqId){var i=S.analysis_plan.findIndex(function(r){return r.id===editRqId;});if(i>=0)S.analysis_plan[i]=rq;}
+  else S.analysis_plan.push(rq);
+  editRqId=null;closeModal('m-rq');renderAnalyse();toast('Analysis plan saved','ok');
+}
+function deleteRQ(){
+  if(!editRqId)return;
+  conf2('Delete research question','This permanently removes this research question.').then(function(ok){if(!ok)return;snap();S.analysis_plan=S.analysis_plan.filter(function(r){return r.id!==editRqId;});editRqId=null;closeModal('m-rq');renderAnalyse();toast('Research question deleted','inf');});
+}
+
+// â”€â”€ Preview â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+function setPvTab(t){pvTab=t;pvPage=0;document.querySelectorAll('.pvtab').forEach(function(b){b.classList.remove('active');});document.getElementById('pvt-'+t).classList.add('active');renderPreview();}
+function prevPvPage(){pvPage=Math.max(0,pvPage-1);renderPreview();}
+function nextPvPage(){pvPage=pvPage+1;renderPreview();}
+function renderPreviewItem(item,cm,col){
+  var cs=cm[item.choice_set||''];
+  if(item.type==='section_break')return'<div class="pv-sec"><div class="pv-sec-t">'+esc(item.label)+'</div>'+(item.section_intro?'<div class="pv-sec-sub">'+esc(item.section_intro)+'</div>':'')+'</div>';
+  if(item.type==='text_block')return'<div class="pv-txtblk">'+esc(item.label).replace(/\n/g,'<br>')+'</div>';
+  var lbl='<div class="pv-ql">'+esc(item.label)+(item.required?'<span class="pv-req-mk">*</span>':'')+'</div>'+(item.help?'<div class="pv-help-t">'+esc(item.help)+'</div>':'');
+  var inp='';
+  if(['likert','single_choice'].includes(item.type))inp='<div class="pv-opts'+(item.type==='likert'?' inl':'')+'">'+((cs?cs.values:[]).map(function(v,i){return'<label class="pv-opt"><input type="radio" name="'+esc(item.id)+'" style="accent-color:'+esc(col)+'"> '+esc((cs.labels||[])[i]||v)+'</label>';})).join('')+'</div>';
+  else if(item.type==='multiple_choice')inp='<div class="pv-opts">'+((cs?cs.values:[]).map(function(v,i){return'<label class="pv-opt"><input type="checkbox" style="accent-color:'+esc(col)+'"> '+esc((cs.labels||[])[i]||v)+'</label>';})).join('')+'</div>';
+  else if(item.type==='numeric')inp='<input class="pv-inp" type="number" placeholder="Enter a number" style="max-width:200px">';
+  else if(item.type==='text')inp='<input class="pv-inp" type="text" placeholder="'+esc(item.placeholder||'')+'">';
+  else if(item.type==='textarea')inp='<textarea class="pv-inp" rows="3" placeholder="'+esc(item.placeholder||'')+'"></textarea>';
+  else if(item.type==='date')inp='<input class="pv-inp" type="date" style="max-width:200px">';
+  else if(item.type==='slider')inp='<div class="pv-slider-w"><input type="range" class="pv-slider" min="'+(item.slider_min||0)+'" max="'+(item.slider_max||100)+'" style="accent-color:'+esc(col)+'"><div class="pv-slider-r"><span>'+esc(item.slider_min||0)+'</span><span>'+esc(item.slider_max||100)+'</span></div></div>';
+  else if(item.type==='rating')inp='<div class="pv-stars">'+Array.from({length:item.rating_max||5},function(){return item.rating_icon==='heart'?'&#10084;':'&#9733;';}).join('')+'</div>';
+  else if(item.type==='matrix'&&item.matrix_items&&cs)inp='<div style="overflow-x:auto"><table class="pv-matrix"><thead><tr><th></th>'+cs.labels.map(function(l){return'<th>'+esc(l)+'</th>';}).join('')+'</tr></thead><tbody>'+item.matrix_items.map(function(row){return'<tr><td class="rl">'+esc(row)+'</td>'+cs.values.map(function(v){return'<td><input type="radio" name="'+esc(item.id)+'_'+esc(row)+'" style="accent-color:'+esc(col)+'"></td>';}).join('')+'</tr>';}).join('')+'</tbody></table></div>';
+  else if(item.type==='ranking'&&cs)inp='<div class="pv-ranklist">'+cs.labels.map(function(l){return'<div class="pv-rankitem"><span style="color:var(--t3)">&#8942;</span>'+esc(l)+'</div>';}).join('')+'</div>';
+  return'<div class="pv-item">'+lbl+inp+'</div>';
+}
+function renderPreview(){
+  var el=document.getElementById('pvFrame');var col=normHex((S.render&&S.render.theme)||'#2563eb');
+  var cm={};S.choices.forEach(function(cs){cm[cs.id]=cs;});
+  if(pvTab==='welcome'){
+    var w=S.render&&S.render.welcome?S.render.welcome:{};
+    if(!w.intro_text&&!w.consent_text){el.innerHTML='<div style="max-width:620px;margin:0 auto"><div style="background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.07);padding:40px;text-align:center;color:var(--t3)"><div style="font-size:32px;margin-bottom:12px">&#128196;</div><p style="font-size:13px">No welcome page configured. <a href="#" onclick="openSettings(\'welcome\');return false" style="color:'+esc(col)+'">Set up welcome page â†’</a></p></div></div>';return;}
+    el.innerHTML='<div style="max-width:620px;margin:0 auto"><div class="pv-card"><div class="pv-title">'+esc(w.title||S.meta.title)+'</div>'+(w.intro_text?'<div class="pv-intro">'+esc(w.intro_text).replace(/\n/g,'<br>')+'</div>':'')+(w.consent_text?'<div class="pv-consent">'+esc(w.consent_text)+'</div>':'')+'<button type="button" style="width:100%;padding:11px;border-radius:10px;background:'+esc(col)+';color:#fff;font-size:14px;font-weight:600;border:none;cursor:default">'+esc(w.start_label||'Start Survey')+'</button></div></div>';return;
+  }
+  if(pvTab==='thankyou'){var ty=S.render&&S.render.thankyou?S.render.thankyou:{};el.innerHTML='<div style="max-width:620px;margin:0 auto"><div class="pv-card"><div class="pv-ty"><div class="pv-ty-ic">&#10003;</div><div class="pv-ty-t">Submitted successfully</div><div class="pv-ty-m">'+esc(ty.message||'Thank you for completing this survey.')+'</div></div></div></div>';return;}
+  if(!S.items.length){el.innerHTML='<div style="max-width:620px;margin:0 auto"><div class="pv-card" style="text-align:center;padding:60px"><p style="color:var(--t3);font-size:13px">Add questions to preview the survey.</p></div></div>';return;}
+  var hdr='';if(S.render&&S.render.header){var h=S.render.header;if(h.institution||h.logo_base64)hdr='<div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;padding-bottom:14px;border-bottom:1px solid var(--cb)">'+(h.logo_base64?'<img src="data:image/png;base64,'+h.logo_base64+'" style="max-height:32px" alt="Logo">':'')+(h.institution?'<span style="font-size:12px;color:var(--t2)">'+esc(h.institution)+'</span>':'')+'</div>';}
+  var mode=(S.render&&S.render.mode)||'standard';
+  var shown=S.items,nav='';
+  if(mode==='conversational'){
+    pvPage=Math.max(0,Math.min(pvPage,S.items.length-1));
+    shown=[S.items[pvPage]];
+    nav='<div class="pv-nav"><button type="button" onclick="prevPvPage()" '+(pvPage===0?'disabled':'')+'>Previous</button><span class="pv-count">Question '+(pvPage+1)+' of '+S.items.length+'</span><button type="button" onclick="nextPvPage()" '+(pvPage>=S.items.length-1?'disabled':'')+'>Next</button></div>';
+  }
+  var items=shown.map(function(item){return renderPreviewItem(item,cm,col);}).join('');
+  var submit=mode==='conversational'&&pvPage<S.items.length-1?'':'<div class="pv-submit"><button type="button" style="background:'+esc(col)+';width:100%;padding:11px;border-radius:10px;color:#fff;font-size:14px;font-weight:600;border:none;cursor:default">'+esc((S.render&&S.render.submit_label)||'Submit')+'</button></div>';
+  el.innerHTML='<div style="max-width:620px;margin:0 auto"><div class="pv-card">'+hdr+'<div class="pv-title">'+esc(S.meta.title)+'</div>'+(S.meta.description?'<div class="pv-desc">'+esc(S.meta.description)+'</div>':'')+items+nav+submit+'</div></div>';
+}
+
+// â”€â”€ Analyse â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+function setAnalyseTab(tab){
+  anTab=tab;document.querySelectorAll('.an-tab').forEach(function(b){b.classList.toggle('active',b.dataset.anTab===tab);});renderAnalyse();
+}
+function currentModel(){
+  var sel=document.getElementById('mb-model'),models=S.models||[];
+  if(!models.length)return null;
+  var id=sel&&sel.value?sel.value:models[models.length-1].id;
+  return models.find(function(m){return m.id===id;})||models[models.length-1];
+}
+function renderModelBuilder(){
+  var models=S.models||[],sel=document.getElementById('mb-model'),from=document.getElementById('mb-from'),to=document.getElementById('mb-to'),list=document.getElementById('modelList');
+  if(!sel||!from||!to||!list)return;
+  var previous=sel.value;
+  sel.innerHTML=models.length?models.map(function(m){return'<option value="'+esc(m.id)+'">'+esc(m.id+' ('+(m.type||'model')+')')+'</option>';}).join(''):'<option value="">No saved models</option>';
+  if(previous&&models.some(function(m){return m.id===previous;}))sel.value=previous;
+  var model=currentModel(),constructs=model&&model.measurement?model.measurement.constructs||[]:[];
+  var opts=constructs.map(function(c){return'<option value="'+esc(c.id)+'">'+esc(c.id)+'</option>';}).join('');
+  from.innerHTML=opts;to.innerHTML=opts;
+  list.innerHTML=models.length?models.map(function(m){var paths=(m.structural&&m.structural.paths)||[];return'<div class="model-row"><strong>'+esc(m.id)+'</strong> <span class="vbadge">'+esc(m.type||'model')+'</span><div>'+esc((m.measurement&&m.measurement.constructs||[]).length)+' construct(s), '+esc(paths.length)+' path(s)</div><div class="model-paths">'+(paths.length?paths.map(function(p){return'<span class="vchip">'+esc(p.from+' -> '+p.to)+'</span>';}).join(''):'<span class="rq-no-int">No paths yet.</span>')+'</div></div>';}).join(''):'<div class="rq-no-int">No saved models yet.</div>';
+}
+function renderAnalyse(){
+  var vl=document.getElementById('anVars');if(!vl)return;
+  renderModelBuilder();
+  var vars=getAllVars();
+  vl.innerHTML=vars.length?vars.map(function(v){var i=v.item||{},m=v.meta||varLevel(v.id),cs=i.choice_set||'',sc=i.scale_id||'';return'<div class="vmeta"><div class="vmeta-id">'+esc(v.id)+'</div><div class="vmeta-lbl">'+esc((i.label||v.label||'').slice(0,90))+'</div><div class="vmeta-badges"><span class="vbadge '+esc(m.cls)+'">'+esc(m.code)+'</span><span class="vbadge">'+esc(m.type||v.kind)+'</span>'+(cs?'<span class="vbadge">choice: '+esc(cs)+'</span>':'')+(sc?'<span class="vbadge">scale: '+esc(sc)+'</span>':'')+(i.required?'<span class="vbadge">required</span>':'<span class="vbadge">missing allowed</span>')+'</div></div>';}).join(''):'<p style="font-size:11px;color:var(--t3);padding:8px">Define items and scales to see variables here.</p>';
+  var rb=document.getElementById('rqsBody');if(!rb)return;
+  document.getElementById('anMidTitle').textContent=anTab==='plan'?'Analysis plans':anTab==='run'?'Run queue':'Report outline';
+  if(!S.analysis_plan.length){rb.innerHTML='<div class="an-empty"><div class="an-empty-ic">&#128300;</div><div class="an-empty-t">No analysis plans yet</div><div class="an-empty-b">Click "+ Add plan" to define method, roles, assumptions, and planned outputs.</div></div>';return;}
+  rb.innerHTML=S.analysis_plan.map(function(rq,i){var method=rq.method||rq.test,reg=ANALYSIS_REGISTRY[method]||{},alpha=(rq.options&&rq.options.alpha)||rq.alpha,vars=rq.variables||flattenRoles(rq.roles||{});return'<div class="rq-card" onclick="openRQModal(\''+rq.id+'\')"><div style="display:flex;align-items:flex-start;gap:8px"><span class="rq-num">'+(i+1)+'</span><div style="flex:1"><div class="rq-q">'+esc(rq.research_question)+'</div><div class="rq-meta"><span class="tc">'+esc(TLBLS[method]||method)+'</span>'+(reg.showAlpha?'<span class="ac">significance='+esc(alpha||0.05)+'</span>':'')+(rq.status?'<span class="ac">'+esc(rq.status)+'</span>':'')+(rq.reporting_references||rq.citations||[]).map(function(k){return'<span class="cc">'+esc(CSHORT[k]||k)+'</span>';}).join('')+'</div>'+(vars&&vars.length?'<div style="margin-top:6px;display:flex;gap:3px;flex-wrap:wrap">'+vars.map(function(v){return'<span class="vchip">'+esc(v)+'</span>';}).join('')+'</div>':'')+(rq.decision_rule||rq.interpretation?'<div class="rq-interp">'+esc(rq.decision_rule||rq.interpretation)+'</div>':'<div class="rq-no-int">Decision rule pending.</div>')+'</div></div></div>';}).join('');
+  var op=document.getElementById('anOutputPreview');if(op){var counts={plan:S.analysis_plan.length,run:S.analysis_plan.filter(function(r){return r.requires_data!==false;}).length,report:S.models?S.models.length:0};op.innerHTML='<strong>'+esc(anTab.charAt(0).toUpperCase()+anTab.slice(1))+'</strong><br>'+counts.plan+' analysis plan(s), '+counts.run+' data-dependent run item(s), '+counts.report+' saved model(s).';}
+}
+
+function modelFromScales(){
+  if(!S.scales.length){toast('Define scales before creating a model','err');return;}
+  var type=gv('mb-type')||'cfa',engine=type==='pls_sem'?'seminr':'lavaan',id='model_'+((S.models||[]).length+1);
+  var constructs=S.scales.map(function(s){return{id:s.id,label:s.label,mode:type==='pls_sem'?'composite':'reflective',items:s.items||[]};});
+  var model={id:id,label:S.meta.title+' model',type:type,engine:engine,measurement:{constructs:constructs},structural:{paths:[],covariances:[],indirect:[]},options:{estimator:'MLR',standardised:true,bootstrap:5000,missing:'fiml'}};
+  if(!S.models)S.models=[];S.models.push(model);setDirty();renderAnalyse();document.getElementById('modelSyntaxOut').value=JSON.stringify(model,null,2);toast('Model saved into .sframe','ok');
+}
+function addModelPath(){
+  var model=currentModel();if(!model){toast('Create or load a model first','err');return;}
+  var from=gv('mb-from'),to=gv('mb-to');if(!from||!to||from===to){toast('Choose two different constructs','err');return;}
+  if(!model.structural)model.structural={paths:[],covariances:[],indirect:[]};
+  if(!model.structural.paths)model.structural.paths=[];
+  if(model.structural.paths.some(function(p){return p.from===from&&p.to===to;})){toast('Path already exists','err');return;}
+  snap();model.structural.paths.push({from:from,to:to});setDirty();renderAnalyse();toast('Path added','ok');
+}
+function exportModelSyntax(){
+  var model=currentModel();if(!model){toast('Create or load a model first','err');return;}
+  var lines=[];
+  if(model.type==='pls_sem'){
+    lines.push('measurement_model <- constructs(');
+    lines=lines.concat(model.measurement.constructs.map(function(c,i,arr){return'  composite("'+c.id+'", c('+c.items.map(function(it){return'"'+it+'"';}).join(', ')+'))'+(i<arr.length-1?',':'');}));
+    var groups={};(model.structural.paths||[]).forEach(function(p){if(!groups[p.from])groups[p.from]=[];groups[p.from].push(p.to);});
+    lines.push(')','','structural_model <- relationships(');
+    var keys=Object.keys(groups);
+    lines=lines.concat(keys.map(function(f,i){return'  paths(from = "'+f+'", to = c('+groups[f].map(function(t){return'"'+t+'"';}).join(', ')+'))'+(i<keys.length-1?',':'');}));
+    lines.push(')','','pls_model <- estimate_pls(data = data, measurement_model = measurement_model, structural_model = structural_model)');
+  }else{
+    model.measurement.constructs.forEach(function(c){lines.push(c.id+' =~ '+(c.items||[]).join(' + '));});
+    (model.structural.paths||[]).forEach(function(p){lines.push(p.to+' ~ '+p.from);});
+  }
+  document.getElementById('modelSyntaxOut').value=lines.join('\n')+'\n\n'+JSON.stringify(model,null,2);
+}
+
+// â”€â”€ Init â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+chkAutoSave();
+renderItemList();
+renderAnalyse();
+updSave();
+updHistBtns();
+setInterval(function(){if(lastSaved)updSave();},30000);
+</script>
+</body>
+</html>

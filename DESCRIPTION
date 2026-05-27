@@ -1,0 +1,42 @@
+Package: surveyframe
+Title: Survey Instrument Workflows
+Version: 0.3.0
+Authors@R: c(
+    person(
+      given = "Mohammed Ali",
+      family = "Sharafuddin",
+      email = "mohammedali.page@gmail.com",
+      role = c("aut", "cre"),
+      comment = c(ORCID = "0000-0001-5247-2964")
+    )
+  )
+Description: Supports survey research workflows built around a typed
+    instrument object (the sframe). Features include visual instrument
+    design via a browser-based builder or 'Shiny' studio, export to a
+    self-contained static HTML survey, an embeddable 'Shiny' module, SHA-256
+    integrity-checked serialisation to the '.sframe' format, multi-page survey
+    rendering, branching logic, response quality checking, scale scoring,
+    psychometric diagnostics, analysis-plan execution, model syntax planning,
+    an interactive response dashboard, codebook generation, and reproducible
+    HTML reporting.
+License: MIT + file LICENSE
+URL: https://github.com/MohammedAliSharafuddin/surveyframe
+BugReports: https://github.com/MohammedAliSharafuddin/surveyframe/issues
+Encoding: UTF-8
+Language: en-GB
+Depends: R (>= 4.1.0)
+Imports: jsonlite (>= 1.8.0), rlang (>= 1.1.0), openssl (>= 2.1.0)
+Suggests: googlesheets4 (>= 1.1.0), shiny (>= 1.7.0), psych (>= 2.3.0),
+        MASS, nnet, digest (>= 0.6.0), testthat (>= 3.0.0), knitr,
+        rmarkdown
+VignetteBuilder: knitr
+Config/testthat/edition: 3
+Config/roxygen2/version: 8.0.0
+RoxygenNote: 8.0.0
+NeedsCompilation: no
+Packaged: 2026-05-20 18:17:37 UTC; maxx
+Author: Mohammed Ali Sharafuddin [aut, cre] (ORCID:
+    <https://orcid.org/0000-0001-5247-2964>)
+Maintainer: Mohammed Ali Sharafuddin <mohammedali.page@gmail.com>
+Repository: CRAN
+Date/Publication: 2026-05-27 20:10:09 UTC

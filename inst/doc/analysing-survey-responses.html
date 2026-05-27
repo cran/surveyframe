@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+
+
+<title>Analysing survey responses</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+<style type="text/css">
+code {
+white-space: pre;
+}
+.sourceCode {
+overflow: visible;
+}
+</style>
+<style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Analysing survey responses</h1>
+
+
+
+<p>This vignette walks through response import, missing-data checks,
+quality checks, scale scoring, descriptives, and planned analyses.</p>
+<div id="load-the-demo" class="section level2">
+<h2>Load the demo</h2>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a>demo <span class="ot">&lt;-</span> <span class="fu">sframe_demo_data</span>()</span>
+<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a>instr <span class="ot">&lt;-</span> demo<span class="sc">$</span>instrument</span>
+<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a>responses <span class="ot">&lt;-</span> demo<span class="sc">$</span>responses</span>
+<span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a><span class="fu">dim</span>(responses)</span>
+<span id="cb1-6"><a href="#cb1-6" tabindex="-1"></a><span class="co">#&gt; [1] 120  18</span></span></code></pre></div>
+</div>
+<div id="expected-response-columns" class="section level2">
+<h2>Expected response columns</h2>
+<p>Response data should use instrument item IDs as column names.
+Metadata columns such as respondent ID, start time, and submission time
+should be declared explicitly.</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a>item_ids <span class="ot">&lt;-</span> <span class="fu">vapply</span>(instr<span class="sc">$</span>items, <span class="cf">function</span>(x) x<span class="sc">$</span>id, <span class="fu">character</span>(<span class="dv">1</span>))</span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a><span class="fu">head</span>(item_ids)</span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a><span class="co">#&gt; [1] &quot;visit_type&quot; &quot;dm_1&quot;       &quot;dm_2&quot;       &quot;dm_3&quot;       &quot;sq_1&quot;      </span></span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a><span class="co">#&gt; [6] &quot;sq_2&quot;</span></span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a><span class="fu">names</span>(responses)[<span class="dv">1</span><span class="sc">:</span><span class="dv">8</span>]</span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a><span class="co">#&gt; [1] &quot;respondent_id&quot; &quot;submitted_at&quot;  &quot;started_at&quot;    &quot;visit_type&quot;   </span></span>
+<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a><span class="co">#&gt; [5] &quot;dm_1&quot;          &quot;dm_2&quot;          &quot;dm_3&quot;          &quot;sq_1&quot;</span></span></code></pre></div>
+</div>
+<div id="import-responses" class="section level2">
+<h2>Import responses</h2>
+<p>Use <code>strict = TRUE</code> when the response file should contain
+only known item and metadata columns. Use <code>strict = FALSE</code>
+when the file may contain additional survey platform columns that should
+be retained with a warning.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a>strict_responses <span class="ot">&lt;-</span> <span class="fu">read_responses</span>(</span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a>  demo<span class="sc">$</span>responses_path,</span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a>  instr,</span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a>  <span class="at">respondent_id =</span> <span class="st">&quot;respondent_id&quot;</span>,</span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a>  <span class="at">submitted_at =</span> <span class="st">&quot;submitted_at&quot;</span>,</span>
+<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a>  <span class="at">meta_cols =</span> <span class="st">&quot;started_at&quot;</span>,</span>
+<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a>  <span class="at">strict =</span> <span class="cn">TRUE</span></span>
+<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a>)</span>
+<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a></span>
+<span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a>relaxed_responses <span class="ot">&lt;-</span> <span class="fu">read_responses</span>(</span>
+<span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a>  demo<span class="sc">$</span>responses_path,</span>
+<span id="cb3-12"><a href="#cb3-12" tabindex="-1"></a>  instr,</span>
+<span id="cb3-13"><a href="#cb3-13" tabindex="-1"></a>  <span class="at">respondent_id =</span> <span class="st">&quot;respondent_id&quot;</span>,</span>
+<span id="cb3-14"><a href="#cb3-14" tabindex="-1"></a>  <span class="at">submitted_at =</span> <span class="st">&quot;submitted_at&quot;</span>,</span>
+<span id="cb3-15"><a href="#cb3-15" tabindex="-1"></a>  <span class="at">meta_cols =</span> <span class="st">&quot;started_at&quot;</span>,</span>
+<span id="cb3-16"><a href="#cb3-16" tabindex="-1"></a>  <span class="at">strict =</span> <span class="cn">FALSE</span></span>
+<span id="cb3-17"><a href="#cb3-17" tabindex="-1"></a>)</span>
+<span id="cb3-18"><a href="#cb3-18" tabindex="-1"></a></span>
+<span id="cb3-19"><a href="#cb3-19" tabindex="-1"></a><span class="fu">identical</span>(<span class="fu">names</span>(strict_responses), <span class="fu">names</span>(relaxed_responses))</span>
+<span id="cb3-20"><a href="#cb3-20" tabindex="-1"></a><span class="co">#&gt; [1] TRUE</span></span></code></pre></div>
+</div>
+<div id="missing-data" class="section level2">
+<h2>Missing data</h2>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a>missing <span class="ot">&lt;-</span> <span class="fu">missing_data_report</span>(responses, instr)</span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>missing<span class="sc">$</span>item_missing</span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a><span class="co">#&gt;              variable missing_n missing_pct valid_n</span></span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a><span class="co">#&gt; visit_type visit_type         0           0     120</span></span>
+<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a><span class="co">#&gt; dm_1             dm_1         0           0     120</span></span>
+<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a><span class="co">#&gt; dm_2             dm_2         0           0     120</span></span>
+<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a><span class="co">#&gt; dm_3             dm_3         0           0     120</span></span>
+<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a><span class="co">#&gt; sq_1             sq_1         0           0     120</span></span>
+<span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a><span class="co">#&gt; sq_2             sq_2         0           0     120</span></span>
+<span id="cb4-11"><a href="#cb4-11" tabindex="-1"></a><span class="co">#&gt; sq_3             sq_3         0           0     120</span></span>
+<span id="cb4-12"><a href="#cb4-12" tabindex="-1"></a><span class="co">#&gt; sus_1           sus_1         0           0     120</span></span>
+<span id="cb4-13"><a href="#cb4-13" tabindex="-1"></a><span class="co">#&gt; sus_2           sus_2         0           0     120</span></span>
+<span id="cb4-14"><a href="#cb4-14" tabindex="-1"></a><span class="co">#&gt; sat_1           sat_1         0           0     120</span></span>
+<span id="cb4-15"><a href="#cb4-15" tabindex="-1"></a><span class="co">#&gt; sat_2           sat_2         0           0     120</span></span>
+<span id="cb4-16"><a href="#cb4-16" tabindex="-1"></a><span class="co">#&gt; bi_1             bi_1         0           0     120</span></span>
+<span id="cb4-17"><a href="#cb4-17" tabindex="-1"></a><span class="co">#&gt; bi_2             bi_2         0           0     120</span></span>
+<span id="cb4-18"><a href="#cb4-18" tabindex="-1"></a><span class="co">#&gt; attention   attention         0           0     120</span></span>
+<span id="cb4-19"><a href="#cb4-19" tabindex="-1"></a><span class="co">#&gt; comments     comments         0           0     120</span></span>
+<span id="cb4-20"><a href="#cb4-20" tabindex="-1"></a><span class="fu">head</span>(missing<span class="sc">$</span>respondent_missing)</span>
+<span id="cb4-21"><a href="#cb4-21" tabindex="-1"></a><span class="co">#&gt;   row missing_n missing_pct</span></span>
+<span id="cb4-22"><a href="#cb4-22" tabindex="-1"></a><span class="co">#&gt; 1   1         0           0</span></span>
+<span id="cb4-23"><a href="#cb4-23" tabindex="-1"></a><span class="co">#&gt; 2   2         0           0</span></span>
+<span id="cb4-24"><a href="#cb4-24" tabindex="-1"></a><span class="co">#&gt; 3   3         0           0</span></span>
+<span id="cb4-25"><a href="#cb4-25" tabindex="-1"></a><span class="co">#&gt; 4   4         0           0</span></span>
+<span id="cb4-26"><a href="#cb4-26" tabindex="-1"></a><span class="co">#&gt; 5   5         0           0</span></span>
+<span id="cb4-27"><a href="#cb4-27" tabindex="-1"></a><span class="co">#&gt; 6   6         0           0</span></span></code></pre></div>
+</div>
+<div id="data-quality" class="section level2">
+<h2>Data quality</h2>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a>quality <span class="ot">&lt;-</span> <span class="fu">quality_report</span>(</span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a>  responses,</span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a>  instr,</span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a>  <span class="at">respondent_id =</span> <span class="st">&quot;respondent_id&quot;</span>,</span>
+<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a>  <span class="at">submitted_at =</span> <span class="st">&quot;submitted_at&quot;</span>,</span>
+<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a>  <span class="at">started_at =</span> <span class="st">&quot;started_at&quot;</span></span>
+<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a>)</span>
+<span id="cb5-8"><a href="#cb5-8" tabindex="-1"></a></span>
+<span id="cb5-9"><a href="#cb5-9" tabindex="-1"></a>quality</span>
+<span id="cb5-10"><a href="#cb5-10" tabindex="-1"></a><span class="co">#&gt; Survey Data Quality Report</span></span>
+<span id="cb5-11"><a href="#cb5-11" tabindex="-1"></a><span class="co">#&gt;   Respondents:  120</span></span>
+<span id="cb5-12"><a href="#cb5-12" tabindex="-1"></a><span class="co">#&gt;   Items:        15</span></span>
+<span id="cb5-13"><a href="#cb5-13" tabindex="-1"></a><span class="co">#&gt;   Flagged:      109 (90.8%)</span></span>
+<span id="cb5-14"><a href="#cb5-14" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb5-15"><a href="#cb5-15" tabindex="-1"></a><span class="co">#&gt; Attention checks:</span></span>
+<span id="cb5-16"><a href="#cb5-16" tabindex="-1"></a><span class="co">#&gt;   attention_agree      pass 95%  fail 6</span></span>
+<span id="cb5-17"><a href="#cb5-17" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb5-18"><a href="#cb5-18" tabindex="-1"></a><span class="co">#&gt; Timing:</span></span>
+<span id="cb5-19"><a href="#cb5-19" tabindex="-1"></a><span class="co">#&gt;   Median completion time: 966.0 seconds</span></span>
+<span id="cb5-20"><a href="#cb5-20" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb5-21"><a href="#cb5-21" tabindex="-1"></a><span class="co">#&gt; Missingness:  0.0% of respondents exceed 20% threshold</span></span></code></pre></div>
+</div>
+<div id="score-scales" class="section level2">
+<h2>Score scales</h2>
+<p><code>score_scales()</code> uses the scale definitions in the
+instrument. It applies reverse coding and minimum valid item rules.</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a>scored <span class="ot">&lt;-</span> <span class="fu">score_scales</span>(responses, instr, <span class="at">keep_items =</span> <span class="cn">TRUE</span>, <span class="at">keep_meta =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a></span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a>scale_ids <span class="ot">&lt;-</span> <span class="fu">vapply</span>(instr<span class="sc">$</span>scales, <span class="cf">function</span>(x) x<span class="sc">$</span>id, <span class="fu">character</span>(<span class="dv">1</span>))</span>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a><span class="fu">head</span>(scored[, <span class="fu">intersect</span>(scale_ids, <span class="fu">names</span>(scored)), <span class="at">drop =</span> <span class="cn">FALSE</span>])</span>
+<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a><span class="co">#&gt;   digital_marketing service_quality sustainability satisfaction</span></span>
+<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a><span class="co">#&gt; 1          2.666667        3.666667            5.0          3.5</span></span>
+<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a><span class="co">#&gt; 2          3.000000        2.666667            3.0          1.5</span></span>
+<span id="cb6-8"><a href="#cb6-8" tabindex="-1"></a><span class="co">#&gt; 3          4.666667        3.333333            3.5          4.5</span></span>
+<span id="cb6-9"><a href="#cb6-9" tabindex="-1"></a><span class="co">#&gt; 4          4.333333        4.000000            5.0          4.5</span></span>
+<span id="cb6-10"><a href="#cb6-10" tabindex="-1"></a><span class="co">#&gt; 5          3.000000        3.666667            4.0          3.0</span></span>
+<span id="cb6-11"><a href="#cb6-11" tabindex="-1"></a><span class="co">#&gt; 6          3.666667        3.666667            2.5          3.5</span></span>
+<span id="cb6-12"><a href="#cb6-12" tabindex="-1"></a><span class="co">#&gt;   behavioural_intention</span></span>
+<span id="cb6-13"><a href="#cb6-13" tabindex="-1"></a><span class="co">#&gt; 1                   4.5</span></span>
+<span id="cb6-14"><a href="#cb6-14" tabindex="-1"></a><span class="co">#&gt; 2                   2.5</span></span>
+<span id="cb6-15"><a href="#cb6-15" tabindex="-1"></a><span class="co">#&gt; 3                   2.5</span></span>
+<span id="cb6-16"><a href="#cb6-16" tabindex="-1"></a><span class="co">#&gt; 4                   5.0</span></span>
+<span id="cb6-17"><a href="#cb6-17" tabindex="-1"></a><span class="co">#&gt; 5                   3.5</span></span>
+<span id="cb6-18"><a href="#cb6-18" tabindex="-1"></a><span class="co">#&gt; 6                   3.0</span></span></code></pre></div>
+</div>
+<div id="descriptive-statistics" class="section level2">
+<h2>Descriptive statistics</h2>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a><span class="fu">descriptives_report</span>(</span>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a>  scored,</span>
+<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a>  <span class="at">variables =</span> <span class="fu">intersect</span>(scale_ids, <span class="fu">names</span>(scored))</span>
+<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a>)</span>
+<span id="cb7-5"><a href="#cb7-5" tabindex="-1"></a><span class="co">#&gt; $method</span></span>
+<span id="cb7-6"><a href="#cb7-6" tabindex="-1"></a><span class="co">#&gt; [1] &quot;descriptives&quot;</span></span>
+<span id="cb7-7"><a href="#cb7-7" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb7-8"><a href="#cb7-8" tabindex="-1"></a><span class="co">#&gt; $variables</span></span>
+<span id="cb7-9"><a href="#cb7-9" tabindex="-1"></a><span class="co">#&gt; [1] &quot;digital_marketing&quot;     &quot;service_quality&quot;       &quot;sustainability&quot;       </span></span>
+<span id="cb7-10"><a href="#cb7-10" tabindex="-1"></a><span class="co">#&gt; [4] &quot;satisfaction&quot;          &quot;behavioural_intention&quot;</span></span>
+<span id="cb7-11"><a href="#cb7-11" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb7-12"><a href="#cb7-12" tabindex="-1"></a><span class="co">#&gt; $split_by</span></span>
+<span id="cb7-13"><a href="#cb7-13" tabindex="-1"></a><span class="co">#&gt; NULL</span></span>
+<span id="cb7-14"><a href="#cb7-14" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb7-15"><a href="#cb7-15" tabindex="-1"></a><span class="co">#&gt; $weights</span></span>
+<span id="cb7-16"><a href="#cb7-16" tabindex="-1"></a><span class="co">#&gt; NULL</span></span>
+<span id="cb7-17"><a href="#cb7-17" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb7-18"><a href="#cb7-18" tabindex="-1"></a><span class="co">#&gt; $table</span></span>
+<span id="cb7-19"><a href="#cb7-19" tabindex="-1"></a><span class="co">#&gt;                variable group   n valid_n missing_n     mean        sd median</span></span>
+<span id="cb7-20"><a href="#cb7-20" tabindex="-1"></a><span class="co">#&gt; 1     digital_marketing   All 120     120         0 3.152778 0.8576517   3.00</span></span>
+<span id="cb7-21"><a href="#cb7-21" tabindex="-1"></a><span class="co">#&gt; 2       service_quality   All 120     120         0 3.055556 0.8964432   3.00</span></span>
+<span id="cb7-22"><a href="#cb7-22" tabindex="-1"></a><span class="co">#&gt; 3        sustainability   All 120     120         0 3.187500 0.8226379   3.00</span></span>
+<span id="cb7-23"><a href="#cb7-23" tabindex="-1"></a><span class="co">#&gt; 4          satisfaction   All 120     120         0 3.291667 1.0443593   3.25</span></span>
+<span id="cb7-24"><a href="#cb7-24" tabindex="-1"></a><span class="co">#&gt; 5 behavioural_intention   All 120     120         0 3.100000 1.0504101   3.00</span></span>
+<span id="cb7-25"><a href="#cb7-25" tabindex="-1"></a><span class="co">#&gt;        iqr      min max    skewness   kurtosis         se   ci_low  ci_high</span></span>
+<span id="cb7-26"><a href="#cb7-26" tabindex="-1"></a><span class="co">#&gt; 1 1.000000 1.000000   5 -0.11828231 -0.1968503 0.07829253 2.997751 3.307805</span></span>
+<span id="cb7-27"><a href="#cb7-27" tabindex="-1"></a><span class="co">#&gt; 2 1.333333 1.333333   5  0.14528766 -0.5985009 0.08183369 2.893517 3.217594</span></span>
+<span id="cb7-28"><a href="#cb7-28" tabindex="-1"></a><span class="co">#&gt; 3 1.500000 1.500000   5  0.15770066 -0.3405926 0.07509623 3.038802 3.336198</span></span>
+<span id="cb7-29"><a href="#cb7-29" tabindex="-1"></a><span class="co">#&gt; 4 1.500000 1.000000   5 -0.03690984 -0.9403399 0.09533652 3.102891 3.480443</span></span>
+<span id="cb7-30"><a href="#cb7-30" tabindex="-1"></a><span class="co">#&gt; 5 1.125000 1.000000   5  0.02329631 -0.6542410 0.09588888 2.910130 3.289870</span></span>
+<span id="cb7-31"><a href="#cb7-31" tabindex="-1"></a><span class="co">#&gt;   weighted_mean</span></span>
+<span id="cb7-32"><a href="#cb7-32" tabindex="-1"></a><span class="co">#&gt; 1            NA</span></span>
+<span id="cb7-33"><a href="#cb7-33" tabindex="-1"></a><span class="co">#&gt; 2            NA</span></span>
+<span id="cb7-34"><a href="#cb7-34" tabindex="-1"></a><span class="co">#&gt; 3            NA</span></span>
+<span id="cb7-35"><a href="#cb7-35" tabindex="-1"></a><span class="co">#&gt; 4            NA</span></span>
+<span id="cb7-36"><a href="#cb7-36" tabindex="-1"></a><span class="co">#&gt; 5            NA</span></span>
+<span id="cb7-37"><a href="#cb7-37" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb7-38"><a href="#cb7-38" tabindex="-1"></a><span class="co">#&gt; $apa</span></span>
+<span id="cb7-39"><a href="#cb7-39" tabindex="-1"></a><span class="co">#&gt; [1] &quot;Descriptive statistics were computed for 5 variable(s).&quot;</span></span>
+<span id="cb7-40"><a href="#cb7-40" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb7-41"><a href="#cb7-41" tabindex="-1"></a><span class="co">#&gt; $prompt</span></span>
+<span id="cb7-42"><a href="#cb7-42" tabindex="-1"></a><span class="co">#&gt; [1] &quot;Report central tendency, variability, missingness, and any skewed distributions before inferential tests.&quot;</span></span>
+<span id="cb7-43"><a href="#cb7-43" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb7-44"><a href="#cb7-44" tabindex="-1"></a><span class="co">#&gt; attr(,&quot;class&quot;)</span></span>
+<span id="cb7-45"><a href="#cb7-45" tabindex="-1"></a><span class="co">#&gt; [1] &quot;sframe_descriptives_report&quot;</span></span></code></pre></div>
+</div>
+<div id="run-an-analysis-plan" class="section level2">
+<h2>Run an analysis plan</h2>
+<p>Analysis plans are stored in the instrument. The current structure
+uses method-specific roles. Earlier <code>variables</code> and
+<code>test</code> blocks remain compatible.</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a>instr<span class="sc">$</span>analysis_plan <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a>  <span class="fu">list</span>(</span>
+<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a>    <span class="at">id =</span> <span class="st">&quot;RQ1&quot;</span>,</span>
+<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a>    <span class="at">research_question =</span> <span class="st">&quot;Is digital marketing associated with satisfaction?&quot;</span>,</span>
+<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a>    <span class="at">family =</span> <span class="st">&quot;association&quot;</span>,</span>
+<span id="cb8-6"><a href="#cb8-6" tabindex="-1"></a>    <span class="at">method =</span> <span class="st">&quot;correlation_spearman&quot;</span>,</span>
+<span id="cb8-7"><a href="#cb8-7" tabindex="-1"></a>    <span class="at">roles =</span> <span class="fu">list</span>(<span class="at">x =</span> <span class="st">&quot;digital_marketing&quot;</span>, <span class="at">y =</span> <span class="st">&quot;satisfaction&quot;</span>),</span>
+<span id="cb8-8"><a href="#cb8-8" tabindex="-1"></a>    <span class="at">options =</span> <span class="fu">list</span>(<span class="at">alpha =</span> <span class="fl">0.05</span>),</span>
+<span id="cb8-9"><a href="#cb8-9" tabindex="-1"></a>    <span class="at">status =</span> <span class="st">&quot;valid_plan&quot;</span>,</span>
+<span id="cb8-10"><a href="#cb8-10" tabindex="-1"></a>    <span class="at">requires_data =</span> <span class="cn">TRUE</span></span>
+<span id="cb8-11"><a href="#cb8-11" tabindex="-1"></a>  ),</span>
+<span id="cb8-12"><a href="#cb8-12" tabindex="-1"></a>  <span class="fu">list</span>(</span>
+<span id="cb8-13"><a href="#cb8-13" tabindex="-1"></a>    <span class="at">id =</span> <span class="st">&quot;RQ2&quot;</span>,</span>
+<span id="cb8-14"><a href="#cb8-14" tabindex="-1"></a>    <span class="at">research_question =</span> <span class="st">&quot;Do visit types differ in satisfaction?&quot;</span>,</span>
+<span id="cb8-15"><a href="#cb8-15" tabindex="-1"></a>    <span class="at">family =</span> <span class="st">&quot;group_comparison&quot;</span>,</span>
+<span id="cb8-16"><a href="#cb8-16" tabindex="-1"></a>    <span class="at">method =</span> <span class="st">&quot;mann_whitney&quot;</span>,</span>
+<span id="cb8-17"><a href="#cb8-17" tabindex="-1"></a>    <span class="at">roles =</span> <span class="fu">list</span>(<span class="at">group =</span> <span class="st">&quot;visit_type&quot;</span>, <span class="at">outcome =</span> <span class="st">&quot;satisfaction&quot;</span>),</span>
+<span id="cb8-18"><a href="#cb8-18" tabindex="-1"></a>    <span class="at">options =</span> <span class="fu">list</span>(<span class="at">alpha =</span> <span class="fl">0.05</span>),</span>
+<span id="cb8-19"><a href="#cb8-19" tabindex="-1"></a>    <span class="at">status =</span> <span class="st">&quot;valid_plan&quot;</span>,</span>
+<span id="cb8-20"><a href="#cb8-20" tabindex="-1"></a>    <span class="at">requires_data =</span> <span class="cn">TRUE</span></span>
+<span id="cb8-21"><a href="#cb8-21" tabindex="-1"></a>  )</span>
+<span id="cb8-22"><a href="#cb8-22" tabindex="-1"></a>)</span>
+<span id="cb8-23"><a href="#cb8-23" tabindex="-1"></a></span>
+<span id="cb8-24"><a href="#cb8-24" tabindex="-1"></a>results <span class="ot">&lt;-</span> <span class="fu">run_analysis_plan</span>(responses, instr)</span>
+<span id="cb8-25"><a href="#cb8-25" tabindex="-1"></a>results</span>
+<span id="cb8-26"><a href="#cb8-26" tabindex="-1"></a><span class="co">#&gt; Analysis Results: 2 research question(s)</span></span>
+<span id="cb8-27"><a href="#cb8-27" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-28"><a href="#cb8-28" tabindex="-1"></a><span class="co">#&gt; RQ 1: Is digital marketing associated with satisfaction?</span></span>
+<span id="cb8-29"><a href="#cb8-29" tabindex="-1"></a><span class="co">#&gt;   Test: correlation_spearman</span></span>
+<span id="cb8-30"><a href="#cb8-30" tabindex="-1"></a><span class="co">#&gt;   APA:  r_s(118) = 0.54, p &lt; .001</span></span>
+<span id="cb8-31"><a href="#cb8-31" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-32"><a href="#cb8-32" tabindex="-1"></a><span class="co">#&gt; RQ 2: Do visit types differ in satisfaction?</span></span>
+<span id="cb8-33"><a href="#cb8-33" tabindex="-1"></a><span class="co">#&gt;   Test: mann_whitney</span></span>
+<span id="cb8-34"><a href="#cb8-34" tabindex="-1"></a><span class="co">#&gt;   APA:  U = 1772, z = -0.06, p = 0.951, r = 0.01</span></span></code></pre></div>
+</div>
+<div id="gui-workflow" class="section level2">
+<h2>GUI workflow</h2>
+<p>SurveyStudio can preload both the instrument and responses.</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a><span class="fu">launch_studio</span>(</span>
+<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a>  <span class="at">instrument =</span> instr,</span>
+<span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a>  <span class="at">responses =</span> responses,</span>
+<span id="cb9-4"><a href="#cb9-4" tabindex="-1"></a>  <span class="at">screen =</span> <span class="st">&quot;analysis&quot;</span>,</span>
+<span id="cb9-5"><a href="#cb9-5" tabindex="-1"></a>  <span class="at">launch.browser =</span> <span class="cn">FALSE</span></span>
+<span id="cb9-6"><a href="#cb9-6" tabindex="-1"></a>)</span></code></pre></div>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

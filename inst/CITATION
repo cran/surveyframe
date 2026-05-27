@@ -1,0 +1,11 @@
+bibentry(
+  bibtype  = "Manual",
+  title    = "surveyframe: A Survey Instrument Workflow for R",
+  author   = person("Mohammed Ali", "Sharafuddin",
+                    email = "mohammedali.page@gmail.com",
+                    role  = c("aut", "cre"),
+                    comment = c(ORCID = "0000-0001-5247-2964")),
+  year     = "2026",
+  note     = "R package version 0.3.0",
+  url      = "https://github.com/MohammedAliSharafuddin/surveyframe"
+)

@@ -1,0 +1,272 @@
+{
+  "hash": {
+    "algo": "sha256",
+    "value": "a58a3eff1b5e66dc4d95c3a87ae68cf71fa8cb8c7982cbe4616e0980a2e406bb"
+  },
+  "version": "0.3.0",
+  "meta": {
+    "title": "Tourism Services Experience Demo",
+    "version": "0.3.0",
+    "description": "Simulated demo questionnaire inspired by tourism-services research on digital marketing, service quality, sustainability, satisfaction, and behavioural intention.",
+    "authors": "Mohammed Ali Sharafuddin",
+    "languages": "en",
+    "validated": true,
+    "created_at": "2026-05-13T18:16:19Z"
+  },
+  "items": [
+    {
+      "id": "visit_type",
+      "label": "Visitor type",
+      "type": "single_choice",
+      "required": true,
+      "choice_set": "visit_type",
+      "reverse": false
+    },
+    {
+      "id": "dm_1",
+      "label": "Digital content helped me discover tourism services.",
+      "type": "likert",
+      "required": true,
+      "choice_set": "agree5",
+      "scale_id": "digital_marketing",
+      "reverse": false
+    },
+    {
+      "id": "dm_2",
+      "label": "Social media information was useful for planning my visit.",
+      "type": "likert",
+      "required": true,
+      "choice_set": "agree5",
+      "scale_id": "digital_marketing",
+      "reverse": false
+    },
+    {
+      "id": "dm_3",
+      "label": "Online promotions improved my interest in the destination.",
+      "type": "likert",
+      "required": true,
+      "choice_set": "agree5",
+      "scale_id": "digital_marketing",
+      "reverse": false
+    },
+    {
+      "id": "sq_1",
+      "label": "Tourism staff provided reliable service.",
+      "type": "likert",
+      "required": true,
+      "choice_set": "agree5",
+      "scale_id": "service_quality",
+      "reverse": false
+    },
+    {
+      "id": "sq_2",
+      "label": "The service environment was easy to navigate.",
+      "type": "likert",
+      "required": true,
+      "choice_set": "agree5",
+      "scale_id": "service_quality",
+      "reverse": false
+    },
+    {
+      "id": "sq_3",
+      "label": "The tourism service met my expectations.",
+      "type": "likert",
+      "required": true,
+      "choice_set": "agree5",
+      "scale_id": "service_quality",
+      "reverse": false
+    },
+    {
+      "id": "sus_1",
+      "label": "The tourism provider communicated sustainability practices clearly.",
+      "type": "likert",
+      "required": true,
+      "choice_set": "agree5",
+      "scale_id": "sustainability",
+      "reverse": false
+    },
+    {
+      "id": "sus_2",
+      "label": "The visit encouraged responsible tourism behaviour.",
+      "type": "likert",
+      "required": true,
+      "choice_set": "agree5",
+      "scale_id": "sustainability",
+      "reverse": false
+    },
+    {
+      "id": "sat_1",
+      "label": "Overall, I was satisfied with the tourism experience.",
+      "type": "likert",
+      "required": true,
+      "choice_set": "agree5",
+      "scale_id": "satisfaction",
+      "reverse": false
+    },
+    {
+      "id": "sat_2",
+      "label": "The experience was worth the time and cost.",
+      "type": "likert",
+      "required": true,
+      "choice_set": "agree5",
+      "scale_id": "satisfaction",
+      "reverse": false
+    },
+    {
+      "id": "bi_1",
+      "label": "I would recommend this tourism service to others.",
+      "type": "likert",
+      "required": true,
+      "choice_set": "agree5",
+      "scale_id": "behavioural_intention",
+      "reverse": false
+    },
+    {
+      "id": "bi_2",
+      "label": "I intend to use similar tourism services again.",
+      "type": "likert",
+      "required": true,
+      "choice_set": "agree5",
+      "scale_id": "behavioural_intention",
+      "reverse": false
+    },
+    {
+      "id": "attention",
+      "label": "For quality control, please select Agree.",
+      "type": "single_choice",
+      "required": true,
+      "choice_set": "agree5",
+      "reverse": false
+    },
+    {
+      "id": "comments",
+      "label": "Optional comments about the tourism experience.",
+      "type": "textarea",
+      "required": false,
+      "reverse": false
+    }
+  ],
+  "choices": [
+    {
+      "id": "agree5",
+      "values": [1, 2, 3, 4, 5],
+      "labels": ["Strongly disagree", "Disagree", "Neither agree nor disagree", "Agree", "Strongly agree"],
+      "allow_other": false,
+      "randomise": false
+    },
+    {
+      "id": "visit_type",
+      "values": ["first_time", "repeat"],
+      "labels": ["First-time visitor", "Repeat visitor"],
+      "allow_other": false,
+      "randomise": false
+    },
+    {
+      "id": "yes_no",
+      "values": ["yes", "no"],
+      "labels": ["Yes", "No"],
+      "allow_other": false,
+      "randomise": false
+    }
+  ],
+  "scales": [
+    {
+      "id": "digital_marketing",
+      "label": "Digital marketing effectiveness",
+      "items": ["dm_1", "dm_2", "dm_3"],
+      "method": "mean",
+      "min_valid": null
+    },
+    {
+      "id": "service_quality",
+      "label": "Service quality",
+      "items": ["sq_1", "sq_2", "sq_3"],
+      "method": "mean",
+      "min_valid": null
+    },
+    {
+      "id": "sustainability",
+      "label": "Sustainability perception",
+      "items": ["sus_1", "sus_2"],
+      "method": "mean",
+      "min_valid": null
+    },
+    {
+      "id": "satisfaction",
+      "label": "Tourist satisfaction",
+      "items": ["sat_1", "sat_2"],
+      "method": "mean",
+      "min_valid": null
+    },
+    {
+      "id": "behavioural_intention",
+      "label": "Behavioural intention",
+      "items": ["bi_1", "bi_2"],
+      "method": "mean",
+      "min_valid": null
+    }
+  ],
+  "branching": [],
+  "checks": [
+    {
+      "id": "attention_agree",
+      "item_id": "attention",
+      "type": "attention",
+      "pass_values": 4,
+      "fail_action": "flag",
+      "label": null,
+      "notes": null
+    }
+  ],
+  "analysis_plan": [
+    {
+      "id": "rq_dm_sat",
+      "research_question": "Is perceived digital marketing effectiveness associated with tourist satisfaction?",
+      "variables": ["digital_marketing", "satisfaction"],
+      "test": "correlation_pearson",
+      "alpha": 0.05,
+      "interpretation": "Use the direction and size of the correlation to describe the relationship.",
+      "citations": []
+    },
+    {
+      "id": "rq_predict_sat",
+      "research_question": "Do digital marketing, service quality, and sustainability perceptions predict satisfaction?",
+      "variables": ["digital_marketing", "service_quality", "sustainability", "satisfaction"],
+      "test": "regression_linear",
+      "alpha": 0.05,
+      "interpretation": "Compare the regression coefficients to identify the strongest predictor.",
+      "citations": []
+    },
+    {
+      "id": "rq_visit_bi",
+      "research_question": "Do first-time and repeat visitors differ in behavioural intention?",
+      "variables": ["visit_type", "behavioural_intention"],
+      "test": "mann_whitney",
+      "alpha": 0.05,
+      "interpretation": "Report whether behavioural intention differs by visitor type.",
+      "citations": []
+    }
+  ],
+  "render": {
+    "mode": "standard",
+    "theme": "#1f6f78",
+    "submit_label": "Submit response",
+    "welcome": {
+      "title": "Tourism Services Experience Survey",
+      "intro_text": "This simulated demo instrument is inspired by published tourism-services research on digital marketing, experience, satisfaction, and behavioural intentions.",
+      "consent_text": "I understand that this is demo data for package examples.",
+      "consent_required": true,
+      "start_label": "Start survey"
+    },
+    "thankyou": {
+      "message": "Thank you for completing the demo survey.",
+      "redirect_url": "",
+      "show_download": true
+    },
+    "header": {
+      "institution": "surveyframe demo",
+      "logo_base64": "",
+      "show_progress": true
+    }
+  }
+}

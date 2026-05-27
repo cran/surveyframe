@@ -1,0 +1,379 @@
+---
+title: "A complete surveyframe workflow"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{A complete surveyframe workflow}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+library(surveyframe)
+```
+
+## Purpose
+
+`surveyframe` supports instrument-centred survey research. Each survey is
+stored as a typed `sframe` object that you can validate, save, reuse, link with
+response data, score, check for data quality, analyse for reliability and item
+diagnostics, and pass to reporting or syntax-generation functions.
+
+The usual workflow is:
+
+1. Define or load an instrument.
+2. Validate the instrument.
+3. Collect or import response data.
+4. Check response quality.
+5. Score scales.
+6. Run descriptive, reliability, and item diagnostics.
+7. Generate syntax for EFA, CFA, CB-SEM, or PLS-SEM workflows.
+8. Render a reproducible report.
+
+Two demonstration datasets are bundled. The tourism-services demo supports
+examples for scale scoring, reliability, reporting, and syntax generation. The
+input-types demo illustrates the main survey controls in the builder, studio,
+and dashboard.
+
+The tourism-services responses are synthetic. They are shaped around a
+digital-marketing and tourism-services questionnaire so the examples feel like
+a research workflow, while avoiding real respondent data and internet access.
+
+## Load the bundled demo instrument
+
+```{r load-demo}
+demo <- sframe_demo_data()
+instr <- demo$instrument
+responses <- demo$responses
+
+instr
+```
+
+## Inspect the instrument
+
+An `sframe` object stores the questionnaire title, version, items, choice
+sets, scales, checks, analysis plans, model specifications, and rendering
+hints. Item IDs are important because response data columns use the same names.
+
+```{r inspect}
+names(instr)
+
+length(instr$items)
+length(instr$scales)
+
+vapply(instr$items[1:5], function(x) x$id, character(1))
+vapply(instr$items[1:5], function(x) x$type, character(1))
+```
+
+## Validate the instrument
+
+`validate_sframe()` checks whether the instrument structure is internally
+consistent. This should be done before fieldwork, before response import, and
+before reports are generated.
+
+```{r validate}
+validation <- validate_sframe(instr, strict = FALSE)
+
+validation$valid
+length(validation$problems)
+```
+
+For a strict workflow, use:
+
+```{r validate-strict, eval = FALSE}
+instr <- validate_sframe(instr)
+```
+
+## Read responses
+
+The demo helper already imported the bundled responses. The equivalent manual
+call is:
+
+```{r read-responses}
+responses <- read_responses(
+  x = demo$responses_path,
+  instrument = instr,
+  respondent_id = "respondent_id",
+  submitted_at = "submitted_at",
+  meta_cols = "started_at"
+)
+
+dim(responses)
+head(responses[, 1:6])
+```
+
+## Check missing data
+
+Missing-data checks are useful before scoring scales or running models.
+
+```{r missing}
+missing <- missing_data_report(responses, instr)
+
+missing
+```
+
+## Check response quality
+
+`quality_report()` evaluates data quality using the instrument definition.
+When attention checks are present, they are checked against the pass values
+stored in the instrument.
+
+```{r quality}
+quality <- quality_report(
+  data = responses,
+  instrument = instr,
+  respondent_id = "respondent_id",
+  submitted_at = "submitted_at",
+  started_at = "started_at"
+)
+
+quality
+```
+
+## Score scales
+
+`score_scales()` applies the scale definitions in the instrument. This includes
+item membership, reverse coding, minimum valid item rules, and the selected
+scoring method.
+
+```{r score}
+scored <- score_scales(
+  data = responses,
+  instrument = instr,
+  keep_items = TRUE,
+  keep_meta = TRUE
+)
+
+scale_names <- vapply(instr$scales, function(x) x$id, character(1))
+scale_names
+
+head(scored[, intersect(scale_names, names(scored)), drop = FALSE])
+```
+
+## Descriptive statistics
+
+Descriptive reports can be run on raw items or scored scale columns.
+
+```{r descriptives}
+descriptives_report(
+  scored,
+  variables = intersect(scale_names, names(scored))
+)
+```
+
+## Reliability diagnostics
+
+Reliability diagnostics use the scale definitions stored in the instrument.
+Cronbach's alpha and omega require the optional `psych` package, so this chunk
+is evaluated only when that package is available.
+
+```{r reliability, eval = requireNamespace("psych", quietly = TRUE)}
+reliability <- reliability_report(
+  data = responses,
+  instrument = instr,
+  omega = FALSE
+)
+
+reliability
+```
+
+## Item diagnostics
+
+`item_report()` gives item-level diagnostics for scale items. This is useful
+before retaining, removing, or rewriting items.
+
+```{r item-report}
+items <- item_report(responses, instr)
+
+names(items)
+items[[1]]
+```
+
+## Validity summary from standardised loadings
+
+When a researcher has standardised loadings from CFA or PLS-SEM, the loadings
+can be passed to `validity_report()` to prepare a compact construct-level
+validity summary.
+
+```{r validity}
+example_loadings <- list(
+  digital_marketing = c(dm_1 = .72, dm_2 = .78, dm_3 = .81),
+  service_quality = c(sq_1 = .75, sq_2 = .80, sq_3 = .77)
+)
+
+validity_report(example_loadings)
+```
+
+## EFA readiness
+
+`efa_report()` prepares EFA-readiness checks using the items stored in the
+instrument. It should be read as a screening step before estimating and
+interpreting factor solutions.
+
+```{r efa, eval = requireNamespace("psych", quietly = TRUE)}
+efa <- efa_report(responses, instr)
+
+efa
+```
+
+## CFA syntax
+
+`cfa_syntax()` and `cfa_lavaan_syntax()` generate measurement-model syntax from
+the scale structure in the instrument. The package does not need `lavaan` to
+generate syntax.
+
+```{r cfa-syntax}
+cat(cfa_syntax(instr))
+```
+
+```{r cfa-lavaan}
+cat(cfa_lavaan_syntax(instr, ordered = TRUE))
+```
+
+## CB-SEM and PLS-SEM syntax
+
+`surveyframe` can also store model definitions and generate syntax for
+downstream SEM software. surveyframe generates model syntax. Specialised
+packages handle formal model estimation.
+
+```{r sem-model}
+model <- sf_model(
+  id = "demo_model",
+  label = "Demo structural model",
+  type = "cb_sem",
+  constructs = list(
+    sf_construct("DM", "Digital marketing", c("dm_1", "dm_2", "dm_3")),
+    sf_construct("SQ", "Service quality", c("sq_1", "sq_2", "sq_3"))
+  ),
+  paths = list(
+    sf_path("DM", "SQ")
+  )
+)
+
+model_json(model)
+```
+
+```{r sem-syntax}
+cat(sem_lavaan_syntax(model, instr))
+```
+
+```{r pls-syntax}
+pls_model <- sf_model(
+  id = "demo_pls",
+  label = "Demo PLS model",
+  type = "pls_sem",
+  constructs = list(
+    sf_construct("DM", "Digital marketing", c("dm_1", "dm_2", "dm_3"), mode = "composite"),
+    sf_construct("SQ", "Service quality", c("sq_1", "sq_2", "sq_3"), mode = "composite")
+  ),
+  paths = list(
+    sf_path("DM", "SQ")
+  )
+)
+
+cat(seminr_syntax(pls_model))
+```
+
+## Generate a codebook
+
+The codebook comes from the instrument object, so it stays aligned with item
+IDs, item labels, choice sets, and scale membership.
+
+```{r codebook}
+codebook <- codebook_report(instr)
+
+codebook
+```
+
+## Render a reproducible report
+
+`render_report()` combines the instrument, response data, quality checks,
+descriptive summaries, codebook content, and other outputs into an HTML file.
+Store the output with the study files.
+
+```{r render-report, eval = FALSE}
+render_report(
+  instrument = instr,
+  data = responses,
+  output_file = "surveyframe-demo-report.html",
+  include_codebook = TRUE,
+  include_quality = TRUE,
+  include_missing = TRUE,
+  include_descriptives = TRUE,
+  include_reliability = TRUE,
+  include_models = TRUE
+)
+```
+
+## GUI workflow
+
+The package has three interactive entry points.
+
+```{r gui-path, eval = FALSE}
+launch_builder()
+launch_studio()
+launch_dashboard()
+```
+
+Use them as follows:
+
+* `launch_builder()` opens the standalone questionnaire builder. It is best for
+  creating or editing a `.sframe` file.
+* `launch_studio()` opens the full workflow interface. It is best for moving
+  from an instrument to data checking, scoring, analysis planning, and reports.
+* `launch_dashboard()` opens a read-only response dashboard. It is best after
+  responses have already been collected.
+
+For package examples and training, the demo launchers are clearer:
+
+```{r gui-demo, eval = FALSE}
+launch_builder_demo()
+launch_studio_demo()
+launch_dashboard_demo()
+```
+
+## A compact script for a complete study
+
+```{r compact-workflow, eval = FALSE}
+library(surveyframe)
+
+instr <- read_sframe("my_survey.sframe")
+instr <- validate_sframe(instr)
+
+responses <- read_responses(
+  "responses.csv",
+  instr,
+  respondent_id = "respondent_id",
+  submitted_at = "submitted_at",
+  meta_cols = "started_at"
+)
+
+quality <- quality_report(responses, instr, respondent_id = "respondent_id")
+scored <- score_scales(responses, instr)
+reliability <- reliability_report(responses, instr, omega = FALSE)
+codebook <- codebook_report(instr)
+
+render_report(
+  instrument = instr,
+  data = responses,
+  output_file = "survey-report.html",
+  include_codebook = TRUE,
+  include_quality = TRUE,
+  include_missing = TRUE,
+  include_descriptives = TRUE,
+  include_reliability = TRUE
+)
+```
+
+## Citation and reproducibility
+
+When reporting results, cite the package and keep the `.sframe` file with the
+analysis files. The `.sframe` file records the instrument definition used to
+read, score, and report the responses.
+
+```{r citation, eval = FALSE}
+citation("surveyframe")
+```

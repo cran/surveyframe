@@ -1,0 +1,151 @@
+---
+title: "EFA, CFA, CB-SEM, and PLS-SEM syntax generation"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{EFA, CFA, CB-SEM, and PLS-SEM syntax generation}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+library(surveyframe)
+```
+
+In v0.3, `surveyframe` generates syntax for lavaan and seminr workflows. Model
+fitting remains in the researcher's analysis script. The generated syntax
+should be reviewed, copied into the modelling package, and fitted with
+modelling choices appropriate to the study.
+
+```{r load}
+demo <- sframe_demo_data()
+instr <- demo$instrument
+```
+
+## EFA planning syntax
+
+`efa_syntax()` creates a small R code block for estimating an exploratory
+factor solution with the optional `psych` package.
+
+```{r efa-syntax}
+cat(efa_syntax(
+  items = c("dm_1", "dm_2", "dm_3", "sq_1", "sq_2", "sq_3"),
+  nfactors = 2,
+  extraction = "minres",
+  rotation = "oblimin"
+))
+```
+
+## CFA syntax from scale definitions
+
+The simplest CFA workflow uses scales already defined in the instrument.
+
+```{r cfa}
+cat(cfa_lavaan_syntax(instr, ordered = TRUE))
+```
+
+`cfa_syntax()` remains available as a backward-compatible wrapper.
+
+```{r cfa-wrapper}
+cat(cfa_syntax(instr))
+```
+
+## Construct objects
+
+Construct objects record the construct ID, label, measurement mode, and
+indicator items.
+
+```{r constructs}
+dm <- sf_construct(
+  id = "DM",
+  label = "Digital marketing",
+  items = c("dm_1", "dm_2", "dm_3"),
+  mode = "reflective"
+)
+
+sq <- sf_construct(
+  id = "SQ",
+  label = "Service quality",
+  items = c("sq_1", "sq_2", "sq_3"),
+  mode = "reflective"
+)
+
+sat <- sf_construct(
+  id = "SAT",
+  label = "Satisfaction",
+  items = c("sat_1", "sat_2"),
+  mode = "reflective"
+)
+```
+
+Construct modes include `reflective`, `composite`, `formative`, and
+`single_item`. Lavaan syntax generation in v0.3 is intended for reflective
+measurement models. PLS-SEM syntax can use composite-style constructs.
+
+## CB-SEM lavaan syntax
+
+`sf_model()` stores measurement and structural paths. `sem_lavaan_syntax()`
+then generates lavaan syntax without requiring `lavaan` to be installed.
+
+```{r cb-sem}
+sem_model <- sf_model(
+  id = "tourism_sem",
+  label = "Tourism structural model",
+  type = "cb_sem",
+  constructs = list(dm, sq, sat),
+  paths = list(
+    sf_path("DM", "SQ", label = "a"),
+    sf_path("SQ", "SAT", label = "b"),
+    sf_path("DM", "SAT", label = "c_prime")
+  ),
+  indirect = list(
+    sf_indirect("DM", "SQ", "SAT", label = "indirect_DM_SQ_SAT")
+  ),
+  options = list(estimator = "MLR", missing = "fiml", standardised = TRUE)
+)
+
+validate_model(sem_model, instr)
+
+cat(sem_lavaan_syntax(sem_model, instr))
+```
+
+## PLS-SEM seminr syntax
+
+For PLS-SEM planning, use composite constructs and `seminr_syntax()`.
+
+```{r pls}
+pls_model <- sf_model(
+  id = "tourism_pls",
+  label = "Tourism PLS model",
+  type = "pls_sem",
+  constructs = list(
+    sf_construct("DM", "Digital marketing", c("dm_1", "dm_2", "dm_3"), mode = "composite"),
+    sf_construct("SQ", "Service quality", c("sq_1", "sq_2", "sq_3"), mode = "composite"),
+    sf_construct("SAT", "Satisfaction", c("sat_1", "sat_2"), mode = "composite")
+  ),
+  paths = list(
+    sf_path("DM", "SQ"),
+    sf_path("SQ", "SAT"),
+    sf_path("DM", "SAT")
+  ),
+  options = list(bootstrap = 5000)
+)
+
+cat(seminr_syntax(pls_model))
+```
+
+## Model JSON
+
+Store model specifications in `.sframe` files and export them as JSON.
+
+```{r model-json}
+model_json(sem_model)
+```
+
+## Where syntax goes next
+
+The generated lavaan syntax should be copied into `lavaan::cfa()` or
+`lavaan::sem()` after selecting estimators, ordered item handling, missing-data
+treatment, and reporting options. The generated seminr syntax should be copied
+into an analysis script where `seminr` is installed and the researcher has
+chosen bootstrapping settings and construct modes.
