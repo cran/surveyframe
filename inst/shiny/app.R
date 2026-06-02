@@ -839,7 +839,8 @@ ui <- fluidPage(
         padding: 24px 20px 16px; font-size: 18px; font-weight: 700;
         color: #ffffff; letter-spacing: 0.02em; border-bottom: 1px solid #2e3250;
       }
-      .studio-logo span { color: #5b8dee; }
+      .studio-logo span { color: #16B3B1; }
+      .studio-logo img { height: 22px; margin-right: 8px; vertical-align: middle; }
       .studio-nav { list-style: none; margin: 0; padding: 12px 0; flex: 1; }
       .studio-nav-item a {
         display: flex; align-items: center; gap: 10px;
@@ -935,7 +936,10 @@ ui <- fluidPage(
   ),
   tags$div(class = "studio-shell",
     tags$div(class = "studio-sidebar",
-      tags$div(class = "studio-logo", "Survey", tags$span("Studio")),
+      tags$div(class = "studio-logo",
+        tags$img(src = "surveyframe-shiny-square-icon.png", alt = "surveyframe"),
+        "Survey", tags$span("Studio")
+      ),
       tags$ul(class = "studio-nav",
         tags$li(class = "studio-nav-item",
           tags$a(href = "#", `data-tab` = "build",

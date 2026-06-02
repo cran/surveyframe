@@ -3,6 +3,22 @@
 # All validators and exported functions must use these classes.
 # Use typed helpers for exported-code errors.
 
+# Friendly sframe type check used by every exported function that takes
+# an instrument argument.  Replaces bare stopifnot(inherits(...)) calls
+# so new users see an actionable message instead of a raw condition string.
+sframe_check_instrument <- function(instrument, arg = "instrument") {
+  if (!inherits(instrument, "sframe")) {
+    rlang::abort(
+      paste0(
+        "The `", arg, "` argument must be an `sframe` object. ",
+        "Build one with `sf_instrument()` and its component constructors, ",
+        "or load a saved instrument from disk with `read_sframe()`."
+      ),
+      class = "sframe_error"
+    )
+  }
+}
+
 sframe_require_shiny <- function(reason) {
   rlang::check_installed("shiny", reason = reason)
 }

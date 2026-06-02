@@ -3,8 +3,8 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 library(surveyframe)
 
 ## ----input-types--------------------------------------------------------------
-demo <- sframe_input_types_demo_data()
-instr <- demo$instrument
+demo      <- sframe_input_types_demo_data()
+instr     <- demo$instrument
 responses <- demo$responses
 
 table(vapply(instr$items, function(x) x$type, character(1)))
@@ -21,16 +21,16 @@ dim(responses)
 
 ## ----studio, eval = FALSE-----------------------------------------------------
 # launch_studio(
-#   instrument = instr,
-#   responses = responses,
-#   screen = "analysis",
+#   instrument     = instr,
+#   responses      = responses,
+#   screen         = "analysis",
 #   launch.browser = FALSE
 # )
 
 ## ----dashboard, eval = FALSE--------------------------------------------------
 # launch_dashboard(
-#   instrument = instr,
-#   responses = responses,
+#   instrument     = instr,
+#   responses      = responses,
 #   launch.browser = FALSE
 # )
 

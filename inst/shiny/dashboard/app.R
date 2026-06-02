@@ -75,6 +75,7 @@ rgb_a <- function(h, a = 1) {
 dash_css <- sprintf("
 body{background:#f1f5f9;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;margin:0}
 .db-hdr{background:%s;color:#fff;padding:14px 24px;display:flex;align-items:center;gap:14px}
+.db-hdr-logo{height:28px;opacity:.92}
 .db-hdr-t{font-size:18px;font-weight:700;flex:1}
 .db-hdr-sub{font-size:12px;opacity:.75}
 .db-nav{background:#1e293b;padding:8px 0;display:flex;gap:2px;padding-left:12px;flex-wrap:wrap}
@@ -129,6 +130,9 @@ ui <- fluidPage(
     ))
   ),
   div(class = "db-hdr",
+    tags$img(class = "db-hdr-logo",
+             src = "surveyframe-shiny-square-icon.png",
+             alt = "surveyframe"),
     div(class = "db-hdr-t", TITLE),
     div(class = "db-hdr-sub",
         paste0(n_resp, " response", if (n_resp != 1) "s" else ""))

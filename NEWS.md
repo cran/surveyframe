@@ -1,3 +1,77 @@
+# surveyframe 0.3.1
+
+This is a patch release. It fixes the static-survey to Google Sheets to R
+collection loop, repairs a serialisation defect, and improves the first-time
+user experience. There are no new exported functions, no new statistical
+methods, and no new bundled datasets.
+
+## Bug fixes
+
+### Data collection round-trip
+
+* `export_static_survey()` now renders the header logo and institution name
+  from `render$header`, so exported surveys match the Shiny renderer and
+  the builder preview.
+* `export_static_survey()` now falls back to the instrument's
+  `render$google_sheets_endpoint` when `endpoint_url` is not supplied, so
+  a Google Sheets endpoint set in the builder is honoured on export.
+* The static survey now posts the respondent identifier under the column name
+  `respondent_id`, matching the Google Apps Script collector and
+  `read_responses()`. The collection round-trip now preserves the identifier.
+* `export_google_sheet()` now includes matrix sub-item columns
+  (`item_id__sub`) in the Apps Script header row, so matrix answers are
+  stored in the Sheet.
+* `read_sheet_responses()` now declares `started_at` as a meta column and
+  no longer raises a warning on every read.
+* Survey logos now keep their original MIME type (`image/png`, `image/jpeg`,
+  `image/gif`), so JPEG and GIF logos display correctly in the builder,
+  the Shiny renderer, and the static export.
+
+### Serialisation
+
+* `write_sframe()` now strips list-level names from the item, choice, scale,
+  branching, check, and model collections before serialisation. Instruments
+  built with `Map()` or other helpers that attach element names (for example,
+  using item IDs as names) previously serialised those collections as keyed
+  JSON objects rather than arrays. This produced a hash mismatch and an
+  integrity error on `read_sframe()`. Saved instruments now round-trip
+  correctly regardless of how the component lists were constructed.
+
+## User experience
+
+* Every exported function that takes an instrument now reports a clear,
+  actionable message when passed something that is not an `sframe` object.
+  The message points the user to `sf_instrument()` and `read_sframe()`
+  instead of showing a raw `inherits()` assertion failure.
+* `reliability_report()` no longer prints `psych` internal warnings to the
+  console. McDonald's omega is skipped silently for scales with fewer than
+  three items, where the statistic is not meaningful.
+* The error message from `run_analysis_plan()` when no analysis plan is
+  present now describes both the programmatic route
+  (`instrument$analysis_plan`) and the visual SurveyBuilder route.
+
+## Documentation
+
+* Rewrote the main vignette (`surveyframe.Rmd`) as an end-to-end worked
+  example: design the questionnaire, export it as a hosted survey with a
+  Google Sheets backend, collect responses, score them, run the analysis
+  plan, and render a report. The results section uses simulated responses so
+  the vignette builds offline; a single `read_sheet_responses()` call
+  connects the same workflow to live responses. The questionnaire and concept
+  are adopted from Sharafuddin, Madhavan, and Wangtueai (2024,
+  *Administrative Sciences*, 14(11), 273,
+  <doi:10.3390/admsci14110273>), with generic destination wording so the
+  example transfers to any tourism services context.
+* Updated the supporting vignettes to reflect the research-design-first
+  workflow where the instrument holds the questions, the analysis plan, and
+  the measurement model.
+* `sf_instrument()` examples now include a complete `analysis_plan` block.
+* The README now leads with `install.packages("surveyframe")`, adds a short
+  path for users who already have a response CSV, and points to
+  `browseVignettes("surveyframe")`.
+
+---
+
 # surveyframe 0.3.0
 
 ## New features

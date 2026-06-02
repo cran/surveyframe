@@ -1,23 +1,48 @@
+<img src="man/figures/readme-logo.png" align="right" width="220" alt="surveyframe" />
+
 # surveyframe
 
 <!-- badges: start -->
+[![CRAN status](https://www.r-pkg.org/badges/version/surveyframe)](https://CRAN.R-project.org/package=surveyframe)
 [![R-CMD-check](https://github.com/MohammedAliSharafuddin/surveyframe/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/MohammedAliSharafuddin/surveyframe/actions/workflows/R-CMD-check.yaml)
-[![Codecov test coverage](https://codecov.io/gh/MohammedAliSharafuddin/surveyframe/branch/main/graph/badge.svg)](https://app.codecov.io/gh/MohammedAliSharafuddin/surveyframe?branch=main)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 <!-- badges: end -->
 
-`surveyframe` supports survey research workflows through a typed instrument
-object, the `sframe`. It stores item definitions, choice sets, scales,
-branching, checks, analysis plans, model specifications, rendering hints, and
-reproducibility metadata.
+`surveyframe` is a research-design-first survey package for R. Most survey tools
+collect answers and return counts. `surveyframe` begins at the research design
+and carries it through to a written results report.
 
-The package works offline during examples, tests, vignettes, and checks.
-Browser and Shiny entry points use `open = FALSE` or explicit launch functions
-so automated checks do not open a browser.
+The unit of work is the instrument, a typed `sframe` object that stores three
+things together:
+
+1. **The questions.** Items, choice sets, scales, branching rules, and attention
+   checks.
+2. **The analysis plan.** A list of research questions, where each question is
+   bound to a named statistical technique and to the variables that fill each
+   role in that technique. The plan is written during design, before any data
+   arrive.
+3. **The measurement or structural model.** Constructs, indicators, and paths
+   for EFA, CFA, CB-SEM, and PLS-SEM.
+
+Because the plan and the model live inside the instrument, the link between a
+question, the variable it produces, and the test that variable feeds is fixed at
+design time. When responses come back, the plan runs in one pass and returns
+results already formatted for reporting, with effect sizes, a writing prompt for
+each finding, and the reference that supports each test.
+
+The package works offline during examples, tests, vignettes, and checks. Browser
+and Shiny entry points use `open = FALSE` or explicit launch functions, so
+automated checks do not open a browser.
 
 ## Installation
 
-Install the development version from GitHub:
+Install from CRAN:
+
+```r
+install.packages("surveyframe")
+```
+
+To get unreleased changes from the development version:
 
 ```r
 remotes::install_github("MohammedAliSharafuddin/surveyframe")
@@ -32,18 +57,49 @@ install.packages(c("shiny", "psych", "googlesheets4", "digest", "MASS", "nnet"))
 Syntax generation works without installing `lavaan` or `seminr`. Install those
 packages when you want to fit the generated CFA, CB-SEM, or PLS-SEM models.
 
+## Already have data?
+
+If you have collected responses in a CSV or Google Sheet and want to start
+from the analysis step, build a minimal instrument that matches your column
+names and load the data directly:
+
+```r
+library(surveyframe)
+
+# 1. Describe the items you already collected
+cs  <- sf_choices("agree5", 1:5,
+        c("Strongly disagree", "Disagree", "Neutral", "Agree", "Strongly agree"))
+i1  <- sf_item("q1", "Item 1", type = "likert", choice_set = "agree5", scale_id = "S")
+i2  <- sf_item("q2", "Item 2", type = "likert", choice_set = "agree5", scale_id = "S")
+sc  <- sf_scale("S", "My scale", items = c("q1", "q2"))
+instr <- sf_instrument("My study", components = list(cs, i1, i2, sc))
+
+# 2. Load your CSV
+responses <- read_responses("my_data.csv", instr, strict = FALSE)
+
+# 3. Score and analyse
+scored  <- score_scales(responses, instr)
+results <- run_analysis_plan(scored, instr)
+```
+
 ## Documentation workflow
 
 Start with:
 
-1. A complete surveyframe workflow
-2. Building a survey instrument
-3. Analysing survey responses
+1. A worked study: digital marketing and tourism services
+2. Building a survey instrument: questions, plan, and model
+3. Analysing survey responses: running the plan
 4. Scale reliability and validity
 5. EFA, CFA, CB-SEM, and PLS-SEM syntax generation
-6. SurveyBuilder GUI overview
+6. The visual workflow: SurveyBuilder, SurveyStudio, and the dashboard
 
-## Basic instrument
+Read all six vignettes inside R with:
+
+```r
+browseVignettes("surveyframe")
+```
+
+## An instrument is the research design
 
 ```r
 library(surveyframe)
@@ -75,6 +131,16 @@ instr <- sf_instrument(
   "Service Survey",
   components = list(
     agree5, visitor_type_choices, sat_1, sat_2, sat_3, visitor_type, sat
+  ),
+  analysis_plan = list(
+    list(
+      id                = "RQ1",
+      research_question = "Do first-time and repeat visitors differ in satisfaction?",
+      family            = "group_comparison",
+      method            = "mann_whitney",
+      roles             = list(group = "visitor_type", outcome = "sat"),
+      options           = list(alpha = 0.05)
+    )
   )
 )
 
@@ -83,9 +149,10 @@ write_sframe(instr, tempfile(fileext = ".sframe"))
 ```
 
 `write_sframe()` validates the instrument and writes the validated object,
-including the validation flag and any saved model specifications.
+including the validation flag, the analysis plan, and any saved model
+specifications.
 
-## Response import and descriptives
+## Import and score
 
 ```r
 responses <- data.frame(
@@ -96,46 +163,42 @@ responses <- data.frame(
   visitor_type = c("first_time", "repeat", "first_time", "repeat", "first_time")
 )
 
-resp <- read_responses(
-  responses,
-  instr,
-  respondent_id = "respondent_id",
-  strict = FALSE
-)
+resp <- read_responses(responses, instr, respondent_id = "respondent_id", strict = FALSE)
 
 score_scales(resp, instr)
-descriptives_report(resp, variables = c("sat_1", "sat_2", "sat_3"))
 missing_data_report(resp, instr)
 ```
 
-## Role-based analysis plans
+## Run the analysis plan
 
-Analysis plans use role-based variable assignment. Earlier `.sframe` files
-using `variables` and `test` fields remain compatible.
+Each block binds a research question to a technique and to the variables that
+fill each role. `run_analysis_plan()` runs every block and returns one result
+per question. Earlier `.sframe` files using `variables` and `test` fields remain
+compatible.
 
 ```r
-instr$analysis_plan <- list(
-  list(
-    id = "RQ1",
-    research_question = "Are the satisfaction items associated?",
-    family = "association",
-    method = "correlation_spearman",
-    roles = list(x = "sat_1", y = "sat_2"),
-    options = list(alpha = 0.05),
-    status = "valid_plan",
-    requires_data = TRUE
-  )
-)
-
-run_analysis_plan(resp, instr)
+results <- run_analysis_plan(resp, instr)
+results
 ```
 
 Supported method IDs include descriptives, missing data, quality checks,
-reliability, EFA readiness and solutions, CFA/CB-SEM/PLS-SEM syntax,
+reliability, EFA readiness and solutions, CFA, CB-SEM, and PLS-SEM syntax,
 chi-square, Fisher's exact test, McNemar, Cochran's Q, t-tests, Mann-Whitney,
-Wilcoxon, one- and two-way ANOVA, ANCOVA, repeated-measures ANOVA, Kruskal-
-Wallis, Friedman, Pearson/Spearman/Kendall correlations, partial correlations,
-linear and logistic regression, mediation, and moderation.
+Wilcoxon, one- and two-way ANOVA, ANCOVA, repeated-measures ANOVA,
+Kruskal-Wallis, Friedman, Pearson, Spearman, and Kendall correlations, partial
+correlations, linear and logistic regression, mediation, and moderation. Each
+technique reports an APA statistic, an effect size where it applies, a writing
+prompt, and the reference that supports it.
+
+## Render the results report
+
+```r
+render_results(results, instr, output_file = tempfile(fileext = ".html"))
+```
+
+The report holds one section per research question, with the APA result, the
+writing prompt, a space for the interpretation, and a reference list compiled
+from the techniques used.
 
 ## Reliability, EFA, and CFA
 
@@ -174,29 +237,17 @@ pls_model <- sf_model(
   "Satisfaction and loyalty PLS model",
   type = "pls_sem",
   constructs = list(
-    sf_construct(
-      "SAT",
-      "Satisfaction",
-      c("sat_1", "sat_2"),
-      mode = "composite"
-    ),
-    sf_construct(
-      "LOY",
-      "Loyalty",
-      "sat_3",
-      mode = "single_item"
-    )
+    sf_construct("SAT", "Satisfaction", c("sat_1", "sat_2"), mode = "composite"),
+    sf_construct("LOY", "Loyalty", "sat_3", mode = "single_item")
   ),
-  paths = list(
-    sf_path("SAT", "LOY")
-  ),
+  paths = list(sf_path("SAT", "LOY")),
   options = list(bootstrap = 5000)
 )
 
 seminr_syntax(pls_model)
 ```
 
-## Reporting
+## A full study report
 
 ```r
 render_report(
@@ -222,9 +273,11 @@ launch_builder(open = FALSE)
 export_static_survey(instr, open = FALSE)
 ```
 
-Use `launch_builder()` as the standalone questionnaire builder,
-`launch_studio()` as the workflow hub, and `launch_dashboard()` as the
-read-only response explorer. Demo launchers are available for training:
+Use `launch_builder()` to author the questionnaire, the plan, and the model and
+to export the `.sframe` file and model syntax; it runs no statistics.
+`launch_studio()` uploads responses, runs the plan on its Analysis Plan screen,
+and renders the report on its Export screen. `launch_dashboard()` is a read-only
+response explorer. Demo launchers are available for training:
 
 ```r
 launch_builder_demo(open = FALSE)
@@ -232,20 +285,28 @@ launch_builder_demo(open = FALSE)
 # launch_dashboard_demo()
 ```
 
-Interactive functions such as `launch_builder(open = TRUE)`,
-`launch_studio()`, `render_survey()`, and `launch_dashboard()` are available
-for manual use. Tests and examples avoid opening browsers.
+Interactive functions such as `launch_builder(open = TRUE)`, `launch_studio()`,
+`render_survey()`, and `launch_dashboard()` are available for manual use. Tests
+and examples avoid opening browsers.
 
 ## v0.4 scope
 
-MCDM and DEMATEL fall outside v0.3 scope. These methods are scheduled for
-v0.4.
+MCDM and DEMATEL fall outside v0.3 scope. These methods are scheduled for v0.4.
 
 ## Citation
 
 ```r
 citation("surveyframe")
 ```
+
+## Related resources
+
+- Quantitative Analysis with Small Samples, a companion textbook on statistical
+  inference when sample sizes are small:
+  <https://flairmi.com/textbooks/smallsamplelab.html>
+- Small-sample inference helpers, validated by a simulation study of survey
+  methods, are planned for a future surveyframe version. The textbook above
+  describes the methods that surveyframe will add and when to prefer each one.
 
 ## License
 

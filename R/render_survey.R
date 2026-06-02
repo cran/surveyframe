@@ -353,7 +353,7 @@ render_survey <- function(
     on_submit      = NULL
 ) {
   sframe_require_shiny("to deploy surveys with render_survey()")
-  stopifnot(inherits(instrument, "sframe"))
+  sframe_check_instrument(instrument)
   mode           <- rlang::arg_match(mode)
   save_responses <- rlang::arg_match(save_responses)
 
@@ -386,9 +386,11 @@ render_survey <- function(
   thankyou_download <- isTRUE(tku$show_download)
 
   # Header settings
-  hdr <- rnd$header %||% list()
-  institution <- hdr$institution %||% ""
-  logo_b64    <- hdr$logo_base64 %||% ""
+  hdr            <- rnd$header %||% list()
+  institution    <- hdr$institution %||% ""
+  logo_b64       <- hdr$logo_base64 %||% ""
+  # Fix E/F: use stored media type so JPEG and GIF logos display correctly
+  logo_media_type <- hdr$logo_media_type %||% "image/png"
 
   submit_label    <- rnd$submit_label %||% "Submit"
   choices_lookup  <- sframe_choices_lookup(instrument)
@@ -599,7 +601,7 @@ render_survey <- function(
         tags$div(class = "sf-header",
           if (nzchar(logo_b64))
             tags$img(class = "sf-logo",
-              src = paste0("data:image/png;base64,", logo_b64)),
+              src = paste0("data:", logo_media_type, ";base64,", logo_b64)),
           if (nzchar(institution))
             tags$div(class = "sf-institution", institution)
         )

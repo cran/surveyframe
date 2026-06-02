@@ -1,8 +1,8 @@
 ---
-title: "SurveyBuilder GUI overview"
+title: "The visual workflow: SurveyBuilder, SurveyStudio, and the dashboard"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{SurveyBuilder GUI overview}
+  %\VignetteIndexEntry{The visual workflow: SurveyBuilder, SurveyStudio, and the dashboard}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -12,44 +12,95 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 library(surveyframe)
 ```
 
-`surveyframe` has three graphical entry points. They are intentionally kept
-separate in v0.3.
+`surveyframe` has three graphical entry points. They are kept separate in v0.3,
+and each maps onto a part of the research-design workflow.
 
-* `launch_builder()` is a standalone questionnaire builder. It runs in the
-  browser and saves `.sframe` files for later use in R.
-* `launch_studio()` is the workflow hub. It can build, preview, load
-  responses, run quality and reliability checks, plan analyses, and export
-  outputs.
-* `launch_dashboard()` is a read-only response explorer for instruments and
-  response data that are already available.
+* `launch_builder()` opens SurveyBuilder, a standalone questionnaire builder. It
+  runs in the browser, saves `.sframe` files, and authors the analysis plan and
+  the model. It does not compute statistics.
+* `launch_studio()` opens SurveyStudio, the workflow hub. With R behind it, it
+  builds, previews, uploads responses, runs quality and reliability checks, runs
+  the analysis plan, and exports the report.
+* `launch_dashboard()` opens a read-only response explorer for an instrument and
+  response data that already exist.
 
 ## Input-types demo
 
-The input-types demo covers the main controls supported by SurveyBuilder and
+The input-types demo covers the main controls available in SurveyBuilder and
 SurveyStudio.
 
 ```{r input-types}
-demo <- sframe_input_types_demo_data()
-instr <- demo$instrument
+demo      <- sframe_input_types_demo_data()
+instr     <- demo$instrument
 responses <- demo$responses
 
 table(vapply(instr$items, function(x) x$type, character(1)))
 dim(responses)
 ```
 
-## Recommended GUI workflow
+## SurveyBuilder: the Analyse mode
 
-1. Use `launch_builder()` to create or revise a questionnaire.
+SurveyBuilder runs entirely in the browser, so it is an authoring tool. Its
+Analyse mode has three tabs, Plan, Run, and Report, with a three-panel layout
+underneath: a list of variables and constructs on the left, the analysis plans
+in the middle, and an output preview with the model builder on the right.
+
+The Plan tab is where the research design is written. The "+ Add plan" button
+opens a form that records the research question, the family and method, the
+significance level, the variables that fill each role, and the decision rule.
+The form offers only the role set a method needs and reads the measurement
+level of each variable, so a saved plan is coherent.
+
+The Run and Report tabs relabel the same plan list as a "run queue" and a
+"report outline". They do not compute anything. SurveyBuilder stores each plan
+with an empty result, because the browser cannot run R. The statistics are
+produced later, either in an R session with `run_analysis_plan()` or in
+SurveyStudio. The output preview on the right shows counts, such as the number
+of plans, the number of data-dependent run items, and the number of saved
+models.
+
+The model builder, also on the right, creates constructs from the scales,
+adds structural paths, and writes lavaan or seminr syntax along with the model
+JSON into the `.sframe` file. The Google Sheet panel does not collect data on
+its own. It explains that, after saving the `.sframe` file, you run
+`export_google_sheet(instr, sheet_url = "...")` in R to generate the Apps Script
+collector.
+
+## SurveyStudio: the screens
+
+SurveyStudio is a Shiny application, so it can run R. Its left navigation lists
+nine screens in this order: Build Survey, Open Instrument, Preview Survey,
+Upload Responses, Quality Dashboard, Reliability, Analysis Plan, Dashboard, and
+Export.
+
+The Analysis Plan screen does two jobs. It edits the plan, with the same
+research question, method, significance level, and role fields as the builder.
+It also runs the plan. When response data have been uploaded, the screen calls
+`run_analysis_plan()` and shows a "Run results" table with the plan ID, the
+method, and the APA result for each research question. Without responses, it
+asks you to upload data before running.
+
+The Export screen produces the written report through `render_report()`. Its
+options include the codebook, quality, missing data, descriptives, reliability,
+the saved analysis-plan results, and the model appendices. The per-question
+report produced by `render_results()` in an R session is a separate route to a
+written report and is covered in the main vignette.
+
+## Recommended workflow
+
+1. Use `launch_builder()` to create or revise the questionnaire, the plan, and
+   the model.
 2. Save the instrument as a `.sframe` file.
 3. Use `read_sframe()` to load the saved instrument in R.
 4. Use `read_responses()` to import collected data.
-5. Use `launch_studio()` to inspect the instrument and responses together.
+5. Use `launch_studio()` to inspect the instrument and responses together, to
+   run the plan on the Analysis Plan screen, and to export the report.
 6. Use `launch_dashboard()` for read-only response exploration.
 
 ## Demo launchers
 
-This vignette leaves the demo launchers unevaluated because CRAN examples and
-vignettes should avoid opening browsers.
+This vignette leaves the demo launchers unevaluated, because CRAN examples and
+vignettes should not open browsers.
 
 ```{r gui-demo, eval = FALSE}
 launch_builder_demo()
@@ -57,13 +108,11 @@ launch_studio_demo()
 launch_dashboard_demo()
 ```
 
-`launch_builder_demo()` injects the demo instrument state directly into a
-temporary copy of `survey_builder.html` and opens it. The demo questions,
-scales, and analysis plan are visible immediately — no manual Load .sframe
-step is needed. `launch_studio_demo()` opens the full workflow with an
-instrument and response data already loaded, and always opens the browser
-automatically. `launch_dashboard_demo()` opens the response dashboard with
-the same demo data and also always opens the browser automatically.
+`launch_builder_demo()` injects the demo state into a temporary copy of
+`survey_builder.html` and opens it, so the demo questions, scales, and analysis
+plan are visible at once. `launch_studio_demo()` opens the studio with an
+instrument and response data already loaded. `launch_dashboard_demo()` opens the
+dashboard with the same demo data.
 
 ## Standalone builder
 
@@ -72,56 +121,54 @@ builder_file <- launch_builder(open = FALSE)
 builder_file
 ```
 
-Use the builder when the immediate task is questionnaire authoring. The builder
-is client-side and is best kept for questionnaire authoring. Response
-exploration belongs in SurveyStudio or the dashboard.
+Use SurveyBuilder for questionnaire, plan, and model authoring. Response
+exploration and plan execution belong in SurveyStudio or the dashboard.
 
 ## Studio workflow hub
 
 ```{r studio, eval = FALSE}
 launch_studio(
-  instrument = instr,
-  responses = responses,
-  screen = "analysis",
+  instrument     = instr,
+  responses      = responses,
+  screen         = "analysis",
   launch.browser = FALSE
 )
 ```
 
-SurveyStudio reads preloaded objects passed by `launch_studio()`. When response
-data are present, `screen = "auto"` opens the dashboard screen. The dashboard
-button in Studio explains how to open the separate dashboard launcher from the
-R console.
+SurveyStudio reads the objects passed by `launch_studio()`. With response data
+present, `screen = "auto"` opens the Upload Responses screen, and
+`screen = "analysis"` opens the Analysis Plan screen.
 
 ## Dashboard
 
 ```{r dashboard, eval = FALSE}
 launch_dashboard(
-  instrument = instr,
-  responses = responses,
+  instrument     = instr,
+  responses      = responses,
   launch.browser = FALSE
 )
 ```
 
-Use the dashboard after data collection for read-only exploration. In v0.4,
-the dashboard can be refactored into a native SurveyStudio tab after the v0.3
-CRAN release is stable.
+Use the dashboard after data collection for read-only exploration.
 
 ## Known limitations
 
 SurveyBuilder stores short autosave recovery data in browser `localStorage`.
-Browsers can clear that storage when site data are cleared, private browsing is
-used, or a storage quota is reached. Save a `.sframe` file before closing the
-browser when work matters.
+Browsers can clear that storage when site data are cleared, when private
+browsing is used, or when a storage quota is reached. Save a `.sframe` file
+before closing the browser when the work matters.
 
-The builder first tries the browser `crypto.subtle` API for SHA-256 hashing and
-then uses the bundled JavaScript fallback. This supports browsers that restrict
-`crypto.subtle` on local `file://` pages.
+SurveyBuilder first tries the browser `crypto.subtle` API for SHA-256 hashing
+and then uses the bundled JavaScript fallback. This supports browsers that
+restrict `crypto.subtle` on local `file://` pages.
 
 ## Moving files between tools
 
-The `.sframe` file is the shared object between the GUI and R workflow:
+The `.sframe` file is the shared object between the visual tools and the R
+workflow. It carries the questions, the analysis plan, and the model in one
+file.
 
-1. Build or edit the questionnaire in SurveyBuilder.
+1. Build or edit the questionnaire, plan, and model in SurveyBuilder.
 2. Save the `.sframe` file.
 3. Load it in R with `read_sframe()`.
 4. Import responses with `read_responses()`.

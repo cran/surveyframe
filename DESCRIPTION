@@ -1,6 +1,6 @@
 Package: surveyframe
 Title: Survey Instrument Workflows
-Version: 0.3.0
+Version: 0.3.1
 Authors@R: c(
     person(
       given = "Mohammed Ali",
@@ -34,9 +34,9 @@ Config/testthat/edition: 3
 Config/roxygen2/version: 8.0.0
 RoxygenNote: 8.0.0
 NeedsCompilation: no
-Packaged: 2026-05-20 18:17:37 UTC; maxx
+Packaged: 2026-06-01 19:00:22 UTC; maxx
 Author: Mohammed Ali Sharafuddin [aut, cre] (ORCID:
     <https://orcid.org/0000-0001-5247-2964>)
 Maintainer: Mohammed Ali Sharafuddin <mohammedali.page@gmail.com>
 Repository: CRAN
-Date/Publication: 2026-05-27 20:10:09 UTC
+Date/Publication: 2026-06-02 06:40:02 UTC

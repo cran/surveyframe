@@ -6,17 +6,22 @@ sframe_strip_component_class <- function(component) {
 }
 
 sframe_serialization_payload <- function(instrument, hash_value = "") {
+  # Strip list-level names before serialisation so items, choices, scales,
+  # branching, and checks are always written as JSON arrays. Without unname(),
+  # instruments built with Map() (which attaches item IDs as list names) produce
+  # a JSON object keyed by item ID, while the round-tripped structure produces
+  # integer-keyed or differently keyed objects, causing a hash mismatch on read.
   list(
     hash = list(algo = "sha256", value = hash_value),
     version = instrument$meta$version,
     meta = instrument$meta,
-    items = lapply(instrument$items, sframe_strip_component_class),
-    choices = lapply(instrument$choices, sframe_strip_component_class),
-    scales = lapply(instrument$scales, sframe_strip_component_class),
-    branching = lapply(instrument$branching, sframe_strip_component_class),
-    checks = lapply(instrument$checks, sframe_strip_component_class),
+    items    = unname(lapply(instrument$items,    sframe_strip_component_class)),
+    choices  = unname(lapply(instrument$choices,  sframe_strip_component_class)),
+    scales   = unname(lapply(instrument$scales,   sframe_strip_component_class)),
+    branching = unname(lapply(instrument$branching, sframe_strip_component_class)),
+    checks   = unname(lapply(instrument$checks,   sframe_strip_component_class)),
     analysis_plan = instrument$analysis_plan %||% list(),
-    models = lapply(instrument$models %||% list(), sframe_model_plain),
+    models = unname(lapply(instrument$models %||% list(), sframe_model_plain)),
     render = instrument$render
   )
 }
@@ -99,7 +104,7 @@ sframe_hash_value <- function(instrument) {
 #' out <- write_sframe(instr, tempfile(fileext = ".sframe"))
 #' file.exists(out)
 write_sframe <- function(instrument, path, pretty = TRUE, overwrite = FALSE) {
-  stopifnot(inherits(instrument, "sframe"))
+  sframe_check_instrument(instrument)
 
   if (!endsWith(path, ".sframe")) {
     path <- paste0(path, ".sframe")

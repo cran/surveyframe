@@ -36,21 +36,41 @@
 #' choices <- sf_choices("agree5", 1:5,
 #'   c("Strongly disagree", "Disagree", "Neutral", "Agree", "Strongly agree"))
 #'
+#' visitor_cs <- sf_choices("visitor", c("new", "returning"),
+#'                           c("New visitor", "Returning visitor"))
+#'
 #' item1 <- sf_item("sat_1", "The service met my expectations.",
 #'                  type = "likert", choice_set = "agree5",
 #'                  scale_id = "sat", required = TRUE)
 #' item2 <- sf_item("sat_2", "I would recommend this service.",
 #'                  type = "likert", choice_set = "agree5",
 #'                  scale_id = "sat", required = TRUE)
+#' item3 <- sf_item("visitor_type", "I am a",
+#'                  type = "single_choice", choice_set = "visitor")
 #'
 #' scale <- sf_scale("sat", "Satisfaction", items = c("sat_1", "sat_2"))
 #'
+#' # The analysis_plan binds each research question to a statistical method
+#' # and the variable roles it needs. Declare it before any data arrive.
+#' plan <- list(
+#'   list(
+#'     id               = "RQ1",
+#'     research_question = "Do new and returning visitors differ in satisfaction?",
+#'     family           = "group_comparison",
+#'     method           = "mann_whitney",
+#'     roles            = list(group = "visitor_type", outcome = "sat"),
+#'     options          = list(alpha = 0.05)
+#'   )
+#' )
+#'
 #' instr <- sf_instrument(
-#'   title      = "Service Quality Survey",
-#'   version    = "1.0.0",
-#'   components = list(choices, item1, item2, scale)
+#'   title         = "Service Quality Survey",
+#'   version       = "1.0.0",
+#'   components    = list(choices, visitor_cs, item1, item2, item3, scale),
+#'   analysis_plan = plan
 #' )
 #' print(instr)
+#' length(instr$analysis_plan)
 sf_instrument <- function(
     title,
     version     = "0.1.0",

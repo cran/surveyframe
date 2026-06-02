@@ -1,8 +1,8 @@
 ---
-title: "Building a survey instrument"
+title: "Building a survey instrument: questions, plan, and model"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Building a survey instrument}
+  %\VignetteIndexEntry{Building a survey instrument: questions, plan, and model}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -12,162 +12,167 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 library(surveyframe)
 ```
 
-This vignette builds an `sframe` instrument from scratch and shows how choice
-sets, items, scales, reverse coding, attention checks, validation, and
-`.sframe` serialisation fit together.
+An `sframe` instrument records the research design, not only the questions. This
+vignette builds a slice of the published Thailand digital marketing study
+(Sharafuddin, Madhavan, and Wangtueai 2024) with the constructors shown one at a
+time, then adds the analysis plan and a measurement model. The full study is
+assembled in the worked-study vignette.
 
 ## Choice sets
 
-Choice sets define reusable response options. They are referenced by items
-through `choice_set`.
+Choice sets define reusable response options. Items reference them through
+`choice_set`.
 
 ```{r choices}
-agree5 <- sf_choices(
-  id = "agree5",
+likert5 <- sf_choices(
+  "likert5",
   values = 1:5,
-  labels = c(
-    "Strongly disagree",
-    "Disagree",
-    "Neither agree nor disagree",
-    "Agree",
-    "Strongly agree"
-  )
+  labels = c("Strongly disagree", "Disagree",
+             "Neither agree nor disagree", "Agree", "Strongly agree")
 )
 
-yes_no <- sf_choices(
-  id = "yes_no",
-  values = c("yes", "no"),
-  labels = c("Yes", "No")
-)
+visitor <- sf_choices("visitor", c("first_time", "repeat"),
+                      c("First-time visitor", "Repeat visitor"))
 ```
 
 ## Items and item types
 
 Items are response variables unless their type is `section_break` or
-`text_block`. Required items are marked with `required = TRUE`. Item IDs should
-be stable because response data columns use those IDs.
+`text_block`. Required items carry `required = TRUE`. Item IDs should stay
+stable, because response columns reuse them and the analysis plan refers to
+them. These items measure perceived value (DMPV) and tourist satisfaction (TS).
 
 ```{r items}
 intro <- sf_item(
-  "intro",
-  "Study introduction",
-  type = "section_break",
-  section_intro = "Please answer the following questions about the service."
+  "intro", "About your trip",
+  type          = "section_break",
+  section_intro = "Please rate your experience of digital booking and your visit."
 )
 
-visit_again <- sf_item(
-  "visit_again",
-  "Would you use this service again?",
-  type = "single_choice",
-  required = TRUE,
-  choice_set = "yes_no"
-)
+dmpv_1 <- sf_item("dmpv_1", "The destination's online content was trustworthy.",
+  type = "likert", required = TRUE, choice_set = "likert5", scale_id = "DMPV")
+dmpv_2 <- sf_item("dmpv_2", "The online information was consistent across platforms.",
+  type = "likert", required = TRUE, choice_set = "likert5", scale_id = "DMPV")
+dmpv_3 <- sf_item("dmpv_3", "The digital channels offered good value for money.",
+  type = "likert", required = TRUE, choice_set = "likert5", scale_id = "DMPV")
+dmpv_4 <- sf_item("dmpv_4", "I was aware of the destination through digital channels.",
+  type = "likert", required = TRUE, choice_set = "likert5", scale_id = "DMPV")
 
-sat_1 <- sf_item(
-  "sat_1",
-  "The service met my expectations.",
-  type = "likert",
-  required = TRUE,
-  choice_set = "agree5",
-  scale_id = "satisfaction"
-)
+ts_1 <- sf_item("ts_1", "The trip met my expectations.",
+  type = "likert", required = TRUE, choice_set = "likert5", scale_id = "TS")
+ts_2 <- sf_item("ts_2", "My overall travel experience was satisfying.",
+  type = "likert", required = TRUE, choice_set = "likert5", scale_id = "TS")
+ts_3 <- sf_item("ts_3", "I felt comfortable at the destination.",
+  type = "likert", required = TRUE, choice_set = "likert5", scale_id = "TS")
 
-sat_2 <- sf_item(
-  "sat_2",
-  "The service was easy to use.",
-  type = "likert",
-  required = TRUE,
-  choice_set = "agree5",
-  scale_id = "satisfaction"
-)
+visitor_type <- sf_item("visitor_type", "I am a",
+  type = "single_choice", required = TRUE, choice_set = "visitor")
 
-sat_3 <- sf_item(
-  "sat_3",
-  "The service was frustrating to use.",
-  type = "likert",
-  required = TRUE,
-  choice_set = "agree5",
-  scale_id = "satisfaction",
-  reverse = TRUE
-)
-
-age <- sf_item(
-  "age",
-  "Age in years",
-  type = "numeric",
-  required = FALSE
-)
-
-comments <- sf_item(
-  "comments",
-  "Any other comments?",
-  type = "textarea",
-  required = FALSE
-)
-
-attention <- sf_item(
-  "attention",
-  "For quality control, please select Agree.",
-  type = "single_choice",
-  required = TRUE,
-  choice_set = "agree5"
-)
+attention <- sf_item("attention", "For quality control, please select Agree.",
+  type = "single_choice", required = TRUE, choice_set = "likert5")
 ```
 
 ## Scales, reverse coding, and minimum valid items
 
-Scale definitions record item membership, the scoring method, reverse-coded
-items, and the minimum number of valid items required to compute a score.
+A scale records item membership, the scoring method, any reverse-coded items,
+and the minimum number of valid items needed to compute a score.
 
-```{r scale}
-satisfaction <- sf_scale(
-  id = "satisfaction",
-  label = "Satisfaction",
-  items = c("sat_1", "sat_2", "sat_3"),
-  method = "mean",
-  min_valid = 2,
-  reverse_items = "sat_3"
-)
+```{r scales}
+dmpv <- sf_scale("DMPV", "Digital marketing perceived value",
+  items = c("dmpv_1", "dmpv_2", "dmpv_3", "dmpv_4"), method = "mean", min_valid = 3)
+
+ts <- sf_scale("TS", "Tourist satisfaction",
+  items = c("ts_1", "ts_2", "ts_3"), method = "mean", min_valid = 2)
 ```
 
 ## Attention checks
 
-Checks keep quality-control logic with the instrument definition.
+Checks keep the quality-control logic with the instrument.
 
 ```{r checks}
 attention_check <- sf_check(
-  id = "attention_agree",
-  item_id = "attention",
-  type = "attention",
-  pass_values = 4,
-  fail_action = "flag",
-  label = "Instructional attention check"
+  id = "attention_agree", item_id = "attention", type = "attention",
+  pass_values = 4, fail_action = "flag", label = "Instructional attention check"
 )
 ```
 
-## Assemble and validate the instrument
+## Branching
+
+A branch shows or hides an item based on an earlier answer. This one is a
+placeholder for a repeat-visitor follow-up.
+
+```{r branch}
+repeat_branch <- sf_branch(
+  item_id    = "ts_3",
+  depends_on = "visitor_type",
+  operator   = "==",
+  value      = "repeat",
+  action     = "show"
+)
+```
+
+## The analysis plan
+
+Each block binds a research question to a technique and to the variables that
+fill each role. A reliability check expects `items`. A group comparison expects
+a `group` and an `outcome`.
+
+```{r plan}
+analysis_plan <- list(
+  list(id = "M1", research_question = "Is perceived value internally consistent?",
+       family = "measurement", method = "reliability_alpha",
+       roles = list(items = c("dmpv_1", "dmpv_2", "dmpv_3", "dmpv_4"))),
+  list(id = "RQ1", research_question = "Do repeat visitors report higher satisfaction?",
+       family = "group_comparison", method = "mann_whitney",
+       roles = list(group = "visitor_type", outcome = "TS"),
+       options = list(alpha = 0.05))
+)
+```
+
+## Assemble the instrument
+
+`sf_instrument()` takes the questions through `components` and the research
+design through `analysis_plan` and `models`. The model is added with
+`add_model()`, which checks each indicator against the instrument items.
 
 ```{r assemble}
 instr <- sf_instrument(
-  title = "Service Feedback Survey",
-  version = "0.3.0",
-  description = "Short example instrument for a service feedback study.",
-  authors = "Research team",
-  languages = "en",
-  components = list(
-    agree5, yes_no,
-    intro, visit_again, sat_1, sat_2, sat_3, age, comments, attention,
-    satisfaction, attention_check
+  title       = "Digital marketing study (teaching slice)",
+  version     = "1.0.0",
+  description = "A slice of the published Thailand study for teaching the constructors.",
+  authors     = "Research team",
+  languages   = "en",
+  components  = list(
+    likert5, visitor,
+    intro, dmpv_1, dmpv_2, dmpv_3, dmpv_4, ts_1, ts_2, ts_3,
+    visitor_type, attention, dmpv, ts, attention_check, repeat_branch
+  ),
+  analysis_plan = analysis_plan
+)
+
+ts_model <- sf_model(
+  id    = "ts_cfa",
+  label = "Satisfaction measurement model",
+  type  = "cfa",
+  constructs = list(
+    sf_construct("DMPV", "Perceived value", c("dmpv_1", "dmpv_2", "dmpv_3", "dmpv_4")),
+    sf_construct("TS",   "Tourist satisfaction", c("ts_1", "ts_2", "ts_3"))
   )
 )
 
+instr <- add_model(instr, ts_model)
+```
+
+## Validate the instrument
+
+```{r validate}
 validation <- validate_sframe(instr, strict = FALSE)
 validation$valid
 validation$problems
 ```
 
-In production workflows, strict validation returns the validated instrument or
-stops with a structured error.
+In production, strict validation returns the validated instrument or stops with
+a structured error.
 
 ```{r strict}
 instr <- validate_sframe(instr)
@@ -176,9 +181,8 @@ instr$meta$validated
 
 ## Write and read `.sframe` files
 
-The `.sframe` file is the portable surveyframe instrument file. It is JSON
-based, keeps validated metadata, and can be loaded by R, SurveyBuilder, or
-SurveyStudio.
+The `.sframe` file is the portable instrument file. It keeps the validated
+metadata, the analysis plan, and the model in one place.
 
 ```{r roundtrip}
 path <- tempfile(fileext = ".sframe")
@@ -187,11 +191,14 @@ write_sframe(instr, path, overwrite = TRUE)
 loaded <- read_sframe(path)
 inherits(loaded, "sframe")
 loaded$meta$title
+length(loaded$analysis_plan)
+length(loaded$models)
 ```
 
 ## GUI option
 
-The same instrument can also be edited visually.
+The same instrument, plan, and model can be authored in SurveyBuilder, which
+saves a `.sframe` file for use in R.
 
 ```{r gui, eval = FALSE}
 launch_builder()

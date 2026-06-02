@@ -7,12 +7,13 @@
 \title{surveyframe: Survey Instrument Workflows for R}
 \description{
 surveyframe defines a survey instrument as a first-class R object and
-supports a workflow from instrument design through data collection,
-quality checking, scoring, psychometric diagnostics, and reproducible
-reporting. Version 0.3 adds static HTML survey export, an embeddable Shiny
-survey module, an interactive response dashboard, a role-based analysis
-planner, common survey statistics, and model syntax planning for EFA, CFA,
-CB-SEM, and PLS-SEM.
+supports a complete workflow from questionnaire design through data
+collection, quality checking, scoring, psychometric diagnostics, and
+reproducible reporting. The package covers static HTML survey export,
+an embeddable Shiny survey module, an interactive response dashboard,
+a role-based analysis planner with pre-declared research questions, common
+survey statistics, and model syntax planning for EFA, CFA, CB-SEM, and
+PLS-SEM.
 \subsection{Core workflow}{
 \enumerate{
 \item \strong{Design} an instrument with \code{\link[=launch_builder]{launch_builder()}} or \code{\link[=sf_instrument]{sf_instrument()}} and

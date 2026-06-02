@@ -431,7 +431,7 @@ model_json <- function(model, pretty = TRUE) {
 #' @return The updated `sframe` object.
 #' @export
 add_model <- function(instrument, model, validate = TRUE, replace = TRUE) {
-  stopifnot(inherits(instrument, "sframe"))
+  sframe_check_instrument(instrument)
   if (isTRUE(validate)) {
     validate_model(model, instrument = instrument, strict = TRUE)
   }
@@ -484,7 +484,7 @@ efa_solution <- function(
     min_loading = 0.30,
     cross_loading = 0.30
 ) {
-  stopifnot(inherits(instrument, "sframe"))
+  sframe_check_instrument(instrument)
   stopifnot(is.data.frame(data))
   extraction <- rlang::arg_match(extraction)
   rotation <- rlang::arg_match(rotation)

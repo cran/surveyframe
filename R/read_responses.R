@@ -48,7 +48,7 @@ read_responses <- function(
     meta_cols     = NULL,
     strict        = TRUE
 ) {
-  stopifnot(inherits(instrument, "sframe"))
+  sframe_check_instrument(instrument)
 
   # Load data
   if (is.character(x)) {

@@ -36,7 +36,7 @@ reliability_report <- function(
     alpha  = TRUE,
     omega  = TRUE
 ) {
-  stopifnot(inherits(instrument, "sframe"))
+  sframe_check_instrument(instrument)
   stopifnot(is.data.frame(data))
   if (isTRUE(alpha) || isTRUE(omega)) {
     sframe_require_psych("to compute reliability statistics")
@@ -69,24 +69,37 @@ reliability_report <- function(
     )
 
     if (alpha) {
-      a <- suppressWarnings(
+      a <- suppressMessages(suppressWarnings(
         psych::alpha(scale_data, check.keys = FALSE, warnings = FALSE)
-      )
+      ))
       result$alpha      <- a$total$raw_alpha
       result$alpha_std  <- a$total$std.alpha
     }
     if (omega) {
-      tryCatch({
-        o <- psych::omega(scale_data, nfactors = 1, plot = FALSE)
-        result$omega_h <- o$omega_h
-        result$omega_t <- o$omega.tot
-      }, error = function(e) {
-        sframe_warn_scoring(
-          paste0("Omega could not be computed for scale '", scale$id,
-                 "': ", conditionMessage(e)),
-          scale_id = scale$id
-        )
-      })
+      if (ncol(scale_data) < 3L) {
+        # psych::omega needs at least 3 items; silently skip small scales
+        # instead of flooding the console with psych internal warnings.
+        result$omega_note <- "omega requires >= 3 items; skipped for this scale"
+      } else {
+        tryCatch({
+          # suppressMessages/suppressWarnings silence psych's internal
+          # message() and warning() diagnostics; capture.output() catches
+          # any remaining cat() output to stdout.
+          invisible(utils::capture.output(
+            o <- suppressMessages(suppressWarnings(
+              psych::omega(scale_data, nfactors = 1, plot = FALSE)
+            ))
+          ))
+          result$omega_h <- o$omega_h
+          result$omega_t <- o$omega.tot
+        }, error = function(e) {
+          sframe_warn_scoring(
+            paste0("Omega could not be computed for scale '", scale$id,
+                   "': ", conditionMessage(e)),
+            scale_id = scale$id
+          )
+        })
+      }
     }
 
     result
@@ -137,7 +150,7 @@ print.sframe_reliability_report <- function(x, ...) {
 #' print(ir)
 #' }
 item_report <- function(data, instrument, scales = NULL) {
-  stopifnot(inherits(instrument, "sframe"))
+  sframe_check_instrument(instrument)
   stopifnot(is.data.frame(data))
 
   target_scales <- instrument$scales
@@ -198,7 +211,9 @@ print.sframe_item_report <- function(x, ...) {
 #' Prepare a survey instrument for exploratory factor analysis
 #'
 #' Reports KMO sampling adequacy, Bartlett's test of sphericity, and a
-#' parallel analysis scree plot to inform factor number selection. The report
+#' parallel analysis scree plot to inform factor number selection. The
+#' suggested number of factors from parallel analysis is returned in
+#' `$suggested_nfactors`. The report
 #' prepares the researcher to estimate an EFA solution with a separate package
 #' such as `psych` or `lavaan`.
 #'
@@ -233,7 +248,7 @@ efa_report <- function(
     nfactors  = NULL,
     rotation  = "oblimin"
 ) {
-  stopifnot(inherits(instrument, "sframe"))
+  sframe_check_instrument(instrument)
   stopifnot(is.data.frame(data))
   sframe_require_psych("to prepare exploratory factor analysis diagnostics")
 

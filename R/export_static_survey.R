@@ -74,8 +74,12 @@ export_static_survey <- function(
     endpoint_url = NULL,
     overwrite    = FALSE
 ) {
-  stopifnot(inherits(instrument, "sframe"))
+  sframe_check_instrument(instrument)
   rlang::check_installed("jsonlite", reason = "to serialise the instrument as JSON.")
+
+  # Fix B: fall back to endpoint stored by the builder if no argument supplied
+  endpoint_url <- endpoint_url %||%
+    instrument$render$google_sheets_endpoint %||% ""
 
   # Resolve output path
   if (is.null(output_path)) {
@@ -141,7 +145,7 @@ export_static_survey <- function(
     html_escape(instrument$meta$title %||% "Survey")
   )
   html <- replace_placeholder(html, "{{THEME_COLOR}}", theme)
-  html <- replace_placeholder(html, "{{ENDPOINT_URL}}", html_escape(endpoint_url %||% ""))
+  html <- replace_placeholder(html, "{{ENDPOINT_URL}}", html_escape(endpoint_url))
 
   # Write output
   dir.create(dirname(output_path), showWarnings = FALSE, recursive = TRUE)

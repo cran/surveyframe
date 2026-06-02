@@ -12,116 +12,111 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 library(surveyframe)
 ```
 
-This vignette focuses on measurement-quality checks. The examples use the
-tourism-services demo because it has coherent Likert constructs.
+Measurement quality is part of the research design. This vignette works through
+the reliability and validity evidence from the published Thailand digital
+marketing study (Sharafuddin, Madhavan, and Wangtueai 2024). The reliability and
+item reports read scale definitions from an instrument, so they are shown on the
+bundled tourism demo, a synthetic companion to the study. The validity summary
+runs on the loadings the paper reported, which needs no raw data.
 
-```{r load}
-demo <- sframe_demo_data()
-instr <- demo$instrument
-responses <- demo$responses
-```
+## Reliability from the instrument
 
-## Construct-to-item mapping
-
-Scale definitions are stored in the instrument. They define which items form
-each construct and how scores should be computed.
-
-```{r scales}
-lapply(instr$scales, function(scale) {
-  list(
-    id = scale$id,
-    label = scale$label,
-    items = scale$items,
-    method = scale$method,
-    min_valid = scale$min_valid,
-    reverse_items = scale$reverse_items
-  )
-})
-```
-
-## Reverse coding and minimum valid item rules
-
-`score_scales()` applies reverse coding and minimum valid item rules before
-returning scale scores.
-
-```{r scoring}
-scored <- score_scales(
-  responses,
-  instr,
-  keep_items = TRUE,
-  keep_meta = TRUE
-)
-
-scale_ids <- vapply(instr$scales, function(scale) scale$id, character(1))
-head(scored[, intersect(scale_ids, names(scored)), drop = FALSE])
-```
-
-## Reliability
-
-Cronbach's alpha and omega use the optional `psych` package. Interpret these
-statistics together with item wording, dimensionality, and study design.
+`reliability_report()` reads the scale definitions and reports Cronbach's alpha
+and, with the optional `psych` package, McDonald's omega. The published study
+reported strong reliability for every construct. At the higher-order level the
+alpha and composite reliability were 0.828 and 0.883 for digital marketing
+effectiveness, 0.792 and 0.906 for service quality, 0.769 and 0.843 for
+sustainability quality, 0.897 and 0.936 for satisfaction, and 0.921 and 0.950
+for behavioural intention.
 
 ```{r reliability, eval = requireNamespace("psych", quietly = TRUE)}
-alpha_only <- reliability_report(
-  responses,
-  instr,
-  omega = FALSE
-)
+demo      <- sframe_demo_data()
+instr     <- demo$instrument
+responses <- demo$responses
 
-alpha_only
-```
-
-```{r omega, eval = requireNamespace("psych", quietly = TRUE)}
-omega_report <- reliability_report(
-  responses,
-  instr,
-  alpha = FALSE,
-  omega = TRUE
-)
-
-omega_report
+reliability_report(responses, instr, omega = TRUE)
 ```
 
 ## Item diagnostics
 
-Item diagnostics help identify sparse items, poor item-total relationships,
-and floor or ceiling issues.
+Item diagnostics identify sparse items, weak item-total relationships, and floor
+or ceiling effects. These are the item-level facts behind a retention decision.
 
 ```{r item-report}
-items <- item_report(responses, instr)
+demo      <- sframe_demo_data()
+instr     <- demo$instrument
+responses <- demo$responses
 
+items <- item_report(responses, instr)
 names(items)
 items[[1]]
 ```
 
 ## EFA readiness
 
-`efa_report()` is a screening step. Interpret it alongside item wording,
-sample size, theory, and the study context.
+`efa_report()` reports the Kaiser-Meyer-Olkin measure and Bartlett's test as a
+screening step before a confirmatory model.
 
 ```{r efa, eval = requireNamespace("psych", quietly = TRUE)}
 efa_report(responses, instr)
 ```
 
-## Validity summary from supplied loadings
+## Convergent validity from the published loadings
 
-When standardised loadings are available from a CFA or PLS-SEM workflow, they
-can be summarised with `validity_report()`.
+This step needs no raw data. `validity_report()` computes composite reliability
+and average variance extracted from standardised loadings. Feeding the outer
+loadings reported in the paper reproduces its convergent validity, which is a
+direct check of the measurement model.
 
 ```{r validity}
-loadings <- list(
-  digital_marketing = c(dm_1 = .72, dm_2 = .78, dm_3 = .81),
-  service_quality = c(sq_1 = .75, sq_2 = .80, sq_3 = .77),
-  satisfaction = c(sat_1 = .76, sat_2 = .82)
+published_loadings <- list(
+  DMRE = c(dmre_1 = .815, dmre_2 = .899, dmre_3 = .668, dmre_4 = .838),
+  DMAU = c(dmau_1 = .843, dmau_2 = .915, dmau_3 = .920),
+  DMEU = c(dmeu_1 = .897, dmeu_2 = .929, dmeu_3 = .932),
+  DMPV = c(dmpv_1 = .818, dmpv_2 = .916, dmpv_3 = .900, dmpv_4 = .863),
+  DSQA = c(dsqa_1 = .904, dsqa_2 = .920, dsqa_3 = .869),
+  DSQT = c(dsqt_1 = .778, dsqt_2 = .883, dsqt_3 = .879, dsqt_4 = .811, dsqt_5 = .713),
+  DSUQ = c(dsuq_1 = .780, dsuq_2 = .855, dsuq_3 = .845, dsuq_4 = .551, dsuq_5 = .529),
+  TS   = c(ts_1 = .912, ts_2 = .950, ts_3 = .869),
+  BI   = c(bi_1 = .937, bi_2 = .911, bi_3 = .940)
 )
 
-validity <- validity_report(loadings)
-
-validity
+validity <- validity_report(published_loadings)
+validity$reliability
 ```
+
+The average variance extracted exceeds 0.5 for every construct, and the
+composite reliability exceeds 0.7, so each construct explains more than half the
+variance in its items. The sustainability construct sits lowest, in line with
+the two weaker items the paper flagged (DSUQ4 and DSUQ5).
+
+## Discriminant validity
+
+The study assessed discriminant validity in two ways. The Fornell-Larcker
+criterion compares the square root of a construct's AVE with its correlations
+with the others. The square roots, 0.810 for digital marketing effectiveness,
+0.910 for service quality, 0.726 for sustainability quality, 0.911 for
+satisfaction, and 0.930 for behavioural intention, each exceeded the
+off-diagonal correlations. The Heterotrait-Monotrait ratios were all below the
+0.90 threshold, the highest being 0.766 between ease of use and accessibility.
+Both results support discriminant validity.
+
+When construct scores are available, `validity_report()` returns the
+Fornell-Larcker matrix and the HTMT matrix directly.
+
+```{r validity-scores, eval = FALSE}
+validity_report(published_loadings, construct_scores = scored_constructs)
+```
+
+## Collinearity
+
+The study reported variance inflation factors below 5 for every indicator, which
+indicates no severe multicollinearity. `assumption_report()` returns variance
+inflation factors when a regression is specified, which is shown in the
+analysing-responses vignette.
 
 ## Cautious interpretation
 
 Reliability and validity summaries are diagnostics, not automatic decisions.
-They should be interpreted with the questionnaire wording, sampling context,
-construct definitions, and planned statistical model.
+Read them with the questionnaire wording, the sampling context, the construct
+definitions, and the planned model in view.

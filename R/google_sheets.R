@@ -30,7 +30,7 @@
 #' )
 #' file.exists(script)
 export_google_sheet <- function(instrument, sheet_url, output_dir = ".") {
-  stopifnot(inherits(instrument, "sframe"))
+  sframe_check_instrument(instrument)
   if (!dir.exists(output_dir)) {
     rlang::abort(
       paste0("Output directory does not exist: '", output_dir, "'."),
@@ -38,8 +38,15 @@ export_google_sheet <- function(instrument, sheet_url, output_dir = ".") {
     )
   }
 
-  item_ids <- vapply(instrument$items, function(i) i$id, character(1))
-  col_headers <- c("respondent_id", "started_at", "submitted_at", item_ids)
+  # Fix C2: matrix items post one column per sub-item (item_id__sub); expand headers
+  item_headers <- unlist(lapply(instrument$items, function(i) {
+    if (identical(i$type, "matrix") && length(i$matrix_items) > 0L) {
+      paste0(i$id, "__", i$matrix_items)
+    } else {
+      i$id
+    }
+  }), use.names = FALSE)
+  col_headers <- c("respondent_id", "started_at", "submitted_at", item_headers)
   headers_js <- jsonlite::toJSON(col_headers, auto_unbox = TRUE)
   sheet_url_js <- jsonlite::toJSON(sheet_url %||% "", auto_unbox = TRUE)
   sheet_url_comment <- gsub("[\r\n]+", " ", sheet_url %||% "", perl = TRUE)
@@ -167,16 +174,18 @@ read_sheet_responses <- function(
 ) {
   rlang::check_installed("googlesheets4",
     reason = "to read responses from Google Sheets")
-  stopifnot(inherits(instrument, "sframe"))
+  sframe_check_instrument(instrument)
 
   raw <- googlesheets4::read_sheet(sheet_id, sheet = sheet_name,
                                     col_types = "c")
 
+  # Fix D: declare started_at as a meta column so it is not flagged as unknown
   read_responses(
     x             = raw,
     instrument    = instrument,
     respondent_id = respondent_id,
     submitted_at  = submitted_at,
+    meta_cols     = "started_at",
     strict        = FALSE
   )
 }

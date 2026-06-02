@@ -32,7 +32,7 @@
 #' nrow(cb$items_table)
 #' nrow(cb$scales_table)
 codebook_report <- function(instrument, format = c("html", "md")) {
-  stopifnot(inherits(instrument, "sframe"))
+  sframe_check_instrument(instrument)
   format <- rlang::arg_match(format)
 
   item_ids <- vapply(instrument$items, function(i) i$id, character(1))
@@ -203,7 +203,7 @@ render_report <- function(
     include_analysis  = TRUE,
     include_models    = TRUE
 ) {
-  stopifnot(inherits(instrument, "sframe"))
+  sframe_check_instrument(instrument)
 
   format <- rlang::arg_match(format)
   dest <- output_file %||% output_path %||% tempfile(fileext = ".html")

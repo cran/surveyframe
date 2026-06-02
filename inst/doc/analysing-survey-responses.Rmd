@@ -1,8 +1,8 @@
 ---
-title: "Analysing survey responses"
+title: "Analysing survey responses: running the plan"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Analysing survey responses}
+  %\VignetteIndexEntry{Analysing survey responses: running the plan}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -12,146 +12,153 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 library(surveyframe)
 ```
 
-This vignette walks through response import, missing-data checks, quality
-checks, scale scoring, descriptives, and planned analyses.
+The analysis in surveyframe is driven by the plan stored in the instrument.
+Once responses are imported, scored, and checked, `run_analysis_plan()` runs
+every research question in one pass and returns results formatted for reporting.
+
+The worked-study vignette uses a published study whose data is private. This
+vignette uses the bundled tourism demo, a synthetic dataset shaped around the
+same digital marketing and tourism constructs, so the analysis runs end to end
+without internet access or private data.
 
 ## Load the demo
 
 ```{r load}
-demo <- sframe_demo_data()
-instr <- demo$instrument
+demo      <- sframe_demo_data()
+instr     <- demo$instrument
 responses <- demo$responses
 
 dim(responses)
 ```
 
-## Expected response columns
-
-Response data should use instrument item IDs as column names. Metadata columns
-such as respondent ID, start time, and submission time should be declared
-explicitly.
-
-```{r expected}
-item_ids <- vapply(instr$items, function(x) x$id, character(1))
-head(item_ids)
-
-names(responses)[1:8]
-```
-
 ## Import responses
 
-Use `strict = TRUE` when the response file should contain only known item and
-metadata columns. Use `strict = FALSE` when the file may contain additional
-survey platform columns that should be retained with a warning.
+Response data uses instrument item IDs as column names. Metadata columns are
+declared explicitly. Use `strict = TRUE` to keep only known columns.
 
 ```{r import}
-strict_responses <- read_responses(
+responses <- read_responses(
   demo$responses_path,
   instr,
   respondent_id = "respondent_id",
-  submitted_at = "submitted_at",
-  meta_cols = "started_at",
-  strict = TRUE
+  submitted_at  = "submitted_at",
+  meta_cols     = "started_at",
+  strict        = TRUE
 )
 
-relaxed_responses <- read_responses(
-  demo$responses_path,
-  instr,
-  respondent_id = "respondent_id",
-  submitted_at = "submitted_at",
-  meta_cols = "started_at",
-  strict = FALSE
-)
-
-identical(names(strict_responses), names(relaxed_responses))
+dim(responses)
 ```
 
-## Missing data
+## Missing data and quality
 
-```{r missing}
-missing <- missing_data_report(responses, instr)
+```{r screening}
+missing_data_report(responses, instr)
 
-missing$item_missing
-head(missing$respondent_missing)
-```
-
-## Data quality
-
-```{r quality}
-quality <- quality_report(
-  responses,
-  instr,
+quality_report(
+  responses, instr,
   respondent_id = "respondent_id",
-  submitted_at = "submitted_at",
-  started_at = "started_at"
+  submitted_at  = "submitted_at",
+  started_at    = "started_at"
 )
-
-quality
 ```
 
 ## Score scales
 
-`score_scales()` uses the scale definitions in the instrument. It applies
-reverse coding and minimum valid item rules.
+`run_analysis_plan()` scores the scales for you, but scoring once up front lets
+you inspect the construct scores and run the assumption checks below.
 
 ```{r score}
-scored <- score_scales(responses, instr, keep_items = TRUE, keep_meta = TRUE)
-
+scored    <- score_scales(responses, instr, keep_items = TRUE, keep_meta = TRUE)
 scale_ids <- vapply(instr$scales, function(x) x$id, character(1))
+
 head(scored[, intersect(scale_ids, names(scored)), drop = FALSE])
 ```
 
-## Descriptive statistics
+## Check assumptions before the plan
 
-```{r descriptives}
-descriptives_report(
+`assumption_report()` reports the checks a technique relies on, such as residual
+normality, variance inflation, and influence for a regression.
+
+```{r assumptions}
+assumption_report(
   scored,
-  variables = intersect(scale_ids, names(scored))
+  predictors = c("digital_marketing", "service_quality", "sustainability"),
+  outcome    = "satisfaction"
 )
 ```
 
-## Run an analysis plan
+## Define the plan
 
-Analysis plans are stored in the instrument. The current structure uses
-method-specific roles. Earlier `variables` and `test` blocks remain compatible.
+Each block binds a research question to a technique and to the variables that
+fill each role. A correlation expects `x` and `y`. A regression expects
+`predictors` and a `dependent` variable. A group comparison expects a `group`
+and an `outcome`.
 
-```{r analysis-plan}
+```{r plan}
 instr$analysis_plan <- list(
-  list(
-    id = "RQ1",
-    research_question = "Is digital marketing associated with satisfaction?",
-    family = "association",
-    method = "correlation_spearman",
-    roles = list(x = "digital_marketing", y = "satisfaction"),
-    options = list(alpha = 0.05),
-    status = "valid_plan",
-    requires_data = TRUE
-  ),
-  list(
-    id = "RQ2",
-    research_question = "Do visit types differ in satisfaction?",
-    family = "group_comparison",
-    method = "mann_whitney",
-    roles = list(group = "visit_type", outcome = "satisfaction"),
-    options = list(alpha = 0.05),
-    status = "valid_plan",
-    requires_data = TRUE
-  )
+  list(id = "RQ1",
+       research_question = "Is digital marketing perception associated with satisfaction?",
+       family = "association", method = "correlation_pearson",
+       roles = list(x = "digital_marketing", y = "satisfaction"),
+       options = list(alpha = 0.05)),
+  list(id = "RQ2",
+       research_question = "Do the three perception scales predict satisfaction?",
+       family = "regression", method = "regression_linear",
+       roles = list(predictors = c("digital_marketing", "service_quality", "sustainability"),
+                    dependent = "satisfaction"),
+       options = list(alpha = 0.05)),
+  list(id = "RQ3",
+       research_question = "Do first-time and repeat visitors differ in behavioural intention?",
+       family = "group_comparison", method = "mann_whitney",
+       roles = list(group = "visit_type", outcome = "behavioural_intention"),
+       options = list(alpha = 0.05))
 )
+```
 
+## Run the plan
+
+```{r run}
 results <- run_analysis_plan(responses, instr)
 results
 ```
 
-## GUI workflow
+## Read a single result
 
-SurveyStudio can preload both the instrument and responses.
+Each result holds more than the printed line. It carries the APA statistic, the
+effect-size label where the technique reports one, a writing prompt, and the
+references that support the technique.
+
+```{r single-result}
+rq1 <- results[[1]]
+
+rq1$apa
+rq1$effect_label
+rq1$prompt
+unlist(rq1$citations)
+```
+
+## Render the results report
+
+`render_results()` writes a self-contained HTML report with one section per
+research question, each holding the APA result, the writing prompt, a space for
+the interpretation, and a reference list compiled from the techniques used.
+
+```{r render, eval = FALSE}
+render_results(results, instr, output_file = "results.html", citation_format = "apa")
+```
+
+## In SurveyStudio
+
+SurveyStudio runs the same plan. Open it on the analysis screen, upload the
+responses, and the Analysis Plan screen runs the saved plan and shows a table of
+each question with its method and APA result. The full report is produced on the
+Export screen.
 
 ```{r gui, eval = FALSE}
 launch_studio(
-  instrument = instr,
-  responses = responses,
-  screen = "analysis",
+  instrument     = instr,
+  responses      = responses,
+  screen         = "analysis",
   launch.browser = FALSE
 )
 ```

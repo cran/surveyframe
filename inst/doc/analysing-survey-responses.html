@@ -12,7 +12,7 @@
 
 
 
-<title>Analysing survey responses</title>
+<title>Analysing survey responses: running the plan</title>
 
 <script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
 // be compatible with the behavior of Pandoc < 2.8).
@@ -337,236 +337,615 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 
 
 
-<h1 class="title toc-ignore">Analysing survey responses</h1>
+<h1 class="title toc-ignore">Analysing survey responses: running the
+plan</h1>
 
 
 
-<p>This vignette walks through response import, missing-data checks,
-quality checks, scale scoring, descriptives, and planned analyses.</p>
+<p>The analysis in surveyframe is driven by the plan stored in the
+instrument. Once responses are imported, scored, and checked,
+<code>run_analysis_plan()</code> runs every research question in one
+pass and returns results formatted for reporting.</p>
+<p>The worked-study vignette uses a published study whose data is
+private. This vignette uses the bundled tourism demo, a synthetic
+dataset shaped around the same digital marketing and tourism constructs,
+so the analysis runs end to end without internet access or private
+data.</p>
 <div id="load-the-demo" class="section level2">
 <h2>Load the demo</h2>
-<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a>demo <span class="ot">&lt;-</span> <span class="fu">sframe_demo_data</span>()</span>
-<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a>instr <span class="ot">&lt;-</span> demo<span class="sc">$</span>instrument</span>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a>demo      <span class="ot">&lt;-</span> <span class="fu">sframe_demo_data</span>()</span>
+<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a>instr     <span class="ot">&lt;-</span> demo<span class="sc">$</span>instrument</span>
 <span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a>responses <span class="ot">&lt;-</span> demo<span class="sc">$</span>responses</span>
 <span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a></span>
 <span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a><span class="fu">dim</span>(responses)</span>
 <span id="cb1-6"><a href="#cb1-6" tabindex="-1"></a><span class="co">#&gt; [1] 120  18</span></span></code></pre></div>
 </div>
-<div id="expected-response-columns" class="section level2">
-<h2>Expected response columns</h2>
-<p>Response data should use instrument item IDs as column names.
-Metadata columns such as respondent ID, start time, and submission time
-should be declared explicitly.</p>
-<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a>item_ids <span class="ot">&lt;-</span> <span class="fu">vapply</span>(instr<span class="sc">$</span>items, <span class="cf">function</span>(x) x<span class="sc">$</span>id, <span class="fu">character</span>(<span class="dv">1</span>))</span>
-<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a><span class="fu">head</span>(item_ids)</span>
-<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a><span class="co">#&gt; [1] &quot;visit_type&quot; &quot;dm_1&quot;       &quot;dm_2&quot;       &quot;dm_3&quot;       &quot;sq_1&quot;      </span></span>
-<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a><span class="co">#&gt; [6] &quot;sq_2&quot;</span></span>
-<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a></span>
-<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a><span class="fu">names</span>(responses)[<span class="dv">1</span><span class="sc">:</span><span class="dv">8</span>]</span>
-<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a><span class="co">#&gt; [1] &quot;respondent_id&quot; &quot;submitted_at&quot;  &quot;started_at&quot;    &quot;visit_type&quot;   </span></span>
-<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a><span class="co">#&gt; [5] &quot;dm_1&quot;          &quot;dm_2&quot;          &quot;dm_3&quot;          &quot;sq_1&quot;</span></span></code></pre></div>
-</div>
 <div id="import-responses" class="section level2">
 <h2>Import responses</h2>
-<p>Use <code>strict = TRUE</code> when the response file should contain
-only known item and metadata columns. Use <code>strict = FALSE</code>
-when the file may contain additional survey platform columns that should
-be retained with a warning.</p>
-<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a>strict_responses <span class="ot">&lt;-</span> <span class="fu">read_responses</span>(</span>
-<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a>  demo<span class="sc">$</span>responses_path,</span>
-<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a>  instr,</span>
-<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a>  <span class="at">respondent_id =</span> <span class="st">&quot;respondent_id&quot;</span>,</span>
-<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a>  <span class="at">submitted_at =</span> <span class="st">&quot;submitted_at&quot;</span>,</span>
-<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a>  <span class="at">meta_cols =</span> <span class="st">&quot;started_at&quot;</span>,</span>
-<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a>  <span class="at">strict =</span> <span class="cn">TRUE</span></span>
-<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a>)</span>
-<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a></span>
-<span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a>relaxed_responses <span class="ot">&lt;-</span> <span class="fu">read_responses</span>(</span>
-<span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a>  demo<span class="sc">$</span>responses_path,</span>
-<span id="cb3-12"><a href="#cb3-12" tabindex="-1"></a>  instr,</span>
-<span id="cb3-13"><a href="#cb3-13" tabindex="-1"></a>  <span class="at">respondent_id =</span> <span class="st">&quot;respondent_id&quot;</span>,</span>
-<span id="cb3-14"><a href="#cb3-14" tabindex="-1"></a>  <span class="at">submitted_at =</span> <span class="st">&quot;submitted_at&quot;</span>,</span>
-<span id="cb3-15"><a href="#cb3-15" tabindex="-1"></a>  <span class="at">meta_cols =</span> <span class="st">&quot;started_at&quot;</span>,</span>
-<span id="cb3-16"><a href="#cb3-16" tabindex="-1"></a>  <span class="at">strict =</span> <span class="cn">FALSE</span></span>
-<span id="cb3-17"><a href="#cb3-17" tabindex="-1"></a>)</span>
-<span id="cb3-18"><a href="#cb3-18" tabindex="-1"></a></span>
-<span id="cb3-19"><a href="#cb3-19" tabindex="-1"></a><span class="fu">identical</span>(<span class="fu">names</span>(strict_responses), <span class="fu">names</span>(relaxed_responses))</span>
-<span id="cb3-20"><a href="#cb3-20" tabindex="-1"></a><span class="co">#&gt; [1] TRUE</span></span></code></pre></div>
+<p>Response data uses instrument item IDs as column names. Metadata
+columns are declared explicitly. Use <code>strict = TRUE</code> to keep
+only known columns.</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a>responses <span class="ot">&lt;-</span> <span class="fu">read_responses</span>(</span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a>  demo<span class="sc">$</span>responses_path,</span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a>  instr,</span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a>  <span class="at">respondent_id =</span> <span class="st">&quot;respondent_id&quot;</span>,</span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a>  <span class="at">submitted_at  =</span> <span class="st">&quot;submitted_at&quot;</span>,</span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a>  <span class="at">meta_cols     =</span> <span class="st">&quot;started_at&quot;</span>,</span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a>  <span class="at">strict        =</span> <span class="cn">TRUE</span></span>
+<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a>)</span>
+<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a></span>
+<span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a><span class="fu">dim</span>(responses)</span>
+<span id="cb2-11"><a href="#cb2-11" tabindex="-1"></a><span class="co">#&gt; [1] 120  18</span></span></code></pre></div>
 </div>
-<div id="missing-data" class="section level2">
-<h2>Missing data</h2>
-<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a>missing <span class="ot">&lt;-</span> <span class="fu">missing_data_report</span>(responses, instr)</span>
-<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a></span>
-<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>missing<span class="sc">$</span>item_missing</span>
-<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a><span class="co">#&gt;              variable missing_n missing_pct valid_n</span></span>
-<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a><span class="co">#&gt; visit_type visit_type         0           0     120</span></span>
-<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a><span class="co">#&gt; dm_1             dm_1         0           0     120</span></span>
-<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a><span class="co">#&gt; dm_2             dm_2         0           0     120</span></span>
-<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a><span class="co">#&gt; dm_3             dm_3         0           0     120</span></span>
-<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a><span class="co">#&gt; sq_1             sq_1         0           0     120</span></span>
-<span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a><span class="co">#&gt; sq_2             sq_2         0           0     120</span></span>
-<span id="cb4-11"><a href="#cb4-11" tabindex="-1"></a><span class="co">#&gt; sq_3             sq_3         0           0     120</span></span>
-<span id="cb4-12"><a href="#cb4-12" tabindex="-1"></a><span class="co">#&gt; sus_1           sus_1         0           0     120</span></span>
-<span id="cb4-13"><a href="#cb4-13" tabindex="-1"></a><span class="co">#&gt; sus_2           sus_2         0           0     120</span></span>
-<span id="cb4-14"><a href="#cb4-14" tabindex="-1"></a><span class="co">#&gt; sat_1           sat_1         0           0     120</span></span>
-<span id="cb4-15"><a href="#cb4-15" tabindex="-1"></a><span class="co">#&gt; sat_2           sat_2         0           0     120</span></span>
-<span id="cb4-16"><a href="#cb4-16" tabindex="-1"></a><span class="co">#&gt; bi_1             bi_1         0           0     120</span></span>
-<span id="cb4-17"><a href="#cb4-17" tabindex="-1"></a><span class="co">#&gt; bi_2             bi_2         0           0     120</span></span>
-<span id="cb4-18"><a href="#cb4-18" tabindex="-1"></a><span class="co">#&gt; attention   attention         0           0     120</span></span>
-<span id="cb4-19"><a href="#cb4-19" tabindex="-1"></a><span class="co">#&gt; comments     comments         0           0     120</span></span>
-<span id="cb4-20"><a href="#cb4-20" tabindex="-1"></a><span class="fu">head</span>(missing<span class="sc">$</span>respondent_missing)</span>
-<span id="cb4-21"><a href="#cb4-21" tabindex="-1"></a><span class="co">#&gt;   row missing_n missing_pct</span></span>
-<span id="cb4-22"><a href="#cb4-22" tabindex="-1"></a><span class="co">#&gt; 1   1         0           0</span></span>
-<span id="cb4-23"><a href="#cb4-23" tabindex="-1"></a><span class="co">#&gt; 2   2         0           0</span></span>
-<span id="cb4-24"><a href="#cb4-24" tabindex="-1"></a><span class="co">#&gt; 3   3         0           0</span></span>
-<span id="cb4-25"><a href="#cb4-25" tabindex="-1"></a><span class="co">#&gt; 4   4         0           0</span></span>
-<span id="cb4-26"><a href="#cb4-26" tabindex="-1"></a><span class="co">#&gt; 5   5         0           0</span></span>
-<span id="cb4-27"><a href="#cb4-27" tabindex="-1"></a><span class="co">#&gt; 6   6         0           0</span></span></code></pre></div>
-</div>
-<div id="data-quality" class="section level2">
-<h2>Data quality</h2>
-<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a>quality <span class="ot">&lt;-</span> <span class="fu">quality_report</span>(</span>
-<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a>  responses,</span>
-<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a>  instr,</span>
-<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a>  <span class="at">respondent_id =</span> <span class="st">&quot;respondent_id&quot;</span>,</span>
-<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a>  <span class="at">submitted_at =</span> <span class="st">&quot;submitted_at&quot;</span>,</span>
-<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a>  <span class="at">started_at =</span> <span class="st">&quot;started_at&quot;</span></span>
-<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a>)</span>
-<span id="cb5-8"><a href="#cb5-8" tabindex="-1"></a></span>
-<span id="cb5-9"><a href="#cb5-9" tabindex="-1"></a>quality</span>
-<span id="cb5-10"><a href="#cb5-10" tabindex="-1"></a><span class="co">#&gt; Survey Data Quality Report</span></span>
-<span id="cb5-11"><a href="#cb5-11" tabindex="-1"></a><span class="co">#&gt;   Respondents:  120</span></span>
-<span id="cb5-12"><a href="#cb5-12" tabindex="-1"></a><span class="co">#&gt;   Items:        15</span></span>
-<span id="cb5-13"><a href="#cb5-13" tabindex="-1"></a><span class="co">#&gt;   Flagged:      109 (90.8%)</span></span>
-<span id="cb5-14"><a href="#cb5-14" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb5-15"><a href="#cb5-15" tabindex="-1"></a><span class="co">#&gt; Attention checks:</span></span>
-<span id="cb5-16"><a href="#cb5-16" tabindex="-1"></a><span class="co">#&gt;   attention_agree      pass 95%  fail 6</span></span>
-<span id="cb5-17"><a href="#cb5-17" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb5-18"><a href="#cb5-18" tabindex="-1"></a><span class="co">#&gt; Timing:</span></span>
-<span id="cb5-19"><a href="#cb5-19" tabindex="-1"></a><span class="co">#&gt;   Median completion time: 966.0 seconds</span></span>
-<span id="cb5-20"><a href="#cb5-20" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb5-21"><a href="#cb5-21" tabindex="-1"></a><span class="co">#&gt; Missingness:  0.0% of respondents exceed 20% threshold</span></span></code></pre></div>
+<div id="missing-data-and-quality" class="section level2">
+<h2>Missing data and quality</h2>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="fu">missing_data_report</span>(responses, instr)</span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a><span class="co">#&gt; $method</span></span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a><span class="co">#&gt; [1] &quot;missing_data&quot;</span></span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a><span class="co">#&gt; $item_missing</span></span>
+<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a><span class="co">#&gt;              variable missing_n missing_pct valid_n</span></span>
+<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a><span class="co">#&gt; visit_type visit_type         0           0     120</span></span>
+<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a><span class="co">#&gt; dm_1             dm_1         0           0     120</span></span>
+<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a><span class="co">#&gt; dm_2             dm_2         0           0     120</span></span>
+<span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a><span class="co">#&gt; dm_3             dm_3         0           0     120</span></span>
+<span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a><span class="co">#&gt; sq_1             sq_1         0           0     120</span></span>
+<span id="cb3-12"><a href="#cb3-12" tabindex="-1"></a><span class="co">#&gt; sq_2             sq_2         0           0     120</span></span>
+<span id="cb3-13"><a href="#cb3-13" tabindex="-1"></a><span class="co">#&gt; sq_3             sq_3         0           0     120</span></span>
+<span id="cb3-14"><a href="#cb3-14" tabindex="-1"></a><span class="co">#&gt; sus_1           sus_1         0           0     120</span></span>
+<span id="cb3-15"><a href="#cb3-15" tabindex="-1"></a><span class="co">#&gt; sus_2           sus_2         0           0     120</span></span>
+<span id="cb3-16"><a href="#cb3-16" tabindex="-1"></a><span class="co">#&gt; sat_1           sat_1         0           0     120</span></span>
+<span id="cb3-17"><a href="#cb3-17" tabindex="-1"></a><span class="co">#&gt; sat_2           sat_2         0           0     120</span></span>
+<span id="cb3-18"><a href="#cb3-18" tabindex="-1"></a><span class="co">#&gt; bi_1             bi_1         0           0     120</span></span>
+<span id="cb3-19"><a href="#cb3-19" tabindex="-1"></a><span class="co">#&gt; bi_2             bi_2         0           0     120</span></span>
+<span id="cb3-20"><a href="#cb3-20" tabindex="-1"></a><span class="co">#&gt; attention   attention         0           0     120</span></span>
+<span id="cb3-21"><a href="#cb3-21" tabindex="-1"></a><span class="co">#&gt; comments     comments         0           0     120</span></span>
+<span id="cb3-22"><a href="#cb3-22" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb3-23"><a href="#cb3-23" tabindex="-1"></a><span class="co">#&gt; $respondent_missing</span></span>
+<span id="cb3-24"><a href="#cb3-24" tabindex="-1"></a><span class="co">#&gt;     row missing_n missing_pct</span></span>
+<span id="cb3-25"><a href="#cb3-25" tabindex="-1"></a><span class="co">#&gt; 1     1         0           0</span></span>
+<span id="cb3-26"><a href="#cb3-26" tabindex="-1"></a><span class="co">#&gt; 2     2         0           0</span></span>
+<span id="cb3-27"><a href="#cb3-27" tabindex="-1"></a><span class="co">#&gt; 3     3         0           0</span></span>
+<span id="cb3-28"><a href="#cb3-28" tabindex="-1"></a><span class="co">#&gt; 4     4         0           0</span></span>
+<span id="cb3-29"><a href="#cb3-29" tabindex="-1"></a><span class="co">#&gt; 5     5         0           0</span></span>
+<span id="cb3-30"><a href="#cb3-30" tabindex="-1"></a><span class="co">#&gt; 6     6         0           0</span></span>
+<span id="cb3-31"><a href="#cb3-31" tabindex="-1"></a><span class="co">#&gt; 7     7         0           0</span></span>
+<span id="cb3-32"><a href="#cb3-32" tabindex="-1"></a><span class="co">#&gt; 8     8         0           0</span></span>
+<span id="cb3-33"><a href="#cb3-33" tabindex="-1"></a><span class="co">#&gt; 9     9         0           0</span></span>
+<span id="cb3-34"><a href="#cb3-34" tabindex="-1"></a><span class="co">#&gt; 10   10         0           0</span></span>
+<span id="cb3-35"><a href="#cb3-35" tabindex="-1"></a><span class="co">#&gt; 11   11         0           0</span></span>
+<span id="cb3-36"><a href="#cb3-36" tabindex="-1"></a><span class="co">#&gt; 12   12         0           0</span></span>
+<span id="cb3-37"><a href="#cb3-37" tabindex="-1"></a><span class="co">#&gt; 13   13         0           0</span></span>
+<span id="cb3-38"><a href="#cb3-38" tabindex="-1"></a><span class="co">#&gt; 14   14         0           0</span></span>
+<span id="cb3-39"><a href="#cb3-39" tabindex="-1"></a><span class="co">#&gt; 15   15         0           0</span></span>
+<span id="cb3-40"><a href="#cb3-40" tabindex="-1"></a><span class="co">#&gt; 16   16         0           0</span></span>
+<span id="cb3-41"><a href="#cb3-41" tabindex="-1"></a><span class="co">#&gt; 17   17         0           0</span></span>
+<span id="cb3-42"><a href="#cb3-42" tabindex="-1"></a><span class="co">#&gt; 18   18         0           0</span></span>
+<span id="cb3-43"><a href="#cb3-43" tabindex="-1"></a><span class="co">#&gt; 19   19         0           0</span></span>
+<span id="cb3-44"><a href="#cb3-44" tabindex="-1"></a><span class="co">#&gt; 20   20         0           0</span></span>
+<span id="cb3-45"><a href="#cb3-45" tabindex="-1"></a><span class="co">#&gt; 21   21         0           0</span></span>
+<span id="cb3-46"><a href="#cb3-46" tabindex="-1"></a><span class="co">#&gt; 22   22         0           0</span></span>
+<span id="cb3-47"><a href="#cb3-47" tabindex="-1"></a><span class="co">#&gt; 23   23         0           0</span></span>
+<span id="cb3-48"><a href="#cb3-48" tabindex="-1"></a><span class="co">#&gt; 24   24         0           0</span></span>
+<span id="cb3-49"><a href="#cb3-49" tabindex="-1"></a><span class="co">#&gt; 25   25         0           0</span></span>
+<span id="cb3-50"><a href="#cb3-50" tabindex="-1"></a><span class="co">#&gt; 26   26         0           0</span></span>
+<span id="cb3-51"><a href="#cb3-51" tabindex="-1"></a><span class="co">#&gt; 27   27         0           0</span></span>
+<span id="cb3-52"><a href="#cb3-52" tabindex="-1"></a><span class="co">#&gt; 28   28         0           0</span></span>
+<span id="cb3-53"><a href="#cb3-53" tabindex="-1"></a><span class="co">#&gt; 29   29         0           0</span></span>
+<span id="cb3-54"><a href="#cb3-54" tabindex="-1"></a><span class="co">#&gt; 30   30         0           0</span></span>
+<span id="cb3-55"><a href="#cb3-55" tabindex="-1"></a><span class="co">#&gt; 31   31         0           0</span></span>
+<span id="cb3-56"><a href="#cb3-56" tabindex="-1"></a><span class="co">#&gt; 32   32         0           0</span></span>
+<span id="cb3-57"><a href="#cb3-57" tabindex="-1"></a><span class="co">#&gt; 33   33         0           0</span></span>
+<span id="cb3-58"><a href="#cb3-58" tabindex="-1"></a><span class="co">#&gt; 34   34         0           0</span></span>
+<span id="cb3-59"><a href="#cb3-59" tabindex="-1"></a><span class="co">#&gt; 35   35         0           0</span></span>
+<span id="cb3-60"><a href="#cb3-60" tabindex="-1"></a><span class="co">#&gt; 36   36         0           0</span></span>
+<span id="cb3-61"><a href="#cb3-61" tabindex="-1"></a><span class="co">#&gt; 37   37         0           0</span></span>
+<span id="cb3-62"><a href="#cb3-62" tabindex="-1"></a><span class="co">#&gt; 38   38         0           0</span></span>
+<span id="cb3-63"><a href="#cb3-63" tabindex="-1"></a><span class="co">#&gt; 39   39         0           0</span></span>
+<span id="cb3-64"><a href="#cb3-64" tabindex="-1"></a><span class="co">#&gt; 40   40         0           0</span></span>
+<span id="cb3-65"><a href="#cb3-65" tabindex="-1"></a><span class="co">#&gt; 41   41         0           0</span></span>
+<span id="cb3-66"><a href="#cb3-66" tabindex="-1"></a><span class="co">#&gt; 42   42         0           0</span></span>
+<span id="cb3-67"><a href="#cb3-67" tabindex="-1"></a><span class="co">#&gt; 43   43         0           0</span></span>
+<span id="cb3-68"><a href="#cb3-68" tabindex="-1"></a><span class="co">#&gt; 44   44         0           0</span></span>
+<span id="cb3-69"><a href="#cb3-69" tabindex="-1"></a><span class="co">#&gt; 45   45         0           0</span></span>
+<span id="cb3-70"><a href="#cb3-70" tabindex="-1"></a><span class="co">#&gt; 46   46         0           0</span></span>
+<span id="cb3-71"><a href="#cb3-71" tabindex="-1"></a><span class="co">#&gt; 47   47         0           0</span></span>
+<span id="cb3-72"><a href="#cb3-72" tabindex="-1"></a><span class="co">#&gt; 48   48         0           0</span></span>
+<span id="cb3-73"><a href="#cb3-73" tabindex="-1"></a><span class="co">#&gt; 49   49         0           0</span></span>
+<span id="cb3-74"><a href="#cb3-74" tabindex="-1"></a><span class="co">#&gt; 50   50         0           0</span></span>
+<span id="cb3-75"><a href="#cb3-75" tabindex="-1"></a><span class="co">#&gt; 51   51         0           0</span></span>
+<span id="cb3-76"><a href="#cb3-76" tabindex="-1"></a><span class="co">#&gt; 52   52         0           0</span></span>
+<span id="cb3-77"><a href="#cb3-77" tabindex="-1"></a><span class="co">#&gt; 53   53         0           0</span></span>
+<span id="cb3-78"><a href="#cb3-78" tabindex="-1"></a><span class="co">#&gt; 54   54         0           0</span></span>
+<span id="cb3-79"><a href="#cb3-79" tabindex="-1"></a><span class="co">#&gt; 55   55         0           0</span></span>
+<span id="cb3-80"><a href="#cb3-80" tabindex="-1"></a><span class="co">#&gt; 56   56         0           0</span></span>
+<span id="cb3-81"><a href="#cb3-81" tabindex="-1"></a><span class="co">#&gt; 57   57         0           0</span></span>
+<span id="cb3-82"><a href="#cb3-82" tabindex="-1"></a><span class="co">#&gt; 58   58         0           0</span></span>
+<span id="cb3-83"><a href="#cb3-83" tabindex="-1"></a><span class="co">#&gt; 59   59         0           0</span></span>
+<span id="cb3-84"><a href="#cb3-84" tabindex="-1"></a><span class="co">#&gt; 60   60         0           0</span></span>
+<span id="cb3-85"><a href="#cb3-85" tabindex="-1"></a><span class="co">#&gt; 61   61         0           0</span></span>
+<span id="cb3-86"><a href="#cb3-86" tabindex="-1"></a><span class="co">#&gt; 62   62         0           0</span></span>
+<span id="cb3-87"><a href="#cb3-87" tabindex="-1"></a><span class="co">#&gt; 63   63         0           0</span></span>
+<span id="cb3-88"><a href="#cb3-88" tabindex="-1"></a><span class="co">#&gt; 64   64         0           0</span></span>
+<span id="cb3-89"><a href="#cb3-89" tabindex="-1"></a><span class="co">#&gt; 65   65         0           0</span></span>
+<span id="cb3-90"><a href="#cb3-90" tabindex="-1"></a><span class="co">#&gt; 66   66         0           0</span></span>
+<span id="cb3-91"><a href="#cb3-91" tabindex="-1"></a><span class="co">#&gt; 67   67         0           0</span></span>
+<span id="cb3-92"><a href="#cb3-92" tabindex="-1"></a><span class="co">#&gt; 68   68         0           0</span></span>
+<span id="cb3-93"><a href="#cb3-93" tabindex="-1"></a><span class="co">#&gt; 69   69         0           0</span></span>
+<span id="cb3-94"><a href="#cb3-94" tabindex="-1"></a><span class="co">#&gt; 70   70         0           0</span></span>
+<span id="cb3-95"><a href="#cb3-95" tabindex="-1"></a><span class="co">#&gt; 71   71         0           0</span></span>
+<span id="cb3-96"><a href="#cb3-96" tabindex="-1"></a><span class="co">#&gt; 72   72         0           0</span></span>
+<span id="cb3-97"><a href="#cb3-97" tabindex="-1"></a><span class="co">#&gt; 73   73         0           0</span></span>
+<span id="cb3-98"><a href="#cb3-98" tabindex="-1"></a><span class="co">#&gt; 74   74         0           0</span></span>
+<span id="cb3-99"><a href="#cb3-99" tabindex="-1"></a><span class="co">#&gt; 75   75         0           0</span></span>
+<span id="cb3-100"><a href="#cb3-100" tabindex="-1"></a><span class="co">#&gt; 76   76         0           0</span></span>
+<span id="cb3-101"><a href="#cb3-101" tabindex="-1"></a><span class="co">#&gt; 77   77         0           0</span></span>
+<span id="cb3-102"><a href="#cb3-102" tabindex="-1"></a><span class="co">#&gt; 78   78         0           0</span></span>
+<span id="cb3-103"><a href="#cb3-103" tabindex="-1"></a><span class="co">#&gt; 79   79         0           0</span></span>
+<span id="cb3-104"><a href="#cb3-104" tabindex="-1"></a><span class="co">#&gt; 80   80         0           0</span></span>
+<span id="cb3-105"><a href="#cb3-105" tabindex="-1"></a><span class="co">#&gt; 81   81         0           0</span></span>
+<span id="cb3-106"><a href="#cb3-106" tabindex="-1"></a><span class="co">#&gt; 82   82         0           0</span></span>
+<span id="cb3-107"><a href="#cb3-107" tabindex="-1"></a><span class="co">#&gt; 83   83         0           0</span></span>
+<span id="cb3-108"><a href="#cb3-108" tabindex="-1"></a><span class="co">#&gt; 84   84         0           0</span></span>
+<span id="cb3-109"><a href="#cb3-109" tabindex="-1"></a><span class="co">#&gt; 85   85         0           0</span></span>
+<span id="cb3-110"><a href="#cb3-110" tabindex="-1"></a><span class="co">#&gt; 86   86         0           0</span></span>
+<span id="cb3-111"><a href="#cb3-111" tabindex="-1"></a><span class="co">#&gt; 87   87         0           0</span></span>
+<span id="cb3-112"><a href="#cb3-112" tabindex="-1"></a><span class="co">#&gt; 88   88         0           0</span></span>
+<span id="cb3-113"><a href="#cb3-113" tabindex="-1"></a><span class="co">#&gt; 89   89         0           0</span></span>
+<span id="cb3-114"><a href="#cb3-114" tabindex="-1"></a><span class="co">#&gt; 90   90         0           0</span></span>
+<span id="cb3-115"><a href="#cb3-115" tabindex="-1"></a><span class="co">#&gt; 91   91         0           0</span></span>
+<span id="cb3-116"><a href="#cb3-116" tabindex="-1"></a><span class="co">#&gt; 92   92         0           0</span></span>
+<span id="cb3-117"><a href="#cb3-117" tabindex="-1"></a><span class="co">#&gt; 93   93         0           0</span></span>
+<span id="cb3-118"><a href="#cb3-118" tabindex="-1"></a><span class="co">#&gt; 94   94         0           0</span></span>
+<span id="cb3-119"><a href="#cb3-119" tabindex="-1"></a><span class="co">#&gt; 95   95         0           0</span></span>
+<span id="cb3-120"><a href="#cb3-120" tabindex="-1"></a><span class="co">#&gt; 96   96         0           0</span></span>
+<span id="cb3-121"><a href="#cb3-121" tabindex="-1"></a><span class="co">#&gt; 97   97         0           0</span></span>
+<span id="cb3-122"><a href="#cb3-122" tabindex="-1"></a><span class="co">#&gt; 98   98         0           0</span></span>
+<span id="cb3-123"><a href="#cb3-123" tabindex="-1"></a><span class="co">#&gt; 99   99         0           0</span></span>
+<span id="cb3-124"><a href="#cb3-124" tabindex="-1"></a><span class="co">#&gt; 100 100         0           0</span></span>
+<span id="cb3-125"><a href="#cb3-125" tabindex="-1"></a><span class="co">#&gt; 101 101         0           0</span></span>
+<span id="cb3-126"><a href="#cb3-126" tabindex="-1"></a><span class="co">#&gt; 102 102         0           0</span></span>
+<span id="cb3-127"><a href="#cb3-127" tabindex="-1"></a><span class="co">#&gt; 103 103         0           0</span></span>
+<span id="cb3-128"><a href="#cb3-128" tabindex="-1"></a><span class="co">#&gt; 104 104         0           0</span></span>
+<span id="cb3-129"><a href="#cb3-129" tabindex="-1"></a><span class="co">#&gt; 105 105         0           0</span></span>
+<span id="cb3-130"><a href="#cb3-130" tabindex="-1"></a><span class="co">#&gt; 106 106         0           0</span></span>
+<span id="cb3-131"><a href="#cb3-131" tabindex="-1"></a><span class="co">#&gt; 107 107         0           0</span></span>
+<span id="cb3-132"><a href="#cb3-132" tabindex="-1"></a><span class="co">#&gt; 108 108         0           0</span></span>
+<span id="cb3-133"><a href="#cb3-133" tabindex="-1"></a><span class="co">#&gt; 109 109         0           0</span></span>
+<span id="cb3-134"><a href="#cb3-134" tabindex="-1"></a><span class="co">#&gt; 110 110         0           0</span></span>
+<span id="cb3-135"><a href="#cb3-135" tabindex="-1"></a><span class="co">#&gt; 111 111         0           0</span></span>
+<span id="cb3-136"><a href="#cb3-136" tabindex="-1"></a><span class="co">#&gt; 112 112         0           0</span></span>
+<span id="cb3-137"><a href="#cb3-137" tabindex="-1"></a><span class="co">#&gt; 113 113         0           0</span></span>
+<span id="cb3-138"><a href="#cb3-138" tabindex="-1"></a><span class="co">#&gt; 114 114         0           0</span></span>
+<span id="cb3-139"><a href="#cb3-139" tabindex="-1"></a><span class="co">#&gt; 115 115         0           0</span></span>
+<span id="cb3-140"><a href="#cb3-140" tabindex="-1"></a><span class="co">#&gt; 116 116         0           0</span></span>
+<span id="cb3-141"><a href="#cb3-141" tabindex="-1"></a><span class="co">#&gt; 117 117         0           0</span></span>
+<span id="cb3-142"><a href="#cb3-142" tabindex="-1"></a><span class="co">#&gt; 118 118         0           0</span></span>
+<span id="cb3-143"><a href="#cb3-143" tabindex="-1"></a><span class="co">#&gt; 119 119         0           0</span></span>
+<span id="cb3-144"><a href="#cb3-144" tabindex="-1"></a><span class="co">#&gt; 120 120         0           0</span></span>
+<span id="cb3-145"><a href="#cb3-145" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb3-146"><a href="#cb3-146" tabindex="-1"></a><span class="co">#&gt; $patterns</span></span>
+<span id="cb3-147"><a href="#cb3-147" tabindex="-1"></a><span class="co">#&gt;           pattern   n percent</span></span>
+<span id="cb3-148"><a href="#cb3-148" tabindex="-1"></a><span class="co">#&gt; 1 000000000000000 120       1</span></span>
+<span id="cb3-149"><a href="#cb3-149" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb3-150"><a href="#cb3-150" tabindex="-1"></a><span class="co">#&gt; $deletion</span></span>
+<span id="cb3-151"><a href="#cb3-151" tabindex="-1"></a><span class="co">#&gt; $deletion$listwise_n</span></span>
+<span id="cb3-152"><a href="#cb3-152" tabindex="-1"></a><span class="co">#&gt; [1] 120</span></span>
+<span id="cb3-153"><a href="#cb3-153" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb3-154"><a href="#cb3-154" tabindex="-1"></a><span class="co">#&gt; $deletion$pairwise_n</span></span>
+<span id="cb3-155"><a href="#cb3-155" tabindex="-1"></a><span class="co">#&gt; $deletion$pairwise_n$visit_type</span></span>
+<span id="cb3-156"><a href="#cb3-156" tabindex="-1"></a><span class="co">#&gt; visit_type       dm_1       dm_2       dm_3       sq_1       sq_2       sq_3 </span></span>
+<span id="cb3-157"><a href="#cb3-157" tabindex="-1"></a><span class="co">#&gt;        120        120        120        120        120        120        120 </span></span>
+<span id="cb3-158"><a href="#cb3-158" tabindex="-1"></a><span class="co">#&gt;      sus_1      sus_2      sat_1      sat_2       bi_1       bi_2  attention </span></span>
+<span id="cb3-159"><a href="#cb3-159" tabindex="-1"></a><span class="co">#&gt;        120        120        120        120        120        120        120 </span></span>
+<span id="cb3-160"><a href="#cb3-160" tabindex="-1"></a><span class="co">#&gt;   comments </span></span>
+<span id="cb3-161"><a href="#cb3-161" tabindex="-1"></a><span class="co">#&gt;        120 </span></span>
+<span id="cb3-162"><a href="#cb3-162" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb3-163"><a href="#cb3-163" tabindex="-1"></a><span class="co">#&gt; $deletion$pairwise_n$dm_1</span></span>
+<span id="cb3-164"><a href="#cb3-164" tabindex="-1"></a><span class="co">#&gt; visit_type       dm_1       dm_2       dm_3       sq_1       sq_2       sq_3 </span></span>
+<span id="cb3-165"><a href="#cb3-165" tabindex="-1"></a><span class="co">#&gt;        120        120        120        120        120        120        120 </span></span>
+<span id="cb3-166"><a href="#cb3-166" tabindex="-1"></a><span class="co">#&gt;      sus_1      sus_2      sat_1      sat_2       bi_1       bi_2  attention </span></span>
+<span id="cb3-167"><a href="#cb3-167" tabindex="-1"></a><span class="co">#&gt;        120        120        120        120        120        120        120 </span></span>
+<span id="cb3-168"><a href="#cb3-168" tabindex="-1"></a><span class="co">#&gt;   comments </span></span>
+<span id="cb3-169"><a href="#cb3-169" tabindex="-1"></a><span class="co">#&gt;        120 </span></span>
+<span id="cb3-170"><a href="#cb3-170" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb3-171"><a href="#cb3-171" tabindex="-1"></a><span class="co">#&gt; $deletion$pairwise_n$dm_2</span></span>
+<span id="cb3-172"><a href="#cb3-172" tabindex="-1"></a><span class="co">#&gt; visit_type       dm_1       dm_2       dm_3       sq_1       sq_2       sq_3 </span></span>
+<span id="cb3-173"><a href="#cb3-173" tabindex="-1"></a><span class="co">#&gt;        120        120        120        120        120        120        120 </span></span>
+<span id="cb3-174"><a href="#cb3-174" tabindex="-1"></a><span class="co">#&gt;      sus_1      sus_2      sat_1      sat_2       bi_1       bi_2  attention </span></span>
+<span id="cb3-175"><a href="#cb3-175" tabindex="-1"></a><span class="co">#&gt;        120        120        120        120        120        120        120 </span></span>
+<span id="cb3-176"><a href="#cb3-176" tabindex="-1"></a><span class="co">#&gt;   comments </span></span>
+<span id="cb3-177"><a href="#cb3-177" tabindex="-1"></a><span class="co">#&gt;        120 </span></span>
+<span id="cb3-178"><a href="#cb3-178" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb3-179"><a href="#cb3-179" tabindex="-1"></a><span class="co">#&gt; $deletion$pairwise_n$dm_3</span></span>
+<span id="cb3-180"><a href="#cb3-180" tabindex="-1"></a><span class="co">#&gt; visit_type       dm_1       dm_2       dm_3       sq_1       sq_2       sq_3 </span></span>
+<span id="cb3-181"><a href="#cb3-181" tabindex="-1"></a><span class="co">#&gt;        120        120        120        120        120        120        120 </span></span>
+<span id="cb3-182"><a href="#cb3-182" tabindex="-1"></a><span class="co">#&gt;      sus_1      sus_2      sat_1      sat_2       bi_1       bi_2  attention </span></span>
+<span id="cb3-183"><a href="#cb3-183" tabindex="-1"></a><span class="co">#&gt;        120        120        120        120        120        120        120 </span></span>
+<span id="cb3-184"><a href="#cb3-184" tabindex="-1"></a><span class="co">#&gt;   comments </span></span>
+<span id="cb3-185"><a href="#cb3-185" tabindex="-1"></a><span class="co">#&gt;        120 </span></span>
+<span id="cb3-186"><a href="#cb3-186" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb3-187"><a href="#cb3-187" tabindex="-1"></a><span class="co">#&gt; $deletion$pairwise_n$sq_1</span></span>
+<span id="cb3-188"><a href="#cb3-188" tabindex="-1"></a><span class="co">#&gt; visit_type       dm_1       dm_2       dm_3       sq_1       sq_2       sq_3 </span></span>
+<span id="cb3-189"><a href="#cb3-189" tabindex="-1"></a><span class="co">#&gt;        120        120        120        120        120        120        120 </span></span>
+<span id="cb3-190"><a href="#cb3-190" tabindex="-1"></a><span class="co">#&gt;      sus_1      sus_2      sat_1      sat_2       bi_1       bi_2  attention </span></span>
+<span id="cb3-191"><a href="#cb3-191" tabindex="-1"></a><span class="co">#&gt;        120        120        120        120        120        120        120 </span></span>
+<span id="cb3-192"><a href="#cb3-192" tabindex="-1"></a><span class="co">#&gt;   comments </span></span>
+<span id="cb3-193"><a href="#cb3-193" tabindex="-1"></a><span class="co">#&gt;        120 </span></span>
+<span id="cb3-194"><a href="#cb3-194" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb3-195"><a href="#cb3-195" tabindex="-1"></a><span class="co">#&gt; $deletion$pairwise_n$sq_2</span></span>
+<span id="cb3-196"><a href="#cb3-196" tabindex="-1"></a><span class="co">#&gt; visit_type       dm_1       dm_2       dm_3       sq_1       sq_2       sq_3 </span></span>
+<span id="cb3-197"><a href="#cb3-197" tabindex="-1"></a><span class="co">#&gt;        120        120        120        120        120        120        120 </span></span>
+<span id="cb3-198"><a href="#cb3-198" tabindex="-1"></a><span class="co">#&gt;      sus_1      sus_2      sat_1      sat_2       bi_1       bi_2  attention </span></span>
+<span id="cb3-199"><a href="#cb3-199" tabindex="-1"></a><span class="co">#&gt;        120        120        120        120        120        120        120 </span></span>
+<span id="cb3-200"><a href="#cb3-200" tabindex="-1"></a><span class="co">#&gt;   comments </span></span>
+<span id="cb3-201"><a href="#cb3-201" tabindex="-1"></a><span class="co">#&gt;        120 </span></span>
+<span id="cb3-202"><a href="#cb3-202" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb3-203"><a href="#cb3-203" tabindex="-1"></a><span class="co">#&gt; $deletion$pairwise_n$sq_3</span></span>
+<span id="cb3-204"><a href="#cb3-204" tabindex="-1"></a><span class="co">#&gt; visit_type       dm_1       dm_2       dm_3       sq_1       sq_2       sq_3 </span></span>
+<span id="cb3-205"><a href="#cb3-205" tabindex="-1"></a><span class="co">#&gt;        120        120        120        120        120        120        120 </span></span>
+<span id="cb3-206"><a href="#cb3-206" tabindex="-1"></a><span class="co">#&gt;      sus_1      sus_2      sat_1      sat_2       bi_1       bi_2  attention </span></span>
+<span id="cb3-207"><a href="#cb3-207" tabindex="-1"></a><span class="co">#&gt;        120        120        120        120        120        120        120 </span></span>
+<span id="cb3-208"><a href="#cb3-208" tabindex="-1"></a><span class="co">#&gt;   comments </span></span>
+<span id="cb3-209"><a href="#cb3-209" tabindex="-1"></a><span class="co">#&gt;        120 </span></span>
+<span id="cb3-210"><a href="#cb3-210" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb3-211"><a href="#cb3-211" tabindex="-1"></a><span class="co">#&gt; $deletion$pairwise_n$sus_1</span></span>
+<span id="cb3-212"><a href="#cb3-212" tabindex="-1"></a><span class="co">#&gt; visit_type       dm_1       dm_2       dm_3       sq_1       sq_2       sq_3 </span></span>
+<span id="cb3-213"><a href="#cb3-213" tabindex="-1"></a><span class="co">#&gt;        120        120        120        120        120        120        120 </span></span>
+<span id="cb3-214"><a href="#cb3-214" tabindex="-1"></a><span class="co">#&gt;      sus_1      sus_2      sat_1      sat_2       bi_1       bi_2  attention </span></span>
+<span id="cb3-215"><a href="#cb3-215" tabindex="-1"></a><span class="co">#&gt;        120        120        120        120        120        120        120 </span></span>
+<span id="cb3-216"><a href="#cb3-216" tabindex="-1"></a><span class="co">#&gt;   comments </span></span>
+<span id="cb3-217"><a href="#cb3-217" tabindex="-1"></a><span class="co">#&gt;        120 </span></span>
+<span id="cb3-218"><a href="#cb3-218" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb3-219"><a href="#cb3-219" tabindex="-1"></a><span class="co">#&gt; $deletion$pairwise_n$sus_2</span></span>
+<span id="cb3-220"><a href="#cb3-220" tabindex="-1"></a><span class="co">#&gt; visit_type       dm_1       dm_2       dm_3       sq_1       sq_2       sq_3 </span></span>
+<span id="cb3-221"><a href="#cb3-221" tabindex="-1"></a><span class="co">#&gt;        120        120        120        120        120        120        120 </span></span>
+<span id="cb3-222"><a href="#cb3-222" tabindex="-1"></a><span class="co">#&gt;      sus_1      sus_2      sat_1      sat_2       bi_1       bi_2  attention </span></span>
+<span id="cb3-223"><a href="#cb3-223" tabindex="-1"></a><span class="co">#&gt;        120        120        120        120        120        120        120 </span></span>
+<span id="cb3-224"><a href="#cb3-224" tabindex="-1"></a><span class="co">#&gt;   comments </span></span>
+<span id="cb3-225"><a href="#cb3-225" tabindex="-1"></a><span class="co">#&gt;        120 </span></span>
+<span id="cb3-226"><a href="#cb3-226" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb3-227"><a href="#cb3-227" tabindex="-1"></a><span class="co">#&gt; $deletion$pairwise_n$sat_1</span></span>
+<span id="cb3-228"><a href="#cb3-228" tabindex="-1"></a><span class="co">#&gt; visit_type       dm_1       dm_2       dm_3       sq_1       sq_2       sq_3 </span></span>
+<span id="cb3-229"><a href="#cb3-229" tabindex="-1"></a><span class="co">#&gt;        120        120        120        120        120        120        120 </span></span>
+<span id="cb3-230"><a href="#cb3-230" tabindex="-1"></a><span class="co">#&gt;      sus_1      sus_2      sat_1      sat_2       bi_1       bi_2  attention </span></span>
+<span id="cb3-231"><a href="#cb3-231" tabindex="-1"></a><span class="co">#&gt;        120        120        120        120        120        120        120 </span></span>
+<span id="cb3-232"><a href="#cb3-232" tabindex="-1"></a><span class="co">#&gt;   comments </span></span>
+<span id="cb3-233"><a href="#cb3-233" tabindex="-1"></a><span class="co">#&gt;        120 </span></span>
+<span id="cb3-234"><a href="#cb3-234" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb3-235"><a href="#cb3-235" tabindex="-1"></a><span class="co">#&gt; $deletion$pairwise_n$sat_2</span></span>
+<span id="cb3-236"><a href="#cb3-236" tabindex="-1"></a><span class="co">#&gt; visit_type       dm_1       dm_2       dm_3       sq_1       sq_2       sq_3 </span></span>
+<span id="cb3-237"><a href="#cb3-237" tabindex="-1"></a><span class="co">#&gt;        120        120        120        120        120        120        120 </span></span>
+<span id="cb3-238"><a href="#cb3-238" tabindex="-1"></a><span class="co">#&gt;      sus_1      sus_2      sat_1      sat_2       bi_1       bi_2  attention </span></span>
+<span id="cb3-239"><a href="#cb3-239" tabindex="-1"></a><span class="co">#&gt;        120        120        120        120        120        120        120 </span></span>
+<span id="cb3-240"><a href="#cb3-240" tabindex="-1"></a><span class="co">#&gt;   comments </span></span>
+<span id="cb3-241"><a href="#cb3-241" tabindex="-1"></a><span class="co">#&gt;        120 </span></span>
+<span id="cb3-242"><a href="#cb3-242" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb3-243"><a href="#cb3-243" tabindex="-1"></a><span class="co">#&gt; $deletion$pairwise_n$bi_1</span></span>
+<span id="cb3-244"><a href="#cb3-244" tabindex="-1"></a><span class="co">#&gt; visit_type       dm_1       dm_2       dm_3       sq_1       sq_2       sq_3 </span></span>
+<span id="cb3-245"><a href="#cb3-245" tabindex="-1"></a><span class="co">#&gt;        120        120        120        120        120        120        120 </span></span>
+<span id="cb3-246"><a href="#cb3-246" tabindex="-1"></a><span class="co">#&gt;      sus_1      sus_2      sat_1      sat_2       bi_1       bi_2  attention </span></span>
+<span id="cb3-247"><a href="#cb3-247" tabindex="-1"></a><span class="co">#&gt;        120        120        120        120        120        120        120 </span></span>
+<span id="cb3-248"><a href="#cb3-248" tabindex="-1"></a><span class="co">#&gt;   comments </span></span>
+<span id="cb3-249"><a href="#cb3-249" tabindex="-1"></a><span class="co">#&gt;        120 </span></span>
+<span id="cb3-250"><a href="#cb3-250" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb3-251"><a href="#cb3-251" tabindex="-1"></a><span class="co">#&gt; $deletion$pairwise_n$bi_2</span></span>
+<span id="cb3-252"><a href="#cb3-252" tabindex="-1"></a><span class="co">#&gt; visit_type       dm_1       dm_2       dm_3       sq_1       sq_2       sq_3 </span></span>
+<span id="cb3-253"><a href="#cb3-253" tabindex="-1"></a><span class="co">#&gt;        120        120        120        120        120        120        120 </span></span>
+<span id="cb3-254"><a href="#cb3-254" tabindex="-1"></a><span class="co">#&gt;      sus_1      sus_2      sat_1      sat_2       bi_1       bi_2  attention </span></span>
+<span id="cb3-255"><a href="#cb3-255" tabindex="-1"></a><span class="co">#&gt;        120        120        120        120        120        120        120 </span></span>
+<span id="cb3-256"><a href="#cb3-256" tabindex="-1"></a><span class="co">#&gt;   comments </span></span>
+<span id="cb3-257"><a href="#cb3-257" tabindex="-1"></a><span class="co">#&gt;        120 </span></span>
+<span id="cb3-258"><a href="#cb3-258" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb3-259"><a href="#cb3-259" tabindex="-1"></a><span class="co">#&gt; $deletion$pairwise_n$attention</span></span>
+<span id="cb3-260"><a href="#cb3-260" tabindex="-1"></a><span class="co">#&gt; visit_type       dm_1       dm_2       dm_3       sq_1       sq_2       sq_3 </span></span>
+<span id="cb3-261"><a href="#cb3-261" tabindex="-1"></a><span class="co">#&gt;        120        120        120        120        120        120        120 </span></span>
+<span id="cb3-262"><a href="#cb3-262" tabindex="-1"></a><span class="co">#&gt;      sus_1      sus_2      sat_1      sat_2       bi_1       bi_2  attention </span></span>
+<span id="cb3-263"><a href="#cb3-263" tabindex="-1"></a><span class="co">#&gt;        120        120        120        120        120        120        120 </span></span>
+<span id="cb3-264"><a href="#cb3-264" tabindex="-1"></a><span class="co">#&gt;   comments </span></span>
+<span id="cb3-265"><a href="#cb3-265" tabindex="-1"></a><span class="co">#&gt;        120 </span></span>
+<span id="cb3-266"><a href="#cb3-266" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb3-267"><a href="#cb3-267" tabindex="-1"></a><span class="co">#&gt; $deletion$pairwise_n$comments</span></span>
+<span id="cb3-268"><a href="#cb3-268" tabindex="-1"></a><span class="co">#&gt; visit_type       dm_1       dm_2       dm_3       sq_1       sq_2       sq_3 </span></span>
+<span id="cb3-269"><a href="#cb3-269" tabindex="-1"></a><span class="co">#&gt;        120        120        120        120        120        120        120 </span></span>
+<span id="cb3-270"><a href="#cb3-270" tabindex="-1"></a><span class="co">#&gt;      sus_1      sus_2      sat_1      sat_2       bi_1       bi_2  attention </span></span>
+<span id="cb3-271"><a href="#cb3-271" tabindex="-1"></a><span class="co">#&gt;        120        120        120        120        120        120        120 </span></span>
+<span id="cb3-272"><a href="#cb3-272" tabindex="-1"></a><span class="co">#&gt;   comments </span></span>
+<span id="cb3-273"><a href="#cb3-273" tabindex="-1"></a><span class="co">#&gt;        120 </span></span>
+<span id="cb3-274"><a href="#cb3-274" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb3-275"><a href="#cb3-275" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb3-276"><a href="#cb3-276" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb3-277"><a href="#cb3-277" tabindex="-1"></a><span class="co">#&gt; $scale_missing_rules</span></span>
+<span id="cb3-278"><a href="#cb3-278" tabindex="-1"></a><span class="co">#&gt;                scale_id n_items min_valid</span></span>
+<span id="cb3-279"><a href="#cb3-279" tabindex="-1"></a><span class="co">#&gt; 1     digital_marketing       3         3</span></span>
+<span id="cb3-280"><a href="#cb3-280" tabindex="-1"></a><span class="co">#&gt; 2       service_quality       3         3</span></span>
+<span id="cb3-281"><a href="#cb3-281" tabindex="-1"></a><span class="co">#&gt; 3        sustainability       2         2</span></span>
+<span id="cb3-282"><a href="#cb3-282" tabindex="-1"></a><span class="co">#&gt; 4          satisfaction       2         2</span></span>
+<span id="cb3-283"><a href="#cb3-283" tabindex="-1"></a><span class="co">#&gt; 5 behavioural_intention       2         2</span></span>
+<span id="cb3-284"><a href="#cb3-284" tabindex="-1"></a><span class="co">#&gt;                               missing_rule</span></span>
+<span id="cb3-285"><a href="#cb3-285" tabindex="-1"></a><span class="co">#&gt; 1 Score when at least 3 item(s) are valid.</span></span>
+<span id="cb3-286"><a href="#cb3-286" tabindex="-1"></a><span class="co">#&gt; 2 Score when at least 3 item(s) are valid.</span></span>
+<span id="cb3-287"><a href="#cb3-287" tabindex="-1"></a><span class="co">#&gt; 3 Score when at least 2 item(s) are valid.</span></span>
+<span id="cb3-288"><a href="#cb3-288" tabindex="-1"></a><span class="co">#&gt; 4 Score when at least 2 item(s) are valid.</span></span>
+<span id="cb3-289"><a href="#cb3-289" tabindex="-1"></a><span class="co">#&gt; 5 Score when at least 2 item(s) are valid.</span></span>
+<span id="cb3-290"><a href="#cb3-290" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb3-291"><a href="#cb3-291" tabindex="-1"></a><span class="co">#&gt; $mcar</span></span>
+<span id="cb3-292"><a href="#cb3-292" tabindex="-1"></a><span class="co">#&gt; $mcar$available</span></span>
+<span id="cb3-293"><a href="#cb3-293" tabindex="-1"></a><span class="co">#&gt; [1] FALSE</span></span>
+<span id="cb3-294"><a href="#cb3-294" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb3-295"><a href="#cb3-295" tabindex="-1"></a><span class="co">#&gt; $mcar$warning</span></span>
+<span id="cb3-296"><a href="#cb3-296" tabindex="-1"></a><span class="co">#&gt; [1] &quot;Little&#39;s MCAR test requires an optional package and was not run.&quot;</span></span>
+<span id="cb3-297"><a href="#cb3-297" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb3-298"><a href="#cb3-298" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb3-299"><a href="#cb3-299" tabindex="-1"></a><span class="co">#&gt; $apa</span></span>
+<span id="cb3-300"><a href="#cb3-300" tabindex="-1"></a><span class="co">#&gt; [1] &quot;Missing-data diagnostics were computed for 15 variable(s).&quot;</span></span>
+<span id="cb3-301"><a href="#cb3-301" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb3-302"><a href="#cb3-302" tabindex="-1"></a><span class="co">#&gt; $prompt</span></span>
+<span id="cb3-303"><a href="#cb3-303" tabindex="-1"></a><span class="co">#&gt; [1] &quot;Report item and respondent missingness, the missing-data pattern, and the deletion rule used for each analysis.&quot;</span></span>
+<span id="cb3-304"><a href="#cb3-304" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb3-305"><a href="#cb3-305" tabindex="-1"></a><span class="co">#&gt; attr(,&quot;class&quot;)</span></span>
+<span id="cb3-306"><a href="#cb3-306" tabindex="-1"></a><span class="co">#&gt; [1] &quot;sframe_missing_data_report&quot;</span></span>
+<span id="cb3-307"><a href="#cb3-307" tabindex="-1"></a></span>
+<span id="cb3-308"><a href="#cb3-308" tabindex="-1"></a><span class="fu">quality_report</span>(</span>
+<span id="cb3-309"><a href="#cb3-309" tabindex="-1"></a>  responses, instr,</span>
+<span id="cb3-310"><a href="#cb3-310" tabindex="-1"></a>  <span class="at">respondent_id =</span> <span class="st">&quot;respondent_id&quot;</span>,</span>
+<span id="cb3-311"><a href="#cb3-311" tabindex="-1"></a>  <span class="at">submitted_at  =</span> <span class="st">&quot;submitted_at&quot;</span>,</span>
+<span id="cb3-312"><a href="#cb3-312" tabindex="-1"></a>  <span class="at">started_at    =</span> <span class="st">&quot;started_at&quot;</span></span>
+<span id="cb3-313"><a href="#cb3-313" tabindex="-1"></a>)</span>
+<span id="cb3-314"><a href="#cb3-314" tabindex="-1"></a><span class="co">#&gt; Survey Data Quality Report</span></span>
+<span id="cb3-315"><a href="#cb3-315" tabindex="-1"></a><span class="co">#&gt;   Respondents:  120</span></span>
+<span id="cb3-316"><a href="#cb3-316" tabindex="-1"></a><span class="co">#&gt;   Items:        15</span></span>
+<span id="cb3-317"><a href="#cb3-317" tabindex="-1"></a><span class="co">#&gt;   Flagged:      109 (90.8%)</span></span>
+<span id="cb3-318"><a href="#cb3-318" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb3-319"><a href="#cb3-319" tabindex="-1"></a><span class="co">#&gt; Attention checks:</span></span>
+<span id="cb3-320"><a href="#cb3-320" tabindex="-1"></a><span class="co">#&gt;   attention_agree      pass 95%  fail 6</span></span>
+<span id="cb3-321"><a href="#cb3-321" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb3-322"><a href="#cb3-322" tabindex="-1"></a><span class="co">#&gt; Timing:</span></span>
+<span id="cb3-323"><a href="#cb3-323" tabindex="-1"></a><span class="co">#&gt;   Median completion time: 966.0 seconds</span></span>
+<span id="cb3-324"><a href="#cb3-324" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb3-325"><a href="#cb3-325" tabindex="-1"></a><span class="co">#&gt; Missingness:  0.0% of respondents exceed 20% threshold</span></span></code></pre></div>
 </div>
 <div id="score-scales" class="section level2">
 <h2>Score scales</h2>
-<p><code>score_scales()</code> uses the scale definitions in the
-instrument. It applies reverse coding and minimum valid item rules.</p>
-<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a>scored <span class="ot">&lt;-</span> <span class="fu">score_scales</span>(responses, instr, <span class="at">keep_items =</span> <span class="cn">TRUE</span>, <span class="at">keep_meta =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a></span>
-<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a>scale_ids <span class="ot">&lt;-</span> <span class="fu">vapply</span>(instr<span class="sc">$</span>scales, <span class="cf">function</span>(x) x<span class="sc">$</span>id, <span class="fu">character</span>(<span class="dv">1</span>))</span>
-<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a><span class="fu">head</span>(scored[, <span class="fu">intersect</span>(scale_ids, <span class="fu">names</span>(scored)), <span class="at">drop =</span> <span class="cn">FALSE</span>])</span>
-<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a><span class="co">#&gt;   digital_marketing service_quality sustainability satisfaction</span></span>
-<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a><span class="co">#&gt; 1          2.666667        3.666667            5.0          3.5</span></span>
-<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a><span class="co">#&gt; 2          3.000000        2.666667            3.0          1.5</span></span>
-<span id="cb6-8"><a href="#cb6-8" tabindex="-1"></a><span class="co">#&gt; 3          4.666667        3.333333            3.5          4.5</span></span>
-<span id="cb6-9"><a href="#cb6-9" tabindex="-1"></a><span class="co">#&gt; 4          4.333333        4.000000            5.0          4.5</span></span>
-<span id="cb6-10"><a href="#cb6-10" tabindex="-1"></a><span class="co">#&gt; 5          3.000000        3.666667            4.0          3.0</span></span>
-<span id="cb6-11"><a href="#cb6-11" tabindex="-1"></a><span class="co">#&gt; 6          3.666667        3.666667            2.5          3.5</span></span>
-<span id="cb6-12"><a href="#cb6-12" tabindex="-1"></a><span class="co">#&gt;   behavioural_intention</span></span>
-<span id="cb6-13"><a href="#cb6-13" tabindex="-1"></a><span class="co">#&gt; 1                   4.5</span></span>
-<span id="cb6-14"><a href="#cb6-14" tabindex="-1"></a><span class="co">#&gt; 2                   2.5</span></span>
-<span id="cb6-15"><a href="#cb6-15" tabindex="-1"></a><span class="co">#&gt; 3                   2.5</span></span>
-<span id="cb6-16"><a href="#cb6-16" tabindex="-1"></a><span class="co">#&gt; 4                   5.0</span></span>
-<span id="cb6-17"><a href="#cb6-17" tabindex="-1"></a><span class="co">#&gt; 5                   3.5</span></span>
-<span id="cb6-18"><a href="#cb6-18" tabindex="-1"></a><span class="co">#&gt; 6                   3.0</span></span></code></pre></div>
+<p><code>run_analysis_plan()</code> scores the scales for you, but
+scoring once up front lets you inspect the construct scores and run the
+assumption checks below.</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a>scored    <span class="ot">&lt;-</span> <span class="fu">score_scales</span>(responses, instr, <span class="at">keep_items =</span> <span class="cn">TRUE</span>, <span class="at">keep_meta =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>scale_ids <span class="ot">&lt;-</span> <span class="fu">vapply</span>(instr<span class="sc">$</span>scales, <span class="cf">function</span>(x) x<span class="sc">$</span>id, <span class="fu">character</span>(<span class="dv">1</span>))</span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a><span class="fu">head</span>(scored[, <span class="fu">intersect</span>(scale_ids, <span class="fu">names</span>(scored)), <span class="at">drop =</span> <span class="cn">FALSE</span>])</span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a><span class="co">#&gt;   digital_marketing service_quality sustainability satisfaction</span></span>
+<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a><span class="co">#&gt; 1          2.666667        3.666667            5.0          3.5</span></span>
+<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a><span class="co">#&gt; 2          3.000000        2.666667            3.0          1.5</span></span>
+<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a><span class="co">#&gt; 3          4.666667        3.333333            3.5          4.5</span></span>
+<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a><span class="co">#&gt; 4          4.333333        4.000000            5.0          4.5</span></span>
+<span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a><span class="co">#&gt; 5          3.000000        3.666667            4.0          3.0</span></span>
+<span id="cb4-11"><a href="#cb4-11" tabindex="-1"></a><span class="co">#&gt; 6          3.666667        3.666667            2.5          3.5</span></span>
+<span id="cb4-12"><a href="#cb4-12" tabindex="-1"></a><span class="co">#&gt;   behavioural_intention</span></span>
+<span id="cb4-13"><a href="#cb4-13" tabindex="-1"></a><span class="co">#&gt; 1                   4.5</span></span>
+<span id="cb4-14"><a href="#cb4-14" tabindex="-1"></a><span class="co">#&gt; 2                   2.5</span></span>
+<span id="cb4-15"><a href="#cb4-15" tabindex="-1"></a><span class="co">#&gt; 3                   2.5</span></span>
+<span id="cb4-16"><a href="#cb4-16" tabindex="-1"></a><span class="co">#&gt; 4                   5.0</span></span>
+<span id="cb4-17"><a href="#cb4-17" tabindex="-1"></a><span class="co">#&gt; 5                   3.5</span></span>
+<span id="cb4-18"><a href="#cb4-18" tabindex="-1"></a><span class="co">#&gt; 6                   3.0</span></span></code></pre></div>
 </div>
-<div id="descriptive-statistics" class="section level2">
-<h2>Descriptive statistics</h2>
-<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a><span class="fu">descriptives_report</span>(</span>
-<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a>  scored,</span>
-<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a>  <span class="at">variables =</span> <span class="fu">intersect</span>(scale_ids, <span class="fu">names</span>(scored))</span>
-<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a>)</span>
-<span id="cb7-5"><a href="#cb7-5" tabindex="-1"></a><span class="co">#&gt; $method</span></span>
-<span id="cb7-6"><a href="#cb7-6" tabindex="-1"></a><span class="co">#&gt; [1] &quot;descriptives&quot;</span></span>
-<span id="cb7-7"><a href="#cb7-7" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb7-8"><a href="#cb7-8" tabindex="-1"></a><span class="co">#&gt; $variables</span></span>
-<span id="cb7-9"><a href="#cb7-9" tabindex="-1"></a><span class="co">#&gt; [1] &quot;digital_marketing&quot;     &quot;service_quality&quot;       &quot;sustainability&quot;       </span></span>
-<span id="cb7-10"><a href="#cb7-10" tabindex="-1"></a><span class="co">#&gt; [4] &quot;satisfaction&quot;          &quot;behavioural_intention&quot;</span></span>
-<span id="cb7-11"><a href="#cb7-11" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb7-12"><a href="#cb7-12" tabindex="-1"></a><span class="co">#&gt; $split_by</span></span>
-<span id="cb7-13"><a href="#cb7-13" tabindex="-1"></a><span class="co">#&gt; NULL</span></span>
-<span id="cb7-14"><a href="#cb7-14" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb7-15"><a href="#cb7-15" tabindex="-1"></a><span class="co">#&gt; $weights</span></span>
-<span id="cb7-16"><a href="#cb7-16" tabindex="-1"></a><span class="co">#&gt; NULL</span></span>
-<span id="cb7-17"><a href="#cb7-17" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb7-18"><a href="#cb7-18" tabindex="-1"></a><span class="co">#&gt; $table</span></span>
-<span id="cb7-19"><a href="#cb7-19" tabindex="-1"></a><span class="co">#&gt;                variable group   n valid_n missing_n     mean        sd median</span></span>
-<span id="cb7-20"><a href="#cb7-20" tabindex="-1"></a><span class="co">#&gt; 1     digital_marketing   All 120     120         0 3.152778 0.8576517   3.00</span></span>
-<span id="cb7-21"><a href="#cb7-21" tabindex="-1"></a><span class="co">#&gt; 2       service_quality   All 120     120         0 3.055556 0.8964432   3.00</span></span>
-<span id="cb7-22"><a href="#cb7-22" tabindex="-1"></a><span class="co">#&gt; 3        sustainability   All 120     120         0 3.187500 0.8226379   3.00</span></span>
-<span id="cb7-23"><a href="#cb7-23" tabindex="-1"></a><span class="co">#&gt; 4          satisfaction   All 120     120         0 3.291667 1.0443593   3.25</span></span>
-<span id="cb7-24"><a href="#cb7-24" tabindex="-1"></a><span class="co">#&gt; 5 behavioural_intention   All 120     120         0 3.100000 1.0504101   3.00</span></span>
-<span id="cb7-25"><a href="#cb7-25" tabindex="-1"></a><span class="co">#&gt;        iqr      min max    skewness   kurtosis         se   ci_low  ci_high</span></span>
-<span id="cb7-26"><a href="#cb7-26" tabindex="-1"></a><span class="co">#&gt; 1 1.000000 1.000000   5 -0.11828231 -0.1968503 0.07829253 2.997751 3.307805</span></span>
-<span id="cb7-27"><a href="#cb7-27" tabindex="-1"></a><span class="co">#&gt; 2 1.333333 1.333333   5  0.14528766 -0.5985009 0.08183369 2.893517 3.217594</span></span>
-<span id="cb7-28"><a href="#cb7-28" tabindex="-1"></a><span class="co">#&gt; 3 1.500000 1.500000   5  0.15770066 -0.3405926 0.07509623 3.038802 3.336198</span></span>
-<span id="cb7-29"><a href="#cb7-29" tabindex="-1"></a><span class="co">#&gt; 4 1.500000 1.000000   5 -0.03690984 -0.9403399 0.09533652 3.102891 3.480443</span></span>
-<span id="cb7-30"><a href="#cb7-30" tabindex="-1"></a><span class="co">#&gt; 5 1.125000 1.000000   5  0.02329631 -0.6542410 0.09588888 2.910130 3.289870</span></span>
-<span id="cb7-31"><a href="#cb7-31" tabindex="-1"></a><span class="co">#&gt;   weighted_mean</span></span>
-<span id="cb7-32"><a href="#cb7-32" tabindex="-1"></a><span class="co">#&gt; 1            NA</span></span>
-<span id="cb7-33"><a href="#cb7-33" tabindex="-1"></a><span class="co">#&gt; 2            NA</span></span>
-<span id="cb7-34"><a href="#cb7-34" tabindex="-1"></a><span class="co">#&gt; 3            NA</span></span>
-<span id="cb7-35"><a href="#cb7-35" tabindex="-1"></a><span class="co">#&gt; 4            NA</span></span>
-<span id="cb7-36"><a href="#cb7-36" tabindex="-1"></a><span class="co">#&gt; 5            NA</span></span>
-<span id="cb7-37"><a href="#cb7-37" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb7-38"><a href="#cb7-38" tabindex="-1"></a><span class="co">#&gt; $apa</span></span>
-<span id="cb7-39"><a href="#cb7-39" tabindex="-1"></a><span class="co">#&gt; [1] &quot;Descriptive statistics were computed for 5 variable(s).&quot;</span></span>
-<span id="cb7-40"><a href="#cb7-40" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb7-41"><a href="#cb7-41" tabindex="-1"></a><span class="co">#&gt; $prompt</span></span>
-<span id="cb7-42"><a href="#cb7-42" tabindex="-1"></a><span class="co">#&gt; [1] &quot;Report central tendency, variability, missingness, and any skewed distributions before inferential tests.&quot;</span></span>
-<span id="cb7-43"><a href="#cb7-43" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb7-44"><a href="#cb7-44" tabindex="-1"></a><span class="co">#&gt; attr(,&quot;class&quot;)</span></span>
-<span id="cb7-45"><a href="#cb7-45" tabindex="-1"></a><span class="co">#&gt; [1] &quot;sframe_descriptives_report&quot;</span></span></code></pre></div>
+<div id="check-assumptions-before-the-plan" class="section level2">
+<h2>Check assumptions before the plan</h2>
+<p><code>assumption_report()</code> reports the checks a technique
+relies on, such as residual normality, variance inflation, and influence
+for a regression.</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a><span class="fu">assumption_report</span>(</span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a>  scored,</span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a>  <span class="at">predictors =</span> <span class="fu">c</span>(<span class="st">&quot;digital_marketing&quot;</span>, <span class="st">&quot;service_quality&quot;</span>, <span class="st">&quot;sustainability&quot;</span>),</span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a>  <span class="at">outcome    =</span> <span class="st">&quot;satisfaction&quot;</span></span>
+<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a>)</span>
+<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a><span class="co">#&gt; $method</span></span>
+<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a><span class="co">#&gt; [1] &quot;assumptions&quot;</span></span>
+<span id="cb5-8"><a href="#cb5-8" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb5-9"><a href="#cb5-9" tabindex="-1"></a><span class="co">#&gt; $normality</span></span>
+<span id="cb5-10"><a href="#cb5-10" tabindex="-1"></a><span class="co">#&gt; data frame with 0 columns and 0 rows</span></span>
+<span id="cb5-11"><a href="#cb5-11" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb5-12"><a href="#cb5-12" tabindex="-1"></a><span class="co">#&gt; $homogeneity</span></span>
+<span id="cb5-13"><a href="#cb5-13" tabindex="-1"></a><span class="co">#&gt; data frame with 0 columns and 0 rows</span></span>
+<span id="cb5-14"><a href="#cb5-14" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb5-15"><a href="#cb5-15" tabindex="-1"></a><span class="co">#&gt; $regression</span></span>
+<span id="cb5-16"><a href="#cb5-16" tabindex="-1"></a><span class="co">#&gt; $regression$n</span></span>
+<span id="cb5-17"><a href="#cb5-17" tabindex="-1"></a><span class="co">#&gt; [1] 120</span></span>
+<span id="cb5-18"><a href="#cb5-18" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb5-19"><a href="#cb5-19" tabindex="-1"></a><span class="co">#&gt; $regression$residual_shapiro_w</span></span>
+<span id="cb5-20"><a href="#cb5-20" tabindex="-1"></a><span class="co">#&gt; [1] 0.9941063</span></span>
+<span id="cb5-21"><a href="#cb5-21" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb5-22"><a href="#cb5-22" tabindex="-1"></a><span class="co">#&gt; $regression$residual_shapiro_p</span></span>
+<span id="cb5-23"><a href="#cb5-23" tabindex="-1"></a><span class="co">#&gt; [1] 0.8980753</span></span>
+<span id="cb5-24"><a href="#cb5-24" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb5-25"><a href="#cb5-25" tabindex="-1"></a><span class="co">#&gt; $regression$vif</span></span>
+<span id="cb5-26"><a href="#cb5-26" tabindex="-1"></a><span class="co">#&gt; digital_marketing   service_quality    sustainability </span></span>
+<span id="cb5-27"><a href="#cb5-27" tabindex="-1"></a><span class="co">#&gt;          1.212656          1.200070          1.012163 </span></span>
+<span id="cb5-28"><a href="#cb5-28" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb5-29"><a href="#cb5-29" tabindex="-1"></a><span class="co">#&gt; $regression$cooks_distance</span></span>
+<span id="cb5-30"><a href="#cb5-30" tabindex="-1"></a><span class="co">#&gt;            1            2            3            4            5            6 </span></span>
+<span id="cb5-31"><a href="#cb5-31" tabindex="-1"></a><span class="co">#&gt; 1.184326e-04 9.147336e-03 1.482864e-03 3.583748e-07 2.883541e-03 1.731349e-04 </span></span>
+<span id="cb5-32"><a href="#cb5-32" tabindex="-1"></a><span class="co">#&gt;            7            8            9           10           11           12 </span></span>
+<span id="cb5-33"><a href="#cb5-33" tabindex="-1"></a><span class="co">#&gt; 1.323697e-02 4.460344e-03 4.542716e-05 4.287879e-02 2.143130e-02 1.509419e-03 </span></span>
+<span id="cb5-34"><a href="#cb5-34" tabindex="-1"></a><span class="co">#&gt;           13           14           15           16           17           18 </span></span>
+<span id="cb5-35"><a href="#cb5-35" tabindex="-1"></a><span class="co">#&gt; 5.088239e-02 5.722577e-03 2.174172e-07 1.127457e-02 8.743696e-03 2.593670e-03 </span></span>
+<span id="cb5-36"><a href="#cb5-36" tabindex="-1"></a><span class="co">#&gt;           19           20           21           22           23           24 </span></span>
+<span id="cb5-37"><a href="#cb5-37" tabindex="-1"></a><span class="co">#&gt; 7.553824e-03 2.109049e-02 1.932134e-05 2.370723e-03 3.851322e-04 5.461064e-03 </span></span>
+<span id="cb5-38"><a href="#cb5-38" tabindex="-1"></a><span class="co">#&gt;           25           26           27           28           29           30 </span></span>
+<span id="cb5-39"><a href="#cb5-39" tabindex="-1"></a><span class="co">#&gt; 1.872377e-04 4.489098e-07 1.706497e-02 2.752537e-06 1.434770e-04 3.195816e-03 </span></span>
+<span id="cb5-40"><a href="#cb5-40" tabindex="-1"></a><span class="co">#&gt;           31           32           33           34           35           36 </span></span>
+<span id="cb5-41"><a href="#cb5-41" tabindex="-1"></a><span class="co">#&gt; 6.905977e-02 1.536396e-02 1.260801e-02 1.534755e-03 1.380360e-02 6.848461e-03 </span></span>
+<span id="cb5-42"><a href="#cb5-42" tabindex="-1"></a><span class="co">#&gt;           37           38           39           40           41           42 </span></span>
+<span id="cb5-43"><a href="#cb5-43" tabindex="-1"></a><span class="co">#&gt; 1.700720e-06 3.793174e-04 2.134337e-03 2.287672e-02 1.001287e-02 4.071700e-03 </span></span>
+<span id="cb5-44"><a href="#cb5-44" tabindex="-1"></a><span class="co">#&gt;           43           44           45           46           47           48 </span></span>
+<span id="cb5-45"><a href="#cb5-45" tabindex="-1"></a><span class="co">#&gt; 5.471299e-03 5.270891e-02 3.433051e-02 2.975180e-03 3.167244e-03 9.174703e-04 </span></span>
+<span id="cb5-46"><a href="#cb5-46" tabindex="-1"></a><span class="co">#&gt;           49           50           51           52           53           54 </span></span>
+<span id="cb5-47"><a href="#cb5-47" tabindex="-1"></a><span class="co">#&gt; 1.170983e-02 8.648779e-04 1.116591e-03 8.230930e-03 1.381027e-02 3.504105e-02 </span></span>
+<span id="cb5-48"><a href="#cb5-48" tabindex="-1"></a><span class="co">#&gt;           55           56           57           58           59           60 </span></span>
+<span id="cb5-49"><a href="#cb5-49" tabindex="-1"></a><span class="co">#&gt; 1.571502e-04 2.905749e-03 1.402942e-03 5.808575e-03 2.019476e-03 6.948885e-06 </span></span>
+<span id="cb5-50"><a href="#cb5-50" tabindex="-1"></a><span class="co">#&gt;           61           62           63           64           65           66 </span></span>
+<span id="cb5-51"><a href="#cb5-51" tabindex="-1"></a><span class="co">#&gt; 1.170618e-03 3.652109e-03 2.922443e-02 9.678057e-03 3.620026e-06 3.218468e-03 </span></span>
+<span id="cb5-52"><a href="#cb5-52" tabindex="-1"></a><span class="co">#&gt;           67           68           69           70           71           72 </span></span>
+<span id="cb5-53"><a href="#cb5-53" tabindex="-1"></a><span class="co">#&gt; 1.378174e-03 5.716292e-03 3.730149e-03 9.087202e-03 8.357802e-03 1.187750e-02 </span></span>
+<span id="cb5-54"><a href="#cb5-54" tabindex="-1"></a><span class="co">#&gt;           73           74           75           76           77           78 </span></span>
+<span id="cb5-55"><a href="#cb5-55" tabindex="-1"></a><span class="co">#&gt; 2.430428e-02 3.348263e-04 9.538221e-03 1.257656e-03 1.433252e-03 1.356868e-03 </span></span>
+<span id="cb5-56"><a href="#cb5-56" tabindex="-1"></a><span class="co">#&gt;           79           80           81           82           83           84 </span></span>
+<span id="cb5-57"><a href="#cb5-57" tabindex="-1"></a><span class="co">#&gt; 2.563597e-05 1.801658e-03 1.835160e-03 5.784606e-04 2.366539e-02 8.884675e-04 </span></span>
+<span id="cb5-58"><a href="#cb5-58" tabindex="-1"></a><span class="co">#&gt;           85           86           87           88           89           90 </span></span>
+<span id="cb5-59"><a href="#cb5-59" tabindex="-1"></a><span class="co">#&gt; 3.063566e-04 9.322376e-03 1.300065e-02 5.103375e-03 6.710071e-04 3.902158e-03 </span></span>
+<span id="cb5-60"><a href="#cb5-60" tabindex="-1"></a><span class="co">#&gt;           91           92           93           94           95           96 </span></span>
+<span id="cb5-61"><a href="#cb5-61" tabindex="-1"></a><span class="co">#&gt; 3.851322e-04 3.045158e-03 4.482863e-04 3.504325e-03 3.537797e-03 4.644052e-04 </span></span>
+<span id="cb5-62"><a href="#cb5-62" tabindex="-1"></a><span class="co">#&gt;           97           98           99          100          101          102 </span></span>
+<span id="cb5-63"><a href="#cb5-63" tabindex="-1"></a><span class="co">#&gt; 1.386934e-02 4.444185e-03 5.864202e-03 9.236185e-03 2.563387e-02 3.445601e-04 </span></span>
+<span id="cb5-64"><a href="#cb5-64" tabindex="-1"></a><span class="co">#&gt;          103          104          105          106          107          108 </span></span>
+<span id="cb5-65"><a href="#cb5-65" tabindex="-1"></a><span class="co">#&gt; 1.467024e-03 1.170618e-03 9.051071e-04 7.373574e-03 2.295924e-05 6.910949e-04 </span></span>
+<span id="cb5-66"><a href="#cb5-66" tabindex="-1"></a><span class="co">#&gt;          109          110          111          112          113          114 </span></span>
+<span id="cb5-67"><a href="#cb5-67" tabindex="-1"></a><span class="co">#&gt; 3.504325e-03 2.274586e-04 9.266580e-05 4.857092e-03 4.700977e-08 2.921484e-03 </span></span>
+<span id="cb5-68"><a href="#cb5-68" tabindex="-1"></a><span class="co">#&gt;          115          116          117          118          119          120 </span></span>
+<span id="cb5-69"><a href="#cb5-69" tabindex="-1"></a><span class="co">#&gt; 4.090240e-03 1.105467e-02 7.365409e-04 1.938023e-02 1.012910e-03 1.535916e-02 </span></span>
+<span id="cb5-70"><a href="#cb5-70" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb5-71"><a href="#cb5-71" tabindex="-1"></a><span class="co">#&gt; $regression$standardised_residuals</span></span>
+<span id="cb5-72"><a href="#cb5-72" tabindex="-1"></a><span class="co">#&gt;            1            2            3            4            5            6 </span></span>
+<span id="cb5-73"><a href="#cb5-73" tabindex="-1"></a><span class="co">#&gt; -0.082923698 -1.870645918  0.395846500  0.004591293 -0.692174489 -0.185004873 </span></span>
+<span id="cb5-74"><a href="#cb5-74" tabindex="-1"></a><span class="co">#&gt;            7            8            9           10           11           12 </span></span>
+<span id="cb5-75"><a href="#cb5-75" tabindex="-1"></a><span class="co">#&gt;  1.084968504  0.780147050  0.110776991 -2.638742712 -1.795997774  0.319306483 </span></span>
+<span id="cb5-76"><a href="#cb5-76" tabindex="-1"></a><span class="co">#&gt;           13           14           15           16           17           18 </span></span>
+<span id="cb5-77"><a href="#cb5-77" tabindex="-1"></a><span class="co">#&gt;  1.954971640 -1.219815183  0.004191993  1.118225981  1.039309006  0.527129425 </span></span>
+<span id="cb5-78"><a href="#cb5-78" tabindex="-1"></a><span class="co">#&gt;           19           20           21           22           23           24 </span></span>
+<span id="cb5-79"><a href="#cb5-79" tabindex="-1"></a><span class="co">#&gt; -0.961835047  0.980099373  0.063225377  0.551354644  0.278271787 -0.647978136 </span></span>
+<span id="cb5-80"><a href="#cb5-80" tabindex="-1"></a><span class="co">#&gt;           25           26           27           28           29           30 </span></span>
+<span id="cb5-81"><a href="#cb5-81" tabindex="-1"></a><span class="co">#&gt;  0.227581315  0.004986299 -1.172216599  0.021868776 -0.095706217 -0.782623908 </span></span>
+<span id="cb5-82"><a href="#cb5-82" tabindex="-1"></a><span class="co">#&gt;           31           32           33           34           35           36 </span></span>
+<span id="cb5-83"><a href="#cb5-83" tabindex="-1"></a><span class="co">#&gt; -2.309384417 -1.374470793  0.932880267 -0.690640105  1.255066667  0.671314169 </span></span>
+<span id="cb5-84"><a href="#cb5-84" tabindex="-1"></a><span class="co">#&gt;           37           38           39           40           41           42 </span></span>
+<span id="cb5-85"><a href="#cb5-85" tabindex="-1"></a><span class="co">#&gt;  0.012570683  0.352662125  0.374079633  1.867781077 -1.228052989  0.606343018 </span></span>
+<span id="cb5-86"><a href="#cb5-86" tabindex="-1"></a><span class="co">#&gt;           43           44           45           46           47           48 </span></span>
+<span id="cb5-87"><a href="#cb5-87" tabindex="-1"></a><span class="co">#&gt; -0.617848955 -1.662835019  2.074446939  0.978590982 -0.793286443  0.252351509 </span></span>
+<span id="cb5-88"><a href="#cb5-88" tabindex="-1"></a><span class="co">#&gt;           49           50           51           52           53           54 </span></span>
+<span id="cb5-89"><a href="#cb5-89" tabindex="-1"></a><span class="co">#&gt;  1.156356561 -0.449473176 -0.363323806  1.152172372 -1.440809735 -1.866773520 </span></span>
+<span id="cb5-90"><a href="#cb5-90" tabindex="-1"></a><span class="co">#&gt;           55           56           57           58           59           60 </span></span>
+<span id="cb5-91"><a href="#cb5-91" tabindex="-1"></a><span class="co">#&gt;  0.189559954 -0.858506945 -0.309992596 -1.198889104  0.696726010 -0.035497078 </span></span>
+<span id="cb5-92"><a href="#cb5-92" tabindex="-1"></a><span class="co">#&gt;           61           62           63           64           65           66 </span></span>
+<span id="cb5-93"><a href="#cb5-93" tabindex="-1"></a><span class="co">#&gt; -0.594649744  0.646085118  1.892162918  1.346958028  0.012140769 -1.050312804 </span></span>
+<span id="cb5-94"><a href="#cb5-94" tabindex="-1"></a><span class="co">#&gt;           67           68           69           70           71           72 </span></span>
+<span id="cb5-95"><a href="#cb5-95" tabindex="-1"></a><span class="co">#&gt;  0.598618566 -1.508218399 -0.521321175 -0.874142231  1.497519709  1.032511438 </span></span>
+<span id="cb5-96"><a href="#cb5-96" tabindex="-1"></a><span class="co">#&gt;           73           74           75           76           77           78 </span></span>
+<span id="cb5-97"><a href="#cb5-97" tabindex="-1"></a><span class="co">#&gt;  2.208163710  0.178475846  1.021361391  0.616360158 -0.448239907 -0.298894184 </span></span>
+<span id="cb5-98"><a href="#cb5-98" tabindex="-1"></a><span class="co">#&gt;           79           80           81           82           83           84 </span></span>
+<span id="cb5-99"><a href="#cb5-99" tabindex="-1"></a><span class="co">#&gt; -0.041513884  0.484623799 -0.711839662 -0.445277725  2.271897566  0.424028147 </span></span>
+<span id="cb5-100"><a href="#cb5-100" tabindex="-1"></a><span class="co">#&gt;           85           86           87           88           89           90 </span></span>
+<span id="cb5-101"><a href="#cb5-101" tabindex="-1"></a><span class="co">#&gt;  0.236369610  1.923468863 -1.537113657 -0.910885755  0.287247717  0.885761213 </span></span>
+<span id="cb5-102"><a href="#cb5-102" tabindex="-1"></a><span class="co">#&gt;           91           92           93           94           95           96 </span></span>
+<span id="cb5-103"><a href="#cb5-103" tabindex="-1"></a><span class="co">#&gt;  0.278271787 -1.099326747 -0.299846917 -0.670336465  1.075297214  0.241274096 </span></span>
+<span id="cb5-104"><a href="#cb5-104" tabindex="-1"></a><span class="co">#&gt;           97           98           99          100          101          102 </span></span>
+<span id="cb5-105"><a href="#cb5-105" tabindex="-1"></a><span class="co">#&gt;  1.521915286  0.863717913  0.560137775 -0.839407809 -1.485896784 -0.173199125 </span></span>
+<span id="cb5-106"><a href="#cb5-106" tabindex="-1"></a><span class="co">#&gt;          103          104          105          106          107          108 </span></span>
+<span id="cb5-107"><a href="#cb5-107" tabindex="-1"></a><span class="co">#&gt; -0.230361700 -0.594649744  0.499913855 -1.172602644 -0.046456880 -0.397268813 </span></span>
+<span id="cb5-108"><a href="#cb5-108" tabindex="-1"></a><span class="co">#&gt;          109          110          111          112          113          114 </span></span>
+<span id="cb5-109"><a href="#cb5-109" tabindex="-1"></a><span class="co">#&gt; -0.670336465  0.181786019 -0.202323795 -0.825310891  0.001891811 -0.577856052 </span></span>
+<span id="cb5-110"><a href="#cb5-110" tabindex="-1"></a><span class="co">#&gt;          115          116          117          118          119          120 </span></span>
+<span id="cb5-111"><a href="#cb5-111" tabindex="-1"></a><span class="co">#&gt; -0.520419080  1.827370061 -0.348396466 -1.215115771  0.250475472  0.752951062 </span></span>
+<span id="cb5-112"><a href="#cb5-112" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb5-113"><a href="#cb5-113" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb5-114"><a href="#cb5-114" tabindex="-1"></a><span class="co">#&gt; $expected_counts</span></span>
+<span id="cb5-115"><a href="#cb5-115" tabindex="-1"></a><span class="co">#&gt; NULL</span></span>
+<span id="cb5-116"><a href="#cb5-116" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb5-117"><a href="#cb5-117" tabindex="-1"></a><span class="co">#&gt; $apa</span></span>
+<span id="cb5-118"><a href="#cb5-118" tabindex="-1"></a><span class="co">#&gt; [1] &quot;Assumption checks were computed.&quot;</span></span>
+<span id="cb5-119"><a href="#cb5-119" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb5-120"><a href="#cb5-120" tabindex="-1"></a><span class="co">#&gt; $prompt</span></span>
+<span id="cb5-121"><a href="#cb5-121" tabindex="-1"></a><span class="co">#&gt; [1] &quot;Report assumption checks before interpreting inferential models, especially sparse cells, non-normal residuals, and high VIF values.&quot;</span></span>
+<span id="cb5-122"><a href="#cb5-122" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb5-123"><a href="#cb5-123" tabindex="-1"></a><span class="co">#&gt; attr(,&quot;class&quot;)</span></span>
+<span id="cb5-124"><a href="#cb5-124" tabindex="-1"></a><span class="co">#&gt; [1] &quot;sframe_assumption_report&quot;</span></span></code></pre></div>
 </div>
-<div id="run-an-analysis-plan" class="section level2">
-<h2>Run an analysis plan</h2>
-<p>Analysis plans are stored in the instrument. The current structure
-uses method-specific roles. Earlier <code>variables</code> and
-<code>test</code> blocks remain compatible.</p>
-<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a>instr<span class="sc">$</span>analysis_plan <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
-<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a>  <span class="fu">list</span>(</span>
-<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a>    <span class="at">id =</span> <span class="st">&quot;RQ1&quot;</span>,</span>
-<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a>    <span class="at">research_question =</span> <span class="st">&quot;Is digital marketing associated with satisfaction?&quot;</span>,</span>
-<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a>    <span class="at">family =</span> <span class="st">&quot;association&quot;</span>,</span>
-<span id="cb8-6"><a href="#cb8-6" tabindex="-1"></a>    <span class="at">method =</span> <span class="st">&quot;correlation_spearman&quot;</span>,</span>
-<span id="cb8-7"><a href="#cb8-7" tabindex="-1"></a>    <span class="at">roles =</span> <span class="fu">list</span>(<span class="at">x =</span> <span class="st">&quot;digital_marketing&quot;</span>, <span class="at">y =</span> <span class="st">&quot;satisfaction&quot;</span>),</span>
-<span id="cb8-8"><a href="#cb8-8" tabindex="-1"></a>    <span class="at">options =</span> <span class="fu">list</span>(<span class="at">alpha =</span> <span class="fl">0.05</span>),</span>
-<span id="cb8-9"><a href="#cb8-9" tabindex="-1"></a>    <span class="at">status =</span> <span class="st">&quot;valid_plan&quot;</span>,</span>
-<span id="cb8-10"><a href="#cb8-10" tabindex="-1"></a>    <span class="at">requires_data =</span> <span class="cn">TRUE</span></span>
-<span id="cb8-11"><a href="#cb8-11" tabindex="-1"></a>  ),</span>
-<span id="cb8-12"><a href="#cb8-12" tabindex="-1"></a>  <span class="fu">list</span>(</span>
-<span id="cb8-13"><a href="#cb8-13" tabindex="-1"></a>    <span class="at">id =</span> <span class="st">&quot;RQ2&quot;</span>,</span>
-<span id="cb8-14"><a href="#cb8-14" tabindex="-1"></a>    <span class="at">research_question =</span> <span class="st">&quot;Do visit types differ in satisfaction?&quot;</span>,</span>
-<span id="cb8-15"><a href="#cb8-15" tabindex="-1"></a>    <span class="at">family =</span> <span class="st">&quot;group_comparison&quot;</span>,</span>
-<span id="cb8-16"><a href="#cb8-16" tabindex="-1"></a>    <span class="at">method =</span> <span class="st">&quot;mann_whitney&quot;</span>,</span>
-<span id="cb8-17"><a href="#cb8-17" tabindex="-1"></a>    <span class="at">roles =</span> <span class="fu">list</span>(<span class="at">group =</span> <span class="st">&quot;visit_type&quot;</span>, <span class="at">outcome =</span> <span class="st">&quot;satisfaction&quot;</span>),</span>
-<span id="cb8-18"><a href="#cb8-18" tabindex="-1"></a>    <span class="at">options =</span> <span class="fu">list</span>(<span class="at">alpha =</span> <span class="fl">0.05</span>),</span>
-<span id="cb8-19"><a href="#cb8-19" tabindex="-1"></a>    <span class="at">status =</span> <span class="st">&quot;valid_plan&quot;</span>,</span>
-<span id="cb8-20"><a href="#cb8-20" tabindex="-1"></a>    <span class="at">requires_data =</span> <span class="cn">TRUE</span></span>
-<span id="cb8-21"><a href="#cb8-21" tabindex="-1"></a>  )</span>
-<span id="cb8-22"><a href="#cb8-22" tabindex="-1"></a>)</span>
-<span id="cb8-23"><a href="#cb8-23" tabindex="-1"></a></span>
-<span id="cb8-24"><a href="#cb8-24" tabindex="-1"></a>results <span class="ot">&lt;-</span> <span class="fu">run_analysis_plan</span>(responses, instr)</span>
-<span id="cb8-25"><a href="#cb8-25" tabindex="-1"></a>results</span>
-<span id="cb8-26"><a href="#cb8-26" tabindex="-1"></a><span class="co">#&gt; Analysis Results: 2 research question(s)</span></span>
-<span id="cb8-27"><a href="#cb8-27" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb8-28"><a href="#cb8-28" tabindex="-1"></a><span class="co">#&gt; RQ 1: Is digital marketing associated with satisfaction?</span></span>
-<span id="cb8-29"><a href="#cb8-29" tabindex="-1"></a><span class="co">#&gt;   Test: correlation_spearman</span></span>
-<span id="cb8-30"><a href="#cb8-30" tabindex="-1"></a><span class="co">#&gt;   APA:  r_s(118) = 0.54, p &lt; .001</span></span>
-<span id="cb8-31"><a href="#cb8-31" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb8-32"><a href="#cb8-32" tabindex="-1"></a><span class="co">#&gt; RQ 2: Do visit types differ in satisfaction?</span></span>
-<span id="cb8-33"><a href="#cb8-33" tabindex="-1"></a><span class="co">#&gt;   Test: mann_whitney</span></span>
-<span id="cb8-34"><a href="#cb8-34" tabindex="-1"></a><span class="co">#&gt;   APA:  U = 1772, z = -0.06, p = 0.951, r = 0.01</span></span></code></pre></div>
+<div id="define-the-plan" class="section level2">
+<h2>Define the plan</h2>
+<p>Each block binds a research question to a technique and to the
+variables that fill each role. A correlation expects <code>x</code> and
+<code>y</code>. A regression expects <code>predictors</code> and a
+<code>dependent</code> variable. A group comparison expects a
+<code>group</code> and an <code>outcome</code>.</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a>instr<span class="sc">$</span>analysis_plan <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">id =</span> <span class="st">&quot;RQ1&quot;</span>,</span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a>       <span class="at">research_question =</span> <span class="st">&quot;Is digital marketing perception associated with satisfaction?&quot;</span>,</span>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a>       <span class="at">family =</span> <span class="st">&quot;association&quot;</span>, <span class="at">method =</span> <span class="st">&quot;correlation_pearson&quot;</span>,</span>
+<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a>       <span class="at">roles =</span> <span class="fu">list</span>(<span class="at">x =</span> <span class="st">&quot;digital_marketing&quot;</span>, <span class="at">y =</span> <span class="st">&quot;satisfaction&quot;</span>),</span>
+<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a>       <span class="at">options =</span> <span class="fu">list</span>(<span class="at">alpha =</span> <span class="fl">0.05</span>)),</span>
+<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">id =</span> <span class="st">&quot;RQ2&quot;</span>,</span>
+<span id="cb6-8"><a href="#cb6-8" tabindex="-1"></a>       <span class="at">research_question =</span> <span class="st">&quot;Do the three perception scales predict satisfaction?&quot;</span>,</span>
+<span id="cb6-9"><a href="#cb6-9" tabindex="-1"></a>       <span class="at">family =</span> <span class="st">&quot;regression&quot;</span>, <span class="at">method =</span> <span class="st">&quot;regression_linear&quot;</span>,</span>
+<span id="cb6-10"><a href="#cb6-10" tabindex="-1"></a>       <span class="at">roles =</span> <span class="fu">list</span>(<span class="at">predictors =</span> <span class="fu">c</span>(<span class="st">&quot;digital_marketing&quot;</span>, <span class="st">&quot;service_quality&quot;</span>, <span class="st">&quot;sustainability&quot;</span>),</span>
+<span id="cb6-11"><a href="#cb6-11" tabindex="-1"></a>                    <span class="at">dependent =</span> <span class="st">&quot;satisfaction&quot;</span>),</span>
+<span id="cb6-12"><a href="#cb6-12" tabindex="-1"></a>       <span class="at">options =</span> <span class="fu">list</span>(<span class="at">alpha =</span> <span class="fl">0.05</span>)),</span>
+<span id="cb6-13"><a href="#cb6-13" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">id =</span> <span class="st">&quot;RQ3&quot;</span>,</span>
+<span id="cb6-14"><a href="#cb6-14" tabindex="-1"></a>       <span class="at">research_question =</span> <span class="st">&quot;Do first-time and repeat visitors differ in behavioural intention?&quot;</span>,</span>
+<span id="cb6-15"><a href="#cb6-15" tabindex="-1"></a>       <span class="at">family =</span> <span class="st">&quot;group_comparison&quot;</span>, <span class="at">method =</span> <span class="st">&quot;mann_whitney&quot;</span>,</span>
+<span id="cb6-16"><a href="#cb6-16" tabindex="-1"></a>       <span class="at">roles =</span> <span class="fu">list</span>(<span class="at">group =</span> <span class="st">&quot;visit_type&quot;</span>, <span class="at">outcome =</span> <span class="st">&quot;behavioural_intention&quot;</span>),</span>
+<span id="cb6-17"><a href="#cb6-17" tabindex="-1"></a>       <span class="at">options =</span> <span class="fu">list</span>(<span class="at">alpha =</span> <span class="fl">0.05</span>))</span>
+<span id="cb6-18"><a href="#cb6-18" tabindex="-1"></a>)</span></code></pre></div>
 </div>
-<div id="gui-workflow" class="section level2">
-<h2>GUI workflow</h2>
-<p>SurveyStudio can preload both the instrument and responses.</p>
-<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a><span class="fu">launch_studio</span>(</span>
-<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a>  <span class="at">instrument =</span> instr,</span>
-<span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a>  <span class="at">responses =</span> responses,</span>
-<span id="cb9-4"><a href="#cb9-4" tabindex="-1"></a>  <span class="at">screen =</span> <span class="st">&quot;analysis&quot;</span>,</span>
-<span id="cb9-5"><a href="#cb9-5" tabindex="-1"></a>  <span class="at">launch.browser =</span> <span class="cn">FALSE</span></span>
-<span id="cb9-6"><a href="#cb9-6" tabindex="-1"></a>)</span></code></pre></div>
+<div id="run-the-plan" class="section level2">
+<h2>Run the plan</h2>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a>results <span class="ot">&lt;-</span> <span class="fu">run_analysis_plan</span>(responses, instr)</span>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a>results</span>
+<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a><span class="co">#&gt; Analysis Results: 3 research question(s)</span></span>
+<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb7-5"><a href="#cb7-5" tabindex="-1"></a><span class="co">#&gt; RQ 1: Is digital marketing perception associated with satisfaction?</span></span>
+<span id="cb7-6"><a href="#cb7-6" tabindex="-1"></a><span class="co">#&gt;   Test: correlation_pearson</span></span>
+<span id="cb7-7"><a href="#cb7-7" tabindex="-1"></a><span class="co">#&gt;   APA:  r(118) = 0.54, p &lt; .001</span></span>
+<span id="cb7-8"><a href="#cb7-8" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb7-9"><a href="#cb7-9" tabindex="-1"></a><span class="co">#&gt; RQ 2: Do the three perception scales predict satisfaction?</span></span>
+<span id="cb7-10"><a href="#cb7-10" tabindex="-1"></a><span class="co">#&gt;   Test: regression_linear</span></span>
+<span id="cb7-11"><a href="#cb7-11" tabindex="-1"></a><span class="co">#&gt;   APA:  R² = 0.383, F(3, 116) = 23.95, p &lt; .001</span></span>
+<span id="cb7-12"><a href="#cb7-12" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb7-13"><a href="#cb7-13" tabindex="-1"></a><span class="co">#&gt; RQ 3: Do first-time and repeat visitors differ in behavioural intention?</span></span>
+<span id="cb7-14"><a href="#cb7-14" tabindex="-1"></a><span class="co">#&gt;   Test: mann_whitney</span></span>
+<span id="cb7-15"><a href="#cb7-15" tabindex="-1"></a><span class="co">#&gt;   APA:  U = 1576, z = -0.98, p = 0.327, r = 0.09</span></span></code></pre></div>
+</div>
+<div id="read-a-single-result" class="section level2">
+<h2>Read a single result</h2>
+<p>Each result holds more than the printed line. It carries the APA
+statistic, the effect-size label where the technique reports one, a
+writing prompt, and the references that support the technique.</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a>rq1 <span class="ot">&lt;-</span> results[[<span class="dv">1</span>]]</span>
+<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a></span>
+<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a>rq1<span class="sc">$</span>apa</span>
+<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a><span class="co">#&gt; [1] &quot;r(118) = 0.54, p &lt; .001&quot;</span></span>
+<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a>rq1<span class="sc">$</span>effect_label</span>
+<span id="cb8-6"><a href="#cb8-6" tabindex="-1"></a><span class="co">#&gt; [1] &quot;large&quot;</span></span>
+<span id="cb8-7"><a href="#cb8-7" tabindex="-1"></a>rq1<span class="sc">$</span>prompt</span>
+<span id="cb8-8"><a href="#cb8-8" tabindex="-1"></a><span class="co">#&gt; [1] &quot;There was a positive, large significant correlation between digital_marketing and satisfaction, r(118) = 0.54, p &lt; .001. Explain what this means for your research question.&quot;</span></span>
+<span id="cb8-9"><a href="#cb8-9" tabindex="-1"></a><span class="fu">unlist</span>(rq1<span class="sc">$</span>citations)</span>
+<span id="cb8-10"><a href="#cb8-10" tabindex="-1"></a><span class="co">#&gt;                                                                                                                                                                field_2018 </span></span>
+<span id="cb8-11"><a href="#cb8-11" tabindex="-1"></a><span class="co">#&gt;                                                                                   &quot;Field, A. (2018). *Discovering statistics using IBM SPSS statistics* (5th ed.). SAGE.&quot; </span></span>
+<span id="cb8-12"><a href="#cb8-12" tabindex="-1"></a><span class="co">#&gt;                                                                                                                                                                cohen_1988 </span></span>
+<span id="cb8-13"><a href="#cb8-13" tabindex="-1"></a><span class="co">#&gt;                                                                 &quot;Cohen, J. (1988). *Statistical power analysis for the behavioral sciences* (2nd ed.). Lawrence Erlbaum.&quot; </span></span>
+<span id="cb8-14"><a href="#cb8-14" tabindex="-1"></a><span class="co">#&gt;                                                                                                                                                                    r_core </span></span>
+<span id="cb8-15"><a href="#cb8-15" tabindex="-1"></a><span class="co">#&gt;                                                 &quot;R Core Team. (2026). *R: A language and environment for statistical computing*. R Foundation for Statistical Computing.&quot; </span></span>
+<span id="cb8-16"><a href="#cb8-16" tabindex="-1"></a><span class="co">#&gt;                                                                                                                                                               surveyframe </span></span>
+<span id="cb8-17"><a href="#cb8-17" tabindex="-1"></a><span class="co">#&gt; &quot;Sharafuddin, M. A. (2026). *surveyframe: A survey instrument workflow for R* (Version 0.3.0) [Computer software]. https://github.com/MohammedAliSharafuddin/surveyframe&quot;</span></span></code></pre></div>
+</div>
+<div id="render-the-results-report" class="section level2">
+<h2>Render the results report</h2>
+<p><code>render_results()</code> writes a self-contained HTML report
+with one section per research question, each holding the APA result, the
+writing prompt, a space for the interpretation, and a reference list
+compiled from the techniques used.</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a><span class="fu">render_results</span>(results, instr, <span class="at">output_file =</span> <span class="st">&quot;results.html&quot;</span>, <span class="at">citation_format =</span> <span class="st">&quot;apa&quot;</span>)</span></code></pre></div>
+</div>
+<div id="in-surveystudio" class="section level2">
+<h2>In SurveyStudio</h2>
+<p>SurveyStudio runs the same plan. Open it on the analysis screen,
+upload the responses, and the Analysis Plan screen runs the saved plan
+and shows a table of each question with its method and APA result. The
+full report is produced on the Export screen.</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a><span class="fu">launch_studio</span>(</span>
+<span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a>  <span class="at">instrument     =</span> instr,</span>
+<span id="cb10-3"><a href="#cb10-3" tabindex="-1"></a>  <span class="at">responses      =</span> responses,</span>
+<span id="cb10-4"><a href="#cb10-4" tabindex="-1"></a>  <span class="at">screen         =</span> <span class="st">&quot;analysis&quot;</span>,</span>
+<span id="cb10-5"><a href="#cb10-5" tabindex="-1"></a>  <span class="at">launch.browser =</span> <span class="cn">FALSE</span></span>
+<span id="cb10-6"><a href="#cb10-6" tabindex="-1"></a>)</span></code></pre></div>
 </div>
 
 

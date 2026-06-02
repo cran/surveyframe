@@ -98,7 +98,7 @@ launch_dashboard <- function(
     }
   }
 
-  stopifnot(inherits(instrument, "sframe"))
+  sframe_check_instrument(instrument)
 
   if (!is.null(responses) && !is.data.frame(responses)) {
     rlang::abort(

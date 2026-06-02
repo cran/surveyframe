@@ -34,7 +34,9 @@ An object of class \code{sframe_efa_report} with elements \code{kmo},
 }
 \description{
 Reports KMO sampling adequacy, Bartlett's test of sphericity, and a
-parallel analysis scree plot to inform factor number selection. The report
+parallel analysis scree plot to inform factor number selection. The
+suggested number of factors from parallel analysis is returned in
+\verb{$suggested_nfactors}. The report
 prepares the researcher to estimate an EFA solution with a separate package
 such as \code{psych} or \code{lavaan}.
 }

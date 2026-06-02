@@ -54,7 +54,7 @@
 #' validated <- validate_sframe(instr, strict = TRUE)
 #' isTRUE(validated$meta$validated)
 validate_sframe <- function(instrument, strict = TRUE) {
-  stopifnot(inherits(instrument, "sframe"))
+  sframe_check_instrument(instrument)
 
   problems <- character(0)
 

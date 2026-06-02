@@ -12,140 +12,153 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 library(surveyframe)
 ```
 
-In v0.3, `surveyframe` generates syntax for lavaan and seminr workflows. Model
-fitting remains in the researcher's analysis script. The generated syntax
-should be reviewed, copied into the modelling package, and fitted with
-modelling choices appropriate to the study.
+The model is the third part of the research design. surveyframe stores the
+measurement and structural specification and writes the syntax for the modelling
+stage. It does not fit the models. This vignette builds the three models from
+the published Thailand study (Sharafuddin, Madhavan, and Wangtueai 2024). The
+syntax steps need no raw data, so every chunk below runs as written.
 
-```{r load}
-demo <- sframe_demo_data()
-instr <- demo$instrument
+The constructs are digital marketing effectiveness (DME), built from relevance
+and engagement (DMRE), accessibility and usefulness (DMAU), ease of use (DMEU),
+and perceived value (DMPV); destination service quality (DSQ), built from
+accommodation (DSQA) and local transport (DSQT); destination sustainability
+quality (DSUQ); tourist satisfaction (TS); and behavioural intention (BI).
+
+```{r item-ids}
+dmre <- paste0("dmre_", 1:4); dmau <- paste0("dmau_", 1:3)
+dmeu <- paste0("dmeu_", 1:3); dmpv <- paste0("dmpv_", 1:4)
+dsqa <- paste0("dsqa_", 1:3); dsqt <- paste0("dsqt_", 1:5)
+dsuq <- paste0("dsuq_", 1:5); ts <- paste0("ts_", 1:3); bi <- paste0("bi_", 1:3)
 ```
 
 ## EFA planning syntax
 
-`efa_syntax()` creates a small R code block for estimating an exploratory
-factor solution with the optional `psych` package.
+`efa_syntax()` writes a short R block that estimates an exploratory factor
+solution with the optional `psych` package. This screens the digital marketing
+items before the confirmatory model.
 
 ```{r efa-syntax}
-cat(efa_syntax(
-  items = c("dm_1", "dm_2", "dm_3", "sq_1", "sq_2", "sq_3"),
-  nfactors = 2,
-  extraction = "minres",
-  rotation = "oblimin"
-))
+cat(efa_syntax(items = c(dmre, dmau, dmeu, dmpv), nfactors = 4,
+               extraction = "minres", rotation = "oblimin"))
 ```
 
-## CFA syntax from scale definitions
+## CFA syntax: the lower-order measurement model
 
-The simplest CFA workflow uses scales already defined in the instrument.
+The confirmatory measurement model has the nine lower-order constructs as
+reflective factors. `cfa_lavaan_syntax()` writes lavaan syntax from a model
+object, with no need for lavaan at this stage.
 
 ```{r cfa}
-cat(cfa_lavaan_syntax(instr, ordered = TRUE))
-```
-
-`cfa_syntax()` remains available as a backward-compatible wrapper.
-
-```{r cfa-wrapper}
-cat(cfa_syntax(instr))
-```
-
-## Construct objects
-
-Construct objects record the construct ID, label, measurement mode, and
-indicator items.
-
-```{r constructs}
-dm <- sf_construct(
-  id = "DM",
-  label = "Digital marketing",
-  items = c("dm_1", "dm_2", "dm_3"),
-  mode = "reflective"
+construct_def <- list(
+  DMRE = dmre, DMAU = dmau, DMEU = dmeu, DMPV = dmpv,
+  DSQA = dsqa, DSQT = dsqt, DSUQ = dsuq, TS = ts, BI = bi
 )
 
-sq <- sf_construct(
-  id = "SQ",
-  label = "Service quality",
-  items = c("sq_1", "sq_2", "sq_3"),
-  mode = "reflective"
+cfa_model <- sf_model(
+  id    = "lower_order_cfa",
+  label = "Lower-order measurement model",
+  type  = "cfa",
+  constructs = Map(function(id, items) sf_construct(id, id, items),
+                   names(construct_def), construct_def)
 )
 
-sat <- sf_construct(
-  id = "SAT",
-  label = "Satisfaction",
-  items = c("sat_1", "sat_2"),
-  mode = "reflective"
-)
+cat(cfa_lavaan_syntax(model = cfa_model))
 ```
 
-Construct modes include `reflective`, `composite`, `formative`, and
-`single_item`. Lavaan syntax generation in v0.3 is intended for reflective
-measurement models. PLS-SEM syntax can use composite-style constructs.
+## CB-SEM syntax: the structural model
 
-## CB-SEM lavaan syntax
+The covariance-based reading treats the five constructs as first-order
+reflective factors over their full item sets, with the nine direct paths and the
+four indirect effects from the hypotheses. `sem_lavaan_syntax()` writes the
+measurement, structural, and indirect-effect lines.
 
-`sf_model()` stores measurement and structural paths. `sem_lavaan_syntax()`
-then generates lavaan syntax without requiring `lavaan` to be installed.
-
-```{r cb-sem}
+```{r cbsem}
 sem_model <- sf_model(
-  id = "tourism_sem",
-  label = "Tourism structural model",
-  type = "cb_sem",
-  constructs = list(dm, sq, sat),
+  id    = "tourism_structural",
+  label = "Digital marketing structural model",
+  type  = "cb_sem",
+  constructs = list(
+    sf_construct("DME",  "Digital marketing effectiveness", c(dmre, dmau, dmeu, dmpv)),
+    sf_construct("DSQ",  "Destination service quality",     c(dsqa, dsqt)),
+    sf_construct("DSUQ", "Destination sustainability quality", dsuq),
+    sf_construct("TS",   "Tourist satisfaction", ts),
+    sf_construct("BI",   "Behavioural intention", bi)
+  ),
   paths = list(
-    sf_path("DM", "SQ", label = "a"),
-    sf_path("SQ", "SAT", label = "b"),
-    sf_path("DM", "SAT", label = "c_prime")
+    sf_path("DME", "DSQ", label = "h1"),  sf_path("DME", "DSUQ", label = "h2"),
+    sf_path("DME", "TS",  label = "h3"),  sf_path("DME", "BI",   label = "h4"),
+    sf_path("DSQ", "TS",  label = "h5"),  sf_path("DSQ", "BI",   label = "h6"),
+    sf_path("DSUQ", "TS", label = "h7"),  sf_path("DSUQ", "BI",  label = "h8"),
+    sf_path("TS", "BI",   label = "h9")
   ),
   indirect = list(
-    sf_indirect("DM", "SQ", "SAT", label = "indirect_DM_SQ_SAT")
+    sf_indirect("DME", "DSQ", "TS",  label = "h10"),
+    sf_indirect("DME", "DSUQ", "TS", label = "h11"),
+    sf_indirect("DME", c("DSQ", "TS"), "BI",  label = "h12"),
+    sf_indirect("DME", c("DSUQ", "TS"), "BI", label = "h13")
   ),
   options = list(estimator = "MLR", missing = "fiml", standardised = TRUE)
 )
 
-validate_model(sem_model, instr)
-
-cat(sem_lavaan_syntax(sem_model, instr))
+validate_model(sem_model)
+cat(sem_lavaan_syntax(sem_model))
 ```
 
-## PLS-SEM seminr syntax
+## PLS-SEM syntax: the two-stage higher-order model
 
-For PLS-SEM planning, use composite constructs and `seminr_syntax()`.
+The published study used PLS-SEM with a two-stage treatment of the higher-order
+constructs. The second stage models digital marketing effectiveness and service
+quality as composites of their lower-order construct scores, then estimates the
+structural paths. `seminr_syntax()` writes the seminr code, including the
+bootstrap, reliability, AVE, and HTMT calls.
 
 ```{r pls}
 pls_model <- sf_model(
-  id = "tourism_pls",
-  label = "Tourism PLS model",
-  type = "pls_sem",
+  id    = "tourism_pls",
+  label = "Two-stage higher-order PLS model",
+  type  = "pls_sem",
   constructs = list(
-    sf_construct("DM", "Digital marketing", c("dm_1", "dm_2", "dm_3"), mode = "composite"),
-    sf_construct("SQ", "Service quality", c("sq_1", "sq_2", "sq_3"), mode = "composite"),
-    sf_construct("SAT", "Satisfaction", c("sat_1", "sat_2"), mode = "composite")
+    sf_construct("DME",  "Digital marketing effectiveness",
+                 c("DMRE", "DMAU", "DMEU", "DMPV"), mode = "composite"),
+    sf_construct("DSQ",  "Destination service quality",
+                 c("DSQA", "DSQT"), mode = "composite"),
+    sf_construct("DSUQ", "Destination sustainability quality", dsuq, mode = "composite"),
+    sf_construct("TS",   "Tourist satisfaction", ts, mode = "composite"),
+    sf_construct("BI",   "Behavioural intention", bi, mode = "composite")
   ),
   paths = list(
-    sf_path("DM", "SQ"),
-    sf_path("SQ", "SAT"),
-    sf_path("DM", "SAT")
+    sf_path("DME", "DSQ"), sf_path("DME", "DSUQ"),
+    sf_path("DME", "TS"),  sf_path("DME", "BI"),
+    sf_path("DSQ", "TS"),  sf_path("DSQ", "BI"),
+    sf_path("DSUQ", "TS"), sf_path("DSUQ", "BI"),
+    sf_path("TS", "BI")
   ),
-  options = list(bootstrap = 5000)
+  options = list(bootstrap = 1000)
 )
 
 cat(seminr_syntax(pls_model))
 ```
 
-## Model JSON
+## Construct modes
 
-Store model specifications in `.sframe` files and export them as JSON.
+A construct's mode is `reflective`, `composite`, `formative`, or `single_item`.
+lavaan syntax generation in v0.3 is intended for reflective measurement models,
+which is why the CFA and CB-SEM models use the default reflective mode. PLS-SEM
+syntax uses composite constructs, as above.
 
-```{r model-json}
-model_json(sem_model)
+## Model JSON and a reporting template
+
+A model serialises to JSON for storage in a `.sframe` file, and
+`model_report_template()` writes a short reporting outline.
+
+```{r json}
+cat(model_report_template(sem_model, include_json = FALSE))
 ```
 
-## Where syntax goes next
+## Where the syntax goes next
 
-The generated lavaan syntax should be copied into `lavaan::cfa()` or
-`lavaan::sem()` after selecting estimators, ordered item handling, missing-data
-treatment, and reporting options. The generated seminr syntax should be copied
-into an analysis script where `seminr` is installed and the researcher has
-chosen bootstrapping settings and construct modes.
+The generated lavaan syntax is copied into `lavaan::cfa()` or `lavaan::sem()`
+after choosing the estimator, ordered-item handling, and missing-data treatment.
+The generated seminr syntax is copied into a script where seminr is installed and
+the bootstrap settings and construct modes are set. The published study fitted
+the two-stage PLS model in seminr with 1000 bootstrap resamples.

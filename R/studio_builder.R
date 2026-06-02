@@ -123,7 +123,7 @@ sframe_builder_state_from_instrument <- function(instrument = NULL) {
     return(sframe_builder_empty_state())
   }
 
-  stopifnot(inherits(instrument, "sframe"))
+  sframe_check_instrument(instrument)
 
   list(
     meta = list(

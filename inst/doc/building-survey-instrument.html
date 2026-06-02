@@ -12,7 +12,7 @@
 
 
 
-<title>Building a survey instrument</title>
+<title>Building a survey instrument: questions, plan, and model</title>
 
 <script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
 // be compatible with the behavior of Pandoc < 2.8).
@@ -337,178 +337,183 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 
 
 
-<h1 class="title toc-ignore">Building a survey instrument</h1>
+<h1 class="title toc-ignore">Building a survey instrument: questions,
+plan, and model</h1>
 
 
 
-<p>This vignette builds an <code>sframe</code> instrument from scratch
-and shows how choice sets, items, scales, reverse coding, attention
-checks, validation, and <code>.sframe</code> serialisation fit
-together.</p>
+<p>An <code>sframe</code> instrument records the research design, not
+only the questions. This vignette builds a slice of the published
+Thailand digital marketing study (Sharafuddin, Madhavan, and Wangtueai
+2024) with the constructors shown one at a time, then adds the analysis
+plan and a measurement model. The full study is assembled in the
+worked-study vignette.</p>
 <div id="choice-sets" class="section level2">
 <h2>Choice sets</h2>
-<p>Choice sets define reusable response options. They are referenced by
-items through <code>choice_set</code>.</p>
-<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a>agree5 <span class="ot">&lt;-</span> <span class="fu">sf_choices</span>(</span>
-<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a>  <span class="at">id =</span> <span class="st">&quot;agree5&quot;</span>,</span>
+<p>Choice sets define reusable response options. Items reference them
+through <code>choice_set</code>.</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a>likert5 <span class="ot">&lt;-</span> <span class="fu">sf_choices</span>(</span>
+<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a>  <span class="st">&quot;likert5&quot;</span>,</span>
 <span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a>  <span class="at">values =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">5</span>,</span>
-<span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a>  <span class="at">labels =</span> <span class="fu">c</span>(</span>
-<span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a>    <span class="st">&quot;Strongly disagree&quot;</span>,</span>
-<span id="cb1-6"><a href="#cb1-6" tabindex="-1"></a>    <span class="st">&quot;Disagree&quot;</span>,</span>
-<span id="cb1-7"><a href="#cb1-7" tabindex="-1"></a>    <span class="st">&quot;Neither agree nor disagree&quot;</span>,</span>
-<span id="cb1-8"><a href="#cb1-8" tabindex="-1"></a>    <span class="st">&quot;Agree&quot;</span>,</span>
-<span id="cb1-9"><a href="#cb1-9" tabindex="-1"></a>    <span class="st">&quot;Strongly agree&quot;</span></span>
-<span id="cb1-10"><a href="#cb1-10" tabindex="-1"></a>  )</span>
-<span id="cb1-11"><a href="#cb1-11" tabindex="-1"></a>)</span>
-<span id="cb1-12"><a href="#cb1-12" tabindex="-1"></a></span>
-<span id="cb1-13"><a href="#cb1-13" tabindex="-1"></a>yes_no <span class="ot">&lt;-</span> <span class="fu">sf_choices</span>(</span>
-<span id="cb1-14"><a href="#cb1-14" tabindex="-1"></a>  <span class="at">id =</span> <span class="st">&quot;yes_no&quot;</span>,</span>
-<span id="cb1-15"><a href="#cb1-15" tabindex="-1"></a>  <span class="at">values =</span> <span class="fu">c</span>(<span class="st">&quot;yes&quot;</span>, <span class="st">&quot;no&quot;</span>),</span>
-<span id="cb1-16"><a href="#cb1-16" tabindex="-1"></a>  <span class="at">labels =</span> <span class="fu">c</span>(<span class="st">&quot;Yes&quot;</span>, <span class="st">&quot;No&quot;</span>)</span>
-<span id="cb1-17"><a href="#cb1-17" tabindex="-1"></a>)</span></code></pre></div>
+<span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a>  <span class="at">labels =</span> <span class="fu">c</span>(<span class="st">&quot;Strongly disagree&quot;</span>, <span class="st">&quot;Disagree&quot;</span>,</span>
+<span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a>             <span class="st">&quot;Neither agree nor disagree&quot;</span>, <span class="st">&quot;Agree&quot;</span>, <span class="st">&quot;Strongly agree&quot;</span>)</span>
+<span id="cb1-6"><a href="#cb1-6" tabindex="-1"></a>)</span>
+<span id="cb1-7"><a href="#cb1-7" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" tabindex="-1"></a>visitor <span class="ot">&lt;-</span> <span class="fu">sf_choices</span>(<span class="st">&quot;visitor&quot;</span>, <span class="fu">c</span>(<span class="st">&quot;first_time&quot;</span>, <span class="st">&quot;repeat&quot;</span>),</span>
+<span id="cb1-9"><a href="#cb1-9" tabindex="-1"></a>                      <span class="fu">c</span>(<span class="st">&quot;First-time visitor&quot;</span>, <span class="st">&quot;Repeat visitor&quot;</span>))</span></code></pre></div>
 </div>
 <div id="items-and-item-types" class="section level2">
 <h2>Items and item types</h2>
 <p>Items are response variables unless their type is
 <code>section_break</code> or <code>text_block</code>. Required items
-are marked with <code>required = TRUE</code>. Item IDs should be stable
-because response data columns use those IDs.</p>
+carry <code>required = TRUE</code>. Item IDs should stay stable, because
+response columns reuse them and the analysis plan refers to them. These
+items measure perceived value (DMPV) and tourist satisfaction (TS).</p>
 <div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a>intro <span class="ot">&lt;-</span> <span class="fu">sf_item</span>(</span>
-<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a>  <span class="st">&quot;intro&quot;</span>,</span>
-<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a>  <span class="st">&quot;Study introduction&quot;</span>,</span>
-<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a>  <span class="at">type =</span> <span class="st">&quot;section_break&quot;</span>,</span>
-<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a>  <span class="at">section_intro =</span> <span class="st">&quot;Please answer the following questions about the service.&quot;</span></span>
-<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a>)</span>
-<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a></span>
-<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a>visit_again <span class="ot">&lt;-</span> <span class="fu">sf_item</span>(</span>
-<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a>  <span class="st">&quot;visit_again&quot;</span>,</span>
-<span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a>  <span class="st">&quot;Would you use this service again?&quot;</span>,</span>
-<span id="cb2-11"><a href="#cb2-11" tabindex="-1"></a>  <span class="at">type =</span> <span class="st">&quot;single_choice&quot;</span>,</span>
-<span id="cb2-12"><a href="#cb2-12" tabindex="-1"></a>  <span class="at">required =</span> <span class="cn">TRUE</span>,</span>
-<span id="cb2-13"><a href="#cb2-13" tabindex="-1"></a>  <span class="at">choice_set =</span> <span class="st">&quot;yes_no&quot;</span></span>
-<span id="cb2-14"><a href="#cb2-14" tabindex="-1"></a>)</span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a>  <span class="st">&quot;intro&quot;</span>, <span class="st">&quot;About your trip&quot;</span>,</span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a>  <span class="at">type          =</span> <span class="st">&quot;section_break&quot;</span>,</span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a>  <span class="at">section_intro =</span> <span class="st">&quot;Please rate your experience of digital booking and your visit.&quot;</span></span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a>)</span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a>dmpv_1 <span class="ot">&lt;-</span> <span class="fu">sf_item</span>(<span class="st">&quot;dmpv_1&quot;</span>, <span class="st">&quot;The destination&#39;s online content was trustworthy.&quot;</span>,</span>
+<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a>  <span class="at">type =</span> <span class="st">&quot;likert&quot;</span>, <span class="at">required =</span> <span class="cn">TRUE</span>, <span class="at">choice_set =</span> <span class="st">&quot;likert5&quot;</span>, <span class="at">scale_id =</span> <span class="st">&quot;DMPV&quot;</span>)</span>
+<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a>dmpv_2 <span class="ot">&lt;-</span> <span class="fu">sf_item</span>(<span class="st">&quot;dmpv_2&quot;</span>, <span class="st">&quot;The online information was consistent across platforms.&quot;</span>,</span>
+<span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a>  <span class="at">type =</span> <span class="st">&quot;likert&quot;</span>, <span class="at">required =</span> <span class="cn">TRUE</span>, <span class="at">choice_set =</span> <span class="st">&quot;likert5&quot;</span>, <span class="at">scale_id =</span> <span class="st">&quot;DMPV&quot;</span>)</span>
+<span id="cb2-11"><a href="#cb2-11" tabindex="-1"></a>dmpv_3 <span class="ot">&lt;-</span> <span class="fu">sf_item</span>(<span class="st">&quot;dmpv_3&quot;</span>, <span class="st">&quot;The digital channels offered good value for money.&quot;</span>,</span>
+<span id="cb2-12"><a href="#cb2-12" tabindex="-1"></a>  <span class="at">type =</span> <span class="st">&quot;likert&quot;</span>, <span class="at">required =</span> <span class="cn">TRUE</span>, <span class="at">choice_set =</span> <span class="st">&quot;likert5&quot;</span>, <span class="at">scale_id =</span> <span class="st">&quot;DMPV&quot;</span>)</span>
+<span id="cb2-13"><a href="#cb2-13" tabindex="-1"></a>dmpv_4 <span class="ot">&lt;-</span> <span class="fu">sf_item</span>(<span class="st">&quot;dmpv_4&quot;</span>, <span class="st">&quot;I was aware of the destination through digital channels.&quot;</span>,</span>
+<span id="cb2-14"><a href="#cb2-14" tabindex="-1"></a>  <span class="at">type =</span> <span class="st">&quot;likert&quot;</span>, <span class="at">required =</span> <span class="cn">TRUE</span>, <span class="at">choice_set =</span> <span class="st">&quot;likert5&quot;</span>, <span class="at">scale_id =</span> <span class="st">&quot;DMPV&quot;</span>)</span>
 <span id="cb2-15"><a href="#cb2-15" tabindex="-1"></a></span>
-<span id="cb2-16"><a href="#cb2-16" tabindex="-1"></a>sat_1 <span class="ot">&lt;-</span> <span class="fu">sf_item</span>(</span>
-<span id="cb2-17"><a href="#cb2-17" tabindex="-1"></a>  <span class="st">&quot;sat_1&quot;</span>,</span>
-<span id="cb2-18"><a href="#cb2-18" tabindex="-1"></a>  <span class="st">&quot;The service met my expectations.&quot;</span>,</span>
-<span id="cb2-19"><a href="#cb2-19" tabindex="-1"></a>  <span class="at">type =</span> <span class="st">&quot;likert&quot;</span>,</span>
-<span id="cb2-20"><a href="#cb2-20" tabindex="-1"></a>  <span class="at">required =</span> <span class="cn">TRUE</span>,</span>
-<span id="cb2-21"><a href="#cb2-21" tabindex="-1"></a>  <span class="at">choice_set =</span> <span class="st">&quot;agree5&quot;</span>,</span>
-<span id="cb2-22"><a href="#cb2-22" tabindex="-1"></a>  <span class="at">scale_id =</span> <span class="st">&quot;satisfaction&quot;</span></span>
-<span id="cb2-23"><a href="#cb2-23" tabindex="-1"></a>)</span>
-<span id="cb2-24"><a href="#cb2-24" tabindex="-1"></a></span>
-<span id="cb2-25"><a href="#cb2-25" tabindex="-1"></a>sat_2 <span class="ot">&lt;-</span> <span class="fu">sf_item</span>(</span>
-<span id="cb2-26"><a href="#cb2-26" tabindex="-1"></a>  <span class="st">&quot;sat_2&quot;</span>,</span>
-<span id="cb2-27"><a href="#cb2-27" tabindex="-1"></a>  <span class="st">&quot;The service was easy to use.&quot;</span>,</span>
-<span id="cb2-28"><a href="#cb2-28" tabindex="-1"></a>  <span class="at">type =</span> <span class="st">&quot;likert&quot;</span>,</span>
-<span id="cb2-29"><a href="#cb2-29" tabindex="-1"></a>  <span class="at">required =</span> <span class="cn">TRUE</span>,</span>
-<span id="cb2-30"><a href="#cb2-30" tabindex="-1"></a>  <span class="at">choice_set =</span> <span class="st">&quot;agree5&quot;</span>,</span>
-<span id="cb2-31"><a href="#cb2-31" tabindex="-1"></a>  <span class="at">scale_id =</span> <span class="st">&quot;satisfaction&quot;</span></span>
-<span id="cb2-32"><a href="#cb2-32" tabindex="-1"></a>)</span>
-<span id="cb2-33"><a href="#cb2-33" tabindex="-1"></a></span>
-<span id="cb2-34"><a href="#cb2-34" tabindex="-1"></a>sat_3 <span class="ot">&lt;-</span> <span class="fu">sf_item</span>(</span>
-<span id="cb2-35"><a href="#cb2-35" tabindex="-1"></a>  <span class="st">&quot;sat_3&quot;</span>,</span>
-<span id="cb2-36"><a href="#cb2-36" tabindex="-1"></a>  <span class="st">&quot;The service was frustrating to use.&quot;</span>,</span>
-<span id="cb2-37"><a href="#cb2-37" tabindex="-1"></a>  <span class="at">type =</span> <span class="st">&quot;likert&quot;</span>,</span>
-<span id="cb2-38"><a href="#cb2-38" tabindex="-1"></a>  <span class="at">required =</span> <span class="cn">TRUE</span>,</span>
-<span id="cb2-39"><a href="#cb2-39" tabindex="-1"></a>  <span class="at">choice_set =</span> <span class="st">&quot;agree5&quot;</span>,</span>
-<span id="cb2-40"><a href="#cb2-40" tabindex="-1"></a>  <span class="at">scale_id =</span> <span class="st">&quot;satisfaction&quot;</span>,</span>
-<span id="cb2-41"><a href="#cb2-41" tabindex="-1"></a>  <span class="at">reverse =</span> <span class="cn">TRUE</span></span>
-<span id="cb2-42"><a href="#cb2-42" tabindex="-1"></a>)</span>
-<span id="cb2-43"><a href="#cb2-43" tabindex="-1"></a></span>
-<span id="cb2-44"><a href="#cb2-44" tabindex="-1"></a>age <span class="ot">&lt;-</span> <span class="fu">sf_item</span>(</span>
-<span id="cb2-45"><a href="#cb2-45" tabindex="-1"></a>  <span class="st">&quot;age&quot;</span>,</span>
-<span id="cb2-46"><a href="#cb2-46" tabindex="-1"></a>  <span class="st">&quot;Age in years&quot;</span>,</span>
-<span id="cb2-47"><a href="#cb2-47" tabindex="-1"></a>  <span class="at">type =</span> <span class="st">&quot;numeric&quot;</span>,</span>
-<span id="cb2-48"><a href="#cb2-48" tabindex="-1"></a>  <span class="at">required =</span> <span class="cn">FALSE</span></span>
-<span id="cb2-49"><a href="#cb2-49" tabindex="-1"></a>)</span>
-<span id="cb2-50"><a href="#cb2-50" tabindex="-1"></a></span>
-<span id="cb2-51"><a href="#cb2-51" tabindex="-1"></a>comments <span class="ot">&lt;-</span> <span class="fu">sf_item</span>(</span>
-<span id="cb2-52"><a href="#cb2-52" tabindex="-1"></a>  <span class="st">&quot;comments&quot;</span>,</span>
-<span id="cb2-53"><a href="#cb2-53" tabindex="-1"></a>  <span class="st">&quot;Any other comments?&quot;</span>,</span>
-<span id="cb2-54"><a href="#cb2-54" tabindex="-1"></a>  <span class="at">type =</span> <span class="st">&quot;textarea&quot;</span>,</span>
-<span id="cb2-55"><a href="#cb2-55" tabindex="-1"></a>  <span class="at">required =</span> <span class="cn">FALSE</span></span>
-<span id="cb2-56"><a href="#cb2-56" tabindex="-1"></a>)</span>
-<span id="cb2-57"><a href="#cb2-57" tabindex="-1"></a></span>
-<span id="cb2-58"><a href="#cb2-58" tabindex="-1"></a>attention <span class="ot">&lt;-</span> <span class="fu">sf_item</span>(</span>
-<span id="cb2-59"><a href="#cb2-59" tabindex="-1"></a>  <span class="st">&quot;attention&quot;</span>,</span>
-<span id="cb2-60"><a href="#cb2-60" tabindex="-1"></a>  <span class="st">&quot;For quality control, please select Agree.&quot;</span>,</span>
-<span id="cb2-61"><a href="#cb2-61" tabindex="-1"></a>  <span class="at">type =</span> <span class="st">&quot;single_choice&quot;</span>,</span>
-<span id="cb2-62"><a href="#cb2-62" tabindex="-1"></a>  <span class="at">required =</span> <span class="cn">TRUE</span>,</span>
-<span id="cb2-63"><a href="#cb2-63" tabindex="-1"></a>  <span class="at">choice_set =</span> <span class="st">&quot;agree5&quot;</span></span>
-<span id="cb2-64"><a href="#cb2-64" tabindex="-1"></a>)</span></code></pre></div>
+<span id="cb2-16"><a href="#cb2-16" tabindex="-1"></a>ts_1 <span class="ot">&lt;-</span> <span class="fu">sf_item</span>(<span class="st">&quot;ts_1&quot;</span>, <span class="st">&quot;The trip met my expectations.&quot;</span>,</span>
+<span id="cb2-17"><a href="#cb2-17" tabindex="-1"></a>  <span class="at">type =</span> <span class="st">&quot;likert&quot;</span>, <span class="at">required =</span> <span class="cn">TRUE</span>, <span class="at">choice_set =</span> <span class="st">&quot;likert5&quot;</span>, <span class="at">scale_id =</span> <span class="st">&quot;TS&quot;</span>)</span>
+<span id="cb2-18"><a href="#cb2-18" tabindex="-1"></a>ts_2 <span class="ot">&lt;-</span> <span class="fu">sf_item</span>(<span class="st">&quot;ts_2&quot;</span>, <span class="st">&quot;My overall travel experience was satisfying.&quot;</span>,</span>
+<span id="cb2-19"><a href="#cb2-19" tabindex="-1"></a>  <span class="at">type =</span> <span class="st">&quot;likert&quot;</span>, <span class="at">required =</span> <span class="cn">TRUE</span>, <span class="at">choice_set =</span> <span class="st">&quot;likert5&quot;</span>, <span class="at">scale_id =</span> <span class="st">&quot;TS&quot;</span>)</span>
+<span id="cb2-20"><a href="#cb2-20" tabindex="-1"></a>ts_3 <span class="ot">&lt;-</span> <span class="fu">sf_item</span>(<span class="st">&quot;ts_3&quot;</span>, <span class="st">&quot;I felt comfortable at the destination.&quot;</span>,</span>
+<span id="cb2-21"><a href="#cb2-21" tabindex="-1"></a>  <span class="at">type =</span> <span class="st">&quot;likert&quot;</span>, <span class="at">required =</span> <span class="cn">TRUE</span>, <span class="at">choice_set =</span> <span class="st">&quot;likert5&quot;</span>, <span class="at">scale_id =</span> <span class="st">&quot;TS&quot;</span>)</span>
+<span id="cb2-22"><a href="#cb2-22" tabindex="-1"></a></span>
+<span id="cb2-23"><a href="#cb2-23" tabindex="-1"></a>visitor_type <span class="ot">&lt;-</span> <span class="fu">sf_item</span>(<span class="st">&quot;visitor_type&quot;</span>, <span class="st">&quot;I am a&quot;</span>,</span>
+<span id="cb2-24"><a href="#cb2-24" tabindex="-1"></a>  <span class="at">type =</span> <span class="st">&quot;single_choice&quot;</span>, <span class="at">required =</span> <span class="cn">TRUE</span>, <span class="at">choice_set =</span> <span class="st">&quot;visitor&quot;</span>)</span>
+<span id="cb2-25"><a href="#cb2-25" tabindex="-1"></a></span>
+<span id="cb2-26"><a href="#cb2-26" tabindex="-1"></a>attention <span class="ot">&lt;-</span> <span class="fu">sf_item</span>(<span class="st">&quot;attention&quot;</span>, <span class="st">&quot;For quality control, please select Agree.&quot;</span>,</span>
+<span id="cb2-27"><a href="#cb2-27" tabindex="-1"></a>  <span class="at">type =</span> <span class="st">&quot;single_choice&quot;</span>, <span class="at">required =</span> <span class="cn">TRUE</span>, <span class="at">choice_set =</span> <span class="st">&quot;likert5&quot;</span>)</span></code></pre></div>
 </div>
 <div id="scales-reverse-coding-and-minimum-valid-items" class="section level2">
 <h2>Scales, reverse coding, and minimum valid items</h2>
-<p>Scale definitions record item membership, the scoring method,
-reverse-coded items, and the minimum number of valid items required to
+<p>A scale records item membership, the scoring method, any
+reverse-coded items, and the minimum number of valid items needed to
 compute a score.</p>
-<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a>satisfaction <span class="ot">&lt;-</span> <span class="fu">sf_scale</span>(</span>
-<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a>  <span class="at">id =</span> <span class="st">&quot;satisfaction&quot;</span>,</span>
-<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a>  <span class="at">label =</span> <span class="st">&quot;Satisfaction&quot;</span>,</span>
-<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a>  <span class="at">items =</span> <span class="fu">c</span>(<span class="st">&quot;sat_1&quot;</span>, <span class="st">&quot;sat_2&quot;</span>, <span class="st">&quot;sat_3&quot;</span>),</span>
-<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a>  <span class="at">method =</span> <span class="st">&quot;mean&quot;</span>,</span>
-<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a>  <span class="at">min_valid =</span> <span class="dv">2</span>,</span>
-<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a>  <span class="at">reverse_items =</span> <span class="st">&quot;sat_3&quot;</span></span>
-<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a>)</span></code></pre></div>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a>dmpv <span class="ot">&lt;-</span> <span class="fu">sf_scale</span>(<span class="st">&quot;DMPV&quot;</span>, <span class="st">&quot;Digital marketing perceived value&quot;</span>,</span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a>  <span class="at">items =</span> <span class="fu">c</span>(<span class="st">&quot;dmpv_1&quot;</span>, <span class="st">&quot;dmpv_2&quot;</span>, <span class="st">&quot;dmpv_3&quot;</span>, <span class="st">&quot;dmpv_4&quot;</span>), <span class="at">method =</span> <span class="st">&quot;mean&quot;</span>, <span class="at">min_valid =</span> <span class="dv">3</span>)</span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a>ts <span class="ot">&lt;-</span> <span class="fu">sf_scale</span>(<span class="st">&quot;TS&quot;</span>, <span class="st">&quot;Tourist satisfaction&quot;</span>,</span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a>  <span class="at">items =</span> <span class="fu">c</span>(<span class="st">&quot;ts_1&quot;</span>, <span class="st">&quot;ts_2&quot;</span>, <span class="st">&quot;ts_3&quot;</span>), <span class="at">method =</span> <span class="st">&quot;mean&quot;</span>, <span class="at">min_valid =</span> <span class="dv">2</span>)</span></code></pre></div>
 </div>
 <div id="attention-checks" class="section level2">
 <h2>Attention checks</h2>
-<p>Checks keep quality-control logic with the instrument definition.</p>
+<p>Checks keep the quality-control logic with the instrument.</p>
 <div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a>attention_check <span class="ot">&lt;-</span> <span class="fu">sf_check</span>(</span>
-<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>  <span class="at">id =</span> <span class="st">&quot;attention_agree&quot;</span>,</span>
-<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>  <span class="at">item_id =</span> <span class="st">&quot;attention&quot;</span>,</span>
-<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a>  <span class="at">type =</span> <span class="st">&quot;attention&quot;</span>,</span>
-<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a>  <span class="at">pass_values =</span> <span class="dv">4</span>,</span>
-<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a>  <span class="at">fail_action =</span> <span class="st">&quot;flag&quot;</span>,</span>
-<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a>  <span class="at">label =</span> <span class="st">&quot;Instructional attention check&quot;</span></span>
-<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a>)</span></code></pre></div>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>  <span class="at">id =</span> <span class="st">&quot;attention_agree&quot;</span>, <span class="at">item_id =</span> <span class="st">&quot;attention&quot;</span>, <span class="at">type =</span> <span class="st">&quot;attention&quot;</span>,</span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>  <span class="at">pass_values =</span> <span class="dv">4</span>, <span class="at">fail_action =</span> <span class="st">&quot;flag&quot;</span>, <span class="at">label =</span> <span class="st">&quot;Instructional attention check&quot;</span></span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a>)</span></code></pre></div>
 </div>
-<div id="assemble-and-validate-the-instrument" class="section level2">
-<h2>Assemble and validate the instrument</h2>
-<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a>instr <span class="ot">&lt;-</span> <span class="fu">sf_instrument</span>(</span>
-<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a>  <span class="at">title =</span> <span class="st">&quot;Service Feedback Survey&quot;</span>,</span>
-<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a>  <span class="at">version =</span> <span class="st">&quot;0.3.0&quot;</span>,</span>
-<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a>  <span class="at">description =</span> <span class="st">&quot;Short example instrument for a service feedback study.&quot;</span>,</span>
-<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a>  <span class="at">authors =</span> <span class="st">&quot;Research team&quot;</span>,</span>
-<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a>  <span class="at">languages =</span> <span class="st">&quot;en&quot;</span>,</span>
-<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a>  <span class="at">components =</span> <span class="fu">list</span>(</span>
-<span id="cb5-8"><a href="#cb5-8" tabindex="-1"></a>    agree5, yes_no,</span>
-<span id="cb5-9"><a href="#cb5-9" tabindex="-1"></a>    intro, visit_again, sat_1, sat_2, sat_3, age, comments, attention,</span>
-<span id="cb5-10"><a href="#cb5-10" tabindex="-1"></a>    satisfaction, attention_check</span>
-<span id="cb5-11"><a href="#cb5-11" tabindex="-1"></a>  )</span>
-<span id="cb5-12"><a href="#cb5-12" tabindex="-1"></a>)</span>
-<span id="cb5-13"><a href="#cb5-13" tabindex="-1"></a></span>
-<span id="cb5-14"><a href="#cb5-14" tabindex="-1"></a>validation <span class="ot">&lt;-</span> <span class="fu">validate_sframe</span>(instr, <span class="at">strict =</span> <span class="cn">FALSE</span>)</span>
-<span id="cb5-15"><a href="#cb5-15" tabindex="-1"></a>validation<span class="sc">$</span>valid</span>
-<span id="cb5-16"><a href="#cb5-16" tabindex="-1"></a><span class="co">#&gt; [1] TRUE</span></span>
-<span id="cb5-17"><a href="#cb5-17" tabindex="-1"></a>validation<span class="sc">$</span>problems</span>
-<span id="cb5-18"><a href="#cb5-18" tabindex="-1"></a><span class="co">#&gt; character(0)</span></span></code></pre></div>
-<p>In production workflows, strict validation returns the validated
-instrument or stops with a structured error.</p>
-<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a>instr <span class="ot">&lt;-</span> <span class="fu">validate_sframe</span>(instr)</span>
-<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a>instr<span class="sc">$</span>meta<span class="sc">$</span>validated</span>
-<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a><span class="co">#&gt; [1] TRUE</span></span></code></pre></div>
+<div id="branching" class="section level2">
+<h2>Branching</h2>
+<p>A branch shows or hides an item based on an earlier answer. This one
+is a placeholder for a repeat-visitor follow-up.</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a>repeat_branch <span class="ot">&lt;-</span> <span class="fu">sf_branch</span>(</span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a>  <span class="at">item_id    =</span> <span class="st">&quot;ts_3&quot;</span>,</span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a>  <span class="at">depends_on =</span> <span class="st">&quot;visitor_type&quot;</span>,</span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a>  <span class="at">operator   =</span> <span class="st">&quot;==&quot;</span>,</span>
+<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a>  <span class="at">value      =</span> <span class="st">&quot;repeat&quot;</span>,</span>
+<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a>  <span class="at">action     =</span> <span class="st">&quot;show&quot;</span></span>
+<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a>)</span></code></pre></div>
+</div>
+<div id="the-analysis-plan" class="section level2">
+<h2>The analysis plan</h2>
+<p>Each block binds a research question to a technique and to the
+variables that fill each role. A reliability check expects
+<code>items</code>. A group comparison expects a <code>group</code> and
+an <code>outcome</code>.</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a>analysis_plan <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">id =</span> <span class="st">&quot;M1&quot;</span>, <span class="at">research_question =</span> <span class="st">&quot;Is perceived value internally consistent?&quot;</span>,</span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a>       <span class="at">family =</span> <span class="st">&quot;measurement&quot;</span>, <span class="at">method =</span> <span class="st">&quot;reliability_alpha&quot;</span>,</span>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a>       <span class="at">roles =</span> <span class="fu">list</span>(<span class="at">items =</span> <span class="fu">c</span>(<span class="st">&quot;dmpv_1&quot;</span>, <span class="st">&quot;dmpv_2&quot;</span>, <span class="st">&quot;dmpv_3&quot;</span>, <span class="st">&quot;dmpv_4&quot;</span>))),</span>
+<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">id =</span> <span class="st">&quot;RQ1&quot;</span>, <span class="at">research_question =</span> <span class="st">&quot;Do repeat visitors report higher satisfaction?&quot;</span>,</span>
+<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a>       <span class="at">family =</span> <span class="st">&quot;group_comparison&quot;</span>, <span class="at">method =</span> <span class="st">&quot;mann_whitney&quot;</span>,</span>
+<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a>       <span class="at">roles =</span> <span class="fu">list</span>(<span class="at">group =</span> <span class="st">&quot;visitor_type&quot;</span>, <span class="at">outcome =</span> <span class="st">&quot;TS&quot;</span>),</span>
+<span id="cb6-8"><a href="#cb6-8" tabindex="-1"></a>       <span class="at">options =</span> <span class="fu">list</span>(<span class="at">alpha =</span> <span class="fl">0.05</span>))</span>
+<span id="cb6-9"><a href="#cb6-9" tabindex="-1"></a>)</span></code></pre></div>
+</div>
+<div id="assemble-the-instrument" class="section level2">
+<h2>Assemble the instrument</h2>
+<p><code>sf_instrument()</code> takes the questions through
+<code>components</code> and the research design through
+<code>analysis_plan</code> and <code>models</code>. The model is added
+with <code>add_model()</code>, which checks each indicator against the
+instrument items.</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a>instr <span class="ot">&lt;-</span> <span class="fu">sf_instrument</span>(</span>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a>  <span class="at">title       =</span> <span class="st">&quot;Digital marketing study (teaching slice)&quot;</span>,</span>
+<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a>  <span class="at">version     =</span> <span class="st">&quot;1.0.0&quot;</span>,</span>
+<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a>  <span class="at">description =</span> <span class="st">&quot;A slice of the published Thailand study for teaching the constructors.&quot;</span>,</span>
+<span id="cb7-5"><a href="#cb7-5" tabindex="-1"></a>  <span class="at">authors     =</span> <span class="st">&quot;Research team&quot;</span>,</span>
+<span id="cb7-6"><a href="#cb7-6" tabindex="-1"></a>  <span class="at">languages   =</span> <span class="st">&quot;en&quot;</span>,</span>
+<span id="cb7-7"><a href="#cb7-7" tabindex="-1"></a>  <span class="at">components  =</span> <span class="fu">list</span>(</span>
+<span id="cb7-8"><a href="#cb7-8" tabindex="-1"></a>    likert5, visitor,</span>
+<span id="cb7-9"><a href="#cb7-9" tabindex="-1"></a>    intro, dmpv_1, dmpv_2, dmpv_3, dmpv_4, ts_1, ts_2, ts_3,</span>
+<span id="cb7-10"><a href="#cb7-10" tabindex="-1"></a>    visitor_type, attention, dmpv, ts, attention_check, repeat_branch</span>
+<span id="cb7-11"><a href="#cb7-11" tabindex="-1"></a>  ),</span>
+<span id="cb7-12"><a href="#cb7-12" tabindex="-1"></a>  <span class="at">analysis_plan =</span> analysis_plan</span>
+<span id="cb7-13"><a href="#cb7-13" tabindex="-1"></a>)</span>
+<span id="cb7-14"><a href="#cb7-14" tabindex="-1"></a></span>
+<span id="cb7-15"><a href="#cb7-15" tabindex="-1"></a>ts_model <span class="ot">&lt;-</span> <span class="fu">sf_model</span>(</span>
+<span id="cb7-16"><a href="#cb7-16" tabindex="-1"></a>  <span class="at">id    =</span> <span class="st">&quot;ts_cfa&quot;</span>,</span>
+<span id="cb7-17"><a href="#cb7-17" tabindex="-1"></a>  <span class="at">label =</span> <span class="st">&quot;Satisfaction measurement model&quot;</span>,</span>
+<span id="cb7-18"><a href="#cb7-18" tabindex="-1"></a>  <span class="at">type  =</span> <span class="st">&quot;cfa&quot;</span>,</span>
+<span id="cb7-19"><a href="#cb7-19" tabindex="-1"></a>  <span class="at">constructs =</span> <span class="fu">list</span>(</span>
+<span id="cb7-20"><a href="#cb7-20" tabindex="-1"></a>    <span class="fu">sf_construct</span>(<span class="st">&quot;DMPV&quot;</span>, <span class="st">&quot;Perceived value&quot;</span>, <span class="fu">c</span>(<span class="st">&quot;dmpv_1&quot;</span>, <span class="st">&quot;dmpv_2&quot;</span>, <span class="st">&quot;dmpv_3&quot;</span>, <span class="st">&quot;dmpv_4&quot;</span>)),</span>
+<span id="cb7-21"><a href="#cb7-21" tabindex="-1"></a>    <span class="fu">sf_construct</span>(<span class="st">&quot;TS&quot;</span>,   <span class="st">&quot;Tourist satisfaction&quot;</span>, <span class="fu">c</span>(<span class="st">&quot;ts_1&quot;</span>, <span class="st">&quot;ts_2&quot;</span>, <span class="st">&quot;ts_3&quot;</span>))</span>
+<span id="cb7-22"><a href="#cb7-22" tabindex="-1"></a>  )</span>
+<span id="cb7-23"><a href="#cb7-23" tabindex="-1"></a>)</span>
+<span id="cb7-24"><a href="#cb7-24" tabindex="-1"></a></span>
+<span id="cb7-25"><a href="#cb7-25" tabindex="-1"></a>instr <span class="ot">&lt;-</span> <span class="fu">add_model</span>(instr, ts_model)</span></code></pre></div>
+</div>
+<div id="validate-the-instrument" class="section level2">
+<h2>Validate the instrument</h2>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a>validation <span class="ot">&lt;-</span> <span class="fu">validate_sframe</span>(instr, <span class="at">strict =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a>validation<span class="sc">$</span>valid</span>
+<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a><span class="co">#&gt; [1] TRUE</span></span>
+<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a>validation<span class="sc">$</span>problems</span>
+<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a><span class="co">#&gt; character(0)</span></span></code></pre></div>
+<p>In production, strict validation returns the validated instrument or
+stops with a structured error.</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a>instr <span class="ot">&lt;-</span> <span class="fu">validate_sframe</span>(instr)</span>
+<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a>instr<span class="sc">$</span>meta<span class="sc">$</span>validated</span>
+<span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a><span class="co">#&gt; [1] TRUE</span></span></code></pre></div>
 </div>
 <div id="write-and-read-.sframe-files" class="section level2">
 <h2>Write and read <code>.sframe</code> files</h2>
-<p>The <code>.sframe</code> file is the portable surveyframe instrument
-file. It is JSON based, keeps validated metadata, and can be loaded by
-R, SurveyBuilder, or SurveyStudio.</p>
-<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a>path <span class="ot">&lt;-</span> <span class="fu">tempfile</span>(<span class="at">fileext =</span> <span class="st">&quot;.sframe&quot;</span>)</span>
-<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a><span class="fu">write_sframe</span>(instr, path, <span class="at">overwrite =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a></span>
-<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a>loaded <span class="ot">&lt;-</span> <span class="fu">read_sframe</span>(path)</span>
-<span id="cb7-5"><a href="#cb7-5" tabindex="-1"></a><span class="fu">inherits</span>(loaded, <span class="st">&quot;sframe&quot;</span>)</span>
-<span id="cb7-6"><a href="#cb7-6" tabindex="-1"></a><span class="co">#&gt; [1] TRUE</span></span>
-<span id="cb7-7"><a href="#cb7-7" tabindex="-1"></a>loaded<span class="sc">$</span>meta<span class="sc">$</span>title</span>
-<span id="cb7-8"><a href="#cb7-8" tabindex="-1"></a><span class="co">#&gt; [1] &quot;Service Feedback Survey&quot;</span></span></code></pre></div>
+<p>The <code>.sframe</code> file is the portable instrument file. It
+keeps the validated metadata, the analysis plan, and the model in one
+place.</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a>path <span class="ot">&lt;-</span> <span class="fu">tempfile</span>(<span class="at">fileext =</span> <span class="st">&quot;.sframe&quot;</span>)</span>
+<span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a><span class="fu">write_sframe</span>(instr, path, <span class="at">overwrite =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb10-3"><a href="#cb10-3" tabindex="-1"></a></span>
+<span id="cb10-4"><a href="#cb10-4" tabindex="-1"></a>loaded <span class="ot">&lt;-</span> <span class="fu">read_sframe</span>(path)</span>
+<span id="cb10-5"><a href="#cb10-5" tabindex="-1"></a><span class="fu">inherits</span>(loaded, <span class="st">&quot;sframe&quot;</span>)</span>
+<span id="cb10-6"><a href="#cb10-6" tabindex="-1"></a><span class="co">#&gt; [1] TRUE</span></span>
+<span id="cb10-7"><a href="#cb10-7" tabindex="-1"></a>loaded<span class="sc">$</span>meta<span class="sc">$</span>title</span>
+<span id="cb10-8"><a href="#cb10-8" tabindex="-1"></a><span class="co">#&gt; [1] &quot;Digital marketing study (teaching slice)&quot;</span></span>
+<span id="cb10-9"><a href="#cb10-9" tabindex="-1"></a><span class="fu">length</span>(loaded<span class="sc">$</span>analysis_plan)</span>
+<span id="cb10-10"><a href="#cb10-10" tabindex="-1"></a><span class="co">#&gt; [1] 2</span></span>
+<span id="cb10-11"><a href="#cb10-11" tabindex="-1"></a><span class="fu">length</span>(loaded<span class="sc">$</span>models)</span>
+<span id="cb10-12"><a href="#cb10-12" tabindex="-1"></a><span class="co">#&gt; [1] 1</span></span></code></pre></div>
 </div>
 <div id="gui-option" class="section level2">
 <h2>GUI option</h2>
-<p>The same instrument can also be edited visually.</p>
-<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a><span class="fu">launch_builder</span>()</span>
-<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a><span class="fu">launch_builder_demo</span>(<span class="at">open =</span> <span class="cn">FALSE</span>)</span></code></pre></div>
+<p>The same instrument, plan, and model can be authored in
+SurveyBuilder, which saves a <code>.sframe</code> file for use in R.</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" tabindex="-1"></a><span class="fu">launch_builder</span>()</span>
+<span id="cb11-2"><a href="#cb11-2" tabindex="-1"></a><span class="fu">launch_builder_demo</span>(<span class="at">open =</span> <span class="cn">FALSE</span>)</span></code></pre></div>
 </div>
 
 

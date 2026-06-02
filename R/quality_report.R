@@ -218,7 +218,7 @@ quality_report <- function(
     straightline_scales   = TRUE,
     missing_threshold     = 0.2
 ) {
-  stopifnot(inherits(instrument, "sframe"))
+  sframe_check_instrument(instrument)
   stopifnot(is.data.frame(data))
 
   item_ids <- vapply(instrument$items, function(i) i$id, character(1))

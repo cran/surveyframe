@@ -59,7 +59,7 @@ launch_studio <- function(
   screen <- match.arg(screen)
 
   if (!is.null(instrument)) {
-    stopifnot(inherits(instrument, "sframe"))
+    sframe_check_instrument(instrument)
   }
 
   if (!is.null(responses) && is.character(responses)) {

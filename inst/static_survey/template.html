@@ -19,6 +19,11 @@ button{font-family:inherit;cursor:pointer;border:none}
 input,textarea,select{font-family:inherit;font-size:14px}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
 
+/* Header (Fix A) */
+.sf-hdr{display:flex;align-items:center;gap:14px;max-width:var(--card-w);margin:20px auto 0;padding:0 16px 16px;border-bottom:1px solid var(--cb)}
+.sf-hdr-logo{max-height:48px;max-width:120px;object-fit:contain}
+.sf-hdr-inst{font-size:13px;font-weight:600;color:var(--t2)}
+
 /* Progress */
 .prog-bar-wrap{position:sticky;top:0;z-index:50;background:var(--cf);border-bottom:1px solid var(--cb);padding:0}
 .prog-bar-inner{height:4px;background:var(--cp);transition:width .3s ease;min-width:0}
@@ -136,6 +141,9 @@ textarea.inp-std{resize:vertical;min-height:80px}
 </head>
 <body data-endpoint="{{ENDPOINT_URL}}">
 
+<!-- Fix A: header region reads R.header for logo and institution -->
+<div id="sf-hdr" class="sf-hdr" style="display:none"></div>
+
 <div id="prog-bar-wrap" class="prog-bar-wrap" hidden>
   <div class="prog-bar-inner" id="progBar" style="width:0%"></div>
   <div class="prog-hdr">
@@ -159,6 +167,23 @@ const TY       = R.thankyou||{};
 
 // Apply theme color
 document.documentElement.style.setProperty('--cp', THEME);
+
+// Fix A: render header (logo + institution) from R.header
+(function(){
+  var hdr=R.header||{};
+  var b64=hdr.logo_base64||'';
+  var inst=hdr.institution||'';
+  if(!b64&&!inst)return;
+  // Fix E/F: use stored media type; default to image/png for backward compat
+  var mtype=hdr.logo_media_type||'image/png';
+  var el=document.getElementById('sf-hdr');
+  if(!el)return;
+  var html='';
+  if(b64)html+='<img class="sf-hdr-logo" src="data:'+mtype+';base64,'+b64+'" alt="Logo">';
+  if(inst)html+='<span class="sf-hdr-inst">'+inst.replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];})+'</span>';
+  el.innerHTML=html;
+  el.style.display='flex';
+})();
 
 // ── Lookups ────────────────────────────────────────────────────────────────
 const choiceMap={};
@@ -488,7 +513,8 @@ function prevPage(){
 // ── Submission ─────────────────────────────────────────────────────────────
 function doSubmit(){
   var submittedAt=new Date().toISOString();
-  var row={response_id:respId,started_at:startedAt,submitted_at:submittedAt};
+  // Fix C: use respondent_id to match Apps Script header and read_responses()
+  var row={respondent_id:respId,started_at:startedAt,submitted_at:submittedAt};
   SF.items.forEach(function(item){
     if(!isVisible(item.id))return;
     if(item.type==='matrix'){
