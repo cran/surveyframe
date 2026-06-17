@@ -10,6 +10,20 @@ vignette: >
 ```{r setup, include = FALSE}
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 library(surveyframe)
+library(knitr)
+```
+
+```{=html}
+<style>
+body { color: #1a1a2e; }
+h1, h2, h3 { color: #1a1a2e; }
+a { color: #16B3B1; }
+table { border-collapse: collapse; margin: 1em 0; }
+table caption { caption-side: top; font-style: italic; color: #444; padding-bottom: .3em; }
+th { border-top: 2px solid #1a1a2e; border-bottom: 1px solid #1a1a2e; padding: 6px 12px; }
+td { padding: 5px 12px; border: none; }
+tbody tr:last-child td { border-bottom: 2px solid #1a1a2e; }
+</style>
 ```
 
 Measurement quality is part of the research design. This vignette works through
@@ -34,7 +48,19 @@ demo      <- sframe_demo_data()
 instr     <- demo$instrument
 responses <- demo$responses
 
-reliability_report(responses, instr, omega = TRUE)
+rr <- reliability_report(responses, instr, omega = TRUE)
+rel_df <- do.call(rbind, lapply(rr, function(s) data.frame(
+  Scale   = paste0(s$label, " (", s$scale_id, ")"),
+  Items   = s$n_items,
+  N       = s$n,
+  Alpha   = if (!is.null(s$alpha))   sprintf("%.2f", s$alpha)   else "n/a",
+  Omega_h = if (!is.null(s$omega_h)) sprintf("%.2f", s$omega_h) else "n/a",
+  Omega_t = if (!is.null(s$omega_t)) sprintf("%.2f", s$omega_t) else "n/a",
+  stringsAsFactors = FALSE)))
+kable(rel_df, row.names = FALSE,
+      col.names = c("Scale", "Items", "N", "Alpha", "Omega h", "Omega total"),
+      align = c("l", "c", "c", "r", "r", "r"),
+      caption = "Scale reliability statistics")
 ```
 
 ## Item diagnostics
@@ -48,8 +74,9 @@ instr     <- demo$instrument
 responses <- demo$responses
 
 items <- item_report(responses, instr)
-names(items)
-items[[1]]
+first  <- items[[1]]
+kable(first$diagnostics, digits = 2,
+      caption = paste0("Item diagnostics: ", first$label, " (", first$scale_id, ")"))
 ```
 
 ## EFA readiness
@@ -82,7 +109,8 @@ published_loadings <- list(
 )
 
 validity <- validity_report(published_loadings)
-validity$reliability
+kable(validity$reliability, digits = 2,
+      caption = "Composite reliability and average variance extracted")
 ```
 
 The average variance extracted exceeds 0.5 for every construct, and the

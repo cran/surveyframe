@@ -1,3 +1,57 @@
+# surveyframe 0.3.2
+
+This release corrects the package citation, completes the S3 method surface for
+the component classes, and improves the graphical tools and the HTML report. It
+adds no new exported functions, no new statistical methods, and no new bundled
+datasets.
+
+## Citation and methods
+
+* `inst/CITATION` now reports the correct package title and reads the version
+  dynamically from the package metadata, so the citation no longer pins an old
+  version or an outdated title.
+* Added `print()`, `format()`, and `summary()` methods for the component
+  classes `sf_choices`, `sf_item`, `sf_scale`, `sf_branch`, `sf_check`, and
+  `sf_model`, so each class now has a visible, documented S3 surface.
+* `lavaan` is declared in `Suggests`. It is used only to fit the syntax produced
+  by `cfa_syntax()`. The package itself generates syntax and never requires
+  `lavaan` to be installed.
+
+## Graphical tools
+
+* SurveyBuilder exports a deployable survey in the browser through a new Export
+  survey button, and generates the Google Sheets Apps Script collector through a
+  Generate collector button. Both reuse the same templates the R functions use,
+  so the output matches `export_static_survey()` and `export_google_sheet()`.
+* The builder Analyse tab shows three distinct stages: Plan, Run preview (the
+  methods that need response data), and Report outline (analyses plus
+  measurement models). Analysis plans can be reordered by dragging.
+* The exported survey carries a "Built with surveyframe" footer, sizes a header
+  logo consistently across aspect ratios, shows a page progress indicator only
+  on multi-page surveys, and gains a mobile layout.
+* SurveyStudio opens an instrument designed in the builder, previews the exact
+  deployable survey in a frame, and analyses uploaded responses. The response
+  dashboard, with an overview, item and scale distributions, and a raw-data
+  table, is now built into the studio. A button loads the bundled sample survey
+  and 120 responses. Survey design moved entirely to the builder.
+
+## HTML report
+
+* `render_report()` renders reliably through Quarto when it is installed. A path
+  defect that made the Quarto render fail and fall back to the plain internal
+  output is fixed.
+* Reports include a response distributions section, with one chart per item and
+  one per scale, in both the Quarto output and the built-in HTML fallback.
+* Tables are formatted, wide tables scroll within the page, the table of
+  contents sits on the left, and numeric values are rounded to two decimal
+  places.
+
+## Documentation
+
+* Added the "Deploying a survey and collecting responses on free hosting"
+  vignette, covering the Apps Script collector, GitHub Pages and Blogger
+  hosting, and reading the responses back into R.
+
 # surveyframe 0.3.1
 
 This is a patch release. It fixes the static-survey to Google Sheets to R

@@ -12,7 +12,8 @@ sframe_builder_validate_draft(
   branching = list(),
   checks = list(),
   analysis_plan = list(),
-  models = list()
+  models = list(),
+  render = list()
 )
 }
 \arguments{
@@ -23,6 +24,9 @@ sframe_builder_validate_draft(
 \item{analysis_plan}{List of draft analysis-plan blocks.}
 
 \item{models}{List of draft model specifications.}
+
+\item{render}{List of rendering settings (welcome, header/logo, thankyou,
+theme) carried from the loaded instrument so previews and exports match.}
 }
 \value{
 A list with \code{valid}, \code{problems}, and \code{instrument}.

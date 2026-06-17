@@ -84,7 +84,7 @@
   ),
   surveyframe = list(
     key  = "surveyframe",
-    apa  = "Sharafuddin, M. A. (2026). *surveyframe: A survey instrument workflow for R* (Version 0.3.0) [Computer software]. https://github.com/MohammedAliSharafuddin/surveyframe",
+    apa  = "Sharafuddin, M. A. (2026). *surveyframe: Survey Instrument Workflows* (Version %s) [Computer software]. https://github.com/MohammedAliSharafuddin/surveyframe",
     use  = "all"
   )
 )
@@ -94,7 +94,13 @@ sframe_citations_for_test <- function(test) {
   matching <- Filter(function(cit) {
     "all" %in% cit$use || test %in% cit$use
   }, citations)
-  lapply(matching, function(cit) cit$apa)
+  # Inject the live package version into any citation template (the surveyframe
+  # self-citation), so the version never goes stale on a release bump.
+  ver <- tryCatch(as.character(utils::packageVersion("surveyframe")),
+                  error = function(e) "0.3.2")
+  lapply(matching, function(cit) {
+    if (grepl("%s", cit$apa, fixed = TRUE)) sprintf(cit$apa, ver) else cit$apa
+  })
 }
 
 # ---------------------------------------------------------------------------
@@ -979,6 +985,13 @@ print.sframe_analysis_results <- function(x, ...) {
 #' out <- render_results(results, instr,
 #'                       output_file = tempfile(fileext = ".html"))
 #' file.exists(out)
+# Escape HTML and render the limited markdown used in citations (*italic*) so
+# references show as italics rather than literal asterisks.
+sframe_md_em <- function(x) {
+  x <- htmltools_escape(x)
+  gsub("\\*([^*]+)\\*", "<em>\\1</em>", x)
+}
+
 render_results <- function(
     results         = NULL,
     instrument,
@@ -1019,7 +1032,7 @@ render_results <- function(
     prompt  <- r$interpretation_prompt %||% r$prompt %||% ""
     interp  <- r$interpretation %||% ""
     cits <- paste(
-      vapply(unlist(r$citations), htmltools_escape, character(1)),
+      vapply(unlist(r$citations), sframe_md_em, character(1)),
       collapse = "<br>"
     )
 
@@ -1034,20 +1047,23 @@ render_results <- function(
     # Build APA-style results table
     tbl_html <- ""
     if (!is.null(r$table) && is.data.frame(r$table)) {
-      rows <- paste(apply(r$table, 1, function(row) {
+      tbl <- r$table
+      num_cols <- vapply(tbl, is.numeric, logical(1))
+      if (any(num_cols)) tbl[num_cols] <- lapply(tbl[num_cols], function(col) round(col, 2))
+      rows <- paste(apply(tbl, 1, function(row) {
         cells <- paste(sprintf("<td>%s</td>", htmltools_escape(as.character(row))),
                       collapse = "")
         sprintf("<tr>%s</tr>", cells)
       }), collapse = "")
-      headers <- paste(sprintf("<th>%s</th>", htmltools_escape(colnames(r$table))),
+      headers <- paste(sprintf("<th>%s</th>", htmltools_escape(colnames(tbl))),
                       collapse = "")
       has_pval <- any(grepl(
         "^p$|^p\\.value$|^p_value$|^Pr\\(>",
-        colnames(r$table), ignore.case = TRUE
+        colnames(tbl), ignore.case = TRUE
       ))
       foot_html <- if (has_pval) {
         paste0(
-          '<tfoot><tr><td colspan="', ncol(r$table), '">',
+          '<tfoot><tr><td colspan="', ncol(tbl), '">',
           "* <em>p</em> &lt; .05, ** <em>p</em> &lt; .01, *** <em>p</em> &lt; .001",
           "</td></tr></tfoot>"
         )
@@ -1100,7 +1116,7 @@ render_results <- function(
     items <- paste(
       sprintf(
         '<li>%s</li>',
-        vapply(unlist(all_citations), htmltools_escape, character(1))
+        vapply(unlist(all_citations), sframe_md_em, character(1))
       ),
       collapse = "\n"
     )
@@ -1114,7 +1130,7 @@ render_results <- function(
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>%s</title>
 <style>
-  body { font-family: "Helvetica Neue", Arial, sans-serif; max-width: 860px;
+  body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; max-width: 900px;
          margin: 0 auto; padding: 32px 24px; color: #1a1a2e; line-height: 1.6; }
   h1 { font-size: 26px; border-bottom: 3px solid #1a1a2e; padding-bottom: 12px; }
   h2 { font-size: 19px; color: #1a1a2e; margin-top: 0; }
@@ -1127,9 +1143,12 @@ render_results <- function(
   .rq-number { background: #1a1a2e; color: #fff; border-radius: 20px;
                 padding: 4px 12px; font-size: 12px; font-weight: 700;
                 white-space: nowrap; margin-top: 3px; }
-  .result-box { background: #f0f4ff; border-left: 4px solid #5b8dee;
+  .result-box { background: #e6f7f7; border-left: 4px solid #16B3B1;
                  padding: 14px 18px; border-radius: 0 8px 8px 0; margin-bottom: 18px; }
-  .apa-string { font-family: "Georgia", serif; font-size: 15px; color: #1a1a2e; }
+  .sf-foot { text-align: center; font-size: 12px; color: #94a3b8; margin-top: 40px;
+              padding-top: 16px; border-top: 1px solid #eee; }
+  .sf-foot a { color: #16B3B1; font-weight: 600; text-decoration: none; }
+  .apa-string { font-size: 15px; color: #1a1a2e; }
   .effect-badge { display: inline-block; margin-left: 10px; padding: 2px 9px;
                    border-radius: 12px; font-size: 12px; font-weight: 600; }
   .effect-negligible { background: #f5f5f5; color: #666; }
@@ -1146,7 +1165,8 @@ render_results <- function(
   .citations-section { border-top: 1px solid #eee; padding-top: 12px; }
   .citation-list { font-size: 13px; color: #555; line-height: 1.8; }
   .results-table { width: 100%%; border-collapse: collapse; font-size: 14px;
-                    margin: 12px 0; font-family: Georgia, serif; }
+                    display: block; overflow-x: auto; max-width: 100%%;
+                    margin: 12px 0; }
   .results-table thead tr { border-top: 2px solid #000; border-bottom: 1px solid #000; }
   .results-table tbody tr:last-child td { border-bottom: 2px solid #000; }
   .results-table th { background: none; color: #000; padding: 6px 12px;
@@ -1171,6 +1191,7 @@ render_results <- function(
 </div>
 %s
 %s
+<div class="sf-foot">Built with <a href="https://cran.r-project.org/package=surveyframe" target="_blank" rel="noopener">surveyframe</a></div>
 </body>
 </html>',
     report_title_html, report_title_html,

@@ -5,9 +5,14 @@ format:
   html:
     toc: true
     toc-depth: 3
+    toc-location: left
     embed-resources: true
     theme: cosmo
     code-fold: true
+    grid:
+      sidebar-width: 280px
+      body-width: 900px
+      margin-width: 160px
 params:
   instrument_path:     ""
   data_path:           ""
@@ -34,6 +39,36 @@ library(knitr)
 instrument <- readRDS(params$instrument_path)
 has_data   <- nzchar(params$data_path) && file.exists(params$data_path)
 responses  <- if (has_data) readRDS(params$data_path) else NULL
+```
+
+```{=html}
+<style>
+/* Brand look shared with render_results() and the static survey: system font,
+   navy headings, teal accent. */
+body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+       color: #1a1a2e; }
+h1, h2, h3, h4, h5, #title-block-header .title { color: #1a1a2e; }
+a { color: #16B3B1; }
+#TOC .active, .sidebar-item .active { color: #16B3B1; }
+
+/* Academic (APA) tables: horizontal rules only, no shading, no vertical lines.
+   Each table is its own horizontal-scroll container so wide tables stay within
+   the content column. Overrides the theme's default table styling. */
+table { display: block; overflow-x: auto; max-width: 100%;
+        border-collapse: collapse; margin: 14px 0; }
+th, td { padding: 7px 14px; vertical-align: top;
+         border: none !important; background: none !important; }
+thead th { border-top: 2px solid #1a1a2e !important;
+           border-bottom: 1px solid #1a1a2e !important; font-weight: 700; }
+tbody tr { background: none !important; }
+tbody tr:last-child td { border-bottom: 2px solid #1a1a2e !important; }
+.cell-output-display, .cell-output { overflow-x: auto; max-width: 100%; }
+
+/* Shared footer */
+.sf-foot { text-align: center; font-size: 12px; color: #94a3b8;
+           margin-top: 48px; padding-top: 16px; border-top: 1px solid #eee; }
+.sf-foot a { color: #16B3B1; font-weight: 600; text-decoration: none; }
+</style>
 ```
 
 ---
@@ -135,14 +170,15 @@ kable(sl_df, align=c("l","c","r"))
 ## Missing Data {#sec-missing .unnumbered}
 
 ```{r missing-data, eval=params$include_missing && has_data}
+#| output: asis
 mr <- tryCatch(missing_data_report(responses, instrument), error = function(e) NULL)
 if (is.null(mr)) {
   cat("Missing-data diagnostics could not be computed from the supplied data.\n\n")
 } else {
-  print(kable(mr$item_missing, caption = "Item-wise missingness"))
-  print(kable(mr$patterns, caption = "Missing-data patterns"))
+  print(kable(mr$item_missing, digits = 2, caption = "Item-wise missingness"))
+  print(kable(mr$patterns, digits = 2, caption = "Missing-data patterns"))
   if (!is.null(mr$scale_missing_rules) && nrow(mr$scale_missing_rules) > 0)
-    print(kable(mr$scale_missing_rules, caption = "Scale missing rules"))
+    print(kable(mr$scale_missing_rules, digits = 2, caption = "Scale missing rules"))
 }
 ```
 
@@ -151,11 +187,69 @@ if (is.null(mr)) {
 ## Descriptives {#sec-descriptives .unnumbered}
 
 ```{r descriptives, eval=params$include_descriptives && has_data}
+#| output: asis
 dr <- tryCatch(descriptives_report(responses), error = function(e) NULL)
 if (is.null(dr)) {
   cat("Descriptive statistics could not be computed from the supplied data.\n\n")
 } else {
-  print(kable(dr$table, caption = "Descriptive statistics"))
+  print(kable(dr$table, digits = 2, caption = "Descriptive statistics"))
+}
+```
+
+---
+
+## Response distributions {#sec-distributions .unnumbered}
+
+```{r distributions, eval=params$include_descriptives && has_data, fig.width=7, fig.height=3.2, fig.align='left'}
+#| output: asis
+THEME <- instrument$render$theme %||% "#16B3B1"
+if (!grepl("^#[0-9A-Fa-f]{3,6}$", THEME)) THEME <- "#16B3B1"
+
+choice_by <- function(id) {
+  for (c in instrument$choices %||% list()) if (identical(c$id, id)) return(c)
+  NULL
+}
+q_items <- Filter(function(i) !(i$type %in% c("section_break", "text_block")),
+                  instrument$items %||% list())
+
+# One bar chart per categorical item, one histogram per numeric item
+for (item in q_items) {
+  if (!item$id %in% names(responses)) next
+  col <- responses[[item$id]]
+  t <- item$type
+  if (t %in% c("likert", "single_choice", "multiple_choice")) {
+    cs <- choice_by(item$choice_set %||% "")
+    if (!is.null(cs)) {
+      freq <- table(factor(col, levels = as.character(cs$values)))
+      names(freq) <- cs$labels
+    } else freq <- table(col)
+    if (!sum(freq)) next
+    cat(sprintf("\n**%s**\n\n", item$label %||% item$id))
+    op <- par(mar = c(4, 11, 1, 1)); barplot(freq, horiz = TRUE, las = 1,
+      col = THEME, border = NA, xlab = "Frequency", cex.names = .8); par(op)
+    cat("\n\n")
+  } else if (t %in% c("numeric", "slider", "rating")) {
+    num <- suppressWarnings(as.numeric(col)); num <- num[!is.na(num)]
+    if (!length(num)) next
+    cat(sprintf("\n**%s**\n\n", item$label %||% item$id))
+    op <- par(mar = c(4, 4, 1, 1)); hist(num, col = THEME, border = "white",
+      main = NULL, xlab = item$label, ylab = "Count", las = 1); par(op)
+    cat("\n\n")
+  }
+}
+
+# One histogram per scale score
+for (sc in instrument$scales %||% list()) {
+  cols <- intersect(sc$items, names(responses))
+  if (!length(cols)) next
+  nums <- lapply(responses[cols], function(x) suppressWarnings(as.numeric(x)))
+  scores <- rowMeans(do.call(cbind, nums), na.rm = TRUE); scores <- scores[!is.na(scores)]
+  if (!length(scores)) next
+  cat(sprintf("\n**%s (scale score)**\n\n", sc$label %||% sc$id))
+  op <- par(mar = c(4, 4, 1, 1)); hist(scores, col = THEME, border = "white",
+    main = NULL, xlab = paste0(sc$label %||% sc$id, " score"), ylab = "Count", las = 1)
+  abline(v = mean(scores), col = "#dc2626", lwd = 2, lty = 2); par(op)
+  cat("\n\n")
 }
 ```
 
@@ -164,6 +258,7 @@ if (is.null(dr)) {
 ## Reliability {#sec-reliability .unnumbered}
 
 ```{r reliability, eval=params$include_reliability && has_data}
+#| output: asis
 rr <- tryCatch(reliability_report(responses, instrument), error = function(e) NULL)
 if (is.null(rr)) {
   cat("Reliability statistics could not be computed from the supplied data.\n\n")
@@ -173,9 +268,9 @@ if (is.null(rr)) {
   rel_df <- do.call(rbind, lapply(rr, function(s)
     data.frame(Scale=paste0(s$label," (",s$scale_id,")"),
       N_items=s$n_items, N=s$n,
-      Alpha   = if (!is.null(s$alpha))   sprintf("%.3f", s$alpha)   else "n/a",
-      Omega_h = if (!is.null(s$omega_h)) sprintf("%.3f", s$omega_h) else "n/a",
-      Omega_t = if (!is.null(s$omega_t)) sprintf("%.3f", s$omega_t) else "n/a",
+      Alpha   = if (!is.null(s$alpha))   sprintf("%.2f", s$alpha)   else "n/a",
+      Omega_h = if (!is.null(s$omega_h)) sprintf("%.2f", s$omega_h) else "n/a",
+      Omega_t = if (!is.null(s$omega_t)) sprintf("%.2f", s$omega_t) else "n/a",
       stringsAsFactors=FALSE)))
   print(kable(rel_df,
     col.names=c("Scale","Items","N","Alpha","Omega h","Omega total"),
@@ -215,7 +310,7 @@ if (!has_data) {
         if (!is.null(r$effect_label))
           cat(sprintf("**Effect size:** %s\n\n", r$effect_label))
         if (!is.null(r$table) && is.data.frame(r$table))
-          print(kable(r$table))
+          print(kable(r$table, digits = 2))
         if (nzchar(r$interpretation %||% ""))
           cat(sprintf("\n**Interpretation:** %s\n\n", r$interpretation))
         if (length(r$citations) > 0) {
@@ -272,4 +367,8 @@ cat("```r\nlibrary(surveyframe)\n")
 cat("instr     <- read_sframe(\"your_instrument.sframe\")\n")
 cat("responses <- read_responses(\"your_responses.csv\", instr)\n")
 cat("render_report(instr, data = responses, output_file = \"report.html\")\n```\n\n")
+```
+
+```{=html}
+<div class="sf-foot">Built with <a href="https://cran.r-project.org/package=surveyframe" target="_blank" rel="noopener">surveyframe</a></div>
 ```

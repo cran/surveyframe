@@ -874,9 +874,9 @@ sframe_run_kendall <- function(data, roles) {
 }
 
 sframe_run_partial_correlation <- function(data, roles, options = list()) {
-  x <- sframe_role_values(roles, "x")[1]
-  y <- sframe_role_values(roles, "y")[1]
-  controls <- sframe_role_values(roles, c("controls", "covariates"))
+  x <- sframe_role_values(roles, c("x", "predictor"))[1]
+  y <- sframe_role_values(roles, c("y", "outcome", "dependent"))[1]
+  controls <- sframe_role_values(roles, c("controls", "covariates", "control"))
   method <- options$method %||% "pearson"
   vars <- c(x, y, controls)
   err <- sframe_require_columns(data, vars, "Partial correlation")
@@ -1180,9 +1180,9 @@ sframe_boot_indirect <- function(df, predictor, mediator, outcome, nboot = 1000L
 }
 
 sframe_run_mediation <- function(data, roles, options = list()) {
-  predictor <- sframe_role_values(roles, "predictor")[1]
+  predictor <- sframe_role_values(roles, c("predictor", "x"))[1]
   mediator <- sframe_role_values(roles, "mediator")[1]
-  outcome <- sframe_role_values(roles, c("outcome", "dependent"))[1]
+  outcome <- sframe_role_values(roles, c("outcome", "dependent", "y"))[1]
   vars <- c(outcome, predictor, mediator)
   err <- sframe_require_columns(data, vars, "Mediation")
   if (!is.null(err)) return(list(test = "mediation", error = err))

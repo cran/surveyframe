@@ -356,8 +356,14 @@ checks</a></li>
 <li><a href="#score-and-describe" id="toc-score-and-describe">Score and
 describe</a></li>
 <li><a href="#reliability" id="toc-reliability">Reliability</a></li>
+<li><a href="#efa-readiness" id="toc-efa-readiness">EFA
+readiness</a></li>
+<li><a href="#construct-validity" id="toc-construct-validity">Construct
+validity</a></li>
 <li><a href="#analysis-plan" id="toc-analysis-plan">Analysis
 plan</a></li>
+<li><a href="#assumption-checks" id="toc-assumption-checks">Assumption
+checks</a></li>
 <li><a href="#run-the-analysis-plan" id="toc-run-the-analysis-plan">Run
 the analysis plan</a></li>
 <li><a href="#results-report" id="toc-results-report">Results
@@ -368,6 +374,16 @@ workflow</a></li>
 </ul>
 </div>
 
+<style>
+body { color: #1a1a2e; }
+h1, h2, h3 { color: #1a1a2e; }
+a { color: #16B3B1; }
+table { border-collapse: collapse; margin: 1em 0; }
+table caption { caption-side: top; font-style: italic; color: #444; padding-bottom: .3em; }
+th { border-top: 2px solid #1a1a2e; border-bottom: 1px solid #1a1a2e; padding: 6px 12px; }
+td { padding: 5px 12px; border: none; }
+tbody tr:last-child td { border-bottom: 2px solid #1a1a2e; }
+</style>
 <div id="about-this-vignette" class="section level2">
 <h2>About this vignette</h2>
 <p>This vignette follows a single instrument through the complete
@@ -412,7 +428,7 @@ their own context.</p>
 <p><code>stem_items()</code> builds items that share a common sentence
 stem. Each item is the stem followed by a unique completion.
 <code>solo_items()</code> builds standalone items. Neither function is
-exported; both use only <code>sf_item()</code>.</p>
+exported, and both use only <code>sf_item()</code>.</p>
 <div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a>stem_items <span class="ot">&lt;-</span> <span class="cf">function</span>(ids, stem, completions, scale_id) {</span>
 <span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a>  <span class="fu">Map</span>(</span>
 <span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a>    <span class="cf">function</span>(id, comp)</span>
@@ -719,8 +735,8 @@ GitHub Pages, shared by email, or opened directly from disk.</p>
 <span id="cb17-3"><a href="#cb17-3" tabindex="-1"></a>  <span class="at">output_path =</span> <span class="fu">file.path</span>(<span class="fu">tempdir</span>(), <span class="st">&quot;tourism_services_survey.html&quot;</span>),</span>
 <span id="cb17-4"><a href="#cb17-4" tabindex="-1"></a>  <span class="at">open        =</span> <span class="cn">FALSE</span></span>
 <span id="cb17-5"><a href="#cb17-5" tabindex="-1"></a>)</span>
-<span id="cb17-6"><a href="#cb17-6" tabindex="-1"></a><span class="co">#&gt; Static survey written to</span></span>
-<span id="cb17-7"><a href="#cb17-7" tabindex="-1"></a><span class="co">#&gt; &#39;/tmp/claude-1000/RtmpQvwDxe/tourism_services_survey.html&#39; (52.3 KB).</span></span>
+<span id="cb17-6"><a href="#cb17-6" tabindex="-1"></a><span class="co">#&gt; Static survey written to &#39;/tmp/RtmpHjpgBm/tourism_services_survey.html&#39; (53.8</span></span>
+<span id="cb17-7"><a href="#cb17-7" tabindex="-1"></a><span class="co">#&gt; KB).</span></span>
 <span id="cb17-8"><a href="#cb17-8" tabindex="-1"></a><span class="fu">file.exists</span>(html_path)</span>
 <span id="cb17-9"><a href="#cb17-9" tabindex="-1"></a><span class="co">#&gt; [1] TRUE</span></span></code></pre></div>
 </div>
@@ -734,7 +750,7 @@ correct column headers, including one column per matrix sub-item.</p>
 <span id="cb18-3"><a href="#cb18-3" tabindex="-1"></a>  <span class="at">sheet_url  =</span> <span class="st">&quot;https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID&quot;</span>,</span>
 <span id="cb18-4"><a href="#cb18-4" tabindex="-1"></a>  <span class="at">output_dir =</span> <span class="fu">tempdir</span>()</span>
 <span id="cb18-5"><a href="#cb18-5" tabindex="-1"></a>)</span>
-<span id="cb18-6"><a href="#cb18-6" tabindex="-1"></a><span class="co">#&gt; Apps Script written to: /tmp/claude-1000/RtmpQvwDxe/surveyframe_collector.gs</span></span>
+<span id="cb18-6"><a href="#cb18-6" tabindex="-1"></a><span class="co">#&gt; Apps Script written to: /tmp/RtmpHjpgBm/surveyframe_collector.gs</span></span>
 <span id="cb18-7"><a href="#cb18-7" tabindex="-1"></a><span class="co">#&gt; Follow the setup instructions inside the file to deploy it.</span></span>
 <span id="cb18-8"><a href="#cb18-8" tabindex="-1"></a><span class="fu">file.exists</span>(script_path)</span>
 <span id="cb18-9"><a href="#cb18-9" tabindex="-1"></a><span class="co">#&gt; [1] TRUE</span></span></code></pre></div>
@@ -871,93 +887,667 @@ onward to use real data.</p>
 <div id="quality-checks" class="section level2">
 <h2>Quality checks</h2>
 <div class="sourceCode" id="cb21"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" tabindex="-1"></a>qr <span class="ot">&lt;-</span> <span class="fu">quality_report</span>(responses, study, <span class="at">respondent_id =</span> <span class="st">&quot;respondent_id&quot;</span>)</span>
-<span id="cb21-2"><a href="#cb21-2" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">&quot;Respondents:&quot;</span>, qr<span class="sc">$</span>summary<span class="sc">$</span>n_respondents, <span class="st">&quot;</span><span class="sc">\n</span><span class="st">&quot;</span>)</span>
-<span id="cb21-3"><a href="#cb21-3" tabindex="-1"></a><span class="co">#&gt; Respondents: 60</span></span>
-<span id="cb21-4"><a href="#cb21-4" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">&quot;Items:      &quot;</span>, qr<span class="sc">$</span>summary<span class="sc">$</span>n_items,       <span class="st">&quot;</span><span class="sc">\n</span><span class="st">&quot;</span>)</span>
-<span id="cb21-5"><a href="#cb21-5" tabindex="-1"></a><span class="co">#&gt; Items:       55</span></span>
-<span id="cb21-6"><a href="#cb21-6" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">&quot;Flagged:    &quot;</span>, qr<span class="sc">$</span>summary<span class="sc">$</span>n_flagged,      <span class="st">&quot;</span><span class="sc">\n</span><span class="st">&quot;</span>)</span>
-<span id="cb21-7"><a href="#cb21-7" tabindex="-1"></a><span class="co">#&gt; Flagged:     59</span></span></code></pre></div>
+<span id="cb21-2"><a href="#cb21-2" tabindex="-1"></a>quality_summary <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb21-3"><a href="#cb21-3" tabindex="-1"></a>  <span class="at">Metric =</span> <span class="fu">c</span>(<span class="st">&quot;Respondents&quot;</span>, <span class="st">&quot;Items&quot;</span>, <span class="st">&quot;Flagged for review&quot;</span>, <span class="st">&quot;Flag rate&quot;</span>),</span>
+<span id="cb21-4"><a href="#cb21-4" tabindex="-1"></a>  <span class="at">Value  =</span> <span class="fu">c</span>(qr<span class="sc">$</span>summary<span class="sc">$</span>n_respondents, qr<span class="sc">$</span>summary<span class="sc">$</span>n_items, qr<span class="sc">$</span>summary<span class="sc">$</span>n_flagged,</span>
+<span id="cb21-5"><a href="#cb21-5" tabindex="-1"></a>             <span class="fu">sprintf</span>(<span class="st">&quot;%.1f%%&quot;</span>, <span class="dv">100</span> <span class="sc">*</span> qr<span class="sc">$</span>summary<span class="sc">$</span>flag_rate)),</span>
+<span id="cb21-6"><a href="#cb21-6" tabindex="-1"></a>  <span class="at">stringsAsFactors =</span> <span class="cn">FALSE</span></span>
+<span id="cb21-7"><a href="#cb21-7" tabindex="-1"></a>)</span>
+<span id="cb21-8"><a href="#cb21-8" tabindex="-1"></a><span class="fu">kable</span>(quality_summary, <span class="at">align =</span> <span class="fu">c</span>(<span class="st">&quot;l&quot;</span>, <span class="st">&quot;r&quot;</span>), <span class="at">caption =</span> <span class="st">&quot;Quality screening summary&quot;</span>)</span></code></pre></div>
+<table>
+<caption>Quality screening summary</caption>
+<thead>
+<tr class="header">
+<th align="left">Metric</th>
+<th align="right">Value</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">Respondents</td>
+<td align="right">60</td>
+</tr>
+<tr class="even">
+<td align="left">Items</td>
+<td align="right">55</td>
+</tr>
+<tr class="odd">
+<td align="left">Flagged for review</td>
+<td align="right">59</td>
+</tr>
+<tr class="even">
+<td align="left">Flag rate</td>
+<td align="right">98.3%</td>
+</tr>
+</tbody>
+</table>
 <p>The flagged count reflects straight-lining detection on simulated
 data, where random responses often repeat values. With real survey
 responses the flagging rate is typically much lower. The flag marks
 respondents for researcher review, not automatic exclusion.</p>
 <div class="sourceCode" id="cb22"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" tabindex="-1"></a>mr <span class="ot">&lt;-</span> <span class="fu">missing_data_report</span>(responses, study)</span>
-<span id="cb22-2"><a href="#cb22-2" tabindex="-1"></a><span class="co"># mr is a list; $item_missing, $respondent_missing, $mcar, and $apa are the</span></span>
-<span id="cb22-3"><a href="#cb22-3" tabindex="-1"></a><span class="co"># main slots. Check names(mr) to see all available components.</span></span>
-<span id="cb22-4"><a href="#cb22-4" tabindex="-1"></a><span class="fu">names</span>(mr)</span>
-<span id="cb22-5"><a href="#cb22-5" tabindex="-1"></a><span class="co">#&gt; [1] &quot;method&quot;              &quot;item_missing&quot;        &quot;respondent_missing&quot; </span></span>
-<span id="cb22-6"><a href="#cb22-6" tabindex="-1"></a><span class="co">#&gt; [4] &quot;patterns&quot;            &quot;deletion&quot;            &quot;scale_missing_rules&quot;</span></span>
-<span id="cb22-7"><a href="#cb22-7" tabindex="-1"></a><span class="co">#&gt; [7] &quot;mcar&quot;                &quot;apa&quot;                 &quot;prompt&quot;</span></span>
-<span id="cb22-8"><a href="#cb22-8" tabindex="-1"></a>items_miss <span class="ot">&lt;-</span> mr<span class="sc">$</span>item_missing</span>
-<span id="cb22-9"><a href="#cb22-9" tabindex="-1"></a>items_miss[items_miss<span class="sc">$</span>missing_pct <span class="sc">&gt;</span> <span class="dv">0</span>, <span class="fu">c</span>(<span class="st">&quot;variable&quot;</span>, <span class="st">&quot;missing_n&quot;</span>, <span class="st">&quot;missing_pct&quot;</span>)]</span>
-<span id="cb22-10"><a href="#cb22-10" tabindex="-1"></a><span class="co">#&gt; [1] variable    missing_n   missing_pct</span></span>
-<span id="cb22-11"><a href="#cb22-11" tabindex="-1"></a><span class="co">#&gt; &lt;0 rows&gt; (or 0-length row.names)</span></span>
-<span id="cb22-12"><a href="#cb22-12" tabindex="-1"></a><span class="co"># $apa provides a plain-language summary suitable for a methods section.</span></span>
-<span id="cb22-13"><a href="#cb22-13" tabindex="-1"></a><span class="fu">cat</span>(mr<span class="sc">$</span>apa, <span class="st">&quot;</span><span class="sc">\n</span><span class="st">&quot;</span>)</span>
-<span id="cb22-14"><a href="#cb22-14" tabindex="-1"></a><span class="co">#&gt; Missing-data diagnostics were computed for 55 variable(s).</span></span></code></pre></div>
+<span id="cb22-2"><a href="#cb22-2" tabindex="-1"></a><span class="co"># mr holds $item_missing, $respondent_missing, $patterns, $mcar, and $apa.</span></span>
+<span id="cb22-3"><a href="#cb22-3" tabindex="-1"></a><span class="fu">kable</span>(mr<span class="sc">$</span>item_missing, <span class="at">digits =</span> <span class="dv">2</span>,</span>
+<span id="cb22-4"><a href="#cb22-4" tabindex="-1"></a>      <span class="at">col.names =</span> <span class="fu">c</span>(<span class="st">&quot;Variable&quot;</span>, <span class="st">&quot;Missing (n)&quot;</span>, <span class="st">&quot;Missing (%)&quot;</span>, <span class="st">&quot;Valid (n)&quot;</span>),</span>
+<span id="cb22-5"><a href="#cb22-5" tabindex="-1"></a>      <span class="at">caption =</span> <span class="st">&quot;Item-level missingness&quot;</span>)</span></code></pre></div>
+<table>
+<caption>Item-level missingness</caption>
+<thead>
+<tr class="header">
+<th align="left"></th>
+<th align="left">Variable</th>
+<th align="right">Missing (n)</th>
+<th align="right">Missing (%)</th>
+<th align="right">Valid (n)</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">dmre_1</td>
+<td align="left">dmre_1</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">60</td>
+</tr>
+<tr class="even">
+<td align="left">dmre_2</td>
+<td align="left">dmre_2</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">60</td>
+</tr>
+<tr class="odd">
+<td align="left">dmre_3</td>
+<td align="left">dmre_3</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">60</td>
+</tr>
+<tr class="even">
+<td align="left">dmre_4</td>
+<td align="left">dmre_4</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">60</td>
+</tr>
+<tr class="odd">
+<td align="left">dmre_5</td>
+<td align="left">dmre_5</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">60</td>
+</tr>
+<tr class="even">
+<td align="left">dmau_1</td>
+<td align="left">dmau_1</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">60</td>
+</tr>
+<tr class="odd">
+<td align="left">dmau_2</td>
+<td align="left">dmau_2</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">60</td>
+</tr>
+<tr class="even">
+<td align="left">dmau_3</td>
+<td align="left">dmau_3</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">60</td>
+</tr>
+<tr class="odd">
+<td align="left">dmau_4</td>
+<td align="left">dmau_4</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">60</td>
+</tr>
+<tr class="even">
+<td align="left">dmau_5</td>
+<td align="left">dmau_5</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">60</td>
+</tr>
+<tr class="odd">
+<td align="left">dmeu_1</td>
+<td align="left">dmeu_1</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">60</td>
+</tr>
+<tr class="even">
+<td align="left">dmeu_2</td>
+<td align="left">dmeu_2</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">60</td>
+</tr>
+<tr class="odd">
+<td align="left">dmeu_3</td>
+<td align="left">dmeu_3</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">60</td>
+</tr>
+<tr class="even">
+<td align="left">dmeu_4</td>
+<td align="left">dmeu_4</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">60</td>
+</tr>
+<tr class="odd">
+<td align="left">dmeu_5</td>
+<td align="left">dmeu_5</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">60</td>
+</tr>
+<tr class="even">
+<td align="left">dmpv_1</td>
+<td align="left">dmpv_1</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">60</td>
+</tr>
+<tr class="odd">
+<td align="left">dmpv_2</td>
+<td align="left">dmpv_2</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">60</td>
+</tr>
+<tr class="even">
+<td align="left">dmpv_3</td>
+<td align="left">dmpv_3</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">60</td>
+</tr>
+<tr class="odd">
+<td align="left">dmpv_4</td>
+<td align="left">dmpv_4</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">60</td>
+</tr>
+<tr class="even">
+<td align="left">dmpv_5</td>
+<td align="left">dmpv_5</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">60</td>
+</tr>
+<tr class="odd">
+<td align="left">dsqa_1</td>
+<td align="left">dsqa_1</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">60</td>
+</tr>
+<tr class="even">
+<td align="left">dsqa_2</td>
+<td align="left">dsqa_2</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">60</td>
+</tr>
+<tr class="odd">
+<td align="left">dsqa_3</td>
+<td align="left">dsqa_3</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">60</td>
+</tr>
+<tr class="even">
+<td align="left">dsqa_4</td>
+<td align="left">dsqa_4</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">60</td>
+</tr>
+<tr class="odd">
+<td align="left">dsqt_1</td>
+<td align="left">dsqt_1</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">60</td>
+</tr>
+<tr class="even">
+<td align="left">dsqt_2</td>
+<td align="left">dsqt_2</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">60</td>
+</tr>
+<tr class="odd">
+<td align="left">dsqt_3</td>
+<td align="left">dsqt_3</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">60</td>
+</tr>
+<tr class="even">
+<td align="left">dsqt_4</td>
+<td align="left">dsqt_4</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">60</td>
+</tr>
+<tr class="odd">
+<td align="left">dsqt_5</td>
+<td align="left">dsqt_5</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">60</td>
+</tr>
+<tr class="even">
+<td align="left">dsuq_1</td>
+<td align="left">dsuq_1</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">60</td>
+</tr>
+<tr class="odd">
+<td align="left">dsuq_2</td>
+<td align="left">dsuq_2</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">60</td>
+</tr>
+<tr class="even">
+<td align="left">dsuq_3</td>
+<td align="left">dsuq_3</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">60</td>
+</tr>
+<tr class="odd">
+<td align="left">dsuq_4</td>
+<td align="left">dsuq_4</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">60</td>
+</tr>
+<tr class="even">
+<td align="left">dsuq_5</td>
+<td align="left">dsuq_5</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">60</td>
+</tr>
+<tr class="odd">
+<td align="left">dsuq_6</td>
+<td align="left">dsuq_6</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">60</td>
+</tr>
+<tr class="even">
+<td align="left">dsuq_7</td>
+<td align="left">dsuq_7</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">60</td>
+</tr>
+<tr class="odd">
+<td align="left">dsuq_8</td>
+<td align="left">dsuq_8</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">60</td>
+</tr>
+<tr class="even">
+<td align="left">dsuq_9</td>
+<td align="left">dsuq_9</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">60</td>
+</tr>
+<tr class="odd">
+<td align="left">dsuq_10</td>
+<td align="left">dsuq_10</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">60</td>
+</tr>
+<tr class="even">
+<td align="left">dsuq_11</td>
+<td align="left">dsuq_11</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">60</td>
+</tr>
+<tr class="odd">
+<td align="left">ts_1</td>
+<td align="left">ts_1</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">60</td>
+</tr>
+<tr class="even">
+<td align="left">ts_2</td>
+<td align="left">ts_2</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">60</td>
+</tr>
+<tr class="odd">
+<td align="left">ts_3</td>
+<td align="left">ts_3</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">60</td>
+</tr>
+<tr class="even">
+<td align="left">bi_1</td>
+<td align="left">bi_1</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">60</td>
+</tr>
+<tr class="odd">
+<td align="left">bi_2</td>
+<td align="left">bi_2</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">60</td>
+</tr>
+<tr class="even">
+<td align="left">bi_3</td>
+<td align="left">bi_3</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">60</td>
+</tr>
+<tr class="odd">
+<td align="left">gender</td>
+<td align="left">gender</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">60</td>
+</tr>
+<tr class="even">
+<td align="left">age_band</td>
+<td align="left">age_band</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">60</td>
+</tr>
+<tr class="odd">
+<td align="left">visitor_type</td>
+<td align="left">visitor_type</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">60</td>
+</tr>
+<tr class="even">
+<td align="left">freq_visit</td>
+<td align="left">freq_visit</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">60</td>
+</tr>
+<tr class="odd">
+<td align="left">nationality</td>
+<td align="left">nationality</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">60</td>
+</tr>
+<tr class="even">
+<td align="left">education</td>
+<td align="left">education</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">60</td>
+</tr>
+<tr class="odd">
+<td align="left">profession</td>
+<td align="left">profession</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">60</td>
+</tr>
+<tr class="even">
+<td align="left">companion</td>
+<td align="left">companion</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">60</td>
+</tr>
+<tr class="odd">
+<td align="left">group_size</td>
+<td align="left">group_size</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">60</td>
+</tr>
+</tbody>
+</table>
+<div class="sourceCode" id="cb23"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" tabindex="-1"></a><span class="co"># $apa provides a plain-language summary suitable for a methods section.</span></span>
+<span id="cb23-2"><a href="#cb23-2" tabindex="-1"></a><span class="fu">cat</span>(mr<span class="sc">$</span>apa, <span class="st">&quot;</span><span class="sc">\n</span><span class="st">&quot;</span>)</span>
+<span id="cb23-3"><a href="#cb23-3" tabindex="-1"></a><span class="co">#&gt; Missing-data diagnostics were computed for 55 variable(s).</span></span></code></pre></div>
 <hr />
 </div>
 <div id="score-and-describe" class="section level2">
 <h2>Score and describe</h2>
 <p><code>score_scales()</code> appends one column per scale to the data
-frame, using the scoring rules stored in the instrument.</p>
-<div class="sourceCode" id="cb23"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" tabindex="-1"></a>scored <span class="ot">&lt;-</span> <span class="fu">score_scales</span>(responses, study)</span>
-<span id="cb23-2"><a href="#cb23-2" tabindex="-1"></a></span>
-<span id="cb23-3"><a href="#cb23-3" tabindex="-1"></a>scale_cols <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;DMRE&quot;</span>, <span class="st">&quot;DMAU&quot;</span>, <span class="st">&quot;DMEU&quot;</span>, <span class="st">&quot;DMPV&quot;</span>,</span>
-<span id="cb23-4"><a href="#cb23-4" tabindex="-1"></a>                <span class="st">&quot;DSQA&quot;</span>, <span class="st">&quot;DSQT&quot;</span>, <span class="st">&quot;DSUQ&quot;</span>, <span class="st">&quot;TS&quot;</span>, <span class="st">&quot;BI&quot;</span>)</span>
-<span id="cb23-5"><a href="#cb23-5" tabindex="-1"></a><span class="fu">round</span>(<span class="fu">colMeans</span>(scored[, scale_cols], <span class="at">na.rm =</span> <span class="cn">TRUE</span>), <span class="dv">2</span>)</span>
-<span id="cb23-6"><a href="#cb23-6" tabindex="-1"></a><span class="co">#&gt; DMRE DMAU DMEU DMPV DSQA DSQT DSUQ   TS   BI </span></span>
-<span id="cb23-7"><a href="#cb23-7" tabindex="-1"></a><span class="co">#&gt; 3.79 3.84 3.76 3.62 3.63 3.52 3.59 4.32 3.79</span></span></code></pre></div>
+frame, using the scoring rules stored in the instrument. If a column
+with the same name as a scale already exists in the data frame,
+<code>score_scales()</code> skips that scale so pre-scored data is never
+overwritten.</p>
+<div class="sourceCode" id="cb24"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" tabindex="-1"></a>scored <span class="ot">&lt;-</span> <span class="fu">score_scales</span>(responses, study)</span>
+<span id="cb24-2"><a href="#cb24-2" tabindex="-1"></a></span>
+<span id="cb24-3"><a href="#cb24-3" tabindex="-1"></a>scale_cols <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;DMRE&quot;</span>, <span class="st">&quot;DMAU&quot;</span>, <span class="st">&quot;DMEU&quot;</span>, <span class="st">&quot;DMPV&quot;</span>,</span>
+<span id="cb24-4"><a href="#cb24-4" tabindex="-1"></a>                <span class="st">&quot;DSQA&quot;</span>, <span class="st">&quot;DSQT&quot;</span>, <span class="st">&quot;DSUQ&quot;</span>, <span class="st">&quot;TS&quot;</span>, <span class="st">&quot;BI&quot;</span>)</span>
+<span id="cb24-5"><a href="#cb24-5" tabindex="-1"></a></span>
+<span id="cb24-6"><a href="#cb24-6" tabindex="-1"></a><span class="co"># Display scale means and standard deviations as a table</span></span>
+<span id="cb24-7"><a href="#cb24-7" tabindex="-1"></a>scale_summary <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb24-8"><a href="#cb24-8" tabindex="-1"></a>  <span class="at">Scale =</span> scale_cols,</span>
+<span id="cb24-9"><a href="#cb24-9" tabindex="-1"></a>  <span class="at">Mean  =</span> <span class="fu">round</span>(<span class="fu">colMeans</span>(scored[, scale_cols], <span class="at">na.rm =</span> <span class="cn">TRUE</span>), <span class="dv">2</span>),</span>
+<span id="cb24-10"><a href="#cb24-10" tabindex="-1"></a>  <span class="at">SD    =</span> <span class="fu">round</span>(<span class="fu">apply</span>(scored[, scale_cols], <span class="dv">2</span>, sd, <span class="at">na.rm =</span> <span class="cn">TRUE</span>), <span class="dv">2</span>),</span>
+<span id="cb24-11"><a href="#cb24-11" tabindex="-1"></a>  <span class="at">row.names =</span> <span class="cn">NULL</span></span>
+<span id="cb24-12"><a href="#cb24-12" tabindex="-1"></a>)</span>
+<span id="cb24-13"><a href="#cb24-13" tabindex="-1"></a><span class="fu">kable</span>(scale_summary, <span class="at">digits =</span> <span class="dv">2</span>, <span class="at">caption =</span> <span class="st">&quot;Scale score summary&quot;</span>)</span></code></pre></div>
+<table>
+<caption>Scale score summary</caption>
+<thead>
+<tr class="header">
+<th align="left">Scale</th>
+<th align="right">Mean</th>
+<th align="right">SD</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">DMRE</td>
+<td align="right">3.79</td>
+<td align="right">0.63</td>
+</tr>
+<tr class="even">
+<td align="left">DMAU</td>
+<td align="right">3.84</td>
+<td align="right">0.57</td>
+</tr>
+<tr class="odd">
+<td align="left">DMEU</td>
+<td align="right">3.76</td>
+<td align="right">0.58</td>
+</tr>
+<tr class="even">
+<td align="left">DMPV</td>
+<td align="right">3.62</td>
+<td align="right">0.58</td>
+</tr>
+<tr class="odd">
+<td align="left">DSQA</td>
+<td align="right">3.63</td>
+<td align="right">0.63</td>
+</tr>
+<tr class="even">
+<td align="left">DSQT</td>
+<td align="right">3.52</td>
+<td align="right">0.74</td>
+</tr>
+<tr class="odd">
+<td align="left">DSUQ</td>
+<td align="right">3.59</td>
+<td align="right">0.68</td>
+</tr>
+<tr class="even">
+<td align="left">TS</td>
+<td align="right">4.32</td>
+<td align="right">0.61</td>
+</tr>
+<tr class="odd">
+<td align="left">BI</td>
+<td align="right">3.79</td>
+<td align="right">0.71</td>
+</tr>
+</tbody>
+</table>
+<div class="sourceCode" id="cb25"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" tabindex="-1"></a>op <span class="ot">&lt;-</span> <span class="fu">par</span>(<span class="at">mfrow =</span> <span class="fu">c</span>(<span class="dv">3</span>, <span class="dv">3</span>), <span class="at">mar =</span> <span class="fu">c</span>(<span class="dv">4</span>, <span class="dv">3</span>, <span class="dv">2</span>, <span class="dv">1</span>))</span>
+<span id="cb25-2"><a href="#cb25-2" tabindex="-1"></a><span class="cf">for</span> (s <span class="cf">in</span> scale_cols) {</span>
+<span id="cb25-3"><a href="#cb25-3" tabindex="-1"></a>  v <span class="ot">&lt;-</span> scored[[s]]; v <span class="ot">&lt;-</span> v[<span class="fu">is.finite</span>(v)]</span>
+<span id="cb25-4"><a href="#cb25-4" tabindex="-1"></a>  <span class="fu">hist</span>(v, <span class="at">col =</span> <span class="st">&quot;#16B3B1&quot;</span>, <span class="at">border =</span> <span class="st">&quot;white&quot;</span>, <span class="at">main =</span> s, <span class="at">xlab =</span> <span class="st">&quot;Score&quot;</span>, <span class="at">ylab =</span> <span class="st">&quot;&quot;</span>)</span>
+<span id="cb25-5"><a href="#cb25-5" tabindex="-1"></a>}</span></code></pre></div>
+<p><img role="img" aria-label src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAqAAAAGACAIAAAD9Gkc5AAAACXBIWXMAAA7DAAAOwwHHb6hkAABVIElEQVR42uydd1wT9xvHE1BxVeuoA1yoyJK93aiouBARXCCoLY4qxYmKq65atYoDBSfixIV7ggIKioAiIuJmyN4jkHWX3yUMQWp/SHIQ8PN+5Q9JyMP5vU+e9/dG7hgCAAAAADQ4GBgCAAAAAIIHAAAAAAQPAAAAAAgeAAAAABA8AAAAACB4AAAAAIIH1aM48XlQQAmBD59EvEktIkpfIXPePg4UPh0cm0WWPFMYFy58JiAoKplL/cxJelH2XtGzwRFv04tLfvWrl0TlH7/NITHg4Dsgs2KDA8vyExz68lMut+wldlKkKGFBzxOLS54hMmIein7xyfvcCkHjp0VTvxgYHldY/iSR+fpRQGDIm+zSZ8i8D6GBAUHRqXwMOair/lnWJImihGeBFXIt4KW+DAoIfPox/wdsnxC8ePA//NO/MaMCMq3UbA9HFwnj5z9PQUb4lNywA0mi1LJvzepQ8szIg2mkgPjsPrQJoxLMpj2nnYoj/u0lhozCPH8ORhx8B+ybs9ozK+arifxg17tpVBqJxH2mooTJdP39AadSlGUV/3hYPg8QcB4t6iVLvbPVhJOZZQ2SfW1GG6ZMh9m3S/PIfbxMSZYhN947FzNQUIf9U9Qki978bdSY0WTAzo8lcwUy22usHENWxeUpF4IHNQloI2W7PWfOnvHas8qyTzMms6n+5pe8LwFl/uJwQ5hY/qtNeiVhrhhQ2R7W20+fpTjluWJ4ZxmGbM9Fj7ilL/WaslP0kgifK+GpBEYcfK/gma1MV56k8nXw7zkDfpFlyMjb+maS5YJnNDbZ/k645V14aerPzCqC5wYv7S0rSnFrqzNlW+wQPJCa/lmlSXIheAhesgH9EiZe7DZjKkxKSx9zRQFlysl37SSnvT6KJyBzT1m2aKLQTV62UkAb6Wyg0lyysfTg964yjOY254tKXmpssOU1dnoCMQX/xcRk3jWHzjLMlmOOpfFFgpeV7yrfuLXN+XwqueGr1OTkuyk0riR4kbplOurp95BltrE5V3qMCIIH0tI/qzZJPgQPwdMVUAEveqNuI0aTIXsTikUBbWFuZd6ixVivTJIbvLiXnIrFhL6NviF4IuXomJ+YjTTXRvJKX1L5zft++dGlykdGAfhuwQsErItTWjFl5Of6FYsE31jLcoKyXJ9lT7hk+hHz5i3HTBrVrKLguaHLlSm/O1y6ubC7LLPdtEt5JAQPpKp/VmmSEDwET19AybRDI+UYjTTWPmeJAtrSZss6A7ku8+8LO6pc26mbXLQrB5TZrKOShqamZl/1Hm3lmnYx2xiY9a+HlyofGQWgJoLnPnRWlGU0s/IpKBG83qotU9vKDXX/LGyncobrN1s1r5A0bqiLMrXlPuVCHuv2r51lZDrYXS2A4IE09c+qTRKCh+DpCygRv3sw1Tj1N8cUlQR06tlrczrLGW97ccWhvdyQnTfWfS34nxQNh5iaDhls0PvnRjKttBffyfrXw0s+156l4xA8EE/wnLuOnWSYP03zLSoV/IZbuwbLtbe/ErXdRE5+7vXTNhUEzwtbodqI+dOEE1Qi8y/bUpU6zbrBguCBFPXPqk0Sgofg6Qto0d05XWSYrSb55HNKA3ox8Yh581aWa5bpyPVeEhTxp/a3dtEX+//eXZbZdsa1YgGOwQM6BE/E7R5EbR9pro3klAp+U2TQ4l5yWkvWWrVubn404XwFwQuPyjdiMJt26K2hqanRp1NzJkNG/rfbRcKyM9szmT/bXWWXCj7Qqbsso6nlqQIMOajd/vkvx+Df7+jXmNHYcGtsyfNkqucIKvTqrhE8CB6IE1CyMPKfYe2oVI4+kkKUBfRSYeRaTblOCvJyra19sqO+LXjeyw061GtjvbJJCB5IXvC8pKuOyo0YskpLgjlEmeCjc3ysf2oi36WTHKX9ggtfBM+LcFVvxJRT0B5iKmKIXrfmTJmu8/yKS89nlu05+2oKFV0i68EiDerHXouDcQwJ1HL//JcmWXBpWlsm86fB26KEl24ofu857hcZZnPzI2n4HjyoUUCZLTora2j0VercXPiN4Ra6q5+wSr/HKQwou+i6g/DbyI2Nt71l/4fg+TGb9amwD933mSjde9+8Ux/h4flSdKYc/gjfg+8VPKNxW8W+mhpqPdo2oVIo23nSqURCUC74V5y324wbU7Ftb3+9qPiL4HnPVvdtxGg28mBy2dHR7FMTWzFluy98wBEQSedsezRhMGSatlGQb9eUSr1sp7GH3yOdoLb75781yaLwTSatmQxmo5Ydunb8qTH1r+aaSwN+yONHELx4EMnnFpqZljJs5JjJ8zaefl7ydWFexK5Jw0zNNwZxiJQLTmamQy23P+XyPxz/dbjpiOXXc0gBmXF58QjT4b95l2qbLPRfN3ro0LErb2USope+wmzuqXgchQffATd024Sh5fkxt7Rftu9evOgCX2S67yIqfI4nPvG5T3dYDjU1W3g+meAE/jnKdNjUfVE8IuHMPDNTs/lnEssjR6Zdcqbe4nD4jTCvvPSwU1ucZ9mMHWtl77T+6KMkbL2DOuif/94kSdb723td59tOGGMx1dFl5+VX+T/o2SEQPAAAAADBAwAAAACCBwAAAEA9EzyflZ6UXojTagAAAID6LXhexM4p6+4Lv/lKFoRuN1fs2ENFuZvSkNX3cP0VAAAAoP4KnnN/fm8bnyJq2/3dzsG6fwQIz3Xkxh21MlwUiLuYAgAAAPVe8NwnLv0db5VInYjbbTb+UDquUAkAAADUX8F3VzT91dl189a5AzXtL6USguLEeysHGLqG8zCQAAAAQD0VvICd+SEy+K7v6YNum1ctcjn5iscN3mg1+0DEt68h8OnTp/DKBAQExMXFYdwBAAAAqRG8CD4rK7uwwll1/KLcfPa3DP/HH3/oVUZBQcHGxqbhjWNMfl5kbg5NDxYfX1YAyCdAPpFP+gRP5jzcNLxHx249uvQw/v1CvGjQeC83GI1w/1zt8+g3bty4evXqhjeOev73Oly7QtMjPDsbLQAgnwD5RD7pEjz/wy5Tg+UheaSAl3ztd32jVcGFJASPgALkE/kEyGc9Fzw3eInBzCtFJT8Uhboamax5WsiF4BFQgHwCGti0aZN1ZQYPHkw9iXwin5IXPJl7Y7aq3q/u10LjhbfZZT3dMKCv5ZZdszQheAQUIJ9A0jx58uRcZSZPnuzk5IR8Ip+SF7zwCnYxlzbPm/q7d8mNn8nssMPOE/vr2p1IgeARUIB8AppB/0Q+6RM8AoqAAuQT+YTgkU8IHgFFQKWb+Pj4r67TEBQUlJCQgHwinxA88gnBI6AIaD1mwYIFX12noUuXLg3yOg3IJwSPfELwEmb37t2OldHX17ezs0NAEVA0UOQTIJ/IZz0WvJ+fn2dlLCws5s+fj4AioGigyCdAPpHPeix4BBQBRQNFPgHyiXxC8AgoAooGinyCUpYvXz68Mr169bK2tkY+kU8IHgEFyGdt5PNFbi6SQwexsbH3KjNz5sylS5cin+ifEDwCCpDP2shnAY/3tqCAvruB5XK5SCbyif4JwSOgAPms7XwW8njmj4Loq38zJQXJRD7RPyF4BBQgnxC8NEJmx4ZEp5Vc1JubEnRw9e+/zVvp7hfHRj7RPyF4BBRInISEhK+uZDd//nwXFxfkE4KXOJz783vb+Ajvxsl65KKrOuHPo2dP71s4SNf+UhqJ/on+CcEjoECyUDr/6kp28vLyEydORD4hePoEzw1ZqjvFJ09kdf6rTQOsvLNJ9E/0z3oo+PHjxzMqw2Qyx40bh4AioNIJGigET5/ge43ZH5fH4cftHz/VO0Mkde7TVcZTffKRT/RPbMEjoAD5hODrKfzX3vMnmvXXUlbsJt+6hfLyJ1xetMe4PtrOfrnYRY/+CcEjoAD5hOAbAGRxblp2EUmkvAh5l/8fdp81a1bPyrRt29bS0hL5RP+E4BHQHxVecW5OVk4+m0A+Ifj6TGZm5ofKLF68eMWKFV/9Wh6Pa+B/j74HlyDQP38kwaOBIqDSCD/Jf6ttv14d2nfu1lOxh0KHdgoao/848bKARD4h+Aa8hymHy6Vv8KkHB4L/MQSPBoqASi9E0lELrSmeYamc8rwWfPL7c4Tx8mAO8gnB1/388+3RKZrd5L+mu7VXCiFWPiF49E8JCB4NFAGVZrjBSwxnXSuq/CSZ6jluwpEMfA0JgpcKxyefmKg4/SKLXxFC3A0kCB79UwKCRwNFQKWawqClepqTNhy/HfIi5u27t9HPgq54Lh2lNe7gRz4moBC8VEBm3dqyN7Tml9aH4NE/6RI8fQ2USxKBGen0PfgkiYD+CPDSnp7YMG/yaNP+xkbGA80mzFy+9/YH1rdXfkZGRnVOYoLgIXgpAYJH/6RN8N/fQENCQs5VZvLkyQsXLkRAEVBpYPbs2V99DalNmzZVv4ZETRDjWCz6Hrx6PgGF4CF4ac5ncnExBE8LW7duta5M3759bW1tEVAIHg20weQTgkc+pTyfq15GTXocQtPjaXbWDyp4BBSCrz2ItCdnD3pW4dD1VywS+YTg6x82NjZtKtOsWbOql/pGPpFPSQgeDbThCv56SvKe9+9oerzMy62NLJP5MZfWmHVu1tdm5ZoKrD8Wmo98ooHWQ4qLi7Mrs2rVKldXV+QT+aRB8PW2geIku/+LfVgofcvvFfeptvLMi9owcIYvu8bvh+DRQLGLHvn8IQVfbxso9Se2xL7eGPOKpgdBkhC8dAhewM+OS8gj0UDRQCF45BP5ZPwIDZT6E11vXKOvPo9mwcexWBA8GigaKEA+kU96BV8fA1rfBU8FdPe7t0teRNL0yONxIXg0UKltoHdTU6F25BOCh+AbrOBpDWhqcTEEjwYqtflMKS5OZ7Ppuw5BPo+HfCKfEDwED8E3KMFnZWVV50p2aKDIJwSPfELwX+Pi4jK8Mr169bKxsYHg0UClAQcHh6pXsrOwsEADRT4heOQTgv8/vHr16l5lqJZKbSRB8GigaKBooMjnf0PNNRmVYTKZuNANBI9d9BA8GigED8Ejn8gn7fl8kJ4OwUPwaKBooP/+4KKBIp8QfH3OZ3ReHn13Q00qLoLgIXg00Hqcz3g671ZHQvDIp3j9DYKvp/mE4CF4NFDkE/lEPv8rn/s/vKfvXhUE8gnBo4GigSKfyCfyiXwinxA8AooGinwin8gn8gnBVxtu8qPDKx3GmxrraGpo6fY3s1mw7VJMPomAIqBS0UCRT+QT+UQ+kc+aCJ7M93PS1rPdfj7geezH+Pi499GPbx9fO1Z7tPs7/jfekpOTU/VKYatWrfrq1/J4XAP/e/Q9qD/R/8F9+urzSdIi+BF99Vl8/sywp/TVz2Czl0a9oK/+xc+JtdA9kU/kE/lEPpHPGgqe+2ix4ezrxV+lNvXguAlHMr4xCbW3t//qSmEdOnSYNWuWAACJbx4hnwD5BKBmgidSvK00J7g9TCgsm3DycmJvug4zWfmEI95CBAcHh9OJn59fva7v7+8fFhZGX/0HDx48ffqUvvrU+s3Ly6M7ysgn8ol8Ip/IZ42PwROpD3fNHqqm0L5dR3kF+Y7tO/Uyslp5PpYl1rcks7OzGzdurEcnsrKyurq69NWXk5PT0NCgr37Lli1VVVXpq9+mTZvevXvTV5/a7FiyZAn9s1XkE/lEPpFP5LOmJ9mV71jisovYPMlc/YAKKDVAtH6wmjZtWlxcTF/9Hj16fPpE43k6xsbGjx8/pq/+hAkTfH196as/b968/fv31+J+KeQT+UQ+kU/ks9a/JoeAIqD1C+QT+UQ+kU8IHgFFQNFAkU/kE/lEPiF4BBQBRQNFPpFP5BP5hOARUDRQ5BP5RD6RT+SzPgk+Pz+/U6dOtP4J6gPA4XDoq6+kpJSUlERf/YEDB0ZERNBX39ra+saNG/TVd3JyOnz4cD1toMgn8ol8Ip/1NJ8MachoTk4O6tdh/by8PILOWz4XFhZyuVxBvQX5QT6RT9Svj/lkCAAAAADQ4IDgAQAAAAgeAAAAABA8AAAAACB4AAAAAEDwAAAAAIDgAQAAAAieNojkmytGqPXo1UdJx/KvoKyKd1TiBCxQbN66XXshCvYXWTWqz3172nGAqrKqat9Bv52MrXR1BrLg+QE7E3VVFe0xa/3Savi9RbLw+f6pBsp9VFW0Riy99rlSlaILU9u0+Fm0/L+oLQ4Q59IQZNY918mbgit/+ZHMCNpsqaeqomJovTM0V6ybUf1rfYksP5F8wKxly7aiKh37b3nBq/Aa//ON5SM1VZXV+806FlNESuMHAvlEPpFP5LOh5LO2BV90d07vAZujigRkbvByPdWlFYaIzPG2NFwbyRNr3HPPT1Odei6VEPATj4xTnHap4MtrvJebDLWcA/NJTuxOU5W5d2r0ASASD4zUXnifSgf79d8D+ywMrLCK+R/+MR2xL1ECVzwg0nxnKsq1s7/OrvgsO8hZvd/mKDZZGLpKT3t1BE/C9SWz/NxQF93JPgX/unIu2SqP9vzIJ7NuOqqbun3gS1//RD6RT+QT+Www+axlwRPJ55wcPF+Lloxz+9ceE0/nVQjQBuNxhzPEmlgRGQ+PHn+SQ4o+Co5KY4+ll5cjEvYO03AJFQaKSHIfobYkpCbXBuLH33Y/F8URfZ5OT+xuf6244gx6oeaMK+Jfs5n4fNZ2hPNSi24OlQLEe75Gd9CO98Kx471Yr9//7zd8idaX0PIXXZiutfjRv40tx29ubwtv0UYH5/7vSmOPZkjdNhLyiXwin8hnw8lnXR2DJ1kxHuNVRx+K+zLfYd+cLa+oO0hHQ0XFcLJbScpqOAl66j7TwkCp/+rgvC9FeGErtYbvTRD9PfZlW/mpl9g1Xvhs/60zzDVVzHdHV1id1Ax6fMc+Rv20+6qoD/zV62VRDePz6aj1qHVPs32nd68cIM7t2d2tzxaK/lT6oTF9nAK5Eq0vmeWnprED5dVNDDXUlTWGL7r0qcIy5p207DnXT7Tjih+zxcRoY7QUbiIhn8gn8ol8NpR81oXgeakPd03VURmxzj+14u6MosgzO44/zSap9R/grKXu8rjGV4cmcz9GBJxbOUzd5tSXgzy8yLX6ZnsTywLabcZVds3/B5nvwvy95ptozrv15VAOmRV8dNeF6EJSwEu+MEN54PaazBC5sfvGm295XixgVw2o/zwlGx9WWUDVFgdzJVpfIssvIBLvurvf/EjFkP3eY2xvC6/k8jVQeM5GqUJA+/8VK50NFPlEPpFP5LNB5LPWBc95e8S6r/E876gqM0yS4BNk+broOfZo5vfPQflvru65UjqwxZemda2QQiLF01xnZThPtKPrwMjSvU3fCyvSx+NuyTSWTPEYVSkl5Jc7DhT6WMvb1eATwI/datRWQVVDU7Nv95/l2vTQcbxQPgr86I3GQ3d9Ikr2xhmW7m2SXH1JLH9JFbIsq/uGV9yTxw10UrU6KfpEcwIWKlt4Z0vhaUzIJ/KJfCKfDSWftSx4MuPUJM1Z1yqd/MlnZaXlFJP86E1GWs4BedQMNC9kpaHxhqganATBj/nLWNM5IF9YJMBZ23hLNK+svoD/fucQgxVPWQL+pwPm2n8E1Gj4uY8WqQ3YFFVEDX/qRTs184PUlJZXkJWexxZwgpzLXkq/9quOuUecOKdbVJghltYX8MJW6Q/d+ZYrYEduMDHe+FKs02mq1pfI8pO5F6f3HuPxkUolN87LSsP2ArWuOXkZmQXUM4W3HLUmeicRZN4DJ52RHomE1LVP5BP5RD6Rz4aTz1oWPMdvrkKz1h3lS+k55zqbSNgzpNXE04UCsiDc3W6wgb6+ju5QR6+XrBpNn8ncxzus9FTUtLS1Bzscel5ICsrrC0jWCw+7QUYmRibj19/PqGF6iNQ7riO1VPpqaemaLfB5yxGdvKHVxfEuR0BkPNg8sb+evp62gfkS34/i3X/yS4DK6wvI7OCtVv2MjA37T3ELyyclXV8yy89PvLp8tLGega620cT1finUMHPuzemq4So8aZVIueUyytjYxGjIb16xxQLpA/lEPpFP5LPh5BMXugEAAAAaIBA8AAAAAMEDAAAAAIIHAAAAAAQPAAAAAAgeAAAAABA8AAAAAMEDAAAAAIIHAAAAAAQPAAAAAAgeAAAAABA8AAAAAMFjCAAAAAAIHgAAAAAQPAAAAAAgeAAAAABA8AAAAACA4GsHsvD9/ZPuO7btPHg5IpWD8QDIJwDIJwTfANKZfXuBhuq4lfu8vD03ORgoj/F8y8eoAOQTAOQTgq/nsC9P7zDhRC4p+oH/evc4i71vqISS+bF3ju7ZfehyRBpXNEl96+e1Z+f+s48S2KJ3vTjvHfLppa/H5RgeO/7hGfd/dh298zafxHgC5BMgn8gnBC8V8CI36MobLzh450VKEVGe2ohNg7QnrPM8snWKpuaigJyXO4aojli275DbvIEqE47GE2Sut6WSgcWsdccCAvaO0R674sAxj9XjNfqvDy3CiALkEyCfyCcELxVwkx4edJ012kCxo7zGqLnuIVkk65qD8pRzOdR8kswLOeh27eQ8pdGHUwnRFHWLicH6KG6ut0WHSWdzSO5DZ5VB6/zCnz17FuG/bmDv3x9gPAHyCZBP5BOCr3tIVsq7xNIdTJyMZydm9e0288rrvWa6q5/xyn4n74Sl0oIHJWePFF2Yojj7NpuagWouD+UKd1DJ689Y+2cpWy/FYkgB8gmQT+QTgq97+NEbDQ3Wv+CW/lh857ceIzzenp+mZOubJ4xtYdA/Ll6ec/qMOZIm/JEf+1c/3bXPqRnoRO2VYTwB7/kaAzP3BOHklEj32+Xmn4EhBcgnQD6RTwheCiDiT09VVjJfsuvwsUM7V4xXV3G4mEoUhbga61hvPnZil72u7tKgnMhtg1TNV3p6uTsNVrU4Eic8hlQSUAERd9RCdcCCPccPuY5SG+r2GmeQAuQTIJ/IJwQPAAAAAAgeAAAAgOABAAAAAMEDAAAAAIIHAAAAAAQPAAAAAAgeAAAAgOABAAAAAMEDAAAAAIIHAAAAAAQPAAAAAAi+bmDfnNWeyfgCs4n8YNe7aYRAQCTuM20ifEqm6+8ltz/if/inf2PhM7KKfzzkUu+9NqNNxfcyZNvoL76ZnHzYvDmzkc6Gl6W3UOJFrtVsxPxp/PEMEuMNJJVPAVn08pCtxs+yZeFrrT5l//NCUcbIrJCdNuqtS19iNu02zOVKHLdiXc6jRb2ol5mtJpzMRCxBjSlvimXItFKzPRwtupc7kXpnlWmXpsyyGCoMXn49qeQK8+z35xcPli97SbaN1vR9T4U3ouM8+L2rDONrGutvhuBBjRsos5XpypNnz546+PecAb/IMmTkbX0zyXLBMxqbbH8njGXhpak/M78WfOl7Tx/bOde4nQxDVnn5448HhjVjyA3aE0eIUv7JbaAcs+Xoo2lopEBy+eTHbjdpymjcfczaoxcundn7x+BOsowmWusjeQJe7N6h1MxTtqOxw5p/3LY4jerVjMmQU18SVFCeQG7w0t4i/TNbW53JRjCBeIJvpGy358zZM157Vln2acZkNtXfTG3eFFyf2VmG2Vr/t91nfS8e3WSj1pzJbG9zLpMks+/OV2rMYDbvM8b5L7cdrnYG7ahUtx9z+BOfSIu46nP27Nkze2yVGzFklaa7naZ+Onf3FQQPatxAZTrMvl1yi2Iy75oDFcqWY46l8UWCl5XvKt+4tc35fGpLPHyVmpx8N4XGlQT/5b3cR4t6yjLkRngmf9wzqCmzxTgv4bYRmek1roVMM+pZAqMNJJdP1gWbFoxGGmuel+woIj6f/m2A8UCny5n5N2ZRv9LMZHNUcWkPTj41qQP1puEeCaUZ5D5epiQr01FPv4css43NuRwYHogl+CYDdn4syRYvdpuxHGXmpY+Lov7UbsRobnWmoDTKIZvNTfpN2Pmc/WYHNTWV6WJ7Kb0keCQrbI0O1WsVFwYUVyrb2GTbux/6nnIQvIQbqEDAujilFVNGfq5fsUjwjbUsJyjL9Vn2hEumHzFv3nLMpFHNviX40OXKlODND2fw3u0wacJsN92XinbhFbv2zGZD9yfA70CS+SwMWUJthMt27D9n+6m74R9zyn5BtJOT+dOEkxU2zEU75JktxnuXPCdKqkxHh0s3F3aXZbabdikPhgeSEbyAF71RtxGjyZC98alHR7dgMlsoW672vPwwJqWwVNVE0oFhcoxGaqvCeeVVyNTDo5ozZFVcnnIheAiezgbKfeisKMtoZuVTUCJ4vVVbpraVG+r+udh/noKc4frNVs0r76L/ecy2ewEBD26f+XO0ggyjUd/Vz3gCfsxm/cYyXeffZ3MDnLrLNh205xP8DiSaTxbx+dpikw5NSg9jyjTrqDV+5YV3xXknLJoyZIVT0i9ViOQDw4VZ3vyKL/K7izK15T7lQh7r9q+dZWQ62F0twEgDyQieTDs0kvK3xtrnXNbzfRP7tCw9pM5s1Fpx4Mw9jzO5YStUGzHkxnpVPDTECVjQjZqWTvNlQ/AQPJ0NlHPXsZMoaUWlgt9wa9dgufb2V6K2m8jJz71+2qb5N0+yY7bWW3xbdAIU78V6rUaN1FY+CV+r2ahJv3/e8zHUQKL5LOmE7PSYIN8j21fMHqXWphGDIaf95xOfKS2ZMgrz/Mvfwebw3203Ke/CPGGDpTbxT2SRgvzLtlT5TrNusDDUQCKCJ+J3D24iPC0uRtTz+AVxYbdPu29wmmwiPN1OpsOU0wF/6lCb+Kb7Ekvfwedw+OwbDu0q5hyCh+BpaaBE3O5B1PxTc20kp1TwmyKDFveS01qy1qp1c/OjCee/EnzpCVBnfS7ceBiTxi6rKzxg36ixwbz5/eSaGG17A78DyebzeXrk1RPHT/q/L/M4O3SFOrVhNNIjeLtJE4asyrLHwuOZ7Je7RygPWuI8vBVTpst8ofRFyWQwm3boraGpqdGnU3Oq68r/drsIYw0kIfiiu3O6yDBbTfLJiQs8edz7Unh6+aa9t8XPTFlF57u+MzvIMFuPPSo8LYlIuzlPS336CjuVRoympu5lRzIheAiehgbKS7rqKDp5c0kwhygTfHSOj/VPTeS7dJKjtF9w4SvBV9y6qgj38VIlWdkmTRo1KZvLAiC5fLIzT1j8xJTpbO0dJ3qJyLg6S3jK3LSLeQkHR7WmJp76S24kson0OwvURd9GaqS8LIRSPi/CVb0RU05Be4ipiCF63ZozZbrO8yvGYANxBU8WRv4zrJ0Ms+XoIymckl3xeq6Pc0X74otjtg1sxqQa6quCwEW9GzEadbXc/zyXX/zK3byDcDc+s83YY58JAQQPwUu6gTIat1Xsq6mh1qOt8IimbOdJpxIJQbngX3HebjNuTAWwvf31ouLqCl7ACXJSlKX6qvafUTyMM5B0PsnCYFedlkwGs3lHFT0DrW6tZBnMnwzWPWFREn9/fFJ34Vc8ZZu179S+Wcn34VroLXuQSfKere7biNFs5MGyL3WQ2acmtmLKdl/4gIPRBjUUPLNFZ2UNjb5KnZsLL67QQne1MIZEnPdEBWELbNND20BPuUMzJiX1yWeojXQyJ2CVgfArx8wmrTt3bl1yHolsF8ujb9gQPAQvSbih2yYMNS3FzNzSftm+e/GijRky3XfRCNPhjic+8blPd1gONTVbeD6Z4AT+Ocp02NR9QmlzQ/4aN3So5fan3H/vzY+3Thg6bPr+aPgdSD6fwojmvfLdvsjWcuRws1GWDsvcbrwpLDtviZ8RfmrL/CljR44aa+O4+vCNi+tNew/cEl4Qf2aemanZ/DOJ5Sd9kmmXnKmcOxx+g9EG3w2RfG6hWVlAh40cM3nextPPy0+f4yY9OrLG0XqM2TCzsZPnrfcKSSnrlSTr4519yx0mjhppPtHOecf5W4dnaqjNOFe2CV9S1uz3s59/6LOTIXgAQLWmChwuBgFILySXi00hCB4AAACA4AEAAAAAwQMAAAAAggcAAAAABA/Af0EQRNnJt0RmzL3zp8/djUrDiWEAAAgegPoM5/783jY+wuupEXHHJ/VWMrWb4zjJWG3krhdsDA4AAIIHoN4LnvdstcHwfXGir78WBTob2F7CnVAAABA8APVf8FEbhs26WnJpdP7bbUMmHMvCzUwBABA8kE7eFhRE5ubQ9MjlNoQD1dzHq3UVuqvq9B8xzlRVYdDO13wi2X+juZq5B+60K3myORwxU5dUjNvTAOQTggcCgfmjoA7XrtD0uJmS0lDGiSzOTXr3PPju5SuhyQQv5tyO4+H/sfl+//59z8ps3bo1MDAQefu/+CQmiJm6Na+iMYwA+YTgAQRfPXgZL/18Lz94lVl23xMy7/X9hx++dZ8zNzc3x8oYGBjY2dkhb2igAPmE4CUDhyC84+Poe/DJen8MFoL///Dfeo7pqTLcboalfi/DJf6ZwpXOe7nBaIR79e83sXHjxtWrV6M/ooEC5BOClww5XC599qIe1AQCgm/wgudFrjce7ZkkXNWc90csNSYcTyQgeDRQgHxC8PSwf//+r3aBWlpaenh4QPAQvOQFH7bKyOpERsnOGiLR20rbyusTG4JHAwXIJwRPB7dv3/7qJCYLC4t58+ZB8BC85OG82DZIUc9m6b7AVGp9EylX5uhpjZ02pKcZBI8GCpBPCJ5+/rWBQvAQvEQgixKCfTy8HqaWrG8y59XlPa7OO/2zSbHyCdBA64T4+PjwygQFBSUkJGBkkE8IHoL/Ab8mR0s+ARponbBgwQK9ynTp0sXGxgYjg3xC8LUq+HnPIiY9DqHpUcznQ/AQPBooQD6RTwi+DgSv53+PvuUv5PEgeDrIysr6UJnFixevWLEC/RENFIJHPiF4CB6Cr8c4ODj0rEybNm0sLCzQH9FAIXjkE4KH4CF4NFA0UAge+RTC4vPFvAL8x8JC5BOCh+AheAgegkc+pYuInGwxUzEt9AnyWZeC5+V9eh50+8rFi77X7oXEpBWTEggoBA/Bo4FC8ACCh+DrTvBkzsO/Rit30xg8fvKMmTMdbCeNMlFW1Hc8+4ErZkAheAgeDRSCBxA8BF9ngue/3jpo0KbIworb7GTG3fn9HK4UihdQugXPheAheAgegkc+IXgI/lvwwl1NrLzTK++T58X+PdT6VK54VwqjW/DUn3iYkRGYkU7Tg4Tg0UAheAhe0iQkJHx1Jbv58+e7uLhA8Min5AUv4L8/PklFxWyWyxa3/QcPH3TfuWHR1H5q/V0fVN/vdSb4rjeu0VefR5IQPAQPwUPwkoXS+VdXspOXl584cSIEj3zSIHgKsuBjkM+Bv/9c5bLcZc2mPcdvvUzn/cev37lzRxpuNgPBQ/AQPASPfELwELwk2bdv31e3izUwMHBwcIDgIXhpwN7eHhe6QQOF4CF4CJ7GgELwEHydgEvVooFC8BA8BC+C/+70oulTq2C36W621J9kB8FD8NhFD8FLBbzi3JysnHw20eDyCcHX7y344s93l+q1Hbbhtn8FHjz7zMYWPAQPwUPwEPx/biEl+W+17derQ/vO3Xoq9lDo0E5BY/QfJ14WkA0mnxB8fd9FT8Tvt55/g13jvwfBQ/D0bh3RcKVFgAYqPkTSUQutKZ5hqZxy4Rd88vtzhPHyYA4ED8FLh+Bp2UKC4CF4CUDblRYBGqj4cIOXGM66VvRVZlM9x004kkE2kHxC8BA8BA/B07MDlLYrLQI0UAlQGLRUT3PShuO3Q17EvH33NvpZ0BXPpaO0xh38yMcWPAQPwUPwEPx/7Zyn7UqLAA1UMhFNe3piw7zJo037GxsZDzSbMHP53tsfWN8OZ0ZGRv36lgcED8FD8BA8TZvwdF1pEaCB1gmzZ8+uep0GS0tLCB75hOAh+B/vJLvvvNKim5vbVxdi0tfXt7Ozg1rQQKUT7KJHPiF4CB5fk6sW9+/fr3op5QULFkjtAsezWEteRIrzuJ2a+jo/X8wij7My0UC/GyLtydmDnlU4dP0VCyfZQfAQPAQPwWMLScx1ve1N7L20VDGLeMd/QgP9/t1L+TGX1ph1btbXZuWaCqw/FpoPwUuf4NfHvILgIXgIXmqg7UqLEDwELyF4URsGzvCV8HVEIHg6BH89JTmPx41jscR55HK5dbtG6BX8q1ev7lXGwcFh8eLFEDwETwc0XWkRgqdD8D6JiT/gLiJ+dlxCHlnjt0PwtSb4W6kpHh/ei1lk59s3DVnwK1asGF6ZXr162djYQPAQPD3QcqVFCJ4OwVMN9Fjcpz63b4rz2P/hPQ4hQfAQPHbRQ/A4Bo8GKl2CbwANFPmE4CF4CB6CRwOF4CF45BOCh+AheAgeDRSC/+EFn5WVhSvZQfAQPAQPwdeEgICA+vU9eAj+hxK8g4ND1SvZURGF4CF4CB6Ch+D/D7t27ap6JTtbW1sIHoLHHiYIXvx87nn3FoKH4CF4NFAIHoJHPhua4IMzM3O4HDG/TJ/P40HwEDwEjwYKwSOf9Tuf0xuW4J9kZf0V+1rMIsfiPkHwEHzNH7H5+VA7BA/B19N8Uv1HzG3Ez0VFUpLPza9jivh88Td5IXgIHoIvfaQWF697FW0WFEjT41pyMgSfxmb/Gh4mzoP6nEPwEDwd/dPovh8moBA8BN9gBW8fFkpffS8xAtpgBP+xsFDMYfwj8jka6A9+dAmCh+AheAgegofgf5QGSrU/MfcwXU1OguAheAhewE1+dHilw3hTYx1NDS3d/mY2C7ZdisknIXgIXioET1M+IXg0UGnOJwSPfEpA8GS+n5O2nu328wHPYz/Gx8e9j358+/jasdqj3d/xv/GWnJycqldiWrVq1Ve/lsfjGvjfo+9B/Yn+D+7TV59PkhbBj+irz+LzZ4Y9pa9+Bpu9NOoFffUvfq6N+4bRl898Hk/MbcTlUS8Si4rEHMYNMa+i8/LELOL58UNwZoaYRS59/nwjJVnMIoHp6acS4sUs8jwn58CH92IWuVDP8yl+/7QMCZbI/xH5lLZ8fofguY8WG86+XvxValMPjptwJOMbk1B7e/uvrsTUoUOHWbNm4WxtIPnNI+QTIJ8A1EzwRIq3leYEt4cJhWUTTl5O7E3XYSYrn3DEW4jg4OBwOvHz86vX9f39/cPCwuir/+DBg6dPn9JXn1q/eXl5dEdZyvMpfkioDFBJELMItaLv378vZpEnT54EBgaKWSQkJCQoKEjMIo8ePRJ/7SCfyGdDzed3HYMnUh/umj1UTaF9u47yCvId23fqZWS18nwsixQnndnZ2Y0bN9ajE1lZWV1dXfrqy8nJaWho0Fe/ZcuWqqqq9NVv06ZN79696atPbXYsWbKE/tmq9OaTikfTpk3FLEJlgEqCmEWUlJR+/vlnMYsoKiq2b99ezCJdu3bt2LGjmEU6d+6soKCAfCKfyKcETrIr37HEZRexeaREUk8FlBIMrR8sKrvFxcX01e/Ro8enTzSep2NsbPz48WP66k+YMMHX15e++vPmzdu/f38t7peSuny+e/eOmkKJWYTaLjEyMhKzyI0bN0aPHi1mkePHj8+YMUPMIjt37ly0aJGYRVavXr1x40bkE/lEPiUoeEkCwUPw0gwaKBoo8ol8QvAQPASPBooGCsEjn8gnBA/BQ/BooGigEDzyiXxC8BA8BI8GigYKwSOfyGd9Enx+fn6nTp1o/RPUB4DD4dBXX0lJKSmJxqtdDhw4MCIigr761tbW1OeKvvpOTk6HDx+upw1UIvmMj49XVVUVs8izZ88GDBggZpF79+5ZWFiIWeTMmTOzZ88Ws8i+ffuWL18uZpE///zz77//Rj6RT+RTSgUvEF2wCfXrsH5eXh5BEPTVLyws5HK5gnqLRMZfSoqQJJmbmytmER6Ply/2LYapOTeLxRKzSFFRkfg755BP5LOh5pMhAAAAAECDA4IHAAAAIHgAAAAAQPAAAAAAgOABAAAAAMEDAAAAAIIHAAAAIHjaIJJvrhih1qNXHyUdy7+CsireUYkTsECxeet27YUo2F+s2VcQuW9POw5QVVZV7Tvot5Oxla5uQxY8P2Bnoq6qoj1mrV9aDb/3TRY+3z/VQLmPqorWiKXXPleqUnRhapsWP4uW/xe1xQHiXFqHzLrnOnlTcOUvP5IZQZst9VRVVAytd4bminUzqn+tL5HlJ5IPmLVs2VZUpWP/LS94FV7jf76xfKSmqrJ6v1nHYopIqf1UkHkBew+Ff/3NU4nk8zvW0MO/LDUVFfv00Ry54kZSxaDxXm7QbfFTyYJ0HncwkaD5I/v5xlIz9T7UZ8p48t7wArLulqR0eZLOO9m7R/Oqm7qGB/KJfEqp4Ivuzuk9YHNUkYDMDV6up7q0gmLIHG9Lw7WRYv3Xydzz01SnnkslBPzEI+MUp10qqLiyNxlqOQfmk5zYnaYqc+/U6ANAJB4Yqb3wPmVX9uu/B/ZZGFjhU8b/8I/piH2SCBGR5jtTUa6d/XV2xWfZQc7q/TZHscnC0FV62qsjeBKuL5nl54a66E72KfjXlXPJVnm050c+mXXTUd3U7QNfGntnUUr0/cOzNX6ZcvGr61NIIp/Vh/dstbbmoqA8kiyK3j6kl/3V/C+Ni33zV635/pxaGhFOwMK+o/Z/5FEt/Yq90kiPir28dpekJKUfD4/v2FRp2WNu9VLX0NyOfCKf0it4Ivmck4Pna1Fn59z+tcfE03kVZ1vG4w5niLVdR2Q8PHr8SQ4pmko4Ko09ll5ejkjYO0zDJZQrmmK5j1BbElKTawPx42+7n4viiD5Ppyd2t79WXClpmjOuiH/Ne+LzWdsRzkstujlUEjDv+RrdQTveC8eO92K9fv+/3/AlWl9Cy190YbrW4kf/NrYcv7m9LbxFO204939XGns0Qwq34fmxPmsWO03U6FClgUoin9WHddfV6u8nomHkha3UMnX7RFTYGjAf8FdsLU2PyMKI057+ycK/zotYrVMpdrW7JKJGGbvXcvRyp+HqXzXQb6eugYF8Ip/SvAVfvlpYMR7jVUcfiiMqzLZmyyvqDtLRUFExnOxWYukajvJT95kWBkr9VwfnfSkijOHwvQmiv8e+bCs/9RK7xguf7b91hrmmivnu6OJKM+jxHfsY9dPuq6I+8Fevl0U11O+no9aj1j3N9p3evbKAObdnd7c+Wyj6U+mHxvRxCuRKtL5klp//4Z+B8uomhhrqyhrDF136VGEZ805a9pzrJ5pO82O2mBhtjJbGTXjRUN917DX16wYquXx+X5jjzzuom2yJ4lXcGlDrpj3QQENVRWf8unsptbHfkRfjvXDSgD7a829WPLZV20vCjvp7jMWe158Pju5buYH+R+oaIsgn8inFguelPtw1VUdlxDr/1IojXhR5Zsfxp9kk5c8AZy11l8c1HgUy92NEwLmVw9RtTn05SM6LXKtvtjexTPDdZlxl1/x/kPkuzN9rvonmvFtfDoWTWcFHd12ILiQFvOQLM5QHbq/JFjY3dt948y3PiwXsqoL3n6dk48MqE7za4mCuROtLZPkFROJdd/ebHymNs997jO1t4ZVcvgYKz9koVRB8/1qdWovfQCWXz+pPJCMOOxorD3D2javULd5c3nEwIJkvIAuebRrQe9b1fPp7OVmQ+CL4ylYLzeG7X/PraElYT9ePsDr4gUemVWmg/5G6H0bwyCfyKQWC57w9Yt3XeJ53VJUZJknwCbLcZT3HHs38/rXBf3N1z5VSMRVfmta1gsWJFE9znZXhvJI9NyNL99Z/90qM9PG4W7IbgEzxGFXJsuSXO7YU+ljL29VgBsGP3WrUVkFVQ1Ozb/ef5dr00HG8UD4K/OiNxkN3ifaE8V5uMCzdWy+5+pJY/pIqZFmq9w2veCSEG+ikanVSNCPiBCxUtvDOJutTA5VEPr9nppR8xVFP13bf4/Qqq5koH2Jq1qrXf+sbOidKROI9T5/nrNI1uLDP2CMV9gLX5pJwgxf3adtdXVNTQ1WhVdNfehks9+NUI3U/jOCRT+SzzgVPZpyapDnrWqWT5/msrLScYpIfvclIyzkgj5qB5oWsNDTeEFWD00X4MX8ZazoH5AuLBDhrG2+J5pXVF/Df7xxisOIpS8D/dMBc+4+AGumL+2iR2oBNUUXUikq9aKdmLjwxk1eQlZ7HFnCCnMteSr/2q465R5w4s7QKW9il9QW8sFX6Q3e+5QrYkRtMjDe+FOt0mqr1JbL8ZO7F6b3HeHyk8suN87LSsL1ArWtOXkZmAfVM4S1HrYneSQSZ98BJZ6RHIlEvGqgk81l9Cu/O0bLwqvQtDbI4Jy2LxSc+e45StruYSvWqoujtwzT/CCiic0GIlMOjqT+XRgjIoqjNA9QXPeTU0ZKUj0OFLaSSaP1r6n4UwSOfyKfUCJ7jN1ehWeuO8qX0nHOdTSTsGdJq4ulCAVkQ7m432EBfX0d3qKPXS1aNhoDMfbzDSk9FTUtbe7DDoeeFpKC8voBkvfCwG2RkYmQyfv39jBrahUi94zpSS6Wvlpau2QKftxzRyW9aXRzvcgRExoPNE/vr6etpG5gv8f0o3hzti4DL6wvI7OCtVv2MjA37T3ELE3Nv07/Ul8zy8xOvLh9trGegq200cb2f8LAX596crhquwpP+iZRbLqOMjU2MhvzmFVtcPxqoZPNZXXjP12o2++mXsg9Kd5vjqQTrrFWrwbvjCQE79uT84Yb6+no6A6fvpv9ga/HLI/bGaiqamlomNtseCbcL62pJqjTQ8mhVTd2PInjkE/mUHsEDAAAAAIIHAAAAAAQPAAAAAAgeAAAAgOABAAAAAMEDAAAAAIIHAAAAAAQPAAAAAAgeAAAAgOABAAAAAMEDAAAAAIIHAAAAAAQPAAAAAAgeAAAAABA8AAAAAMEDAAAAAIIHAAAAAATfcCAL398/6b5j286DlyNSORgPgHwCgHxC8A0gndm3F2iojlu5z8vbc5ODgfIYz7d8jApAPgFAPiH4eg778vQOE07kkqIf+K93j7PY+4ZKKJkfe+font2HLkekcUWT1Ld+Xnt27j/7KIEteteL894hn176elyO4bHjH55x/2fX0Ttv80mMJ0A+AfKJfELwUgEvcoOuvPGCg3depBQR5amN2DRIe8I6zyNbp2hqLgrIebljiOqIZfsOuc0bqDLhaDxB5npbKhlYzFp3LCBg7xjtsSsOHPNYPV6j//rQIowoQD4B8ol8QvBSATfp4UHXWaMNFDvKa4ya6x6SRbKuOShPOZdDzSfJvJCDbtdOzlMafTiVEE1Rt5gYrI/i5npbdJh0NofkPnRWGbTOL/zZs2cR/usG9v79AcYTIJ8A+UQ+Ifi6h2SlvEss3cHEyXh2YlbfbjOvvN5rprv6Ga/sd/JOWCoteFBy9kjRhSmKs2+zqRmo5vJQrnAHlbz+jLV/lrL1UiyGFCCfAPlEPiH4uocfvdHQYP0LbumPxXd+6zHC4+35aUq2vnnC2BYG/ePi5Tmnz5gjacIf+bF/9dNd+5yagU7UXhnGE/CerzEwc08QTk6JdL9dbv4ZGFKAfALkE/mE4KUAIv70VGUl8yW7Dh87tHPFeHUVh4upRFGIq7GO9eZjJ3bZ6+ouDcqJ3DZI1Xylp5e702BViyNxwmNIJQEVEHFHLVQHLNhz/JDrKLWhbq9xBilAPgHyiXxC8AAAAACA4AEAAAAIHgAAAAAQPAAAAAAgeAAAAABA8AAAAACA4AEAAAAIHgAAAAAQPAAAAAAgeAAAAABA8AAAGuEkvQgKqMLDmIySW3USxelvIx6HPHn2Lr2YwGiBOoKbEvUlpoGPQl9+LiyNI5EVGxwQGPImG/d+h+Bpgn1zVnsm4wvMJvKDXe+mCRNIFr08ZKvxs2zpK7Kt1afsf15ICtjXZrRhynSYfZtTGuDHy5RkGXLjvUU3UiKzQnbaqLcufRezabdhLlfiuBhoIGmIpP3DmjC+hvnTNF/2t6ILQG1DZhwxl6sU0ca/GDlfTaJaLPvGzHZMmY6/3eFgmCB4GgXPbGW68uTZs6cO/j1nwC+yDBl5W99Mkh+73aQpo3H3MWuPXrh0Zu8fgzvJMpporY/k/ZfgebF7h7ZhMmQ7Gjus+cdti9OoXs2YDDn1JUEF6K5AwhS9e3D+LMXJFUN+YjJbDnahMnzW5+Ljz9xvRRdjBupG8DIKE7acouJ56tCmScpyTJluCx6wIXgIvnYE/8XWZN41h84yzJZjjqWxLti0YDTSWPO8pC0Sn0//NsB4oNPlrOJvCp4ouDGLenczk81RxSWv8ZNPTepA1RvukYC9pIDOSWpb++vsMvN/K7qYZYK6EXwjtVXhJWnkf/inf2OG3Nhj2SQED8HXsuAFAtbFKa2YMvJz/QpDlvSWpbbF+8/Zfupu+Mec8hB+ewue/eD3rjLMnyacrHBQifNoUS9ZZovx3jjQBGpJ8NxvRReAuhG8bA/bg/4BAQH+14/8rv+TTJuRHh/42IKH4Gtf8NyHzoqyjGZWPizi87XFJh2alB6hl2nWUWv8ygvviv9D8LknLJoyZPsse1LhmDuRfGB4E0Zjvc2vcHtjUDuCF3wrugDUjeArnSbSwnhjBEuAY/AQfB0InnPXsZOM6EylktfTY4J8j2xfMXuUWptGDIac9p+Rhd8UfNHFKS2ZMgrz/MuLsTn8d9tNGjOaDNj5EfvoQS0J/lvRxUF4UDeCLzsGf+b43kWmnWQaK867nYdd9BB8rQueiNs9SI7RSHPt8/TIqyeOn/R/XxY+dugK9UYMuZGHEm7MpPrpz3ZXS/spN9CpuyyjqeWpAv67HSZNGLIqyx4LN5bYL3ePUB60xHl4K6ZMl/n+CDGoHcGT2d+KbhoOE4E6EfyXY/ACXthK1UbMdjNvsCF4CL52Bc9Luuqo3Ighq7QkmJ15wuInpkxna+840UtExtVZPWSZbaZdzH21Sa8xQ7bn7KspPOF3OR8s0qB+7LU4mCsgEg6Oas1kttJfciORTaTfWaDeVLibtJHyshDsHwW1JfhvRrcAgwXqWPD8lBMT28nIdJ5zjwPBQ/C10hwZjdsq9tXUUOvRVnjYUrbzpFOJhIAsDHbVaclkMJt3VNEz0OrWSpbB/Mlg3ROWgEg6Z9ujCYMh07SNgny7prLUWzqNPfxedIyd9/74pO7CbyfLNmvfqX0z2ZJjTnrLHmRi4wnUjuD/I7oA1IngmU079NbQ1NTo26dLy0YMRhPVxYGFOAYPwdMON3TbhKGmpZiZW9ov23cvvmxrm8x75bt9ka3lyOFmoywdlrndeFN2sRBeetipLc6zbMaOtbJ3Wn/0UVKF0+r4GeGntsyfMnbkqLE2jqsP37i43rT3wC3hLBge0JfhoeO3Pq4Qwm9HF4BaFXzuTZcRpuUMNRtvu+xQcLIwq9wnf1sMHTpxRxguBAbB1+sOzEGCAQAAQPAAAAAABA8AAAAACB4AAAAAEDwAAAAAIHgAagxBEGUnehOZMffOnz53NyoNZycC5BNA8N8Jn5WelF6Iy6MDKYFzf35vG58iYfeMOz6pt5Kp3RzHScZqI3e9YGNwAPIJIPj/ghexc8q6+8IwkgWh280VO/ZQUe6mNGT1vXRcIx1IUQPlPVttMHxfnCiVRYHOBraXcP01gHwCCL5aAeW/2zlY948A4d1LuXFHrQwXBeI6QkCKGmjUhmGzrhaJnuS/3TZkwjHcxhwgnwCCr1ZAuU9c+jveKpE6EbfbbPyhdAT0O3mTnx+ZmyORR3ReHsZTILwn32pdhe6qOv1HjDNVVRi08zWfSPbfaK5m7vEJu5jqO59YhZL6vFR9ZHI4yCf6JwQ/v7ui6a/Orpu3zh2oaX8plRAUJ95bOcDQNRw3kfxeBgXc73DtikQeqnduYTzLIItzk949D757+UpoMsGLObfjePh/bB7dv3/fszJbt24NDAzEOEob9mGhkvq8VH14xX1CPtE/f3TBC9iZHyKD7/qePui2edUil5OveNzgjVazD0TkfzOhcXFx4ZWh0kk9iYAioLTAy3jp53v5wavMsk0yMu/1/YcfvnUjPjc3N8fKGBgY2NnZYSAheOQT/fMHE/z34+TkpFeZLl26TJ48GQFFQCUP/63nmJ4qw+1mWOr3MlziL7r7Hu/lBqMR7p+rvQ9048aNq1evxlhC8Mgn+icE/90goAgoXVtHkeuNR3smCXsl5/0RS40JxxMJNFAIXloEj3yif0q34Im0J2cPelbh0PVX1b+RKQKKgNLVQMNWGVmdyCiJIpHobaVt5fWJjQYKwUuJ4JFP9E+pFjyZH3NpjVnnZn1tVq6pwPpjofkNXfCfi4okeNYuSZIIqOThvNg2SFHPZum+wFSqYRIpV+boaY2dNqSnGRooBC8Fu+iRTwheqgUvmoZGbRg4w7fml16qpwFd9TJKgg2FTRAIKB2QRQnBPh5eD1NLGiaZ8+ryHlfnnf7Z2MMEwUvBSXbIJwQv5YIX8LPjEvJq/rV3CB6Cl2YaagO1fRpqFhRI0yMmn/ZvEjeUr8khnxC8dAu+XgQ0l8uV4B71Ij4fgofg6zV6/vfoE2R4djYEj3xC8BB8LQX0ekqyBD//0Xl5EHyDJCsr60NlFi9evGLFCggegkc+IXgIHoKH4OsxDg4OPSvTpk0bCwsLCB6CRz4heAgegofgGxTYRQ/BI58QPAQPwUPwEDwED8EjnxA8BA/BQ/BooBA8BI98QvAQPASPgKKBQvAQPAQPwUPwEDxAA4XgIXgIHv2zFgWfkJDw1e1i58+f7+LiAsEjoGigEDwEj3xC8PVY8JTOv7pdrLy8/MSJEyF4BBQNFIKH4JFPCL4eC76uAgrBAzRQCB6Ch+AheAgegv9Bsbe3x4VuIHipFfyPk08IHoKH4P/9YXTfj0eSErz2fhyL9YO0CVyqFoLHpWoheAgegpdewfd/4J/J4Uhw8X6LCPthGwd20UPwyCcED8FD8BA8BA/BQ/DIJwQPwUPwEHytwMv79Dzo9pWLF32v3QuJSSsm0UAheCkSPPIJwUPwEDwE//2QOQ//Gq3cTWPw+MkzZs50sJ00ykRZUd/x7AcuGigEX/eCRz4heAgegofgawb/9dZBgzZFFlbcJiIz7s7v53ClEIKH4Ota8PUon8nFxVeSkyT1+FhYKPElhOAheAj+xxI8L9zVxMo7vfI+T17s30OtT+WS0pVPCP4HFHw9yqdk++ehTx8heAgegofgxdxEen98koqK2SyXLW77Dx4+6L5zw6Kp/dT6uz6ofv+E4CF45BOCh+Ah+IYr+DnPwutrnMmCj0E+B/7+c5XLcpc1m/Ycv/Uynfcfv+7m5uZYGX19fTs7Owgegv+R8wnBQ/ACPis9Kb2QD8E3OMG7f3jH4vPjWCxJPfJ5POlM//379z0rY2FhsWDBAggegv+R8wnBi0lkbs6SF5GSegRnZtaG4HkRO6esu88WzUNDt5srduyhotxNacjqe+kEBN+QBO/58cPlpCQJFjyG7xlD8BD8j7oH9AcUvPT0z+8QPOf+/N42PkXUtvu7nYN1/wjIJgUCbtxRK8NFgZxvvCUzM7NOLrUIwf+Igue/O71o+tQq2G26m42T7CD4uj8GX2/yCcH/0ILnPnHp73irROpE3G6z8YfSvxHQmTNnfnWzhLZt21paWkLwEDwdFH++u1Sv7bANt/0r8ODZZza24OkUfDaHA8E3pHxC8D+o4Lsrmv7q7Lp569yBmvaXUglBceK9lQMMXcN5DTqgEHz92UVPxO+3nn+DXeP3Q/A1eBTyeNZPQvrcvknTI53Nbii76OtHPiH4H1HwAnbmh8jgu76nD7ptXrXI5eQrHjd4o9XsAxH5pACCh+BxDP4HFrz5oyD66qcWF+MYPARPk+AN/e9xSSKHy5XUg2rv9VPwP2pAIXgIHoKH4CH4Bin4ht0/IXgIHoKH4CF45BOCh+AheAi+AQk+ICAA34OH4L2QTwgegofgIfgGJvhdu3ZVvVKYra0tBA/B/8j5hOAheAgegscueggegkf/hOAheAgegq+3DbSYz98Y84q+B48kIXgIHoKH4Bum4KkGJ8Ern+dxuRA8BC/BfOZwufTZhXpwCAKCh+AheAi+YQpesg103/t3EDwED8FD8D+I4Fl8/q/hYZJ63EpJgeAheAgegofgIXgIHv3z/zweZmZA8BA8BI+AQvAQPATfAPsnVdMsKFBSDw76J02C5yY/OrzSYbypsY6mhpZufzObBdsuxXzPlWoheAieRupFPiH4H1bw6J/on9IreDLfz0lbz3b7+YDnsR/j4+PeRz++fXztWO3R7u/433hLTk5O1dvFrlq16qtfy+NxDfzvSerhHRd3Pz1NggXfFhRsfxMrwYJUQ5/y5LGkqlk/DsnhciS4eKcT4u+lpUqw4IXPibXQPetLPqs+uPQL3iL4EX3Lz+LzZ4Y9pa9+Bpu9NOoFffUvIp/onw20f36H4LmPFhvOvl78VWpTD46bcCTjG5NQe3v7r24X26FDh1mzZgkAkPjmEfIJkE8AaiZ4IsXbSnOC28OEwrIJJy8n9qbrMJOVT8S8HXRwcHC45AgNDX3w4IEECwYFBYWEhEiwoJ+fX7hEkWxBagADAgIkWJBav3l5eXRHub7ksxbyUMv1/f39w8LC6KtPfZyfPn1KX33kE/2zofbP7zoGT6Q+3DV7qJpC+3Yd5RXkO7bv1MvIauX5WJZYl+nIzs5u3LixnuTo1atXmzZtJFiQmjV369ZNggWbN2+urq4uqWra2toSH8C2bdtKdgCXLFlC/2y1fuSzKrKysrq6uvTVl5OT09DQoK9+y5YtVVVV6atPfZx79+5NX33kE/2zofbPmp1FT3LZRWyeZC6/RQWUypMEP0YXL16cOHGiBAsuXLhwz549EizYt2/fly9fSqpaenr6L7/8IsHF8/HxsbGxkWDBefPm7d+/vxb3S0l1PqvStGnT4uJi+ur36NHj06dP9NU3NjZ+/PgxffUnTJjg6+tLX33kE/2zofbP2v6aHAKKgNYvIHgI/ofKJ/onBI+AIqBooBA8BA/Bo39C8AgoAooGCsFD8Oif6J8QPAKKgELwEDwEj/6J/lnvBZ+fn9+pUycJFrx27drkyZMlWHDx4sUeHh4SLKijo/PmzRtJVcvJyVFQUJDg4lHNdPr06RIs6OTkdPjw4XraQCWez6pQDZrD4dBXX0lJKSkpib76AwcOjIiIoK++tbX1jRs36KuPfKJ/NtT+yZCGjFJDLMFqBEFI9luthYWFku2/kv3/1osB5HK5gnqLxNcX6n8XVBoJOi/2h3yifzbU/skQAAAAAKDBAcEDAAAAEDwAAAAAIHgAAAAAQPAAAAAAgOABAAAAAMEDAAAAEDxtEMk3V4xQ69Grj5KO5V9BWRXvqEQWPD9gZ6KuqqI9Zq1fWjW/90pmPfzLUlNRsU8fzZErbiRVfBfv5QbdFj+1ay+k87iDiUT16gVusdDuo6Kiojdu04PMSnd84n++sXykpqqyer9Zx2KKqnczKLLw+f6pBsp9VFW0Riy99rnSMhRdmNqmxc+i5ftFbXHAd31VlBW2fcqyG/mVFqJGA1gK982hWfNOVh6jGg0gkXzArGXLtqI3dey/5QVPzAGUnnxyAhYoNm9dMhwK9hdZNarPfXvacYCqsqpq30G/nYzlSGr10Z63Kh+Te66TNwVX/nIumRG02VJPVUXF0HpnaK5Yq/df60tk+RtuPtE/0T/rXPBFd+f0HrA5qkhA5gYv11NdWuEjzHu5yVDLOTCf5MTuNFWZe6daDZT3bLW25qKgPJIsit4+pJf91QqrjH3zV635/t/XBnhRG4z6/RlJLV/hoyUahhujv4wvmXvJVnm050c+mXXTUd3U7QO/Oqsr8cBI7YX3qW7Hfv33wD4LAyu0LP6Hf0xH7EusQScn84OWaDZrMdYrm6yUpxoMYOlQvfhr4M/NTLa9q/R/qskACrihLrqTfQr+balrMoDSk08yx9vScG0kTyxv5Z6fpjr1XCoh4CceGac47VKBRFYf3Xmr8lfSfGcqyrWzv86uFJcgZ/V+m6PYZGHoKj3t1RE8CdeXzPI32Hyif6J/1rngieRzTg6er0VLxrn9a4+Jp8uv+EMk7B2m4RIqXIFEkvsItSUh1bl2D+uuq9XfT0S/yQtbqWXq9omoMBUyH/BX7Pd9Snmxvnuvvhe+h4jfPbTSQnD85va28BbNmTn3f1caezSjGlMofvxt93NRHJEfTk/sbn+tuOIW4ULNGVe+/xrkZPadhSNmLp+ubFEpoDUbQNEgPl1nPmm5o+GgygGt0QBS0+rpWosf/dufrtEASk0+hfNx43GHxVtmIuPh0eNPckhRq3ZUGnssnRR/9dGdtyr/ic9nbUc4L7Xo5lBJwLzna3QH7RB9dngv1uv3//sNX6L1JbT8DTWf6J/on1KwBV8+yKwYj/Gqow/FledJmK/hexNEP7Mv28pPvcT+rolP/HkHdZMtUbyKUyG1btoDDTRUVXTGr7uXUv2ZHpFwefW0oWp9J5+Mq7B28k5a9pzrJ5qP8WO2mBhtjOZXO1H+W2eYa6qY746uEEdqi3B8xz5G/bT7qqgP/NXrZVG1t25mD114Oy3oD5XKAa3hAJL5D5eZTT8TH73Z5KuA1mgAqWn1QHl1E0MNdWWN4YsufeJKYgClIZ/UfHy2vKLuIB0NFRXDyW4llq7hRuRT95kWBkr9VwfnkQIJ5Z+2vFXJ36ej1qPWPc32nd69soA5t2d3tz5bKPpT6YfG9HEK5Eq0vmSWv8HmE/0T/VNKBM9Lfbhrqo7KiHX+qRX+z7zItfpmexPLxrfbjKvsaq//iMOOxsoDnH3jKrYU/pvLOw4GJPMFZMGzTQN6z7qeX92WTBanxDy+tddO13DNky8LUXjORqnC+Pb/jrkZL/NdmL/XfBPNebe+HJoks4KP7roQXUgKeMkXZigP3F6dLR7i85npw5Y8yCO5D6sEtCYDKJzNDnW4mErwY6oEtEYDSCTedXe/+ZEaJvZ7j7G9LbySCQkMoBTkU1AUeWbH8afUiJPZAc5a6i6Pa3z1cjL3Y0TAuZXD1G1OfTmoWPP805m3Kh6I3TfefMvzYgG7quD95ynZ+LDKBK+2OJgr0foSWf6Gm0/0T/RPaRA85+0R677G87yjvt4CIlI8zXVWhvNK9m2MLN1ZUo2dVlcc9XRt9z1Or/K/JQiCLF93ev23ViMAZGbw8ePBJaeG8KM3GvXf+mUQuYFOqlYnRQHjBCxUtvDOrsb6YkX6eNwtmRWSKR6jKnU98ssdNAp9rOXtqhEoMuPI6J87Kmloamr0bC/XuouG9cH3fHEGkH11Rodfegrr9enUomVnVbOt4TxxBlD0vyLLsrpveMUdXTUaQKnJJ/Uf45f9zyiX9Rx7NPP7F5//5uqeK6XDWHxpWtcKTaSG+ac3b1WWP3arUVsFVSovfbv/LNemh47jhfJRoD4vxkN3iXbx8l5uMCzdWy+5+pJY/gacT/RP9M+6FzyZcWqS5qxrlU7+5LOy0nKKSQH//c4hBiuesgT8TwfMtf8IqNbHt/DuHC0Lr0onV5LFOWlZLD7x2XOUst3FVGpQi6K3D9P8I6A6+3AKLs9QGush3DHC/XBwrIqtLzWenLyMzALqmcJbjloTvZMIMu+Bk85Ij2qd3cF9tEhtwKYo6k8TqRft1MyFp1LyCrLS89gCTpBz2Uvp137VMfeI+57TRSrMQMUawPK18GUGKs4AkrkXp/ce4/FROIBxXlYatheyxBtAqcknP3qTkZZzQB61BZ8XstLQeENUDU4i48f8ZazpHJAvLBLgrG28JZonmdVHe96qdLYvW9il9QW8sFX6Q3e+5QrYkRtMjDe+FOt0xKr1JbL8DTef6J/on3UveI7fXIVmrTvKl9JzznU2kbBnSKuJpwuFx5VeeNgNMjIxMhm//n5GtdYW7/lazWY//VJWr7vN8VSCddaq1eDd8YSAHXty/nBDfX09nYHTd1f3mCnv44WFg9VVNLS0DMa53hJ+bYRzb05XDVfhOcFEyi2XUcbGJkZDfvOKrebJHUTqHdeRWip9tbR0zRb4vOWITkbS6uJ4lyMgMh5snthfT19P28B8ie/H79tg+xJQsQbw3wIq3gDyE68uH22sZ6CrbTRxvV+K2AMoNfkkC8Ld7QYb6Ovr6A519HrJqtHmHZn7eIeVnoqalrb2YIdDzwtJCa0+2vP2bQGX1xeQ2cFbrfoZGRv2n+IWlk9Kur5klr/B5hP9E/1TCnbRAwAAAIB+IHgAAAAAggcAAAAABA8A+F+79trSZBjAYfxbGPgiElq6SrHRwg5aBIqHdBoFdqDMiJJGFJ0UzVlZiaibh5XbdFublGSl0RsHmqIxkNrUjLQVpEaoSXlA19zhsW1aHyE1rt+7B7Y3Nxf8b54NABh4AADAwAMAAAYeAAAGHgAAMPAAAICBBwAADDwAAGDgAQBg4DkCAAAYeAAAwMADAAAGHgAAMPAAAICB/zeEuc+vGtRlpRXaFtv4AucB+gTok4H/D+r82SqPFKfm1RhNmuIsaXiKxuHlVECfAH0y8Gucq+VYSLp5Wgg+eAcrU2XVH/2FCrNDFn1Vpa7FNuEOXlIdbcaqivuNr0ddwW/1N5msXwaaa1s+eFwj3Y/V5Uq9xTErcJ6gT9AnfTLwq4Kn75YkNEautfSPOX1/q7UVx0WnKzT1JZlRUZc6pwbK9okTrtboVDmxEen6EZ8wbcoQSWXZCkNnZ3VK9IHcB4bagrTI3UU9Tk4U9An6pE8GflVwf+vW5mcnS8PWhUYmnlNbfwjzL7PCM59M+e+TwoxVq3rZkCNKrhv3Ba+od3dKi965p02ykEONU4K7+2JEnKLtrd1ut7UrYjee7+A8QZ+gT/pk4FeeMD/26evyC6aFSbs5e+v6Uy8Gq+MlBXbPn8/MmDNE8o6lf484n2aGnW51+W+gUdd63IEXVKHbTxTeXFbyfIgjBX2CPumTgV953ve3d0iL+t3Lj78sZzYk1DqajoqON88Esp3rKr9u1JzdlFI/EXj0Dt3bJSns9d9AD0bnvfEsenpvSOPVo4HLqe97m1LVPsmRgj5Bn/TJwK8CvpFHR8JFSZeVdQZdRW7aloisZ+M+pzU/ZtvhOwaz8qREcqVrqq80TpyUpzGqL+wVy+qHA78hLQW66BvWy8R75FUPdfmJm/erBvkHKegT9EmfDDwAAGDgAQBg4AEAwFryGygN578uNM2/AAAAAElFTkSuQmCC" alt style="display: block; margin: auto auto auto 0;" /></p>
+<div class="sourceCode" id="cb26"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" tabindex="-1"></a><span class="fu">par</span>(op)</span></code></pre></div>
 <hr />
 </div>
 <div id="reliability" class="section level2">
 <h2>Reliability</h2>
-<div class="sourceCode" id="cb24"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" tabindex="-1"></a><span class="cf">if</span> (<span class="fu">requireNamespace</span>(<span class="st">&quot;psych&quot;</span>, <span class="at">quietly =</span> <span class="cn">TRUE</span>)) {</span>
-<span id="cb24-2"><a href="#cb24-2" tabindex="-1"></a>  rr <span class="ot">&lt;-</span> <span class="fu">reliability_report</span>(scored, study, <span class="at">omega =</span> <span class="cn">FALSE</span>)</span>
-<span id="cb24-3"><a href="#cb24-3" tabindex="-1"></a>  <span class="fu">print</span>(rr)</span>
-<span id="cb24-4"><a href="#cb24-4" tabindex="-1"></a>}</span>
-<span id="cb24-5"><a href="#cb24-5" tabindex="-1"></a><span class="co">#&gt; Reliability Report</span></span>
-<span id="cb24-6"><a href="#cb24-6" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb24-7"><a href="#cb24-7" tabindex="-1"></a><span class="co">#&gt; Scale: DMRE (Digital marketing: relevance and engagement)</span></span>
-<span id="cb24-8"><a href="#cb24-8" tabindex="-1"></a><span class="co">#&gt;   Items: 5   N: 60</span></span>
-<span id="cb24-9"><a href="#cb24-9" tabindex="-1"></a><span class="co">#&gt;   Alpha:   0.868</span></span>
-<span id="cb24-10"><a href="#cb24-10" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb24-11"><a href="#cb24-11" tabindex="-1"></a><span class="co">#&gt; Scale: DMAU (Digital marketing: accessibility and usefulness)</span></span>
-<span id="cb24-12"><a href="#cb24-12" tabindex="-1"></a><span class="co">#&gt;   Items: 5   N: 60</span></span>
-<span id="cb24-13"><a href="#cb24-13" tabindex="-1"></a><span class="co">#&gt;   Alpha:   0.859</span></span>
-<span id="cb24-14"><a href="#cb24-14" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb24-15"><a href="#cb24-15" tabindex="-1"></a><span class="co">#&gt; Scale: DMEU (Digital marketing: ease of use)</span></span>
-<span id="cb24-16"><a href="#cb24-16" tabindex="-1"></a><span class="co">#&gt;   Items: 5   N: 60</span></span>
-<span id="cb24-17"><a href="#cb24-17" tabindex="-1"></a><span class="co">#&gt;   Alpha:   0.867</span></span>
-<span id="cb24-18"><a href="#cb24-18" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb24-19"><a href="#cb24-19" tabindex="-1"></a><span class="co">#&gt; Scale: DMPV (Digital marketing: perceived value)</span></span>
-<span id="cb24-20"><a href="#cb24-20" tabindex="-1"></a><span class="co">#&gt;   Items: 5   N: 60</span></span>
-<span id="cb24-21"><a href="#cb24-21" tabindex="-1"></a><span class="co">#&gt;   Alpha:   0.847</span></span>
-<span id="cb24-22"><a href="#cb24-22" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb24-23"><a href="#cb24-23" tabindex="-1"></a><span class="co">#&gt; Scale: DSQA (Destination service quality: accommodation)</span></span>
-<span id="cb24-24"><a href="#cb24-24" tabindex="-1"></a><span class="co">#&gt;   Items: 4   N: 60</span></span>
-<span id="cb24-25"><a href="#cb24-25" tabindex="-1"></a><span class="co">#&gt;   Alpha:   0.860</span></span>
-<span id="cb24-26"><a href="#cb24-26" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb24-27"><a href="#cb24-27" tabindex="-1"></a><span class="co">#&gt; Scale: DSQT (Destination service quality: transport)</span></span>
-<span id="cb24-28"><a href="#cb24-28" tabindex="-1"></a><span class="co">#&gt;   Items: 5   N: 60</span></span>
-<span id="cb24-29"><a href="#cb24-29" tabindex="-1"></a><span class="co">#&gt;   Alpha:   0.900</span></span>
-<span id="cb24-30"><a href="#cb24-30" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb24-31"><a href="#cb24-31" tabindex="-1"></a><span class="co">#&gt; Scale: DSUQ (Destination sustainability quality)</span></span>
-<span id="cb24-32"><a href="#cb24-32" tabindex="-1"></a><span class="co">#&gt;   Items: 11   N: 60</span></span>
-<span id="cb24-33"><a href="#cb24-33" tabindex="-1"></a><span class="co">#&gt;   Alpha:   0.951</span></span>
-<span id="cb24-34"><a href="#cb24-34" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb24-35"><a href="#cb24-35" tabindex="-1"></a><span class="co">#&gt; Scale: TS (Tourist satisfaction)</span></span>
-<span id="cb24-36"><a href="#cb24-36" tabindex="-1"></a><span class="co">#&gt;   Items: 3   N: 60</span></span>
-<span id="cb24-37"><a href="#cb24-37" tabindex="-1"></a><span class="co">#&gt;   Alpha:   0.862</span></span>
-<span id="cb24-38"><a href="#cb24-38" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb24-39"><a href="#cb24-39" tabindex="-1"></a><span class="co">#&gt; Scale: BI (Behavioural intention)</span></span>
-<span id="cb24-40"><a href="#cb24-40" tabindex="-1"></a><span class="co">#&gt;   Items: 3   N: 60</span></span>
-<span id="cb24-41"><a href="#cb24-41" tabindex="-1"></a><span class="co">#&gt;   Alpha:   0.822</span></span></code></pre></div>
+<div class="sourceCode" id="cb27"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" tabindex="-1"></a><span class="cf">if</span> (<span class="fu">requireNamespace</span>(<span class="st">&quot;psych&quot;</span>, <span class="at">quietly =</span> <span class="cn">TRUE</span>)) {</span>
+<span id="cb27-2"><a href="#cb27-2" tabindex="-1"></a>  rr <span class="ot">&lt;-</span> <span class="fu">reliability_report</span>(scored, study, <span class="at">omega =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb27-3"><a href="#cb27-3" tabindex="-1"></a>  rel_df <span class="ot">&lt;-</span> <span class="fu">do.call</span>(rbind, <span class="fu">lapply</span>(rr, <span class="cf">function</span>(s) <span class="fu">data.frame</span>(</span>
+<span id="cb27-4"><a href="#cb27-4" tabindex="-1"></a>    <span class="at">Scale   =</span> <span class="fu">paste0</span>(s<span class="sc">$</span>label, <span class="st">&quot; (&quot;</span>, s<span class="sc">$</span>scale_id, <span class="st">&quot;)&quot;</span>),</span>
+<span id="cb27-5"><a href="#cb27-5" tabindex="-1"></a>    <span class="at">Items   =</span> s<span class="sc">$</span>n_items,</span>
+<span id="cb27-6"><a href="#cb27-6" tabindex="-1"></a>    <span class="at">N       =</span> s<span class="sc">$</span>n,</span>
+<span id="cb27-7"><a href="#cb27-7" tabindex="-1"></a>    <span class="at">Alpha   =</span> <span class="cf">if</span> (<span class="sc">!</span><span class="fu">is.null</span>(s<span class="sc">$</span>alpha)) <span class="fu">sprintf</span>(<span class="st">&quot;%.2f&quot;</span>, s<span class="sc">$</span>alpha) <span class="cf">else</span> <span class="st">&quot;n/a&quot;</span>,</span>
+<span id="cb27-8"><a href="#cb27-8" tabindex="-1"></a>    <span class="at">stringsAsFactors =</span> <span class="cn">FALSE</span>)))</span>
+<span id="cb27-9"><a href="#cb27-9" tabindex="-1"></a>  <span class="fu">kable</span>(rel_df, <span class="at">row.names =</span> <span class="cn">FALSE</span>, <span class="at">align =</span> <span class="fu">c</span>(<span class="st">&quot;l&quot;</span>, <span class="st">&quot;c&quot;</span>, <span class="st">&quot;c&quot;</span>, <span class="st">&quot;r&quot;</span>),</span>
+<span id="cb27-10"><a href="#cb27-10" tabindex="-1"></a>        <span class="at">caption =</span> <span class="st">&quot;Scale reliability&quot;</span>)</span>
+<span id="cb27-11"><a href="#cb27-11" tabindex="-1"></a>}</span></code></pre></div>
+<table>
+<caption>Scale reliability</caption>
+<colgroup>
+<col width="76%" />
+<col width="9%" />
+<col width="5%" />
+<col width="8%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">Scale</th>
+<th align="center">Items</th>
+<th align="center">N</th>
+<th align="right">Alpha</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">Digital marketing: relevance and engagement (DMRE)</td>
+<td align="center">5</td>
+<td align="center">60</td>
+<td align="right">0.87</td>
+</tr>
+<tr class="even">
+<td align="left">Digital marketing: accessibility and usefulness
+(DMAU)</td>
+<td align="center">5</td>
+<td align="center">60</td>
+<td align="right">0.86</td>
+</tr>
+<tr class="odd">
+<td align="left">Digital marketing: ease of use (DMEU)</td>
+<td align="center">5</td>
+<td align="center">60</td>
+<td align="right">0.87</td>
+</tr>
+<tr class="even">
+<td align="left">Digital marketing: perceived value (DMPV)</td>
+<td align="center">5</td>
+<td align="center">60</td>
+<td align="right">0.85</td>
+</tr>
+<tr class="odd">
+<td align="left">Destination service quality: accommodation (DSQA)</td>
+<td align="center">4</td>
+<td align="center">60</td>
+<td align="right">0.86</td>
+</tr>
+<tr class="even">
+<td align="left">Destination service quality: transport (DSQT)</td>
+<td align="center">5</td>
+<td align="center">60</td>
+<td align="right">0.90</td>
+</tr>
+<tr class="odd">
+<td align="left">Destination sustainability quality (DSUQ)</td>
+<td align="center">11</td>
+<td align="center">60</td>
+<td align="right">0.95</td>
+</tr>
+<tr class="even">
+<td align="left">Tourist satisfaction (TS)</td>
+<td align="center">3</td>
+<td align="center">60</td>
+<td align="right">0.86</td>
+</tr>
+<tr class="odd">
+<td align="left">Behavioural intention (BI)</td>
+<td align="center">3</td>
+<td align="center">60</td>
+<td align="right">0.82</td>
+</tr>
+</tbody>
+</table>
 <p>A Cronbach’s alpha of 0.70 or above is conventionally accepted as
 adequate internal consistency (Nunnally, 1978). For scales with three or
-more items, McDonald’s omega is a more accurate estimate; pass
-<code>omega = TRUE</code> to include it. See
+more items, McDonald’s omega is a more accurate estimate because it
+accounts for unequal factor loadings across items. Alpha assumes all
+items load equally on the factor. Pass <code>omega = TRUE</code> when
+items within a scale differ substantially in their contribution. See
 <code>?reliability_report</code> for details.</p>
+</div>
+<div id="efa-readiness" class="section level2">
+<h2>EFA readiness</h2>
+<p>Before a confirmatory factor analysis, it is good practice to confirm
+that the item correlations are strong enough to support factoring.
+<code>efa_report()</code> runs the KMO measure of sampling adequacy and
+Bartlett’s test of sphericity, and uses parallel analysis to suggest the
+number of factors.</p>
+<div class="sourceCode" id="cb28"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1" tabindex="-1"></a><span class="cf">if</span> (<span class="fu">requireNamespace</span>(<span class="st">&quot;psych&quot;</span>, <span class="at">quietly =</span> <span class="cn">TRUE</span>)) {</span>
+<span id="cb28-2"><a href="#cb28-2" tabindex="-1"></a>  er <span class="ot">&lt;-</span> <span class="fu">efa_report</span>(scored, study)</span>
+<span id="cb28-3"><a href="#cb28-3" tabindex="-1"></a>  <span class="fu">print</span>(er)</span>
+<span id="cb28-4"><a href="#cb28-4" tabindex="-1"></a>}</span></code></pre></div>
+<p>A KMO value of 0.60 or above and a significant Bartlett test confirm
+that the correlation structure supports factor analysis. The suggested
+factor count from parallel analysis is a guide. Theory should take
+precedence.</p>
+</div>
+<div id="construct-validity" class="section level2">
+<h2>Construct validity</h2>
+<p><code>validity_report()</code> computes composite reliability (CR)
+and average variance extracted (AVE) from supplied factor loadings.
+Discriminant validity is assessed via the Fornell-Larcker criterion and
+HTMT when construct scores are supplied.</p>
+<div class="sourceCode" id="cb29"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" tabindex="-1"></a><span class="co"># Supply a named list of loadings (construct -&gt; item loadings vector)</span></span>
+<span id="cb29-2"><a href="#cb29-2" tabindex="-1"></a>loadings_list <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb29-3"><a href="#cb29-3" tabindex="-1"></a>  <span class="at">DMRE =</span> <span class="fu">c</span>(<span class="at">dm_1 =</span> <span class="fl">0.78</span>, <span class="at">dm_2 =</span> <span class="fl">0.82</span>, <span class="at">dm_3 =</span> <span class="fl">0.75</span>),</span>
+<span id="cb29-4"><a href="#cb29-4" tabindex="-1"></a>  <span class="at">TS   =</span> <span class="fu">c</span>(<span class="at">ts_1 =</span> <span class="fl">0.84</span>, <span class="at">ts_2 =</span> <span class="fl">0.80</span>)</span>
+<span id="cb29-5"><a href="#cb29-5" tabindex="-1"></a>)</span>
+<span id="cb29-6"><a href="#cb29-6" tabindex="-1"></a>vr <span class="ot">&lt;-</span> <span class="fu">validity_report</span>(loadings_list)</span>
+<span id="cb29-7"><a href="#cb29-7" tabindex="-1"></a><span class="fu">print</span>(vr<span class="sc">$</span>reliability)</span></code></pre></div>
+<p>AVE above 0.50 and CR above 0.70 are the conventional thresholds for
+convergent validity. The Fornell-Larcker criterion requires that the
+square root of each construct’s AVE exceeds its highest correlation with
+any other construct.</p>
 <hr />
 </div>
 <div id="analysis-plan" class="section level2">
@@ -965,71 +1555,166 @@ more items, McDonald’s omega is a more accurate estimate; pass
 <p>The plan binds each research question to a statistical technique and
 the variable roles it needs. <code>run_analysis_plan()</code> executes
 every block and returns one result per question.</p>
-<div class="sourceCode" id="cb25"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" tabindex="-1"></a>study<span class="sc">$</span>analysis_plan <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
-<span id="cb25-2"><a href="#cb25-2" tabindex="-1"></a>  <span class="fu">list</span>(</span>
-<span id="cb25-3"><a href="#cb25-3" tabindex="-1"></a>    <span class="at">id               =</span> <span class="st">&quot;RQ1&quot;</span>,</span>
-<span id="cb25-4"><a href="#cb25-4" tabindex="-1"></a>    <span class="at">research_question =</span> <span class="st">&quot;Are digital marketing perceptions associated with tourist satisfaction?&quot;</span>,</span>
-<span id="cb25-5"><a href="#cb25-5" tabindex="-1"></a>    <span class="at">family           =</span> <span class="st">&quot;association&quot;</span>,</span>
-<span id="cb25-6"><a href="#cb25-6" tabindex="-1"></a>    <span class="at">method           =</span> <span class="st">&quot;correlation_pearson&quot;</span>,</span>
-<span id="cb25-7"><a href="#cb25-7" tabindex="-1"></a>    <span class="at">roles            =</span> <span class="fu">list</span>(<span class="at">x =</span> <span class="st">&quot;DMRE&quot;</span>, <span class="at">y =</span> <span class="st">&quot;TS&quot;</span>),</span>
-<span id="cb25-8"><a href="#cb25-8" tabindex="-1"></a>    <span class="at">options          =</span> <span class="fu">list</span>(<span class="at">alpha =</span> <span class="fl">0.05</span>)</span>
-<span id="cb25-9"><a href="#cb25-9" tabindex="-1"></a>  ),</span>
-<span id="cb25-10"><a href="#cb25-10" tabindex="-1"></a>  <span class="fu">list</span>(</span>
-<span id="cb25-11"><a href="#cb25-11" tabindex="-1"></a>    <span class="at">id               =</span> <span class="st">&quot;RQ2&quot;</span>,</span>
-<span id="cb25-12"><a href="#cb25-12" tabindex="-1"></a>    <span class="at">research_question =</span> <span class="st">&quot;Is service quality associated with tourist satisfaction?&quot;</span>,</span>
-<span id="cb25-13"><a href="#cb25-13" tabindex="-1"></a>    <span class="at">family           =</span> <span class="st">&quot;association&quot;</span>,</span>
-<span id="cb25-14"><a href="#cb25-14" tabindex="-1"></a>    <span class="at">method           =</span> <span class="st">&quot;correlation_pearson&quot;</span>,</span>
-<span id="cb25-15"><a href="#cb25-15" tabindex="-1"></a>    <span class="at">roles            =</span> <span class="fu">list</span>(<span class="at">x =</span> <span class="st">&quot;DSQT&quot;</span>, <span class="at">y =</span> <span class="st">&quot;TS&quot;</span>),</span>
-<span id="cb25-16"><a href="#cb25-16" tabindex="-1"></a>    <span class="at">options          =</span> <span class="fu">list</span>(<span class="at">alpha =</span> <span class="fl">0.05</span>)</span>
-<span id="cb25-17"><a href="#cb25-17" tabindex="-1"></a>  ),</span>
-<span id="cb25-18"><a href="#cb25-18" tabindex="-1"></a>  <span class="fu">list</span>(</span>
-<span id="cb25-19"><a href="#cb25-19" tabindex="-1"></a>    <span class="at">id               =</span> <span class="st">&quot;RQ3&quot;</span>,</span>
-<span id="cb25-20"><a href="#cb25-20" tabindex="-1"></a>    <span class="at">research_question =</span> <span class="st">&quot;Do service quality and sustainability quality predict satisfaction?&quot;</span>,</span>
-<span id="cb25-21"><a href="#cb25-21" tabindex="-1"></a>    <span class="at">family           =</span> <span class="st">&quot;regression&quot;</span>,</span>
-<span id="cb25-22"><a href="#cb25-22" tabindex="-1"></a>    <span class="at">method           =</span> <span class="st">&quot;regression_linear&quot;</span>,</span>
-<span id="cb25-23"><a href="#cb25-23" tabindex="-1"></a>    <span class="at">roles            =</span> <span class="fu">list</span>(<span class="at">predictors =</span> <span class="fu">c</span>(<span class="st">&quot;DSQA&quot;</span>, <span class="st">&quot;DSQT&quot;</span>, <span class="st">&quot;DSUQ&quot;</span>),</span>
-<span id="cb25-24"><a href="#cb25-24" tabindex="-1"></a>                            <span class="at">dependent  =</span> <span class="st">&quot;TS&quot;</span>),</span>
-<span id="cb25-25"><a href="#cb25-25" tabindex="-1"></a>    <span class="at">options          =</span> <span class="fu">list</span>(<span class="at">alpha =</span> <span class="fl">0.05</span>)</span>
-<span id="cb25-26"><a href="#cb25-26" tabindex="-1"></a>  ),</span>
-<span id="cb25-27"><a href="#cb25-27" tabindex="-1"></a>  <span class="fu">list</span>(</span>
-<span id="cb25-28"><a href="#cb25-28" tabindex="-1"></a>    <span class="at">id               =</span> <span class="st">&quot;RQ4&quot;</span>,</span>
-<span id="cb25-29"><a href="#cb25-29" tabindex="-1"></a>    <span class="at">research_question =</span> <span class="st">&quot;Do first-time and repeat visitors differ in satisfaction?&quot;</span>,</span>
-<span id="cb25-30"><a href="#cb25-30" tabindex="-1"></a>    <span class="at">family           =</span> <span class="st">&quot;group_comparison&quot;</span>,</span>
-<span id="cb25-31"><a href="#cb25-31" tabindex="-1"></a>    <span class="at">method           =</span> <span class="st">&quot;mann_whitney&quot;</span>,</span>
-<span id="cb25-32"><a href="#cb25-32" tabindex="-1"></a>    <span class="at">roles            =</span> <span class="fu">list</span>(<span class="at">group =</span> <span class="st">&quot;visitor_type&quot;</span>, <span class="at">outcome =</span> <span class="st">&quot;TS&quot;</span>),</span>
-<span id="cb25-33"><a href="#cb25-33" tabindex="-1"></a>    <span class="at">options          =</span> <span class="fu">list</span>(<span class="at">alpha =</span> <span class="fl">0.05</span>)</span>
-<span id="cb25-34"><a href="#cb25-34" tabindex="-1"></a>  ),</span>
-<span id="cb25-35"><a href="#cb25-35" tabindex="-1"></a>  <span class="fu">list</span>(</span>
-<span id="cb25-36"><a href="#cb25-36" tabindex="-1"></a>    <span class="at">id               =</span> <span class="st">&quot;RQ5&quot;</span>,</span>
-<span id="cb25-37"><a href="#cb25-37" tabindex="-1"></a>    <span class="at">research_question =</span> <span class="st">&quot;Does satisfaction predict behavioural intention?&quot;</span>,</span>
-<span id="cb25-38"><a href="#cb25-38" tabindex="-1"></a>    <span class="at">family           =</span> <span class="st">&quot;regression&quot;</span>,</span>
-<span id="cb25-39"><a href="#cb25-39" tabindex="-1"></a>    <span class="at">method           =</span> <span class="st">&quot;regression_linear&quot;</span>,</span>
-<span id="cb25-40"><a href="#cb25-40" tabindex="-1"></a>    <span class="at">roles            =</span> <span class="fu">list</span>(<span class="at">predictors =</span> <span class="st">&quot;TS&quot;</span>, <span class="at">dependent =</span> <span class="st">&quot;BI&quot;</span>),</span>
-<span id="cb25-41"><a href="#cb25-41" tabindex="-1"></a>    <span class="at">options          =</span> <span class="fu">list</span>(<span class="at">alpha =</span> <span class="fl">0.05</span>)</span>
-<span id="cb25-42"><a href="#cb25-42" tabindex="-1"></a>  )</span>
-<span id="cb25-43"><a href="#cb25-43" tabindex="-1"></a>)</span>
-<span id="cb25-44"><a href="#cb25-44" tabindex="-1"></a></span>
-<span id="cb25-45"><a href="#cb25-45" tabindex="-1"></a><span class="fu">length</span>(study<span class="sc">$</span>analysis_plan)</span>
-<span id="cb25-46"><a href="#cb25-46" tabindex="-1"></a><span class="co">#&gt; [1] 5</span></span></code></pre></div>
+<div class="sourceCode" id="cb30"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1" tabindex="-1"></a>study<span class="sc">$</span>analysis_plan <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb30-2"><a href="#cb30-2" tabindex="-1"></a>  <span class="fu">list</span>(</span>
+<span id="cb30-3"><a href="#cb30-3" tabindex="-1"></a>    <span class="at">id               =</span> <span class="st">&quot;RQ1&quot;</span>,</span>
+<span id="cb30-4"><a href="#cb30-4" tabindex="-1"></a>    <span class="at">research_question =</span> <span class="st">&quot;Are digital marketing perceptions associated with tourist satisfaction?&quot;</span>,</span>
+<span id="cb30-5"><a href="#cb30-5" tabindex="-1"></a>    <span class="at">family           =</span> <span class="st">&quot;association&quot;</span>,</span>
+<span id="cb30-6"><a href="#cb30-6" tabindex="-1"></a>    <span class="at">method           =</span> <span class="st">&quot;correlation_pearson&quot;</span>,</span>
+<span id="cb30-7"><a href="#cb30-7" tabindex="-1"></a>    <span class="at">roles            =</span> <span class="fu">list</span>(<span class="at">x =</span> <span class="st">&quot;DMRE&quot;</span>, <span class="at">y =</span> <span class="st">&quot;TS&quot;</span>),</span>
+<span id="cb30-8"><a href="#cb30-8" tabindex="-1"></a>    <span class="at">options          =</span> <span class="fu">list</span>(<span class="at">alpha =</span> <span class="fl">0.05</span>)</span>
+<span id="cb30-9"><a href="#cb30-9" tabindex="-1"></a>  ),</span>
+<span id="cb30-10"><a href="#cb30-10" tabindex="-1"></a>  <span class="fu">list</span>(</span>
+<span id="cb30-11"><a href="#cb30-11" tabindex="-1"></a>    <span class="at">id               =</span> <span class="st">&quot;RQ2&quot;</span>,</span>
+<span id="cb30-12"><a href="#cb30-12" tabindex="-1"></a>    <span class="at">research_question =</span> <span class="st">&quot;Is service quality associated with tourist satisfaction?&quot;</span>,</span>
+<span id="cb30-13"><a href="#cb30-13" tabindex="-1"></a>    <span class="at">family           =</span> <span class="st">&quot;association&quot;</span>,</span>
+<span id="cb30-14"><a href="#cb30-14" tabindex="-1"></a>    <span class="at">method           =</span> <span class="st">&quot;correlation_pearson&quot;</span>,</span>
+<span id="cb30-15"><a href="#cb30-15" tabindex="-1"></a>    <span class="at">roles            =</span> <span class="fu">list</span>(<span class="at">x =</span> <span class="st">&quot;DSQT&quot;</span>, <span class="at">y =</span> <span class="st">&quot;TS&quot;</span>),</span>
+<span id="cb30-16"><a href="#cb30-16" tabindex="-1"></a>    <span class="at">options          =</span> <span class="fu">list</span>(<span class="at">alpha =</span> <span class="fl">0.05</span>)</span>
+<span id="cb30-17"><a href="#cb30-17" tabindex="-1"></a>  ),</span>
+<span id="cb30-18"><a href="#cb30-18" tabindex="-1"></a>  <span class="fu">list</span>(</span>
+<span id="cb30-19"><a href="#cb30-19" tabindex="-1"></a>    <span class="at">id               =</span> <span class="st">&quot;RQ3&quot;</span>,</span>
+<span id="cb30-20"><a href="#cb30-20" tabindex="-1"></a>    <span class="at">research_question =</span> <span class="st">&quot;Do service quality and sustainability quality predict satisfaction?&quot;</span>,</span>
+<span id="cb30-21"><a href="#cb30-21" tabindex="-1"></a>    <span class="at">family           =</span> <span class="st">&quot;regression&quot;</span>,</span>
+<span id="cb30-22"><a href="#cb30-22" tabindex="-1"></a>    <span class="at">method           =</span> <span class="st">&quot;regression_linear&quot;</span>,</span>
+<span id="cb30-23"><a href="#cb30-23" tabindex="-1"></a>    <span class="at">roles            =</span> <span class="fu">list</span>(<span class="at">predictors =</span> <span class="fu">c</span>(<span class="st">&quot;DSQA&quot;</span>, <span class="st">&quot;DSQT&quot;</span>, <span class="st">&quot;DSUQ&quot;</span>),</span>
+<span id="cb30-24"><a href="#cb30-24" tabindex="-1"></a>                            <span class="at">dependent  =</span> <span class="st">&quot;TS&quot;</span>),</span>
+<span id="cb30-25"><a href="#cb30-25" tabindex="-1"></a>    <span class="at">options          =</span> <span class="fu">list</span>(<span class="at">alpha =</span> <span class="fl">0.05</span>)</span>
+<span id="cb30-26"><a href="#cb30-26" tabindex="-1"></a>  ),</span>
+<span id="cb30-27"><a href="#cb30-27" tabindex="-1"></a>  <span class="fu">list</span>(</span>
+<span id="cb30-28"><a href="#cb30-28" tabindex="-1"></a>    <span class="at">id               =</span> <span class="st">&quot;RQ4&quot;</span>,</span>
+<span id="cb30-29"><a href="#cb30-29" tabindex="-1"></a>    <span class="at">research_question =</span> <span class="st">&quot;Do first-time and repeat visitors differ in satisfaction?&quot;</span>,</span>
+<span id="cb30-30"><a href="#cb30-30" tabindex="-1"></a>    <span class="at">family           =</span> <span class="st">&quot;group_comparison&quot;</span>,</span>
+<span id="cb30-31"><a href="#cb30-31" tabindex="-1"></a>    <span class="at">method           =</span> <span class="st">&quot;mann_whitney&quot;</span>,</span>
+<span id="cb30-32"><a href="#cb30-32" tabindex="-1"></a>    <span class="at">roles            =</span> <span class="fu">list</span>(<span class="at">group =</span> <span class="st">&quot;visitor_type&quot;</span>, <span class="at">outcome =</span> <span class="st">&quot;TS&quot;</span>),</span>
+<span id="cb30-33"><a href="#cb30-33" tabindex="-1"></a>    <span class="at">options          =</span> <span class="fu">list</span>(<span class="at">alpha =</span> <span class="fl">0.05</span>)</span>
+<span id="cb30-34"><a href="#cb30-34" tabindex="-1"></a>  ),</span>
+<span id="cb30-35"><a href="#cb30-35" tabindex="-1"></a>  <span class="fu">list</span>(</span>
+<span id="cb30-36"><a href="#cb30-36" tabindex="-1"></a>    <span class="at">id               =</span> <span class="st">&quot;RQ5&quot;</span>,</span>
+<span id="cb30-37"><a href="#cb30-37" tabindex="-1"></a>    <span class="at">research_question =</span> <span class="st">&quot;Does satisfaction predict behavioural intention?&quot;</span>,</span>
+<span id="cb30-38"><a href="#cb30-38" tabindex="-1"></a>    <span class="at">family           =</span> <span class="st">&quot;regression&quot;</span>,</span>
+<span id="cb30-39"><a href="#cb30-39" tabindex="-1"></a>    <span class="at">method           =</span> <span class="st">&quot;regression_linear&quot;</span>,</span>
+<span id="cb30-40"><a href="#cb30-40" tabindex="-1"></a>    <span class="at">roles            =</span> <span class="fu">list</span>(<span class="at">predictors =</span> <span class="st">&quot;TS&quot;</span>, <span class="at">dependent =</span> <span class="st">&quot;BI&quot;</span>),</span>
+<span id="cb30-41"><a href="#cb30-41" tabindex="-1"></a>    <span class="at">options          =</span> <span class="fu">list</span>(<span class="at">alpha =</span> <span class="fl">0.05</span>)</span>
+<span id="cb30-42"><a href="#cb30-42" tabindex="-1"></a>  )</span>
+<span id="cb30-43"><a href="#cb30-43" tabindex="-1"></a>)</span>
+<span id="cb30-44"><a href="#cb30-44" tabindex="-1"></a></span>
+<span id="cb30-45"><a href="#cb30-45" tabindex="-1"></a><span class="fu">length</span>(study<span class="sc">$</span>analysis_plan)</span>
+<span id="cb30-46"><a href="#cb30-46" tabindex="-1"></a><span class="co">#&gt; [1] 5</span></span></code></pre></div>
+<hr />
+</div>
+<div id="assumption-checks" class="section level2">
+<h2>Assumption checks</h2>
+<p>Before running the analysis plan, check statistical assumptions for
+the variables involved. <code>assumption_report()</code> tests normality
+(Shapiro-Wilk for samples below 5,000), homogeneity of variance (Levene)
+for grouped tests, and linearity for regression pairs.</p>
+<div class="sourceCode" id="cb31"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" tabindex="-1"></a><span class="cf">if</span> (<span class="fu">requireNamespace</span>(<span class="st">&quot;psych&quot;</span>, <span class="at">quietly =</span> <span class="cn">TRUE</span>)) {</span>
+<span id="cb31-2"><a href="#cb31-2" tabindex="-1"></a>  ar <span class="ot">&lt;-</span> <span class="fu">assumption_report</span>(scored, study)</span>
+<span id="cb31-3"><a href="#cb31-3" tabindex="-1"></a>  <span class="fu">print</span>(ar)</span>
+<span id="cb31-4"><a href="#cb31-4" tabindex="-1"></a>}</span>
+<span id="cb31-5"><a href="#cb31-5" tabindex="-1"></a><span class="co">#&gt; $method</span></span>
+<span id="cb31-6"><a href="#cb31-6" tabindex="-1"></a><span class="co">#&gt; [1] &quot;assumptions&quot;</span></span>
+<span id="cb31-7"><a href="#cb31-7" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb31-8"><a href="#cb31-8" tabindex="-1"></a><span class="co">#&gt; $normality</span></span>
+<span id="cb31-9"><a href="#cb31-9" tabindex="-1"></a><span class="co">#&gt; data frame with 0 columns and 0 rows</span></span>
+<span id="cb31-10"><a href="#cb31-10" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb31-11"><a href="#cb31-11" tabindex="-1"></a><span class="co">#&gt; $homogeneity</span></span>
+<span id="cb31-12"><a href="#cb31-12" tabindex="-1"></a><span class="co">#&gt; data frame with 0 columns and 0 rows</span></span>
+<span id="cb31-13"><a href="#cb31-13" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb31-14"><a href="#cb31-14" tabindex="-1"></a><span class="co">#&gt; $regression</span></span>
+<span id="cb31-15"><a href="#cb31-15" tabindex="-1"></a><span class="co">#&gt; NULL</span></span>
+<span id="cb31-16"><a href="#cb31-16" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb31-17"><a href="#cb31-17" tabindex="-1"></a><span class="co">#&gt; $expected_counts</span></span>
+<span id="cb31-18"><a href="#cb31-18" tabindex="-1"></a><span class="co">#&gt; NULL</span></span>
+<span id="cb31-19"><a href="#cb31-19" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb31-20"><a href="#cb31-20" tabindex="-1"></a><span class="co">#&gt; $apa</span></span>
+<span id="cb31-21"><a href="#cb31-21" tabindex="-1"></a><span class="co">#&gt; [1] &quot;Assumption checks were computed.&quot;</span></span>
+<span id="cb31-22"><a href="#cb31-22" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb31-23"><a href="#cb31-23" tabindex="-1"></a><span class="co">#&gt; $prompt</span></span>
+<span id="cb31-24"><a href="#cb31-24" tabindex="-1"></a><span class="co">#&gt; [1] &quot;Report assumption checks before interpreting inferential models, especially sparse cells, non-normal residuals, and high VIF values.&quot;</span></span>
+<span id="cb31-25"><a href="#cb31-25" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb31-26"><a href="#cb31-26" tabindex="-1"></a><span class="co">#&gt; attr(,&quot;class&quot;)</span></span>
+<span id="cb31-27"><a href="#cb31-27" tabindex="-1"></a><span class="co">#&gt; [1] &quot;sframe_assumption_report&quot;</span></span></code></pre></div>
+<p>Review the <code>$normality</code> and <code>$homogeneity</code>
+slots to decide whether parametric or non-parametric alternatives are
+appropriate. The analysis plan can override the test method per block if
+the default is not suitable.</p>
 <hr />
 </div>
 <div id="run-the-analysis-plan" class="section level2">
 <h2>Run the analysis plan</h2>
-<div class="sourceCode" id="cb26"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" tabindex="-1"></a>results <span class="ot">&lt;-</span> <span class="fu">run_analysis_plan</span>(scored, study)</span></code></pre></div>
+<div class="sourceCode" id="cb32"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb32-1"><a href="#cb32-1" tabindex="-1"></a>results <span class="ot">&lt;-</span> <span class="fu">run_analysis_plan</span>(scored, study)</span></code></pre></div>
 <p>Each result carries an APA-formatted statistic, an effect size, a
 writing prompt, and the methodological reference that supports the
 chosen test.</p>
-<div class="sourceCode" id="cb27"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" tabindex="-1"></a><span class="cf">for</span> (r <span class="cf">in</span> results) {</span>
-<span id="cb27-2"><a href="#cb27-2" tabindex="-1"></a>  <span class="fu">cat</span>(<span class="fu">sprintf</span>(<span class="st">&quot;[%s] %s</span><span class="sc">\n</span><span class="st">  APA:    %s</span><span class="sc">\n</span><span class="st">  Effect: %s</span><span class="sc">\n</span><span class="st">  Prompt: %s</span><span class="sc">\n\n</span><span class="st">&quot;</span>,</span>
-<span id="cb27-3"><a href="#cb27-3" tabindex="-1"></a>              r<span class="sc">$</span>id,</span>
-<span id="cb27-4"><a href="#cb27-4" tabindex="-1"></a>              r<span class="sc">$</span>research_question,</span>
-<span id="cb27-5"><a href="#cb27-5" tabindex="-1"></a>              r<span class="sc">$</span>apa,</span>
-<span id="cb27-6"><a href="#cb27-6" tabindex="-1"></a>              r<span class="sc">$</span>effect_label,</span>
-<span id="cb27-7"><a href="#cb27-7" tabindex="-1"></a>              r<span class="sc">$</span>prompt))</span>
-<span id="cb27-8"><a href="#cb27-8" tabindex="-1"></a>}</span></code></pre></div>
+<div class="sourceCode" id="cb33"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1" tabindex="-1"></a><span class="fu">results_table</span>(results)</span></code></pre></div>
+<table style="width:100%;">
+<colgroup>
+<col width="2%" />
+<col width="53%" />
+<col width="5%" />
+<col width="29%" />
+<col width="8%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">RQ</th>
+<th align="left">Research question</th>
+<th align="left">Method</th>
+<th align="right">Result (APA)</th>
+<th align="left">Effect</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">RQ1</td>
+<td align="left">Are digital marketing perceptions associated with
+tourist satisfaction?</td>
+<td align="left">pearson</td>
+<td align="right">r(58) = 0.19, p = 0.153</td>
+<td align="left">small</td>
+</tr>
+<tr class="even">
+<td align="left">RQ2</td>
+<td align="left">Is service quality associated with tourist
+satisfaction?</td>
+<td align="left">pearson</td>
+<td align="right">r(58) = -0.04, p = 0.778</td>
+<td align="left">negligible</td>
+</tr>
+<tr class="odd">
+<td align="left">RQ3</td>
+<td align="left">Do service quality and sustainability quality predict
+satisfaction?</td>
+<td align="left"></td>
+<td align="right">R² = 0.210, F(3, 56) = 4.97, p = 0.004</td>
+<td align="left"></td>
+</tr>
+<tr class="even">
+<td align="left">RQ4</td>
+<td align="left">Do first-time and repeat visitors differ in
+satisfaction?</td>
+<td align="left"></td>
+<td align="right">U = 744, z = -4.62, p &lt; .001, r = 0.60</td>
+<td align="left">large</td>
+</tr>
+<tr class="odd">
+<td align="left">RQ5</td>
+<td align="left">Does satisfaction predict behavioural intention?</td>
+<td align="left"></td>
+<td align="right">R² = 0.291, F(1, 58) = 23.83, p &lt; .001</td>
+<td align="left"></td>
+</tr>
+</tbody>
+</table>
+<p>The full writing prompt for each result is available in
+<code>r$prompt</code>. The first one reads:</p>
+<div class="sourceCode" id="cb34"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb34-1"><a href="#cb34-1" tabindex="-1"></a><span class="fu">cat</span>(results[[<span class="dv">1</span>]]<span class="sc">$</span>prompt)</span>
+<span id="cb34-2"><a href="#cb34-2" tabindex="-1"></a><span class="co">#&gt; There was a positive, small non-significant correlation between DMRE and TS, r(58) = 0.19, p = 0.153. Explain what this means for your research question.</span></span></code></pre></div>
 <p>The <code>prompt</code> field is a sentence template for the methods
 or results section. The researcher fills in the substantive
-interpretation; the package supplies the statistic and the label. This
+interpretation. The package supplies the statistic and the label. This
 separation is intentional: statistical significance and practical
 significance are distinct judgements.</p>
 <hr />
@@ -1039,30 +1724,30 @@ significance are distinct judgements.</p>
 <p><code>render_results()</code> writes one section per research
 question. <code>render_report()</code> adds a codebook, quality summary,
 and descriptives alongside the analysis results.</p>
-<div class="sourceCode" id="cb28"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1" tabindex="-1"></a>results_path <span class="ot">&lt;-</span> <span class="fu">render_results</span>(</span>
-<span id="cb28-2"><a href="#cb28-2" tabindex="-1"></a>  results,</span>
-<span id="cb28-3"><a href="#cb28-3" tabindex="-1"></a>  study,</span>
-<span id="cb28-4"><a href="#cb28-4" tabindex="-1"></a>  <span class="at">output_file =</span> <span class="fu">file.path</span>(<span class="fu">tempdir</span>(), <span class="st">&quot;tourism_results.html&quot;</span>)</span>
-<span id="cb28-5"><a href="#cb28-5" tabindex="-1"></a>)</span>
-<span id="cb28-6"><a href="#cb28-6" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">&quot;Results report written:&quot;</span>, results_path, <span class="st">&quot;</span><span class="sc">\n</span><span class="st">&quot;</span>)</span>
-<span id="cb28-7"><a href="#cb28-7" tabindex="-1"></a><span class="co">#&gt; Results report written: /tmp/claude-1000/RtmpQvwDxe/tourism_results.html</span></span>
-<span id="cb28-8"><a href="#cb28-8" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">&quot;Size:&quot;</span>, <span class="fu">round</span>(<span class="fu">file.size</span>(results_path) <span class="sc">/</span> <span class="dv">1024</span>, <span class="dv">1</span>), <span class="st">&quot;KB</span><span class="sc">\n</span><span class="st">&quot;</span>)</span>
-<span id="cb28-9"><a href="#cb28-9" tabindex="-1"></a><span class="co">#&gt; Size: 11.2 KB</span></span></code></pre></div>
+<div class="sourceCode" id="cb35"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb35-1"><a href="#cb35-1" tabindex="-1"></a>results_path <span class="ot">&lt;-</span> <span class="fu">render_results</span>(</span>
+<span id="cb35-2"><a href="#cb35-2" tabindex="-1"></a>  results,</span>
+<span id="cb35-3"><a href="#cb35-3" tabindex="-1"></a>  study,</span>
+<span id="cb35-4"><a href="#cb35-4" tabindex="-1"></a>  <span class="at">output_file =</span> <span class="fu">file.path</span>(<span class="fu">tempdir</span>(), <span class="st">&quot;tourism_results.html&quot;</span>)</span>
+<span id="cb35-5"><a href="#cb35-5" tabindex="-1"></a>)</span>
+<span id="cb35-6"><a href="#cb35-6" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">&quot;Results report written:&quot;</span>, results_path, <span class="st">&quot;</span><span class="sc">\n</span><span class="st">&quot;</span>)</span>
+<span id="cb35-7"><a href="#cb35-7" tabindex="-1"></a><span class="co">#&gt; Results report written: /tmp/RtmpHjpgBm/tourism_results.html</span></span>
+<span id="cb35-8"><a href="#cb35-8" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">&quot;Size:&quot;</span>, <span class="fu">round</span>(<span class="fu">file.size</span>(results_path) <span class="sc">/</span> <span class="dv">1024</span>, <span class="dv">1</span>), <span class="st">&quot;KB</span><span class="sc">\n</span><span class="st">&quot;</span>)</span>
+<span id="cb35-9"><a href="#cb35-9" tabindex="-1"></a><span class="co">#&gt; Size: 11.7 KB</span></span></code></pre></div>
 <p>The results report contains one section per research question, with
 the APA statistic, effect size, writing prompt, and the reference for
 the chosen method.</p>
-<div class="sourceCode" id="cb29"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" tabindex="-1"></a><span class="fu">render_report</span>(</span>
-<span id="cb29-2"><a href="#cb29-2" tabindex="-1"></a>  study,</span>
-<span id="cb29-3"><a href="#cb29-3" tabindex="-1"></a>  <span class="at">data             =</span> scored,</span>
-<span id="cb29-4"><a href="#cb29-4" tabindex="-1"></a>  <span class="at">output_file      =</span> <span class="fu">file.path</span>(<span class="fu">tempdir</span>(), <span class="st">&quot;tourism_report.html&quot;</span>),</span>
-<span id="cb29-5"><a href="#cb29-5" tabindex="-1"></a>  <span class="at">include_codebook =</span> <span class="cn">TRUE</span>,</span>
-<span id="cb29-6"><a href="#cb29-6" tabindex="-1"></a>  <span class="at">include_quality  =</span> <span class="cn">TRUE</span>,</span>
-<span id="cb29-7"><a href="#cb29-7" tabindex="-1"></a>  <span class="at">include_missing  =</span> <span class="cn">TRUE</span>,</span>
-<span id="cb29-8"><a href="#cb29-8" tabindex="-1"></a>  <span class="at">include_descriptives =</span> <span class="cn">TRUE</span>,</span>
-<span id="cb29-9"><a href="#cb29-9" tabindex="-1"></a>  <span class="at">include_reliability  =</span> <span class="cn">TRUE</span>,</span>
-<span id="cb29-10"><a href="#cb29-10" tabindex="-1"></a>  <span class="at">include_analysis =</span> <span class="cn">TRUE</span>,</span>
-<span id="cb29-11"><a href="#cb29-11" tabindex="-1"></a>  <span class="at">include_models   =</span> <span class="cn">FALSE</span></span>
-<span id="cb29-12"><a href="#cb29-12" tabindex="-1"></a>)</span></code></pre></div>
+<div class="sourceCode" id="cb36"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb36-1"><a href="#cb36-1" tabindex="-1"></a><span class="fu">render_report</span>(</span>
+<span id="cb36-2"><a href="#cb36-2" tabindex="-1"></a>  study,</span>
+<span id="cb36-3"><a href="#cb36-3" tabindex="-1"></a>  <span class="at">data             =</span> scored,</span>
+<span id="cb36-4"><a href="#cb36-4" tabindex="-1"></a>  <span class="at">output_file      =</span> <span class="fu">file.path</span>(<span class="fu">tempdir</span>(), <span class="st">&quot;tourism_report.html&quot;</span>),</span>
+<span id="cb36-5"><a href="#cb36-5" tabindex="-1"></a>  <span class="at">include_codebook =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb36-6"><a href="#cb36-6" tabindex="-1"></a>  <span class="at">include_quality  =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb36-7"><a href="#cb36-7" tabindex="-1"></a>  <span class="at">include_missing  =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb36-8"><a href="#cb36-8" tabindex="-1"></a>  <span class="at">include_descriptives =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb36-9"><a href="#cb36-9" tabindex="-1"></a>  <span class="at">include_reliability  =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb36-10"><a href="#cb36-10" tabindex="-1"></a>  <span class="at">include_analysis =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb36-11"><a href="#cb36-11" tabindex="-1"></a>  <span class="at">include_models   =</span> <span class="cn">FALSE</span></span>
+<span id="cb36-12"><a href="#cb36-12" tabindex="-1"></a>)</span></code></pre></div>
 <hr />
 </div>
 <div id="the-live-workflow" class="section level2">
@@ -1071,34 +1756,34 @@ the chosen method.</p>
 Every step from <code>read_sheet_responses()</code> onward is identical
 to the simulated workflow. Re-run this block each time you want updated
 results.</p>
-<div class="sourceCode" id="cb30"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1" tabindex="-1"></a><span class="co"># 1. Pull the latest responses from the Google Sheet.</span></span>
-<span id="cb30-2"><a href="#cb30-2" tabindex="-1"></a>responses <span class="ot">&lt;-</span> <span class="fu">read_sheet_responses</span>(</span>
-<span id="cb30-3"><a href="#cb30-3" tabindex="-1"></a>  <span class="at">sheet_id   =</span> <span class="st">&quot;YOUR_SHEET_ID&quot;</span>,</span>
-<span id="cb30-4"><a href="#cb30-4" tabindex="-1"></a>  <span class="at">instrument =</span> study</span>
-<span id="cb30-5"><a href="#cb30-5" tabindex="-1"></a>)</span>
-<span id="cb30-6"><a href="#cb30-6" tabindex="-1"></a></span>
-<span id="cb30-7"><a href="#cb30-7" tabindex="-1"></a><span class="co"># 2. Run quality checks on the new data.</span></span>
-<span id="cb30-8"><a href="#cb30-8" tabindex="-1"></a><span class="fu">quality_report</span>(responses, study, <span class="at">respondent_id =</span> <span class="st">&quot;respondent_id&quot;</span>)</span>
-<span id="cb30-9"><a href="#cb30-9" tabindex="-1"></a></span>
-<span id="cb30-10"><a href="#cb30-10" tabindex="-1"></a><span class="co"># 3. Score the scales.</span></span>
-<span id="cb30-11"><a href="#cb30-11" tabindex="-1"></a>scored <span class="ot">&lt;-</span> <span class="fu">score_scales</span>(responses, study)</span>
-<span id="cb30-12"><a href="#cb30-12" tabindex="-1"></a></span>
-<span id="cb30-13"><a href="#cb30-13" tabindex="-1"></a><span class="co"># 4. Run the pre-declared analysis plan.</span></span>
-<span id="cb30-14"><a href="#cb30-14" tabindex="-1"></a>results <span class="ot">&lt;-</span> <span class="fu">run_analysis_plan</span>(scored, study)</span>
-<span id="cb30-15"><a href="#cb30-15" tabindex="-1"></a></span>
-<span id="cb30-16"><a href="#cb30-16" tabindex="-1"></a><span class="co"># 5. Render the updated report.</span></span>
-<span id="cb30-17"><a href="#cb30-17" tabindex="-1"></a><span class="fu">render_report</span>(</span>
-<span id="cb30-18"><a href="#cb30-18" tabindex="-1"></a>  study,</span>
-<span id="cb30-19"><a href="#cb30-19" tabindex="-1"></a>  <span class="at">data             =</span> scored,</span>
-<span id="cb30-20"><a href="#cb30-20" tabindex="-1"></a>  <span class="at">output_file      =</span> <span class="st">&quot;tourism_report_latest.html&quot;</span>,</span>
-<span id="cb30-21"><a href="#cb30-21" tabindex="-1"></a>  <span class="at">include_codebook =</span> <span class="cn">TRUE</span>,</span>
-<span id="cb30-22"><a href="#cb30-22" tabindex="-1"></a>  <span class="at">include_quality  =</span> <span class="cn">TRUE</span>,</span>
-<span id="cb30-23"><a href="#cb30-23" tabindex="-1"></a>  <span class="at">include_missing  =</span> <span class="cn">TRUE</span>,</span>
-<span id="cb30-24"><a href="#cb30-24" tabindex="-1"></a>  <span class="at">include_descriptives =</span> <span class="cn">TRUE</span>,</span>
-<span id="cb30-25"><a href="#cb30-25" tabindex="-1"></a>  <span class="at">include_reliability  =</span> <span class="cn">TRUE</span>,</span>
-<span id="cb30-26"><a href="#cb30-26" tabindex="-1"></a>  <span class="at">include_analysis =</span> <span class="cn">TRUE</span>,</span>
-<span id="cb30-27"><a href="#cb30-27" tabindex="-1"></a>  <span class="at">include_models   =</span> <span class="cn">FALSE</span></span>
-<span id="cb30-28"><a href="#cb30-28" tabindex="-1"></a>)</span></code></pre></div>
+<div class="sourceCode" id="cb37"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb37-1"><a href="#cb37-1" tabindex="-1"></a><span class="co"># 1. Pull the latest responses from the Google Sheet.</span></span>
+<span id="cb37-2"><a href="#cb37-2" tabindex="-1"></a>responses <span class="ot">&lt;-</span> <span class="fu">read_sheet_responses</span>(</span>
+<span id="cb37-3"><a href="#cb37-3" tabindex="-1"></a>  <span class="at">sheet_id   =</span> <span class="st">&quot;YOUR_SHEET_ID&quot;</span>,</span>
+<span id="cb37-4"><a href="#cb37-4" tabindex="-1"></a>  <span class="at">instrument =</span> study</span>
+<span id="cb37-5"><a href="#cb37-5" tabindex="-1"></a>)</span>
+<span id="cb37-6"><a href="#cb37-6" tabindex="-1"></a></span>
+<span id="cb37-7"><a href="#cb37-7" tabindex="-1"></a><span class="co"># 2. Run quality checks on the new data.</span></span>
+<span id="cb37-8"><a href="#cb37-8" tabindex="-1"></a><span class="fu">quality_report</span>(responses, study, <span class="at">respondent_id =</span> <span class="st">&quot;respondent_id&quot;</span>)</span>
+<span id="cb37-9"><a href="#cb37-9" tabindex="-1"></a></span>
+<span id="cb37-10"><a href="#cb37-10" tabindex="-1"></a><span class="co"># 3. Score the scales.</span></span>
+<span id="cb37-11"><a href="#cb37-11" tabindex="-1"></a>scored <span class="ot">&lt;-</span> <span class="fu">score_scales</span>(responses, study)</span>
+<span id="cb37-12"><a href="#cb37-12" tabindex="-1"></a></span>
+<span id="cb37-13"><a href="#cb37-13" tabindex="-1"></a><span class="co"># 4. Run the pre-declared analysis plan.</span></span>
+<span id="cb37-14"><a href="#cb37-14" tabindex="-1"></a>results <span class="ot">&lt;-</span> <span class="fu">run_analysis_plan</span>(scored, study)</span>
+<span id="cb37-15"><a href="#cb37-15" tabindex="-1"></a></span>
+<span id="cb37-16"><a href="#cb37-16" tabindex="-1"></a><span class="co"># 5. Render the updated report.</span></span>
+<span id="cb37-17"><a href="#cb37-17" tabindex="-1"></a><span class="fu">render_report</span>(</span>
+<span id="cb37-18"><a href="#cb37-18" tabindex="-1"></a>  study,</span>
+<span id="cb37-19"><a href="#cb37-19" tabindex="-1"></a>  <span class="at">data             =</span> scored,</span>
+<span id="cb37-20"><a href="#cb37-20" tabindex="-1"></a>  <span class="at">output_file      =</span> <span class="st">&quot;tourism_report_latest.html&quot;</span>,</span>
+<span id="cb37-21"><a href="#cb37-21" tabindex="-1"></a>  <span class="at">include_codebook =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb37-22"><a href="#cb37-22" tabindex="-1"></a>  <span class="at">include_quality  =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb37-23"><a href="#cb37-23" tabindex="-1"></a>  <span class="at">include_missing  =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb37-24"><a href="#cb37-24" tabindex="-1"></a>  <span class="at">include_descriptives =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb37-25"><a href="#cb37-25" tabindex="-1"></a>  <span class="at">include_reliability  =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb37-26"><a href="#cb37-26" tabindex="-1"></a>  <span class="at">include_analysis =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb37-27"><a href="#cb37-27" tabindex="-1"></a>  <span class="at">include_models   =</span> <span class="cn">FALSE</span></span>
+<span id="cb37-28"><a href="#cb37-28" tabindex="-1"></a>)</span></code></pre></div>
 <p>As more respondents complete the survey, re-running from the
 <code>read_sheet_responses()</code> call above refreshes every result,
 table, and figure in the report without changing any analysis code.</p>
@@ -1112,7 +1797,7 @@ HTML file. The Google Sheets script connects online submissions to R
 through a single function call. Because the questionnaire, the scales,
 and the analysis plan are stored together in the sframe, the design and
 the analysis travel as one object.</p>
-<div class="sourceCode" id="cb31"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" tabindex="-1"></a><span class="fu">citation</span>(<span class="st">&quot;surveyframe&quot;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb38"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb38-1"><a href="#cb38-1" tabindex="-1"></a><span class="fu">citation</span>(<span class="st">&quot;surveyframe&quot;</span>)</span></code></pre></div>
 </div>
 
 

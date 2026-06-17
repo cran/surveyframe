@@ -18,7 +18,7 @@
 #'   [export_static_survey()]
 #'
 #' @examples
-#' \donttest{
+#' \dontrun{
 #' # Minimal embedding example:
 #' library(shiny)
 #' library(surveyframe)
@@ -291,7 +291,7 @@ render_module_ui <- function(state, instr, pages, max_page, ns) {
      .sf-mod .ty-ic{font-size:48px;text-align:center;margin-bottom:12px}
      .sf-mod .ty-t{font-size:20px;font-weight:700;text-align:center;margin-bottom:8px}
      .sf-mod .ty-m{color:#475569;text-align:center;font-size:13px}",
-    theme, theme
+    theme
   )))
 
   content <- switch(state$screen,

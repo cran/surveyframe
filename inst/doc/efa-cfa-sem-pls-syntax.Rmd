@@ -18,11 +18,12 @@ stage. It does not fit the models. This vignette builds the three models from
 the published Thailand study (Sharafuddin, Madhavan, and Wangtueai 2024). The
 syntax steps need no raw data, so every chunk below runs as written.
 
-The constructs are digital marketing effectiveness (DME), built from relevance
-and engagement (DMRE), accessibility and usefulness (DMAU), ease of use (DMEU),
-and perceived value (DMPV); destination service quality (DSQ), built from
-accommodation (DSQA) and local transport (DSQT); destination sustainability
-quality (DSUQ); tourist satisfaction (TS); and behavioural intention (BI).
+There are five constructs. Digital marketing effectiveness (DME) is built from
+relevance and engagement (DMRE), accessibility and usefulness (DMAU), ease of use
+(DMEU), and perceived value (DMPV). Destination service quality (DSQ) is built
+from accommodation (DSQA) and local transport (DSQT). The remaining three are
+destination sustainability quality (DSUQ), tourist satisfaction (TS), and
+behavioural intention (BI).
 
 ```{r item-ids}
 dmre <- paste0("dmre_", 1:4); dmau <- paste0("dmau_", 1:3)

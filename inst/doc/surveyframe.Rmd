@@ -13,6 +13,36 @@ vignette: >
 ```{r setup, include = FALSE}
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 library(surveyframe)
+library(knitr)
+
+# Tabulate analysis-plan results the same way the report template does.
+results_table <- function(results) {
+  g <- function(r, f) { v <- r[[f]]; if (is.null(v) || !length(v)) "" else as.character(v)[1] }
+  df <- data.frame(
+    RQ       = vapply(results, g, "", "block_id"),
+    Question = vapply(results, g, "", "research_question"),
+    Method   = vapply(results, g, "", "method"),
+    Result   = vapply(results, g, "", "apa"),
+    Effect   = vapply(results, g, "", "effect_label"),
+    check.names = FALSE, stringsAsFactors = FALSE
+  )
+  kable(df, row.names = FALSE,
+        col.names = c("RQ", "Research question", "Method", "Result (APA)", "Effect"),
+        align = c("l", "l", "l", "r", "l"))
+}
+```
+
+```{=html}
+<style>
+body { color: #1a1a2e; }
+h1, h2, h3 { color: #1a1a2e; }
+a { color: #16B3B1; }
+table { border-collapse: collapse; margin: 1em 0; }
+table caption { caption-side: top; font-style: italic; color: #444; padding-bottom: .3em; }
+th { border-top: 2px solid #1a1a2e; border-bottom: 1px solid #1a1a2e; padding: 6px 12px; }
+td { padding: 5px 12px; border: none; }
+tbody tr:last-child td { border-bottom: 2px solid #1a1a2e; }
+</style>
 ```
 
 ## About this vignette
@@ -61,7 +91,7 @@ likert5 <- sf_choices(
 
 `stem_items()` builds items that share a common sentence stem. Each item is the
 stem followed by a unique completion. `solo_items()` builds standalone items.
-Neither function is exported; both use only `sf_item()`.
+Neither function is exported, and both use only `sf_item()`.
 
 ```{r helpers}
 stem_items <- function(ids, stem, completions, scale_id) {
@@ -558,9 +588,13 @@ cat("Columns:    ", ncol(responses), "\n")
 
 ```{r quality}
 qr <- quality_report(responses, study, respondent_id = "respondent_id")
-cat("Respondents:", qr$summary$n_respondents, "\n")
-cat("Items:      ", qr$summary$n_items,       "\n")
-cat("Flagged:    ", qr$summary$n_flagged,      "\n")
+quality_summary <- data.frame(
+  Metric = c("Respondents", "Items", "Flagged for review", "Flag rate"),
+  Value  = c(qr$summary$n_respondents, qr$summary$n_items, qr$summary$n_flagged,
+             sprintf("%.1f%%", 100 * qr$summary$flag_rate)),
+  stringsAsFactors = FALSE
+)
+kable(quality_summary, align = c("l", "r"), caption = "Quality screening summary")
 ```
 
 The flagged count reflects straight-lining detection on simulated data, where
@@ -570,11 +604,10 @@ not automatic exclusion.
 
 ```{r missing}
 mr <- missing_data_report(responses, study)
-# mr is a list; $item_missing, $respondent_missing, $mcar, and $apa are the
-# main slots. Check names(mr) to see all available components.
-names(mr)
-items_miss <- mr$item_missing
-items_miss[items_miss$missing_pct > 0, c("variable", "missing_n", "missing_pct")]
+# mr holds $item_missing, $respondent_missing, $patterns, $mcar, and $apa.
+kable(mr$item_missing, digits = 2,
+      col.names = c("Variable", "Missing (n)", "Missing (%)", "Valid (n)"),
+      caption = "Item-level missingness")
 # $apa provides a plain-language summary suitable for a methods section.
 cat(mr$apa, "\n")
 ```
@@ -584,14 +617,33 @@ cat(mr$apa, "\n")
 ## Score and describe
 
 `score_scales()` appends one column per scale to the data frame, using the
-scoring rules stored in the instrument.
+scoring rules stored in the instrument. If a column with the same name as a
+scale already exists in the data frame, `score_scales()` skips that scale so
+pre-scored data is never overwritten.
 
 ```{r score}
 scored <- score_scales(responses, study)
 
 scale_cols <- c("DMRE", "DMAU", "DMEU", "DMPV",
                 "DSQA", "DSQT", "DSUQ", "TS", "BI")
-round(colMeans(scored[, scale_cols], na.rm = TRUE), 2)
+
+# Display scale means and standard deviations as a table
+scale_summary <- data.frame(
+  Scale = scale_cols,
+  Mean  = round(colMeans(scored[, scale_cols], na.rm = TRUE), 2),
+  SD    = round(apply(scored[, scale_cols], 2, sd, na.rm = TRUE), 2),
+  row.names = NULL
+)
+kable(scale_summary, digits = 2, caption = "Scale score summary")
+```
+
+```{r score-distributions, fig.width = 7, fig.height = 4, fig.align = "left"}
+op <- par(mfrow = c(3, 3), mar = c(4, 3, 2, 1))
+for (s in scale_cols) {
+  v <- scored[[s]]; v <- v[is.finite(v)]
+  hist(v, col = "#16B3B1", border = "white", main = s, xlab = "Score", ylab = "")
+}
+par(op)
 ```
 
 ---
@@ -601,14 +653,63 @@ round(colMeans(scored[, scale_cols], na.rm = TRUE), 2)
 ```{r reliability}
 if (requireNamespace("psych", quietly = TRUE)) {
   rr <- reliability_report(scored, study, omega = FALSE)
-  print(rr)
+  rel_df <- do.call(rbind, lapply(rr, function(s) data.frame(
+    Scale   = paste0(s$label, " (", s$scale_id, ")"),
+    Items   = s$n_items,
+    N       = s$n,
+    Alpha   = if (!is.null(s$alpha)) sprintf("%.2f", s$alpha) else "n/a",
+    stringsAsFactors = FALSE)))
+  kable(rel_df, row.names = FALSE, align = c("l", "c", "c", "r"),
+        caption = "Scale reliability")
 }
 ```
 
 A Cronbach's alpha of 0.70 or above is conventionally accepted as adequate
 internal consistency (Nunnally, 1978). For scales with three or more items,
-McDonald's omega is a more accurate estimate; pass `omega = TRUE` to include
-it. See `?reliability_report` for details.
+McDonald's omega is a more accurate estimate because it accounts for unequal
+factor loadings across items. Alpha assumes all items load equally on the
+factor. Pass `omega = TRUE` when items within a scale differ substantially in
+their contribution. See `?reliability_report` for details.
+
+## EFA readiness
+
+Before a confirmatory factor analysis, it is good practice to confirm that the
+item correlations are strong enough to support factoring. `efa_report()` runs
+the KMO measure of sampling adequacy and Bartlett's test of sphericity, and
+uses parallel analysis to suggest the number of factors.
+
+```{r efa, eval=FALSE}
+if (requireNamespace("psych", quietly = TRUE)) {
+  er <- efa_report(scored, study)
+  print(er)
+}
+```
+
+A KMO value of 0.60 or above and a significant Bartlett test confirm that the
+correlation structure supports factor analysis. The suggested factor count from
+parallel analysis is a guide. Theory should take precedence.
+
+## Construct validity
+
+`validity_report()` computes composite reliability (CR) and average variance
+extracted (AVE) from supplied factor loadings. Discriminant validity is
+assessed via the Fornell-Larcker criterion and HTMT when construct scores are
+supplied.
+
+```{r validity, eval=FALSE}
+# Supply a named list of loadings (construct -> item loadings vector)
+loadings_list <- list(
+  DMRE = c(dm_1 = 0.78, dm_2 = 0.82, dm_3 = 0.75),
+  TS   = c(ts_1 = 0.84, ts_2 = 0.80)
+)
+vr <- validity_report(loadings_list)
+print(vr$reliability)
+```
+
+AVE above 0.50 and CR above 0.70 are the conventional thresholds for
+convergent validity. The Fornell-Larcker criterion requires that the square
+root of each construct's AVE exceeds its highest correlation with any other
+construct.
 
 ---
 
@@ -668,6 +769,26 @@ length(study$analysis_plan)
 
 ---
 
+## Assumption checks
+
+Before running the analysis plan, check statistical assumptions for the
+variables involved. `assumption_report()` tests normality (Shapiro-Wilk for
+samples below 5,000), homogeneity of variance (Levene) for grouped tests, and
+linearity for regression pairs.
+
+```{r assumptions}
+if (requireNamespace("psych", quietly = TRUE)) {
+  ar <- assumption_report(scored, study)
+  print(ar)
+}
+```
+
+Review the `$normality` and `$homogeneity` slots to decide whether parametric
+or non-parametric alternatives are appropriate. The analysis plan can override
+the test method per block if the default is not suitable.
+
+---
+
 ## Run the analysis plan
 
 ```{r run-plan}
@@ -678,18 +799,18 @@ Each result carries an APA-formatted statistic, an effect size, a writing
 prompt, and the methodological reference that supports the chosen test.
 
 ```{r show-results}
-for (r in results) {
-  cat(sprintf("[%s] %s\n  APA:    %s\n  Effect: %s\n  Prompt: %s\n\n",
-              r$id,
-              r$research_question,
-              r$apa,
-              r$effect_label,
-              r$prompt))
-}
+results_table(results)
+```
+
+The full writing prompt for each result is available in `r$prompt`. The first
+one reads:
+
+```{r show-prompt}
+cat(results[[1]]$prompt)
 ```
 
 The `prompt` field is a sentence template for the methods or results section.
-The researcher fills in the substantive interpretation; the package supplies
+The researcher fills in the substantive interpretation. The package supplies
 the statistic and the label. This separation is intentional: statistical
 significance and practical significance are distinct judgements.
 

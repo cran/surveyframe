@@ -18,17 +18,18 @@
 #'   \item{Raw data}{Scrollable response table with a CSV download button.}
 #' }
 #'
-#' The dashboard is read-only. Use it for descriptive exploration after
-#' collecting responses and before running formal analysis with
-#' [run_analysis_plan()].
+#' The dashboard is read-only and takes its data from R. It has no upload
+#' screen, so pass `instrument` and `responses` directly. To open and upload
+#' data interactively, use [launch_studio()], which includes this same
+#' dashboard as its Dashboard tab. For a quick look at bundled demo data, use
+#' [launch_dashboard_demo()].
 #'
-#' @param instrument An `sframe` object. When `NULL`, the bundled tourism
-#'   services demo instrument is loaded.
+#' @param instrument An `sframe` object. Required. Calling `launch_dashboard()`
+#'   with no instrument errors with guidance; use [launch_dashboard_demo()] for
+#'   the bundled demo or [launch_studio()] to upload interactively.
 #' @param responses A `data.frame` or `tibble` of survey responses, as
-#'   produced by [read_responses()] or [read_sheet_responses()]. When NULL
-#'   and `instrument` is also NULL, the bundled simulated demo responses are
-#'   loaded. When NULL with a user-supplied instrument, the dashboard opens
-#'   with instrument metadata and no response summaries.
+#'   produced by [read_responses()] or [read_sheet_responses()]. When NULL the
+#'   dashboard opens with instrument metadata and no response summaries.
 #' @param port Integer or NULL. TCP port for the Shiny server. When NULL,
 #'   Shiny selects an available port automatically.
 #' @param host Character. Host address passed to [shiny::runApp()]. Defaults
@@ -42,10 +43,9 @@
 #' @seealso [run_analysis_plan()], [quality_report()], [score_scales()]
 #'
 #' @examples
-#' \donttest{
-#' # Open the bundled tourism-services response dashboard.
-#' # To build a questionnaire instead, use launch_builder().
-#' launch_dashboard()
+#' \dontrun{
+#' # For the bundled demo, use launch_dashboard_demo().
+#' # To upload data interactively, use launch_studio().
 #'
 #' # Open the dashboard with your own instrument and responses
 #' instr <- read_sframe(
@@ -72,30 +72,15 @@ launch_dashboard <- function(
   rlang::check_installed("shiny", reason = "to launch the response dashboard.")
 
   if (is.null(instrument)) {
-    demo_instr_path <- system.file(
-      "extdata", "tourism_services_demo.sframe",
-      package = "surveyframe"
+    rlang::abort(
+      paste0(
+        "launch_dashboard() needs an instrument to display. Pass one (with ",
+        "responses) from R, use launch_dashboard_demo() for the bundled demo, ",
+        "or use launch_studio() to open and upload data interactively (the ",
+        "studio includes this dashboard as its Dashboard tab)."
+      ),
+      class = "sframe_error"
     )
-    demo_resp_path <- system.file(
-      "extdata", "tourism_services_responses.csv",
-      package = "surveyframe"
-    )
-    if (!nzchar(demo_instr_path) || !file.exists(demo_instr_path)) {
-      rlang::abort(
-        "Bundled dashboard demo instrument not found. Please reinstall surveyframe.",
-        class = "sframe_error"
-      )
-    }
-    instrument <- read_sframe(demo_instr_path)
-    if (is.null(responses) && nzchar(demo_resp_path) && file.exists(demo_resp_path)) {
-      responses <- read_responses(
-        demo_resp_path,
-        instrument,
-        respondent_id = "respondent_id",
-        submitted_at = "submitted_at",
-        meta_cols = "started_at"
-      )
-    }
   }
 
   sframe_check_instrument(instrument)
@@ -121,6 +106,11 @@ launch_dashboard <- function(
   app_env$SFRAME_INSTRUMENT <- instrument
   app_env$SFRAME_RESPONSES  <- responses
   sys.source(file.path(app_path, "app.R"), envir = app_env)
+
+  # Running a shinyApp object (not a directory) does not auto-serve www/, so
+  # register it explicitly for the header logo and other static assets.
+  www_dir <- file.path(app_path, "www")
+  if (dir.exists(www_dir)) shiny::addResourcePath("sfdash", www_dir)
 
   shiny::runApp(
     appDir        = shiny::shinyApp(ui = app_env$ui, server = app_env$server),

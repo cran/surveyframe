@@ -264,9 +264,18 @@ efa_report <- function(
                                     function(x) suppressWarnings(as.numeric(x))))
   item_data <- item_data[complete.cases(item_data), , drop = FALSE]
 
-  kmo      <- psych::KMO(item_data)
-  bart     <- psych::cortest.bartlett(item_data)
-  parallel <- psych::fa.parallel(item_data, plot = FALSE)
+  # KMO(), cortest.bartlett(), and fa.parallel() all print "R was not square ..."
+  # to stderr (and fa.parallel prints its suggestion to stdout) when given raw
+  # data. Capture both streams and silence conditions so reports stay clean.
+  invisible(utils::capture.output(type = "message",
+    invisible(utils::capture.output(
+      suppressWarnings(suppressMessages({
+        kmo      <- psych::KMO(item_data)
+        bart     <- psych::cortest.bartlett(item_data)
+        parallel <- psych::fa.parallel(item_data, plot = FALSE)
+      }))
+    ))
+  ))
 
   suggested <- nfactors %||% parallel$nfact
 

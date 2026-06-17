@@ -342,6 +342,16 @@ plan</h1>
 
 
 
+<style>
+body { color: #1a1a2e; }
+h1, h2, h3 { color: #1a1a2e; }
+a { color: #16B3B1; }
+table { border-collapse: collapse; margin: 1em 0; }
+table caption { caption-side: top; font-style: italic; color: #444; padding-bottom: .3em; }
+th { border-top: 2px solid #1a1a2e; border-bottom: 1px solid #1a1a2e; padding: 6px 12px; }
+td { padding: 5px 12px; border: none; }
+tbody tr:last-child td { border-bottom: 2px solid #1a1a2e; }
+</style>
 <p>The analysis in surveyframe is driven by the plan stored in the
 instrument. Once responses are imported, scored, and checked,
 <code>run_analysis_plan()</code> runs every research question in one
@@ -379,485 +389,385 @@ only known columns.</p>
 </div>
 <div id="missing-data-and-quality" class="section level2">
 <h2>Missing data and quality</h2>
-<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="fu">missing_data_report</span>(responses, instr)</span>
-<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a><span class="co">#&gt; $method</span></span>
-<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a><span class="co">#&gt; [1] &quot;missing_data&quot;</span></span>
-<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a><span class="co">#&gt; $item_missing</span></span>
-<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a><span class="co">#&gt;              variable missing_n missing_pct valid_n</span></span>
-<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a><span class="co">#&gt; visit_type visit_type         0           0     120</span></span>
-<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a><span class="co">#&gt; dm_1             dm_1         0           0     120</span></span>
-<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a><span class="co">#&gt; dm_2             dm_2         0           0     120</span></span>
-<span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a><span class="co">#&gt; dm_3             dm_3         0           0     120</span></span>
-<span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a><span class="co">#&gt; sq_1             sq_1         0           0     120</span></span>
-<span id="cb3-12"><a href="#cb3-12" tabindex="-1"></a><span class="co">#&gt; sq_2             sq_2         0           0     120</span></span>
-<span id="cb3-13"><a href="#cb3-13" tabindex="-1"></a><span class="co">#&gt; sq_3             sq_3         0           0     120</span></span>
-<span id="cb3-14"><a href="#cb3-14" tabindex="-1"></a><span class="co">#&gt; sus_1           sus_1         0           0     120</span></span>
-<span id="cb3-15"><a href="#cb3-15" tabindex="-1"></a><span class="co">#&gt; sus_2           sus_2         0           0     120</span></span>
-<span id="cb3-16"><a href="#cb3-16" tabindex="-1"></a><span class="co">#&gt; sat_1           sat_1         0           0     120</span></span>
-<span id="cb3-17"><a href="#cb3-17" tabindex="-1"></a><span class="co">#&gt; sat_2           sat_2         0           0     120</span></span>
-<span id="cb3-18"><a href="#cb3-18" tabindex="-1"></a><span class="co">#&gt; bi_1             bi_1         0           0     120</span></span>
-<span id="cb3-19"><a href="#cb3-19" tabindex="-1"></a><span class="co">#&gt; bi_2             bi_2         0           0     120</span></span>
-<span id="cb3-20"><a href="#cb3-20" tabindex="-1"></a><span class="co">#&gt; attention   attention         0           0     120</span></span>
-<span id="cb3-21"><a href="#cb3-21" tabindex="-1"></a><span class="co">#&gt; comments     comments         0           0     120</span></span>
-<span id="cb3-22"><a href="#cb3-22" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb3-23"><a href="#cb3-23" tabindex="-1"></a><span class="co">#&gt; $respondent_missing</span></span>
-<span id="cb3-24"><a href="#cb3-24" tabindex="-1"></a><span class="co">#&gt;     row missing_n missing_pct</span></span>
-<span id="cb3-25"><a href="#cb3-25" tabindex="-1"></a><span class="co">#&gt; 1     1         0           0</span></span>
-<span id="cb3-26"><a href="#cb3-26" tabindex="-1"></a><span class="co">#&gt; 2     2         0           0</span></span>
-<span id="cb3-27"><a href="#cb3-27" tabindex="-1"></a><span class="co">#&gt; 3     3         0           0</span></span>
-<span id="cb3-28"><a href="#cb3-28" tabindex="-1"></a><span class="co">#&gt; 4     4         0           0</span></span>
-<span id="cb3-29"><a href="#cb3-29" tabindex="-1"></a><span class="co">#&gt; 5     5         0           0</span></span>
-<span id="cb3-30"><a href="#cb3-30" tabindex="-1"></a><span class="co">#&gt; 6     6         0           0</span></span>
-<span id="cb3-31"><a href="#cb3-31" tabindex="-1"></a><span class="co">#&gt; 7     7         0           0</span></span>
-<span id="cb3-32"><a href="#cb3-32" tabindex="-1"></a><span class="co">#&gt; 8     8         0           0</span></span>
-<span id="cb3-33"><a href="#cb3-33" tabindex="-1"></a><span class="co">#&gt; 9     9         0           0</span></span>
-<span id="cb3-34"><a href="#cb3-34" tabindex="-1"></a><span class="co">#&gt; 10   10         0           0</span></span>
-<span id="cb3-35"><a href="#cb3-35" tabindex="-1"></a><span class="co">#&gt; 11   11         0           0</span></span>
-<span id="cb3-36"><a href="#cb3-36" tabindex="-1"></a><span class="co">#&gt; 12   12         0           0</span></span>
-<span id="cb3-37"><a href="#cb3-37" tabindex="-1"></a><span class="co">#&gt; 13   13         0           0</span></span>
-<span id="cb3-38"><a href="#cb3-38" tabindex="-1"></a><span class="co">#&gt; 14   14         0           0</span></span>
-<span id="cb3-39"><a href="#cb3-39" tabindex="-1"></a><span class="co">#&gt; 15   15         0           0</span></span>
-<span id="cb3-40"><a href="#cb3-40" tabindex="-1"></a><span class="co">#&gt; 16   16         0           0</span></span>
-<span id="cb3-41"><a href="#cb3-41" tabindex="-1"></a><span class="co">#&gt; 17   17         0           0</span></span>
-<span id="cb3-42"><a href="#cb3-42" tabindex="-1"></a><span class="co">#&gt; 18   18         0           0</span></span>
-<span id="cb3-43"><a href="#cb3-43" tabindex="-1"></a><span class="co">#&gt; 19   19         0           0</span></span>
-<span id="cb3-44"><a href="#cb3-44" tabindex="-1"></a><span class="co">#&gt; 20   20         0           0</span></span>
-<span id="cb3-45"><a href="#cb3-45" tabindex="-1"></a><span class="co">#&gt; 21   21         0           0</span></span>
-<span id="cb3-46"><a href="#cb3-46" tabindex="-1"></a><span class="co">#&gt; 22   22         0           0</span></span>
-<span id="cb3-47"><a href="#cb3-47" tabindex="-1"></a><span class="co">#&gt; 23   23         0           0</span></span>
-<span id="cb3-48"><a href="#cb3-48" tabindex="-1"></a><span class="co">#&gt; 24   24         0           0</span></span>
-<span id="cb3-49"><a href="#cb3-49" tabindex="-1"></a><span class="co">#&gt; 25   25         0           0</span></span>
-<span id="cb3-50"><a href="#cb3-50" tabindex="-1"></a><span class="co">#&gt; 26   26         0           0</span></span>
-<span id="cb3-51"><a href="#cb3-51" tabindex="-1"></a><span class="co">#&gt; 27   27         0           0</span></span>
-<span id="cb3-52"><a href="#cb3-52" tabindex="-1"></a><span class="co">#&gt; 28   28         0           0</span></span>
-<span id="cb3-53"><a href="#cb3-53" tabindex="-1"></a><span class="co">#&gt; 29   29         0           0</span></span>
-<span id="cb3-54"><a href="#cb3-54" tabindex="-1"></a><span class="co">#&gt; 30   30         0           0</span></span>
-<span id="cb3-55"><a href="#cb3-55" tabindex="-1"></a><span class="co">#&gt; 31   31         0           0</span></span>
-<span id="cb3-56"><a href="#cb3-56" tabindex="-1"></a><span class="co">#&gt; 32   32         0           0</span></span>
-<span id="cb3-57"><a href="#cb3-57" tabindex="-1"></a><span class="co">#&gt; 33   33         0           0</span></span>
-<span id="cb3-58"><a href="#cb3-58" tabindex="-1"></a><span class="co">#&gt; 34   34         0           0</span></span>
-<span id="cb3-59"><a href="#cb3-59" tabindex="-1"></a><span class="co">#&gt; 35   35         0           0</span></span>
-<span id="cb3-60"><a href="#cb3-60" tabindex="-1"></a><span class="co">#&gt; 36   36         0           0</span></span>
-<span id="cb3-61"><a href="#cb3-61" tabindex="-1"></a><span class="co">#&gt; 37   37         0           0</span></span>
-<span id="cb3-62"><a href="#cb3-62" tabindex="-1"></a><span class="co">#&gt; 38   38         0           0</span></span>
-<span id="cb3-63"><a href="#cb3-63" tabindex="-1"></a><span class="co">#&gt; 39   39         0           0</span></span>
-<span id="cb3-64"><a href="#cb3-64" tabindex="-1"></a><span class="co">#&gt; 40   40         0           0</span></span>
-<span id="cb3-65"><a href="#cb3-65" tabindex="-1"></a><span class="co">#&gt; 41   41         0           0</span></span>
-<span id="cb3-66"><a href="#cb3-66" tabindex="-1"></a><span class="co">#&gt; 42   42         0           0</span></span>
-<span id="cb3-67"><a href="#cb3-67" tabindex="-1"></a><span class="co">#&gt; 43   43         0           0</span></span>
-<span id="cb3-68"><a href="#cb3-68" tabindex="-1"></a><span class="co">#&gt; 44   44         0           0</span></span>
-<span id="cb3-69"><a href="#cb3-69" tabindex="-1"></a><span class="co">#&gt; 45   45         0           0</span></span>
-<span id="cb3-70"><a href="#cb3-70" tabindex="-1"></a><span class="co">#&gt; 46   46         0           0</span></span>
-<span id="cb3-71"><a href="#cb3-71" tabindex="-1"></a><span class="co">#&gt; 47   47         0           0</span></span>
-<span id="cb3-72"><a href="#cb3-72" tabindex="-1"></a><span class="co">#&gt; 48   48         0           0</span></span>
-<span id="cb3-73"><a href="#cb3-73" tabindex="-1"></a><span class="co">#&gt; 49   49         0           0</span></span>
-<span id="cb3-74"><a href="#cb3-74" tabindex="-1"></a><span class="co">#&gt; 50   50         0           0</span></span>
-<span id="cb3-75"><a href="#cb3-75" tabindex="-1"></a><span class="co">#&gt; 51   51         0           0</span></span>
-<span id="cb3-76"><a href="#cb3-76" tabindex="-1"></a><span class="co">#&gt; 52   52         0           0</span></span>
-<span id="cb3-77"><a href="#cb3-77" tabindex="-1"></a><span class="co">#&gt; 53   53         0           0</span></span>
-<span id="cb3-78"><a href="#cb3-78" tabindex="-1"></a><span class="co">#&gt; 54   54         0           0</span></span>
-<span id="cb3-79"><a href="#cb3-79" tabindex="-1"></a><span class="co">#&gt; 55   55         0           0</span></span>
-<span id="cb3-80"><a href="#cb3-80" tabindex="-1"></a><span class="co">#&gt; 56   56         0           0</span></span>
-<span id="cb3-81"><a href="#cb3-81" tabindex="-1"></a><span class="co">#&gt; 57   57         0           0</span></span>
-<span id="cb3-82"><a href="#cb3-82" tabindex="-1"></a><span class="co">#&gt; 58   58         0           0</span></span>
-<span id="cb3-83"><a href="#cb3-83" tabindex="-1"></a><span class="co">#&gt; 59   59         0           0</span></span>
-<span id="cb3-84"><a href="#cb3-84" tabindex="-1"></a><span class="co">#&gt; 60   60         0           0</span></span>
-<span id="cb3-85"><a href="#cb3-85" tabindex="-1"></a><span class="co">#&gt; 61   61         0           0</span></span>
-<span id="cb3-86"><a href="#cb3-86" tabindex="-1"></a><span class="co">#&gt; 62   62         0           0</span></span>
-<span id="cb3-87"><a href="#cb3-87" tabindex="-1"></a><span class="co">#&gt; 63   63         0           0</span></span>
-<span id="cb3-88"><a href="#cb3-88" tabindex="-1"></a><span class="co">#&gt; 64   64         0           0</span></span>
-<span id="cb3-89"><a href="#cb3-89" tabindex="-1"></a><span class="co">#&gt; 65   65         0           0</span></span>
-<span id="cb3-90"><a href="#cb3-90" tabindex="-1"></a><span class="co">#&gt; 66   66         0           0</span></span>
-<span id="cb3-91"><a href="#cb3-91" tabindex="-1"></a><span class="co">#&gt; 67   67         0           0</span></span>
-<span id="cb3-92"><a href="#cb3-92" tabindex="-1"></a><span class="co">#&gt; 68   68         0           0</span></span>
-<span id="cb3-93"><a href="#cb3-93" tabindex="-1"></a><span class="co">#&gt; 69   69         0           0</span></span>
-<span id="cb3-94"><a href="#cb3-94" tabindex="-1"></a><span class="co">#&gt; 70   70         0           0</span></span>
-<span id="cb3-95"><a href="#cb3-95" tabindex="-1"></a><span class="co">#&gt; 71   71         0           0</span></span>
-<span id="cb3-96"><a href="#cb3-96" tabindex="-1"></a><span class="co">#&gt; 72   72         0           0</span></span>
-<span id="cb3-97"><a href="#cb3-97" tabindex="-1"></a><span class="co">#&gt; 73   73         0           0</span></span>
-<span id="cb3-98"><a href="#cb3-98" tabindex="-1"></a><span class="co">#&gt; 74   74         0           0</span></span>
-<span id="cb3-99"><a href="#cb3-99" tabindex="-1"></a><span class="co">#&gt; 75   75         0           0</span></span>
-<span id="cb3-100"><a href="#cb3-100" tabindex="-1"></a><span class="co">#&gt; 76   76         0           0</span></span>
-<span id="cb3-101"><a href="#cb3-101" tabindex="-1"></a><span class="co">#&gt; 77   77         0           0</span></span>
-<span id="cb3-102"><a href="#cb3-102" tabindex="-1"></a><span class="co">#&gt; 78   78         0           0</span></span>
-<span id="cb3-103"><a href="#cb3-103" tabindex="-1"></a><span class="co">#&gt; 79   79         0           0</span></span>
-<span id="cb3-104"><a href="#cb3-104" tabindex="-1"></a><span class="co">#&gt; 80   80         0           0</span></span>
-<span id="cb3-105"><a href="#cb3-105" tabindex="-1"></a><span class="co">#&gt; 81   81         0           0</span></span>
-<span id="cb3-106"><a href="#cb3-106" tabindex="-1"></a><span class="co">#&gt; 82   82         0           0</span></span>
-<span id="cb3-107"><a href="#cb3-107" tabindex="-1"></a><span class="co">#&gt; 83   83         0           0</span></span>
-<span id="cb3-108"><a href="#cb3-108" tabindex="-1"></a><span class="co">#&gt; 84   84         0           0</span></span>
-<span id="cb3-109"><a href="#cb3-109" tabindex="-1"></a><span class="co">#&gt; 85   85         0           0</span></span>
-<span id="cb3-110"><a href="#cb3-110" tabindex="-1"></a><span class="co">#&gt; 86   86         0           0</span></span>
-<span id="cb3-111"><a href="#cb3-111" tabindex="-1"></a><span class="co">#&gt; 87   87         0           0</span></span>
-<span id="cb3-112"><a href="#cb3-112" tabindex="-1"></a><span class="co">#&gt; 88   88         0           0</span></span>
-<span id="cb3-113"><a href="#cb3-113" tabindex="-1"></a><span class="co">#&gt; 89   89         0           0</span></span>
-<span id="cb3-114"><a href="#cb3-114" tabindex="-1"></a><span class="co">#&gt; 90   90         0           0</span></span>
-<span id="cb3-115"><a href="#cb3-115" tabindex="-1"></a><span class="co">#&gt; 91   91         0           0</span></span>
-<span id="cb3-116"><a href="#cb3-116" tabindex="-1"></a><span class="co">#&gt; 92   92         0           0</span></span>
-<span id="cb3-117"><a href="#cb3-117" tabindex="-1"></a><span class="co">#&gt; 93   93         0           0</span></span>
-<span id="cb3-118"><a href="#cb3-118" tabindex="-1"></a><span class="co">#&gt; 94   94         0           0</span></span>
-<span id="cb3-119"><a href="#cb3-119" tabindex="-1"></a><span class="co">#&gt; 95   95         0           0</span></span>
-<span id="cb3-120"><a href="#cb3-120" tabindex="-1"></a><span class="co">#&gt; 96   96         0           0</span></span>
-<span id="cb3-121"><a href="#cb3-121" tabindex="-1"></a><span class="co">#&gt; 97   97         0           0</span></span>
-<span id="cb3-122"><a href="#cb3-122" tabindex="-1"></a><span class="co">#&gt; 98   98         0           0</span></span>
-<span id="cb3-123"><a href="#cb3-123" tabindex="-1"></a><span class="co">#&gt; 99   99         0           0</span></span>
-<span id="cb3-124"><a href="#cb3-124" tabindex="-1"></a><span class="co">#&gt; 100 100         0           0</span></span>
-<span id="cb3-125"><a href="#cb3-125" tabindex="-1"></a><span class="co">#&gt; 101 101         0           0</span></span>
-<span id="cb3-126"><a href="#cb3-126" tabindex="-1"></a><span class="co">#&gt; 102 102         0           0</span></span>
-<span id="cb3-127"><a href="#cb3-127" tabindex="-1"></a><span class="co">#&gt; 103 103         0           0</span></span>
-<span id="cb3-128"><a href="#cb3-128" tabindex="-1"></a><span class="co">#&gt; 104 104         0           0</span></span>
-<span id="cb3-129"><a href="#cb3-129" tabindex="-1"></a><span class="co">#&gt; 105 105         0           0</span></span>
-<span id="cb3-130"><a href="#cb3-130" tabindex="-1"></a><span class="co">#&gt; 106 106         0           0</span></span>
-<span id="cb3-131"><a href="#cb3-131" tabindex="-1"></a><span class="co">#&gt; 107 107         0           0</span></span>
-<span id="cb3-132"><a href="#cb3-132" tabindex="-1"></a><span class="co">#&gt; 108 108         0           0</span></span>
-<span id="cb3-133"><a href="#cb3-133" tabindex="-1"></a><span class="co">#&gt; 109 109         0           0</span></span>
-<span id="cb3-134"><a href="#cb3-134" tabindex="-1"></a><span class="co">#&gt; 110 110         0           0</span></span>
-<span id="cb3-135"><a href="#cb3-135" tabindex="-1"></a><span class="co">#&gt; 111 111         0           0</span></span>
-<span id="cb3-136"><a href="#cb3-136" tabindex="-1"></a><span class="co">#&gt; 112 112         0           0</span></span>
-<span id="cb3-137"><a href="#cb3-137" tabindex="-1"></a><span class="co">#&gt; 113 113         0           0</span></span>
-<span id="cb3-138"><a href="#cb3-138" tabindex="-1"></a><span class="co">#&gt; 114 114         0           0</span></span>
-<span id="cb3-139"><a href="#cb3-139" tabindex="-1"></a><span class="co">#&gt; 115 115         0           0</span></span>
-<span id="cb3-140"><a href="#cb3-140" tabindex="-1"></a><span class="co">#&gt; 116 116         0           0</span></span>
-<span id="cb3-141"><a href="#cb3-141" tabindex="-1"></a><span class="co">#&gt; 117 117         0           0</span></span>
-<span id="cb3-142"><a href="#cb3-142" tabindex="-1"></a><span class="co">#&gt; 118 118         0           0</span></span>
-<span id="cb3-143"><a href="#cb3-143" tabindex="-1"></a><span class="co">#&gt; 119 119         0           0</span></span>
-<span id="cb3-144"><a href="#cb3-144" tabindex="-1"></a><span class="co">#&gt; 120 120         0           0</span></span>
-<span id="cb3-145"><a href="#cb3-145" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb3-146"><a href="#cb3-146" tabindex="-1"></a><span class="co">#&gt; $patterns</span></span>
-<span id="cb3-147"><a href="#cb3-147" tabindex="-1"></a><span class="co">#&gt;           pattern   n percent</span></span>
-<span id="cb3-148"><a href="#cb3-148" tabindex="-1"></a><span class="co">#&gt; 1 000000000000000 120       1</span></span>
-<span id="cb3-149"><a href="#cb3-149" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb3-150"><a href="#cb3-150" tabindex="-1"></a><span class="co">#&gt; $deletion</span></span>
-<span id="cb3-151"><a href="#cb3-151" tabindex="-1"></a><span class="co">#&gt; $deletion$listwise_n</span></span>
-<span id="cb3-152"><a href="#cb3-152" tabindex="-1"></a><span class="co">#&gt; [1] 120</span></span>
-<span id="cb3-153"><a href="#cb3-153" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb3-154"><a href="#cb3-154" tabindex="-1"></a><span class="co">#&gt; $deletion$pairwise_n</span></span>
-<span id="cb3-155"><a href="#cb3-155" tabindex="-1"></a><span class="co">#&gt; $deletion$pairwise_n$visit_type</span></span>
-<span id="cb3-156"><a href="#cb3-156" tabindex="-1"></a><span class="co">#&gt; visit_type       dm_1       dm_2       dm_3       sq_1       sq_2       sq_3 </span></span>
-<span id="cb3-157"><a href="#cb3-157" tabindex="-1"></a><span class="co">#&gt;        120        120        120        120        120        120        120 </span></span>
-<span id="cb3-158"><a href="#cb3-158" tabindex="-1"></a><span class="co">#&gt;      sus_1      sus_2      sat_1      sat_2       bi_1       bi_2  attention </span></span>
-<span id="cb3-159"><a href="#cb3-159" tabindex="-1"></a><span class="co">#&gt;        120        120        120        120        120        120        120 </span></span>
-<span id="cb3-160"><a href="#cb3-160" tabindex="-1"></a><span class="co">#&gt;   comments </span></span>
-<span id="cb3-161"><a href="#cb3-161" tabindex="-1"></a><span class="co">#&gt;        120 </span></span>
-<span id="cb3-162"><a href="#cb3-162" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb3-163"><a href="#cb3-163" tabindex="-1"></a><span class="co">#&gt; $deletion$pairwise_n$dm_1</span></span>
-<span id="cb3-164"><a href="#cb3-164" tabindex="-1"></a><span class="co">#&gt; visit_type       dm_1       dm_2       dm_3       sq_1       sq_2       sq_3 </span></span>
-<span id="cb3-165"><a href="#cb3-165" tabindex="-1"></a><span class="co">#&gt;        120        120        120        120        120        120        120 </span></span>
-<span id="cb3-166"><a href="#cb3-166" tabindex="-1"></a><span class="co">#&gt;      sus_1      sus_2      sat_1      sat_2       bi_1       bi_2  attention </span></span>
-<span id="cb3-167"><a href="#cb3-167" tabindex="-1"></a><span class="co">#&gt;        120        120        120        120        120        120        120 </span></span>
-<span id="cb3-168"><a href="#cb3-168" tabindex="-1"></a><span class="co">#&gt;   comments </span></span>
-<span id="cb3-169"><a href="#cb3-169" tabindex="-1"></a><span class="co">#&gt;        120 </span></span>
-<span id="cb3-170"><a href="#cb3-170" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb3-171"><a href="#cb3-171" tabindex="-1"></a><span class="co">#&gt; $deletion$pairwise_n$dm_2</span></span>
-<span id="cb3-172"><a href="#cb3-172" tabindex="-1"></a><span class="co">#&gt; visit_type       dm_1       dm_2       dm_3       sq_1       sq_2       sq_3 </span></span>
-<span id="cb3-173"><a href="#cb3-173" tabindex="-1"></a><span class="co">#&gt;        120        120        120        120        120        120        120 </span></span>
-<span id="cb3-174"><a href="#cb3-174" tabindex="-1"></a><span class="co">#&gt;      sus_1      sus_2      sat_1      sat_2       bi_1       bi_2  attention </span></span>
-<span id="cb3-175"><a href="#cb3-175" tabindex="-1"></a><span class="co">#&gt;        120        120        120        120        120        120        120 </span></span>
-<span id="cb3-176"><a href="#cb3-176" tabindex="-1"></a><span class="co">#&gt;   comments </span></span>
-<span id="cb3-177"><a href="#cb3-177" tabindex="-1"></a><span class="co">#&gt;        120 </span></span>
-<span id="cb3-178"><a href="#cb3-178" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb3-179"><a href="#cb3-179" tabindex="-1"></a><span class="co">#&gt; $deletion$pairwise_n$dm_3</span></span>
-<span id="cb3-180"><a href="#cb3-180" tabindex="-1"></a><span class="co">#&gt; visit_type       dm_1       dm_2       dm_3       sq_1       sq_2       sq_3 </span></span>
-<span id="cb3-181"><a href="#cb3-181" tabindex="-1"></a><span class="co">#&gt;        120        120        120        120        120        120        120 </span></span>
-<span id="cb3-182"><a href="#cb3-182" tabindex="-1"></a><span class="co">#&gt;      sus_1      sus_2      sat_1      sat_2       bi_1       bi_2  attention </span></span>
-<span id="cb3-183"><a href="#cb3-183" tabindex="-1"></a><span class="co">#&gt;        120        120        120        120        120        120        120 </span></span>
-<span id="cb3-184"><a href="#cb3-184" tabindex="-1"></a><span class="co">#&gt;   comments </span></span>
-<span id="cb3-185"><a href="#cb3-185" tabindex="-1"></a><span class="co">#&gt;        120 </span></span>
-<span id="cb3-186"><a href="#cb3-186" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb3-187"><a href="#cb3-187" tabindex="-1"></a><span class="co">#&gt; $deletion$pairwise_n$sq_1</span></span>
-<span id="cb3-188"><a href="#cb3-188" tabindex="-1"></a><span class="co">#&gt; visit_type       dm_1       dm_2       dm_3       sq_1       sq_2       sq_3 </span></span>
-<span id="cb3-189"><a href="#cb3-189" tabindex="-1"></a><span class="co">#&gt;        120        120        120        120        120        120        120 </span></span>
-<span id="cb3-190"><a href="#cb3-190" tabindex="-1"></a><span class="co">#&gt;      sus_1      sus_2      sat_1      sat_2       bi_1       bi_2  attention </span></span>
-<span id="cb3-191"><a href="#cb3-191" tabindex="-1"></a><span class="co">#&gt;        120        120        120        120        120        120        120 </span></span>
-<span id="cb3-192"><a href="#cb3-192" tabindex="-1"></a><span class="co">#&gt;   comments </span></span>
-<span id="cb3-193"><a href="#cb3-193" tabindex="-1"></a><span class="co">#&gt;        120 </span></span>
-<span id="cb3-194"><a href="#cb3-194" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb3-195"><a href="#cb3-195" tabindex="-1"></a><span class="co">#&gt; $deletion$pairwise_n$sq_2</span></span>
-<span id="cb3-196"><a href="#cb3-196" tabindex="-1"></a><span class="co">#&gt; visit_type       dm_1       dm_2       dm_3       sq_1       sq_2       sq_3 </span></span>
-<span id="cb3-197"><a href="#cb3-197" tabindex="-1"></a><span class="co">#&gt;        120        120        120        120        120        120        120 </span></span>
-<span id="cb3-198"><a href="#cb3-198" tabindex="-1"></a><span class="co">#&gt;      sus_1      sus_2      sat_1      sat_2       bi_1       bi_2  attention </span></span>
-<span id="cb3-199"><a href="#cb3-199" tabindex="-1"></a><span class="co">#&gt;        120        120        120        120        120        120        120 </span></span>
-<span id="cb3-200"><a href="#cb3-200" tabindex="-1"></a><span class="co">#&gt;   comments </span></span>
-<span id="cb3-201"><a href="#cb3-201" tabindex="-1"></a><span class="co">#&gt;        120 </span></span>
-<span id="cb3-202"><a href="#cb3-202" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb3-203"><a href="#cb3-203" tabindex="-1"></a><span class="co">#&gt; $deletion$pairwise_n$sq_3</span></span>
-<span id="cb3-204"><a href="#cb3-204" tabindex="-1"></a><span class="co">#&gt; visit_type       dm_1       dm_2       dm_3       sq_1       sq_2       sq_3 </span></span>
-<span id="cb3-205"><a href="#cb3-205" tabindex="-1"></a><span class="co">#&gt;        120        120        120        120        120        120        120 </span></span>
-<span id="cb3-206"><a href="#cb3-206" tabindex="-1"></a><span class="co">#&gt;      sus_1      sus_2      sat_1      sat_2       bi_1       bi_2  attention </span></span>
-<span id="cb3-207"><a href="#cb3-207" tabindex="-1"></a><span class="co">#&gt;        120        120        120        120        120        120        120 </span></span>
-<span id="cb3-208"><a href="#cb3-208" tabindex="-1"></a><span class="co">#&gt;   comments </span></span>
-<span id="cb3-209"><a href="#cb3-209" tabindex="-1"></a><span class="co">#&gt;        120 </span></span>
-<span id="cb3-210"><a href="#cb3-210" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb3-211"><a href="#cb3-211" tabindex="-1"></a><span class="co">#&gt; $deletion$pairwise_n$sus_1</span></span>
-<span id="cb3-212"><a href="#cb3-212" tabindex="-1"></a><span class="co">#&gt; visit_type       dm_1       dm_2       dm_3       sq_1       sq_2       sq_3 </span></span>
-<span id="cb3-213"><a href="#cb3-213" tabindex="-1"></a><span class="co">#&gt;        120        120        120        120        120        120        120 </span></span>
-<span id="cb3-214"><a href="#cb3-214" tabindex="-1"></a><span class="co">#&gt;      sus_1      sus_2      sat_1      sat_2       bi_1       bi_2  attention </span></span>
-<span id="cb3-215"><a href="#cb3-215" tabindex="-1"></a><span class="co">#&gt;        120        120        120        120        120        120        120 </span></span>
-<span id="cb3-216"><a href="#cb3-216" tabindex="-1"></a><span class="co">#&gt;   comments </span></span>
-<span id="cb3-217"><a href="#cb3-217" tabindex="-1"></a><span class="co">#&gt;        120 </span></span>
-<span id="cb3-218"><a href="#cb3-218" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb3-219"><a href="#cb3-219" tabindex="-1"></a><span class="co">#&gt; $deletion$pairwise_n$sus_2</span></span>
-<span id="cb3-220"><a href="#cb3-220" tabindex="-1"></a><span class="co">#&gt; visit_type       dm_1       dm_2       dm_3       sq_1       sq_2       sq_3 </span></span>
-<span id="cb3-221"><a href="#cb3-221" tabindex="-1"></a><span class="co">#&gt;        120        120        120        120        120        120        120 </span></span>
-<span id="cb3-222"><a href="#cb3-222" tabindex="-1"></a><span class="co">#&gt;      sus_1      sus_2      sat_1      sat_2       bi_1       bi_2  attention </span></span>
-<span id="cb3-223"><a href="#cb3-223" tabindex="-1"></a><span class="co">#&gt;        120        120        120        120        120        120        120 </span></span>
-<span id="cb3-224"><a href="#cb3-224" tabindex="-1"></a><span class="co">#&gt;   comments </span></span>
-<span id="cb3-225"><a href="#cb3-225" tabindex="-1"></a><span class="co">#&gt;        120 </span></span>
-<span id="cb3-226"><a href="#cb3-226" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb3-227"><a href="#cb3-227" tabindex="-1"></a><span class="co">#&gt; $deletion$pairwise_n$sat_1</span></span>
-<span id="cb3-228"><a href="#cb3-228" tabindex="-1"></a><span class="co">#&gt; visit_type       dm_1       dm_2       dm_3       sq_1       sq_2       sq_3 </span></span>
-<span id="cb3-229"><a href="#cb3-229" tabindex="-1"></a><span class="co">#&gt;        120        120        120        120        120        120        120 </span></span>
-<span id="cb3-230"><a href="#cb3-230" tabindex="-1"></a><span class="co">#&gt;      sus_1      sus_2      sat_1      sat_2       bi_1       bi_2  attention </span></span>
-<span id="cb3-231"><a href="#cb3-231" tabindex="-1"></a><span class="co">#&gt;        120        120        120        120        120        120        120 </span></span>
-<span id="cb3-232"><a href="#cb3-232" tabindex="-1"></a><span class="co">#&gt;   comments </span></span>
-<span id="cb3-233"><a href="#cb3-233" tabindex="-1"></a><span class="co">#&gt;        120 </span></span>
-<span id="cb3-234"><a href="#cb3-234" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb3-235"><a href="#cb3-235" tabindex="-1"></a><span class="co">#&gt; $deletion$pairwise_n$sat_2</span></span>
-<span id="cb3-236"><a href="#cb3-236" tabindex="-1"></a><span class="co">#&gt; visit_type       dm_1       dm_2       dm_3       sq_1       sq_2       sq_3 </span></span>
-<span id="cb3-237"><a href="#cb3-237" tabindex="-1"></a><span class="co">#&gt;        120        120        120        120        120        120        120 </span></span>
-<span id="cb3-238"><a href="#cb3-238" tabindex="-1"></a><span class="co">#&gt;      sus_1      sus_2      sat_1      sat_2       bi_1       bi_2  attention </span></span>
-<span id="cb3-239"><a href="#cb3-239" tabindex="-1"></a><span class="co">#&gt;        120        120        120        120        120        120        120 </span></span>
-<span id="cb3-240"><a href="#cb3-240" tabindex="-1"></a><span class="co">#&gt;   comments </span></span>
-<span id="cb3-241"><a href="#cb3-241" tabindex="-1"></a><span class="co">#&gt;        120 </span></span>
-<span id="cb3-242"><a href="#cb3-242" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb3-243"><a href="#cb3-243" tabindex="-1"></a><span class="co">#&gt; $deletion$pairwise_n$bi_1</span></span>
-<span id="cb3-244"><a href="#cb3-244" tabindex="-1"></a><span class="co">#&gt; visit_type       dm_1       dm_2       dm_3       sq_1       sq_2       sq_3 </span></span>
-<span id="cb3-245"><a href="#cb3-245" tabindex="-1"></a><span class="co">#&gt;        120        120        120        120        120        120        120 </span></span>
-<span id="cb3-246"><a href="#cb3-246" tabindex="-1"></a><span class="co">#&gt;      sus_1      sus_2      sat_1      sat_2       bi_1       bi_2  attention </span></span>
-<span id="cb3-247"><a href="#cb3-247" tabindex="-1"></a><span class="co">#&gt;        120        120        120        120        120        120        120 </span></span>
-<span id="cb3-248"><a href="#cb3-248" tabindex="-1"></a><span class="co">#&gt;   comments </span></span>
-<span id="cb3-249"><a href="#cb3-249" tabindex="-1"></a><span class="co">#&gt;        120 </span></span>
-<span id="cb3-250"><a href="#cb3-250" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb3-251"><a href="#cb3-251" tabindex="-1"></a><span class="co">#&gt; $deletion$pairwise_n$bi_2</span></span>
-<span id="cb3-252"><a href="#cb3-252" tabindex="-1"></a><span class="co">#&gt; visit_type       dm_1       dm_2       dm_3       sq_1       sq_2       sq_3 </span></span>
-<span id="cb3-253"><a href="#cb3-253" tabindex="-1"></a><span class="co">#&gt;        120        120        120        120        120        120        120 </span></span>
-<span id="cb3-254"><a href="#cb3-254" tabindex="-1"></a><span class="co">#&gt;      sus_1      sus_2      sat_1      sat_2       bi_1       bi_2  attention </span></span>
-<span id="cb3-255"><a href="#cb3-255" tabindex="-1"></a><span class="co">#&gt;        120        120        120        120        120        120        120 </span></span>
-<span id="cb3-256"><a href="#cb3-256" tabindex="-1"></a><span class="co">#&gt;   comments </span></span>
-<span id="cb3-257"><a href="#cb3-257" tabindex="-1"></a><span class="co">#&gt;        120 </span></span>
-<span id="cb3-258"><a href="#cb3-258" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb3-259"><a href="#cb3-259" tabindex="-1"></a><span class="co">#&gt; $deletion$pairwise_n$attention</span></span>
-<span id="cb3-260"><a href="#cb3-260" tabindex="-1"></a><span class="co">#&gt; visit_type       dm_1       dm_2       dm_3       sq_1       sq_2       sq_3 </span></span>
-<span id="cb3-261"><a href="#cb3-261" tabindex="-1"></a><span class="co">#&gt;        120        120        120        120        120        120        120 </span></span>
-<span id="cb3-262"><a href="#cb3-262" tabindex="-1"></a><span class="co">#&gt;      sus_1      sus_2      sat_1      sat_2       bi_1       bi_2  attention </span></span>
-<span id="cb3-263"><a href="#cb3-263" tabindex="-1"></a><span class="co">#&gt;        120        120        120        120        120        120        120 </span></span>
-<span id="cb3-264"><a href="#cb3-264" tabindex="-1"></a><span class="co">#&gt;   comments </span></span>
-<span id="cb3-265"><a href="#cb3-265" tabindex="-1"></a><span class="co">#&gt;        120 </span></span>
-<span id="cb3-266"><a href="#cb3-266" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb3-267"><a href="#cb3-267" tabindex="-1"></a><span class="co">#&gt; $deletion$pairwise_n$comments</span></span>
-<span id="cb3-268"><a href="#cb3-268" tabindex="-1"></a><span class="co">#&gt; visit_type       dm_1       dm_2       dm_3       sq_1       sq_2       sq_3 </span></span>
-<span id="cb3-269"><a href="#cb3-269" tabindex="-1"></a><span class="co">#&gt;        120        120        120        120        120        120        120 </span></span>
-<span id="cb3-270"><a href="#cb3-270" tabindex="-1"></a><span class="co">#&gt;      sus_1      sus_2      sat_1      sat_2       bi_1       bi_2  attention </span></span>
-<span id="cb3-271"><a href="#cb3-271" tabindex="-1"></a><span class="co">#&gt;        120        120        120        120        120        120        120 </span></span>
-<span id="cb3-272"><a href="#cb3-272" tabindex="-1"></a><span class="co">#&gt;   comments </span></span>
-<span id="cb3-273"><a href="#cb3-273" tabindex="-1"></a><span class="co">#&gt;        120 </span></span>
-<span id="cb3-274"><a href="#cb3-274" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb3-275"><a href="#cb3-275" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb3-276"><a href="#cb3-276" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb3-277"><a href="#cb3-277" tabindex="-1"></a><span class="co">#&gt; $scale_missing_rules</span></span>
-<span id="cb3-278"><a href="#cb3-278" tabindex="-1"></a><span class="co">#&gt;                scale_id n_items min_valid</span></span>
-<span id="cb3-279"><a href="#cb3-279" tabindex="-1"></a><span class="co">#&gt; 1     digital_marketing       3         3</span></span>
-<span id="cb3-280"><a href="#cb3-280" tabindex="-1"></a><span class="co">#&gt; 2       service_quality       3         3</span></span>
-<span id="cb3-281"><a href="#cb3-281" tabindex="-1"></a><span class="co">#&gt; 3        sustainability       2         2</span></span>
-<span id="cb3-282"><a href="#cb3-282" tabindex="-1"></a><span class="co">#&gt; 4          satisfaction       2         2</span></span>
-<span id="cb3-283"><a href="#cb3-283" tabindex="-1"></a><span class="co">#&gt; 5 behavioural_intention       2         2</span></span>
-<span id="cb3-284"><a href="#cb3-284" tabindex="-1"></a><span class="co">#&gt;                               missing_rule</span></span>
-<span id="cb3-285"><a href="#cb3-285" tabindex="-1"></a><span class="co">#&gt; 1 Score when at least 3 item(s) are valid.</span></span>
-<span id="cb3-286"><a href="#cb3-286" tabindex="-1"></a><span class="co">#&gt; 2 Score when at least 3 item(s) are valid.</span></span>
-<span id="cb3-287"><a href="#cb3-287" tabindex="-1"></a><span class="co">#&gt; 3 Score when at least 2 item(s) are valid.</span></span>
-<span id="cb3-288"><a href="#cb3-288" tabindex="-1"></a><span class="co">#&gt; 4 Score when at least 2 item(s) are valid.</span></span>
-<span id="cb3-289"><a href="#cb3-289" tabindex="-1"></a><span class="co">#&gt; 5 Score when at least 2 item(s) are valid.</span></span>
-<span id="cb3-290"><a href="#cb3-290" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb3-291"><a href="#cb3-291" tabindex="-1"></a><span class="co">#&gt; $mcar</span></span>
-<span id="cb3-292"><a href="#cb3-292" tabindex="-1"></a><span class="co">#&gt; $mcar$available</span></span>
-<span id="cb3-293"><a href="#cb3-293" tabindex="-1"></a><span class="co">#&gt; [1] FALSE</span></span>
-<span id="cb3-294"><a href="#cb3-294" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb3-295"><a href="#cb3-295" tabindex="-1"></a><span class="co">#&gt; $mcar$warning</span></span>
-<span id="cb3-296"><a href="#cb3-296" tabindex="-1"></a><span class="co">#&gt; [1] &quot;Little&#39;s MCAR test requires an optional package and was not run.&quot;</span></span>
-<span id="cb3-297"><a href="#cb3-297" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb3-298"><a href="#cb3-298" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb3-299"><a href="#cb3-299" tabindex="-1"></a><span class="co">#&gt; $apa</span></span>
-<span id="cb3-300"><a href="#cb3-300" tabindex="-1"></a><span class="co">#&gt; [1] &quot;Missing-data diagnostics were computed for 15 variable(s).&quot;</span></span>
-<span id="cb3-301"><a href="#cb3-301" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb3-302"><a href="#cb3-302" tabindex="-1"></a><span class="co">#&gt; $prompt</span></span>
-<span id="cb3-303"><a href="#cb3-303" tabindex="-1"></a><span class="co">#&gt; [1] &quot;Report item and respondent missingness, the missing-data pattern, and the deletion rule used for each analysis.&quot;</span></span>
-<span id="cb3-304"><a href="#cb3-304" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb3-305"><a href="#cb3-305" tabindex="-1"></a><span class="co">#&gt; attr(,&quot;class&quot;)</span></span>
-<span id="cb3-306"><a href="#cb3-306" tabindex="-1"></a><span class="co">#&gt; [1] &quot;sframe_missing_data_report&quot;</span></span>
-<span id="cb3-307"><a href="#cb3-307" tabindex="-1"></a></span>
-<span id="cb3-308"><a href="#cb3-308" tabindex="-1"></a><span class="fu">quality_report</span>(</span>
-<span id="cb3-309"><a href="#cb3-309" tabindex="-1"></a>  responses, instr,</span>
-<span id="cb3-310"><a href="#cb3-310" tabindex="-1"></a>  <span class="at">respondent_id =</span> <span class="st">&quot;respondent_id&quot;</span>,</span>
-<span id="cb3-311"><a href="#cb3-311" tabindex="-1"></a>  <span class="at">submitted_at  =</span> <span class="st">&quot;submitted_at&quot;</span>,</span>
-<span id="cb3-312"><a href="#cb3-312" tabindex="-1"></a>  <span class="at">started_at    =</span> <span class="st">&quot;started_at&quot;</span></span>
-<span id="cb3-313"><a href="#cb3-313" tabindex="-1"></a>)</span>
-<span id="cb3-314"><a href="#cb3-314" tabindex="-1"></a><span class="co">#&gt; Survey Data Quality Report</span></span>
-<span id="cb3-315"><a href="#cb3-315" tabindex="-1"></a><span class="co">#&gt;   Respondents:  120</span></span>
-<span id="cb3-316"><a href="#cb3-316" tabindex="-1"></a><span class="co">#&gt;   Items:        15</span></span>
-<span id="cb3-317"><a href="#cb3-317" tabindex="-1"></a><span class="co">#&gt;   Flagged:      109 (90.8%)</span></span>
-<span id="cb3-318"><a href="#cb3-318" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb3-319"><a href="#cb3-319" tabindex="-1"></a><span class="co">#&gt; Attention checks:</span></span>
-<span id="cb3-320"><a href="#cb3-320" tabindex="-1"></a><span class="co">#&gt;   attention_agree      pass 95%  fail 6</span></span>
-<span id="cb3-321"><a href="#cb3-321" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb3-322"><a href="#cb3-322" tabindex="-1"></a><span class="co">#&gt; Timing:</span></span>
-<span id="cb3-323"><a href="#cb3-323" tabindex="-1"></a><span class="co">#&gt;   Median completion time: 966.0 seconds</span></span>
-<span id="cb3-324"><a href="#cb3-324" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb3-325"><a href="#cb3-325" tabindex="-1"></a><span class="co">#&gt; Missingness:  0.0% of respondents exceed 20% threshold</span></span></code></pre></div>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a>mr <span class="ot">&lt;-</span> <span class="fu">missing_data_report</span>(responses, instr)</span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a><span class="fu">kable</span>(mr<span class="sc">$</span>item_missing, <span class="at">digits =</span> <span class="dv">2</span>,</span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a>      <span class="at">col.names =</span> <span class="fu">c</span>(<span class="st">&quot;Variable&quot;</span>, <span class="st">&quot;Missing (n)&quot;</span>, <span class="st">&quot;Missing (%)&quot;</span>, <span class="st">&quot;Valid (n)&quot;</span>),</span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a>      <span class="at">caption =</span> <span class="st">&quot;Item-level missingness&quot;</span>)</span></code></pre></div>
+<table>
+<caption>Item-level missingness</caption>
+<thead>
+<tr class="header">
+<th align="left"></th>
+<th align="left">Variable</th>
+<th align="right">Missing (n)</th>
+<th align="right">Missing (%)</th>
+<th align="right">Valid (n)</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">visit_type</td>
+<td align="left">visit_type</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">120</td>
+</tr>
+<tr class="even">
+<td align="left">dm_1</td>
+<td align="left">dm_1</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">120</td>
+</tr>
+<tr class="odd">
+<td align="left">dm_2</td>
+<td align="left">dm_2</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">120</td>
+</tr>
+<tr class="even">
+<td align="left">dm_3</td>
+<td align="left">dm_3</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">120</td>
+</tr>
+<tr class="odd">
+<td align="left">sq_1</td>
+<td align="left">sq_1</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">120</td>
+</tr>
+<tr class="even">
+<td align="left">sq_2</td>
+<td align="left">sq_2</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">120</td>
+</tr>
+<tr class="odd">
+<td align="left">sq_3</td>
+<td align="left">sq_3</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">120</td>
+</tr>
+<tr class="even">
+<td align="left">sus_1</td>
+<td align="left">sus_1</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">120</td>
+</tr>
+<tr class="odd">
+<td align="left">sus_2</td>
+<td align="left">sus_2</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">120</td>
+</tr>
+<tr class="even">
+<td align="left">sat_1</td>
+<td align="left">sat_1</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">120</td>
+</tr>
+<tr class="odd">
+<td align="left">sat_2</td>
+<td align="left">sat_2</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">120</td>
+</tr>
+<tr class="even">
+<td align="left">bi_1</td>
+<td align="left">bi_1</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">120</td>
+</tr>
+<tr class="odd">
+<td align="left">bi_2</td>
+<td align="left">bi_2</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">120</td>
+</tr>
+<tr class="even">
+<td align="left">attention</td>
+<td align="left">attention</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">120</td>
+</tr>
+<tr class="odd">
+<td align="left">comments</td>
+<td align="left">comments</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">120</td>
+</tr>
+</tbody>
+</table>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a></span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>qr <span class="ot">&lt;-</span> <span class="fu">quality_report</span>(</span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>  responses, instr,</span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a>  <span class="at">respondent_id =</span> <span class="st">&quot;respondent_id&quot;</span>,</span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a>  <span class="at">submitted_at  =</span> <span class="st">&quot;submitted_at&quot;</span>,</span>
+<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a>  <span class="at">started_at    =</span> <span class="st">&quot;started_at&quot;</span></span>
+<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a>)</span>
+<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a>quality_summary <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a>  <span class="at">Metric =</span> <span class="fu">c</span>(<span class="st">&quot;Respondents&quot;</span>, <span class="st">&quot;Items&quot;</span>, <span class="st">&quot;Flagged for review&quot;</span>, <span class="st">&quot;Flag rate&quot;</span>),</span>
+<span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a>  <span class="at">Value  =</span> <span class="fu">c</span>(qr<span class="sc">$</span>summary<span class="sc">$</span>n_respondents, qr<span class="sc">$</span>summary<span class="sc">$</span>n_items, qr<span class="sc">$</span>summary<span class="sc">$</span>n_flagged,</span>
+<span id="cb4-11"><a href="#cb4-11" tabindex="-1"></a>             <span class="fu">sprintf</span>(<span class="st">&quot;%.1f%%&quot;</span>, <span class="dv">100</span> <span class="sc">*</span> qr<span class="sc">$</span>summary<span class="sc">$</span>flag_rate)),</span>
+<span id="cb4-12"><a href="#cb4-12" tabindex="-1"></a>  <span class="at">stringsAsFactors =</span> <span class="cn">FALSE</span></span>
+<span id="cb4-13"><a href="#cb4-13" tabindex="-1"></a>)</span>
+<span id="cb4-14"><a href="#cb4-14" tabindex="-1"></a><span class="fu">kable</span>(quality_summary, <span class="at">align =</span> <span class="fu">c</span>(<span class="st">&quot;l&quot;</span>, <span class="st">&quot;r&quot;</span>), <span class="at">caption =</span> <span class="st">&quot;Quality screening summary&quot;</span>)</span></code></pre></div>
+<table>
+<caption>Quality screening summary</caption>
+<thead>
+<tr class="header">
+<th align="left">Metric</th>
+<th align="right">Value</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">Respondents</td>
+<td align="right">120</td>
+</tr>
+<tr class="even">
+<td align="left">Items</td>
+<td align="right">15</td>
+</tr>
+<tr class="odd">
+<td align="left">Flagged for review</td>
+<td align="right">109</td>
+</tr>
+<tr class="even">
+<td align="left">Flag rate</td>
+<td align="right">90.8%</td>
+</tr>
+</tbody>
+</table>
 </div>
 <div id="score-scales" class="section level2">
 <h2>Score scales</h2>
 <p><code>run_analysis_plan()</code> scores the scales for you, but
 scoring once up front lets you inspect the construct scores and run the
 assumption checks below.</p>
-<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a>scored    <span class="ot">&lt;-</span> <span class="fu">score_scales</span>(responses, instr, <span class="at">keep_items =</span> <span class="cn">TRUE</span>, <span class="at">keep_meta =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>scale_ids <span class="ot">&lt;-</span> <span class="fu">vapply</span>(instr<span class="sc">$</span>scales, <span class="cf">function</span>(x) x<span class="sc">$</span>id, <span class="fu">character</span>(<span class="dv">1</span>))</span>
-<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a></span>
-<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a><span class="fu">head</span>(scored[, <span class="fu">intersect</span>(scale_ids, <span class="fu">names</span>(scored)), <span class="at">drop =</span> <span class="cn">FALSE</span>])</span>
-<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a><span class="co">#&gt;   digital_marketing service_quality sustainability satisfaction</span></span>
-<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a><span class="co">#&gt; 1          2.666667        3.666667            5.0          3.5</span></span>
-<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a><span class="co">#&gt; 2          3.000000        2.666667            3.0          1.5</span></span>
-<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a><span class="co">#&gt; 3          4.666667        3.333333            3.5          4.5</span></span>
-<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a><span class="co">#&gt; 4          4.333333        4.000000            5.0          4.5</span></span>
-<span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a><span class="co">#&gt; 5          3.000000        3.666667            4.0          3.0</span></span>
-<span id="cb4-11"><a href="#cb4-11" tabindex="-1"></a><span class="co">#&gt; 6          3.666667        3.666667            2.5          3.5</span></span>
-<span id="cb4-12"><a href="#cb4-12" tabindex="-1"></a><span class="co">#&gt;   behavioural_intention</span></span>
-<span id="cb4-13"><a href="#cb4-13" tabindex="-1"></a><span class="co">#&gt; 1                   4.5</span></span>
-<span id="cb4-14"><a href="#cb4-14" tabindex="-1"></a><span class="co">#&gt; 2                   2.5</span></span>
-<span id="cb4-15"><a href="#cb4-15" tabindex="-1"></a><span class="co">#&gt; 3                   2.5</span></span>
-<span id="cb4-16"><a href="#cb4-16" tabindex="-1"></a><span class="co">#&gt; 4                   5.0</span></span>
-<span id="cb4-17"><a href="#cb4-17" tabindex="-1"></a><span class="co">#&gt; 5                   3.5</span></span>
-<span id="cb4-18"><a href="#cb4-18" tabindex="-1"></a><span class="co">#&gt; 6                   3.0</span></span></code></pre></div>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a>scored    <span class="ot">&lt;-</span> <span class="fu">score_scales</span>(responses, instr, <span class="at">keep_items =</span> <span class="cn">TRUE</span>, <span class="at">keep_meta =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a>scale_ids <span class="ot">&lt;-</span> <span class="fu">vapply</span>(instr<span class="sc">$</span>scales, <span class="cf">function</span>(x) x<span class="sc">$</span>id, <span class="fu">character</span>(<span class="dv">1</span>))</span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a>score_cols <span class="ot">&lt;-</span> <span class="fu">intersect</span>(scale_ids, <span class="fu">names</span>(scored))</span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a></span>
+<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a><span class="fu">kable</span>(<span class="fu">head</span>(scored[, score_cols, <span class="at">drop =</span> <span class="cn">FALSE</span>]), <span class="at">digits =</span> <span class="dv">2</span>,</span>
+<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a>      <span class="at">caption =</span> <span class="st">&quot;Scale scores, first respondents&quot;</span>)</span></code></pre></div>
+<table>
+<caption>Scale scores, first respondents</caption>
+<colgroup>
+<col width="21%" />
+<col width="19%" />
+<col width="17%" />
+<col width="15%" />
+<col width="26%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="right">digital_marketing</th>
+<th align="right">service_quality</th>
+<th align="right">sustainability</th>
+<th align="right">satisfaction</th>
+<th align="right">behavioural_intention</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="right">2.67</td>
+<td align="right">3.67</td>
+<td align="right">5.0</td>
+<td align="right">3.5</td>
+<td align="right">4.5</td>
+</tr>
+<tr class="even">
+<td align="right">3.00</td>
+<td align="right">2.67</td>
+<td align="right">3.0</td>
+<td align="right">1.5</td>
+<td align="right">2.5</td>
+</tr>
+<tr class="odd">
+<td align="right">4.67</td>
+<td align="right">3.33</td>
+<td align="right">3.5</td>
+<td align="right">4.5</td>
+<td align="right">2.5</td>
+</tr>
+<tr class="even">
+<td align="right">4.33</td>
+<td align="right">4.00</td>
+<td align="right">5.0</td>
+<td align="right">4.5</td>
+<td align="right">5.0</td>
+</tr>
+<tr class="odd">
+<td align="right">3.00</td>
+<td align="right">3.67</td>
+<td align="right">4.0</td>
+<td align="right">3.0</td>
+<td align="right">3.5</td>
+</tr>
+<tr class="even">
+<td align="right">3.67</td>
+<td align="right">3.67</td>
+<td align="right">2.5</td>
+<td align="right">3.5</td>
+<td align="right">3.0</td>
+</tr>
+</tbody>
+</table>
+<p>The scale-score distributions show the shape of each construct before
+the plan runs.</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a>op <span class="ot">&lt;-</span> <span class="fu">par</span>(<span class="at">mfrow =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="fu">length</span>(score_cols)), <span class="at">mar =</span> <span class="fu">c</span>(<span class="dv">4</span>, <span class="dv">3</span>, <span class="dv">2</span>, <span class="dv">1</span>))</span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a><span class="cf">for</span> (s <span class="cf">in</span> score_cols) {</span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a>  v <span class="ot">&lt;-</span> scored[[s]]; v <span class="ot">&lt;-</span> v[<span class="fu">is.finite</span>(v)]</span>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a>  <span class="fu">hist</span>(v, <span class="at">col =</span> <span class="st">&quot;#16B3B1&quot;</span>, <span class="at">border =</span> <span class="st">&quot;white&quot;</span>, <span class="at">main =</span> s,</span>
+<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a>       <span class="at">xlab =</span> <span class="st">&quot;Score&quot;</span>, <span class="at">ylab =</span> <span class="st">&quot;&quot;</span>)</span>
+<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a>}</span></code></pre></div>
+<p><img role="img" aria-label src="data:image/png;base64,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" alt style="display: block; margin: auto auto auto 0;" /></p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a><span class="fu">par</span>(op)</span></code></pre></div>
 </div>
 <div id="check-assumptions-before-the-plan" class="section level2">
 <h2>Check assumptions before the plan</h2>
 <p><code>assumption_report()</code> reports the checks a technique
 relies on, such as residual normality, variance inflation, and influence
 for a regression.</p>
-<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a><span class="fu">assumption_report</span>(</span>
-<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a>  scored,</span>
-<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a>  <span class="at">predictors =</span> <span class="fu">c</span>(<span class="st">&quot;digital_marketing&quot;</span>, <span class="st">&quot;service_quality&quot;</span>, <span class="st">&quot;sustainability&quot;</span>),</span>
-<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a>  <span class="at">outcome    =</span> <span class="st">&quot;satisfaction&quot;</span></span>
-<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a>)</span>
-<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a><span class="co">#&gt; $method</span></span>
-<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a><span class="co">#&gt; [1] &quot;assumptions&quot;</span></span>
-<span id="cb5-8"><a href="#cb5-8" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb5-9"><a href="#cb5-9" tabindex="-1"></a><span class="co">#&gt; $normality</span></span>
-<span id="cb5-10"><a href="#cb5-10" tabindex="-1"></a><span class="co">#&gt; data frame with 0 columns and 0 rows</span></span>
-<span id="cb5-11"><a href="#cb5-11" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb5-12"><a href="#cb5-12" tabindex="-1"></a><span class="co">#&gt; $homogeneity</span></span>
-<span id="cb5-13"><a href="#cb5-13" tabindex="-1"></a><span class="co">#&gt; data frame with 0 columns and 0 rows</span></span>
-<span id="cb5-14"><a href="#cb5-14" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb5-15"><a href="#cb5-15" tabindex="-1"></a><span class="co">#&gt; $regression</span></span>
-<span id="cb5-16"><a href="#cb5-16" tabindex="-1"></a><span class="co">#&gt; $regression$n</span></span>
-<span id="cb5-17"><a href="#cb5-17" tabindex="-1"></a><span class="co">#&gt; [1] 120</span></span>
-<span id="cb5-18"><a href="#cb5-18" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb5-19"><a href="#cb5-19" tabindex="-1"></a><span class="co">#&gt; $regression$residual_shapiro_w</span></span>
-<span id="cb5-20"><a href="#cb5-20" tabindex="-1"></a><span class="co">#&gt; [1] 0.9941063</span></span>
-<span id="cb5-21"><a href="#cb5-21" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb5-22"><a href="#cb5-22" tabindex="-1"></a><span class="co">#&gt; $regression$residual_shapiro_p</span></span>
-<span id="cb5-23"><a href="#cb5-23" tabindex="-1"></a><span class="co">#&gt; [1] 0.8980753</span></span>
-<span id="cb5-24"><a href="#cb5-24" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb5-25"><a href="#cb5-25" tabindex="-1"></a><span class="co">#&gt; $regression$vif</span></span>
-<span id="cb5-26"><a href="#cb5-26" tabindex="-1"></a><span class="co">#&gt; digital_marketing   service_quality    sustainability </span></span>
-<span id="cb5-27"><a href="#cb5-27" tabindex="-1"></a><span class="co">#&gt;          1.212656          1.200070          1.012163 </span></span>
-<span id="cb5-28"><a href="#cb5-28" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb5-29"><a href="#cb5-29" tabindex="-1"></a><span class="co">#&gt; $regression$cooks_distance</span></span>
-<span id="cb5-30"><a href="#cb5-30" tabindex="-1"></a><span class="co">#&gt;            1            2            3            4            5            6 </span></span>
-<span id="cb5-31"><a href="#cb5-31" tabindex="-1"></a><span class="co">#&gt; 1.184326e-04 9.147336e-03 1.482864e-03 3.583748e-07 2.883541e-03 1.731349e-04 </span></span>
-<span id="cb5-32"><a href="#cb5-32" tabindex="-1"></a><span class="co">#&gt;            7            8            9           10           11           12 </span></span>
-<span id="cb5-33"><a href="#cb5-33" tabindex="-1"></a><span class="co">#&gt; 1.323697e-02 4.460344e-03 4.542716e-05 4.287879e-02 2.143130e-02 1.509419e-03 </span></span>
-<span id="cb5-34"><a href="#cb5-34" tabindex="-1"></a><span class="co">#&gt;           13           14           15           16           17           18 </span></span>
-<span id="cb5-35"><a href="#cb5-35" tabindex="-1"></a><span class="co">#&gt; 5.088239e-02 5.722577e-03 2.174172e-07 1.127457e-02 8.743696e-03 2.593670e-03 </span></span>
-<span id="cb5-36"><a href="#cb5-36" tabindex="-1"></a><span class="co">#&gt;           19           20           21           22           23           24 </span></span>
-<span id="cb5-37"><a href="#cb5-37" tabindex="-1"></a><span class="co">#&gt; 7.553824e-03 2.109049e-02 1.932134e-05 2.370723e-03 3.851322e-04 5.461064e-03 </span></span>
-<span id="cb5-38"><a href="#cb5-38" tabindex="-1"></a><span class="co">#&gt;           25           26           27           28           29           30 </span></span>
-<span id="cb5-39"><a href="#cb5-39" tabindex="-1"></a><span class="co">#&gt; 1.872377e-04 4.489098e-07 1.706497e-02 2.752537e-06 1.434770e-04 3.195816e-03 </span></span>
-<span id="cb5-40"><a href="#cb5-40" tabindex="-1"></a><span class="co">#&gt;           31           32           33           34           35           36 </span></span>
-<span id="cb5-41"><a href="#cb5-41" tabindex="-1"></a><span class="co">#&gt; 6.905977e-02 1.536396e-02 1.260801e-02 1.534755e-03 1.380360e-02 6.848461e-03 </span></span>
-<span id="cb5-42"><a href="#cb5-42" tabindex="-1"></a><span class="co">#&gt;           37           38           39           40           41           42 </span></span>
-<span id="cb5-43"><a href="#cb5-43" tabindex="-1"></a><span class="co">#&gt; 1.700720e-06 3.793174e-04 2.134337e-03 2.287672e-02 1.001287e-02 4.071700e-03 </span></span>
-<span id="cb5-44"><a href="#cb5-44" tabindex="-1"></a><span class="co">#&gt;           43           44           45           46           47           48 </span></span>
-<span id="cb5-45"><a href="#cb5-45" tabindex="-1"></a><span class="co">#&gt; 5.471299e-03 5.270891e-02 3.433051e-02 2.975180e-03 3.167244e-03 9.174703e-04 </span></span>
-<span id="cb5-46"><a href="#cb5-46" tabindex="-1"></a><span class="co">#&gt;           49           50           51           52           53           54 </span></span>
-<span id="cb5-47"><a href="#cb5-47" tabindex="-1"></a><span class="co">#&gt; 1.170983e-02 8.648779e-04 1.116591e-03 8.230930e-03 1.381027e-02 3.504105e-02 </span></span>
-<span id="cb5-48"><a href="#cb5-48" tabindex="-1"></a><span class="co">#&gt;           55           56           57           58           59           60 </span></span>
-<span id="cb5-49"><a href="#cb5-49" tabindex="-1"></a><span class="co">#&gt; 1.571502e-04 2.905749e-03 1.402942e-03 5.808575e-03 2.019476e-03 6.948885e-06 </span></span>
-<span id="cb5-50"><a href="#cb5-50" tabindex="-1"></a><span class="co">#&gt;           61           62           63           64           65           66 </span></span>
-<span id="cb5-51"><a href="#cb5-51" tabindex="-1"></a><span class="co">#&gt; 1.170618e-03 3.652109e-03 2.922443e-02 9.678057e-03 3.620026e-06 3.218468e-03 </span></span>
-<span id="cb5-52"><a href="#cb5-52" tabindex="-1"></a><span class="co">#&gt;           67           68           69           70           71           72 </span></span>
-<span id="cb5-53"><a href="#cb5-53" tabindex="-1"></a><span class="co">#&gt; 1.378174e-03 5.716292e-03 3.730149e-03 9.087202e-03 8.357802e-03 1.187750e-02 </span></span>
-<span id="cb5-54"><a href="#cb5-54" tabindex="-1"></a><span class="co">#&gt;           73           74           75           76           77           78 </span></span>
-<span id="cb5-55"><a href="#cb5-55" tabindex="-1"></a><span class="co">#&gt; 2.430428e-02 3.348263e-04 9.538221e-03 1.257656e-03 1.433252e-03 1.356868e-03 </span></span>
-<span id="cb5-56"><a href="#cb5-56" tabindex="-1"></a><span class="co">#&gt;           79           80           81           82           83           84 </span></span>
-<span id="cb5-57"><a href="#cb5-57" tabindex="-1"></a><span class="co">#&gt; 2.563597e-05 1.801658e-03 1.835160e-03 5.784606e-04 2.366539e-02 8.884675e-04 </span></span>
-<span id="cb5-58"><a href="#cb5-58" tabindex="-1"></a><span class="co">#&gt;           85           86           87           88           89           90 </span></span>
-<span id="cb5-59"><a href="#cb5-59" tabindex="-1"></a><span class="co">#&gt; 3.063566e-04 9.322376e-03 1.300065e-02 5.103375e-03 6.710071e-04 3.902158e-03 </span></span>
-<span id="cb5-60"><a href="#cb5-60" tabindex="-1"></a><span class="co">#&gt;           91           92           93           94           95           96 </span></span>
-<span id="cb5-61"><a href="#cb5-61" tabindex="-1"></a><span class="co">#&gt; 3.851322e-04 3.045158e-03 4.482863e-04 3.504325e-03 3.537797e-03 4.644052e-04 </span></span>
-<span id="cb5-62"><a href="#cb5-62" tabindex="-1"></a><span class="co">#&gt;           97           98           99          100          101          102 </span></span>
-<span id="cb5-63"><a href="#cb5-63" tabindex="-1"></a><span class="co">#&gt; 1.386934e-02 4.444185e-03 5.864202e-03 9.236185e-03 2.563387e-02 3.445601e-04 </span></span>
-<span id="cb5-64"><a href="#cb5-64" tabindex="-1"></a><span class="co">#&gt;          103          104          105          106          107          108 </span></span>
-<span id="cb5-65"><a href="#cb5-65" tabindex="-1"></a><span class="co">#&gt; 1.467024e-03 1.170618e-03 9.051071e-04 7.373574e-03 2.295924e-05 6.910949e-04 </span></span>
-<span id="cb5-66"><a href="#cb5-66" tabindex="-1"></a><span class="co">#&gt;          109          110          111          112          113          114 </span></span>
-<span id="cb5-67"><a href="#cb5-67" tabindex="-1"></a><span class="co">#&gt; 3.504325e-03 2.274586e-04 9.266580e-05 4.857092e-03 4.700977e-08 2.921484e-03 </span></span>
-<span id="cb5-68"><a href="#cb5-68" tabindex="-1"></a><span class="co">#&gt;          115          116          117          118          119          120 </span></span>
-<span id="cb5-69"><a href="#cb5-69" tabindex="-1"></a><span class="co">#&gt; 4.090240e-03 1.105467e-02 7.365409e-04 1.938023e-02 1.012910e-03 1.535916e-02 </span></span>
-<span id="cb5-70"><a href="#cb5-70" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb5-71"><a href="#cb5-71" tabindex="-1"></a><span class="co">#&gt; $regression$standardised_residuals</span></span>
-<span id="cb5-72"><a href="#cb5-72" tabindex="-1"></a><span class="co">#&gt;            1            2            3            4            5            6 </span></span>
-<span id="cb5-73"><a href="#cb5-73" tabindex="-1"></a><span class="co">#&gt; -0.082923698 -1.870645918  0.395846500  0.004591293 -0.692174489 -0.185004873 </span></span>
-<span id="cb5-74"><a href="#cb5-74" tabindex="-1"></a><span class="co">#&gt;            7            8            9           10           11           12 </span></span>
-<span id="cb5-75"><a href="#cb5-75" tabindex="-1"></a><span class="co">#&gt;  1.084968504  0.780147050  0.110776991 -2.638742712 -1.795997774  0.319306483 </span></span>
-<span id="cb5-76"><a href="#cb5-76" tabindex="-1"></a><span class="co">#&gt;           13           14           15           16           17           18 </span></span>
-<span id="cb5-77"><a href="#cb5-77" tabindex="-1"></a><span class="co">#&gt;  1.954971640 -1.219815183  0.004191993  1.118225981  1.039309006  0.527129425 </span></span>
-<span id="cb5-78"><a href="#cb5-78" tabindex="-1"></a><span class="co">#&gt;           19           20           21           22           23           24 </span></span>
-<span id="cb5-79"><a href="#cb5-79" tabindex="-1"></a><span class="co">#&gt; -0.961835047  0.980099373  0.063225377  0.551354644  0.278271787 -0.647978136 </span></span>
-<span id="cb5-80"><a href="#cb5-80" tabindex="-1"></a><span class="co">#&gt;           25           26           27           28           29           30 </span></span>
-<span id="cb5-81"><a href="#cb5-81" tabindex="-1"></a><span class="co">#&gt;  0.227581315  0.004986299 -1.172216599  0.021868776 -0.095706217 -0.782623908 </span></span>
-<span id="cb5-82"><a href="#cb5-82" tabindex="-1"></a><span class="co">#&gt;           31           32           33           34           35           36 </span></span>
-<span id="cb5-83"><a href="#cb5-83" tabindex="-1"></a><span class="co">#&gt; -2.309384417 -1.374470793  0.932880267 -0.690640105  1.255066667  0.671314169 </span></span>
-<span id="cb5-84"><a href="#cb5-84" tabindex="-1"></a><span class="co">#&gt;           37           38           39           40           41           42 </span></span>
-<span id="cb5-85"><a href="#cb5-85" tabindex="-1"></a><span class="co">#&gt;  0.012570683  0.352662125  0.374079633  1.867781077 -1.228052989  0.606343018 </span></span>
-<span id="cb5-86"><a href="#cb5-86" tabindex="-1"></a><span class="co">#&gt;           43           44           45           46           47           48 </span></span>
-<span id="cb5-87"><a href="#cb5-87" tabindex="-1"></a><span class="co">#&gt; -0.617848955 -1.662835019  2.074446939  0.978590982 -0.793286443  0.252351509 </span></span>
-<span id="cb5-88"><a href="#cb5-88" tabindex="-1"></a><span class="co">#&gt;           49           50           51           52           53           54 </span></span>
-<span id="cb5-89"><a href="#cb5-89" tabindex="-1"></a><span class="co">#&gt;  1.156356561 -0.449473176 -0.363323806  1.152172372 -1.440809735 -1.866773520 </span></span>
-<span id="cb5-90"><a href="#cb5-90" tabindex="-1"></a><span class="co">#&gt;           55           56           57           58           59           60 </span></span>
-<span id="cb5-91"><a href="#cb5-91" tabindex="-1"></a><span class="co">#&gt;  0.189559954 -0.858506945 -0.309992596 -1.198889104  0.696726010 -0.035497078 </span></span>
-<span id="cb5-92"><a href="#cb5-92" tabindex="-1"></a><span class="co">#&gt;           61           62           63           64           65           66 </span></span>
-<span id="cb5-93"><a href="#cb5-93" tabindex="-1"></a><span class="co">#&gt; -0.594649744  0.646085118  1.892162918  1.346958028  0.012140769 -1.050312804 </span></span>
-<span id="cb5-94"><a href="#cb5-94" tabindex="-1"></a><span class="co">#&gt;           67           68           69           70           71           72 </span></span>
-<span id="cb5-95"><a href="#cb5-95" tabindex="-1"></a><span class="co">#&gt;  0.598618566 -1.508218399 -0.521321175 -0.874142231  1.497519709  1.032511438 </span></span>
-<span id="cb5-96"><a href="#cb5-96" tabindex="-1"></a><span class="co">#&gt;           73           74           75           76           77           78 </span></span>
-<span id="cb5-97"><a href="#cb5-97" tabindex="-1"></a><span class="co">#&gt;  2.208163710  0.178475846  1.021361391  0.616360158 -0.448239907 -0.298894184 </span></span>
-<span id="cb5-98"><a href="#cb5-98" tabindex="-1"></a><span class="co">#&gt;           79           80           81           82           83           84 </span></span>
-<span id="cb5-99"><a href="#cb5-99" tabindex="-1"></a><span class="co">#&gt; -0.041513884  0.484623799 -0.711839662 -0.445277725  2.271897566  0.424028147 </span></span>
-<span id="cb5-100"><a href="#cb5-100" tabindex="-1"></a><span class="co">#&gt;           85           86           87           88           89           90 </span></span>
-<span id="cb5-101"><a href="#cb5-101" tabindex="-1"></a><span class="co">#&gt;  0.236369610  1.923468863 -1.537113657 -0.910885755  0.287247717  0.885761213 </span></span>
-<span id="cb5-102"><a href="#cb5-102" tabindex="-1"></a><span class="co">#&gt;           91           92           93           94           95           96 </span></span>
-<span id="cb5-103"><a href="#cb5-103" tabindex="-1"></a><span class="co">#&gt;  0.278271787 -1.099326747 -0.299846917 -0.670336465  1.075297214  0.241274096 </span></span>
-<span id="cb5-104"><a href="#cb5-104" tabindex="-1"></a><span class="co">#&gt;           97           98           99          100          101          102 </span></span>
-<span id="cb5-105"><a href="#cb5-105" tabindex="-1"></a><span class="co">#&gt;  1.521915286  0.863717913  0.560137775 -0.839407809 -1.485896784 -0.173199125 </span></span>
-<span id="cb5-106"><a href="#cb5-106" tabindex="-1"></a><span class="co">#&gt;          103          104          105          106          107          108 </span></span>
-<span id="cb5-107"><a href="#cb5-107" tabindex="-1"></a><span class="co">#&gt; -0.230361700 -0.594649744  0.499913855 -1.172602644 -0.046456880 -0.397268813 </span></span>
-<span id="cb5-108"><a href="#cb5-108" tabindex="-1"></a><span class="co">#&gt;          109          110          111          112          113          114 </span></span>
-<span id="cb5-109"><a href="#cb5-109" tabindex="-1"></a><span class="co">#&gt; -0.670336465  0.181786019 -0.202323795 -0.825310891  0.001891811 -0.577856052 </span></span>
-<span id="cb5-110"><a href="#cb5-110" tabindex="-1"></a><span class="co">#&gt;          115          116          117          118          119          120 </span></span>
-<span id="cb5-111"><a href="#cb5-111" tabindex="-1"></a><span class="co">#&gt; -0.520419080  1.827370061 -0.348396466 -1.215115771  0.250475472  0.752951062 </span></span>
-<span id="cb5-112"><a href="#cb5-112" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb5-113"><a href="#cb5-113" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb5-114"><a href="#cb5-114" tabindex="-1"></a><span class="co">#&gt; $expected_counts</span></span>
-<span id="cb5-115"><a href="#cb5-115" tabindex="-1"></a><span class="co">#&gt; NULL</span></span>
-<span id="cb5-116"><a href="#cb5-116" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb5-117"><a href="#cb5-117" tabindex="-1"></a><span class="co">#&gt; $apa</span></span>
-<span id="cb5-118"><a href="#cb5-118" tabindex="-1"></a><span class="co">#&gt; [1] &quot;Assumption checks were computed.&quot;</span></span>
-<span id="cb5-119"><a href="#cb5-119" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb5-120"><a href="#cb5-120" tabindex="-1"></a><span class="co">#&gt; $prompt</span></span>
-<span id="cb5-121"><a href="#cb5-121" tabindex="-1"></a><span class="co">#&gt; [1] &quot;Report assumption checks before interpreting inferential models, especially sparse cells, non-normal residuals, and high VIF values.&quot;</span></span>
-<span id="cb5-122"><a href="#cb5-122" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb5-123"><a href="#cb5-123" tabindex="-1"></a><span class="co">#&gt; attr(,&quot;class&quot;)</span></span>
-<span id="cb5-124"><a href="#cb5-124" tabindex="-1"></a><span class="co">#&gt; [1] &quot;sframe_assumption_report&quot;</span></span></code></pre></div>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a><span class="fu">assumption_report</span>(</span>
+<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a>  scored,</span>
+<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a>  <span class="at">predictors =</span> <span class="fu">c</span>(<span class="st">&quot;digital_marketing&quot;</span>, <span class="st">&quot;service_quality&quot;</span>, <span class="st">&quot;sustainability&quot;</span>),</span>
+<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a>  <span class="at">outcome    =</span> <span class="st">&quot;satisfaction&quot;</span></span>
+<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a>)</span>
+<span id="cb8-6"><a href="#cb8-6" tabindex="-1"></a><span class="co">#&gt; $method</span></span>
+<span id="cb8-7"><a href="#cb8-7" tabindex="-1"></a><span class="co">#&gt; [1] &quot;assumptions&quot;</span></span>
+<span id="cb8-8"><a href="#cb8-8" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-9"><a href="#cb8-9" tabindex="-1"></a><span class="co">#&gt; $normality</span></span>
+<span id="cb8-10"><a href="#cb8-10" tabindex="-1"></a><span class="co">#&gt; data frame with 0 columns and 0 rows</span></span>
+<span id="cb8-11"><a href="#cb8-11" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-12"><a href="#cb8-12" tabindex="-1"></a><span class="co">#&gt; $homogeneity</span></span>
+<span id="cb8-13"><a href="#cb8-13" tabindex="-1"></a><span class="co">#&gt; data frame with 0 columns and 0 rows</span></span>
+<span id="cb8-14"><a href="#cb8-14" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-15"><a href="#cb8-15" tabindex="-1"></a><span class="co">#&gt; $regression</span></span>
+<span id="cb8-16"><a href="#cb8-16" tabindex="-1"></a><span class="co">#&gt; $regression$n</span></span>
+<span id="cb8-17"><a href="#cb8-17" tabindex="-1"></a><span class="co">#&gt; [1] 120</span></span>
+<span id="cb8-18"><a href="#cb8-18" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-19"><a href="#cb8-19" tabindex="-1"></a><span class="co">#&gt; $regression$residual_shapiro_w</span></span>
+<span id="cb8-20"><a href="#cb8-20" tabindex="-1"></a><span class="co">#&gt; [1] 0.9941063</span></span>
+<span id="cb8-21"><a href="#cb8-21" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-22"><a href="#cb8-22" tabindex="-1"></a><span class="co">#&gt; $regression$residual_shapiro_p</span></span>
+<span id="cb8-23"><a href="#cb8-23" tabindex="-1"></a><span class="co">#&gt; [1] 0.8980753</span></span>
+<span id="cb8-24"><a href="#cb8-24" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-25"><a href="#cb8-25" tabindex="-1"></a><span class="co">#&gt; $regression$vif</span></span>
+<span id="cb8-26"><a href="#cb8-26" tabindex="-1"></a><span class="co">#&gt; digital_marketing   service_quality    sustainability </span></span>
+<span id="cb8-27"><a href="#cb8-27" tabindex="-1"></a><span class="co">#&gt;          1.212656          1.200070          1.012163 </span></span>
+<span id="cb8-28"><a href="#cb8-28" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-29"><a href="#cb8-29" tabindex="-1"></a><span class="co">#&gt; $regression$cooks_distance</span></span>
+<span id="cb8-30"><a href="#cb8-30" tabindex="-1"></a><span class="co">#&gt;            1            2            3            4            5            6 </span></span>
+<span id="cb8-31"><a href="#cb8-31" tabindex="-1"></a><span class="co">#&gt; 1.184326e-04 9.147336e-03 1.482864e-03 3.583748e-07 2.883541e-03 1.731349e-04 </span></span>
+<span id="cb8-32"><a href="#cb8-32" tabindex="-1"></a><span class="co">#&gt;            7            8            9           10           11           12 </span></span>
+<span id="cb8-33"><a href="#cb8-33" tabindex="-1"></a><span class="co">#&gt; 1.323697e-02 4.460344e-03 4.542716e-05 4.287879e-02 2.143130e-02 1.509419e-03 </span></span>
+<span id="cb8-34"><a href="#cb8-34" tabindex="-1"></a><span class="co">#&gt;           13           14           15           16           17           18 </span></span>
+<span id="cb8-35"><a href="#cb8-35" tabindex="-1"></a><span class="co">#&gt; 5.088239e-02 5.722577e-03 2.174172e-07 1.127457e-02 8.743696e-03 2.593670e-03 </span></span>
+<span id="cb8-36"><a href="#cb8-36" tabindex="-1"></a><span class="co">#&gt;           19           20           21           22           23           24 </span></span>
+<span id="cb8-37"><a href="#cb8-37" tabindex="-1"></a><span class="co">#&gt; 7.553824e-03 2.109049e-02 1.932134e-05 2.370723e-03 3.851322e-04 5.461064e-03 </span></span>
+<span id="cb8-38"><a href="#cb8-38" tabindex="-1"></a><span class="co">#&gt;           25           26           27           28           29           30 </span></span>
+<span id="cb8-39"><a href="#cb8-39" tabindex="-1"></a><span class="co">#&gt; 1.872377e-04 4.489098e-07 1.706497e-02 2.752537e-06 1.434770e-04 3.195816e-03 </span></span>
+<span id="cb8-40"><a href="#cb8-40" tabindex="-1"></a><span class="co">#&gt;           31           32           33           34           35           36 </span></span>
+<span id="cb8-41"><a href="#cb8-41" tabindex="-1"></a><span class="co">#&gt; 6.905977e-02 1.536396e-02 1.260801e-02 1.534755e-03 1.380360e-02 6.848461e-03 </span></span>
+<span id="cb8-42"><a href="#cb8-42" tabindex="-1"></a><span class="co">#&gt;           37           38           39           40           41           42 </span></span>
+<span id="cb8-43"><a href="#cb8-43" tabindex="-1"></a><span class="co">#&gt; 1.700720e-06 3.793174e-04 2.134337e-03 2.287672e-02 1.001287e-02 4.071700e-03 </span></span>
+<span id="cb8-44"><a href="#cb8-44" tabindex="-1"></a><span class="co">#&gt;           43           44           45           46           47           48 </span></span>
+<span id="cb8-45"><a href="#cb8-45" tabindex="-1"></a><span class="co">#&gt; 5.471299e-03 5.270891e-02 3.433051e-02 2.975180e-03 3.167244e-03 9.174703e-04 </span></span>
+<span id="cb8-46"><a href="#cb8-46" tabindex="-1"></a><span class="co">#&gt;           49           50           51           52           53           54 </span></span>
+<span id="cb8-47"><a href="#cb8-47" tabindex="-1"></a><span class="co">#&gt; 1.170983e-02 8.648779e-04 1.116591e-03 8.230930e-03 1.381027e-02 3.504105e-02 </span></span>
+<span id="cb8-48"><a href="#cb8-48" tabindex="-1"></a><span class="co">#&gt;           55           56           57           58           59           60 </span></span>
+<span id="cb8-49"><a href="#cb8-49" tabindex="-1"></a><span class="co">#&gt; 1.571502e-04 2.905749e-03 1.402942e-03 5.808575e-03 2.019476e-03 6.948885e-06 </span></span>
+<span id="cb8-50"><a href="#cb8-50" tabindex="-1"></a><span class="co">#&gt;           61           62           63           64           65           66 </span></span>
+<span id="cb8-51"><a href="#cb8-51" tabindex="-1"></a><span class="co">#&gt; 1.170618e-03 3.652109e-03 2.922443e-02 9.678057e-03 3.620026e-06 3.218468e-03 </span></span>
+<span id="cb8-52"><a href="#cb8-52" tabindex="-1"></a><span class="co">#&gt;           67           68           69           70           71           72 </span></span>
+<span id="cb8-53"><a href="#cb8-53" tabindex="-1"></a><span class="co">#&gt; 1.378174e-03 5.716292e-03 3.730149e-03 9.087202e-03 8.357802e-03 1.187750e-02 </span></span>
+<span id="cb8-54"><a href="#cb8-54" tabindex="-1"></a><span class="co">#&gt;           73           74           75           76           77           78 </span></span>
+<span id="cb8-55"><a href="#cb8-55" tabindex="-1"></a><span class="co">#&gt; 2.430428e-02 3.348263e-04 9.538221e-03 1.257656e-03 1.433252e-03 1.356868e-03 </span></span>
+<span id="cb8-56"><a href="#cb8-56" tabindex="-1"></a><span class="co">#&gt;           79           80           81           82           83           84 </span></span>
+<span id="cb8-57"><a href="#cb8-57" tabindex="-1"></a><span class="co">#&gt; 2.563597e-05 1.801658e-03 1.835160e-03 5.784606e-04 2.366539e-02 8.884675e-04 </span></span>
+<span id="cb8-58"><a href="#cb8-58" tabindex="-1"></a><span class="co">#&gt;           85           86           87           88           89           90 </span></span>
+<span id="cb8-59"><a href="#cb8-59" tabindex="-1"></a><span class="co">#&gt; 3.063566e-04 9.322376e-03 1.300065e-02 5.103375e-03 6.710071e-04 3.902158e-03 </span></span>
+<span id="cb8-60"><a href="#cb8-60" tabindex="-1"></a><span class="co">#&gt;           91           92           93           94           95           96 </span></span>
+<span id="cb8-61"><a href="#cb8-61" tabindex="-1"></a><span class="co">#&gt; 3.851322e-04 3.045158e-03 4.482863e-04 3.504325e-03 3.537797e-03 4.644052e-04 </span></span>
+<span id="cb8-62"><a href="#cb8-62" tabindex="-1"></a><span class="co">#&gt;           97           98           99          100          101          102 </span></span>
+<span id="cb8-63"><a href="#cb8-63" tabindex="-1"></a><span class="co">#&gt; 1.386934e-02 4.444185e-03 5.864202e-03 9.236185e-03 2.563387e-02 3.445601e-04 </span></span>
+<span id="cb8-64"><a href="#cb8-64" tabindex="-1"></a><span class="co">#&gt;          103          104          105          106          107          108 </span></span>
+<span id="cb8-65"><a href="#cb8-65" tabindex="-1"></a><span class="co">#&gt; 1.467024e-03 1.170618e-03 9.051071e-04 7.373574e-03 2.295924e-05 6.910949e-04 </span></span>
+<span id="cb8-66"><a href="#cb8-66" tabindex="-1"></a><span class="co">#&gt;          109          110          111          112          113          114 </span></span>
+<span id="cb8-67"><a href="#cb8-67" tabindex="-1"></a><span class="co">#&gt; 3.504325e-03 2.274586e-04 9.266580e-05 4.857092e-03 4.700977e-08 2.921484e-03 </span></span>
+<span id="cb8-68"><a href="#cb8-68" tabindex="-1"></a><span class="co">#&gt;          115          116          117          118          119          120 </span></span>
+<span id="cb8-69"><a href="#cb8-69" tabindex="-1"></a><span class="co">#&gt; 4.090240e-03 1.105467e-02 7.365409e-04 1.938023e-02 1.012910e-03 1.535916e-02 </span></span>
+<span id="cb8-70"><a href="#cb8-70" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-71"><a href="#cb8-71" tabindex="-1"></a><span class="co">#&gt; $regression$standardised_residuals</span></span>
+<span id="cb8-72"><a href="#cb8-72" tabindex="-1"></a><span class="co">#&gt;            1            2            3            4            5            6 </span></span>
+<span id="cb8-73"><a href="#cb8-73" tabindex="-1"></a><span class="co">#&gt; -0.082923698 -1.870645918  0.395846500  0.004591293 -0.692174489 -0.185004873 </span></span>
+<span id="cb8-74"><a href="#cb8-74" tabindex="-1"></a><span class="co">#&gt;            7            8            9           10           11           12 </span></span>
+<span id="cb8-75"><a href="#cb8-75" tabindex="-1"></a><span class="co">#&gt;  1.084968504  0.780147050  0.110776991 -2.638742712 -1.795997774  0.319306483 </span></span>
+<span id="cb8-76"><a href="#cb8-76" tabindex="-1"></a><span class="co">#&gt;           13           14           15           16           17           18 </span></span>
+<span id="cb8-77"><a href="#cb8-77" tabindex="-1"></a><span class="co">#&gt;  1.954971640 -1.219815183  0.004191993  1.118225981  1.039309006  0.527129425 </span></span>
+<span id="cb8-78"><a href="#cb8-78" tabindex="-1"></a><span class="co">#&gt;           19           20           21           22           23           24 </span></span>
+<span id="cb8-79"><a href="#cb8-79" tabindex="-1"></a><span class="co">#&gt; -0.961835047  0.980099373  0.063225377  0.551354644  0.278271787 -0.647978136 </span></span>
+<span id="cb8-80"><a href="#cb8-80" tabindex="-1"></a><span class="co">#&gt;           25           26           27           28           29           30 </span></span>
+<span id="cb8-81"><a href="#cb8-81" tabindex="-1"></a><span class="co">#&gt;  0.227581315  0.004986299 -1.172216599  0.021868776 -0.095706217 -0.782623908 </span></span>
+<span id="cb8-82"><a href="#cb8-82" tabindex="-1"></a><span class="co">#&gt;           31           32           33           34           35           36 </span></span>
+<span id="cb8-83"><a href="#cb8-83" tabindex="-1"></a><span class="co">#&gt; -2.309384417 -1.374470793  0.932880267 -0.690640105  1.255066667  0.671314169 </span></span>
+<span id="cb8-84"><a href="#cb8-84" tabindex="-1"></a><span class="co">#&gt;           37           38           39           40           41           42 </span></span>
+<span id="cb8-85"><a href="#cb8-85" tabindex="-1"></a><span class="co">#&gt;  0.012570683  0.352662125  0.374079633  1.867781077 -1.228052989  0.606343018 </span></span>
+<span id="cb8-86"><a href="#cb8-86" tabindex="-1"></a><span class="co">#&gt;           43           44           45           46           47           48 </span></span>
+<span id="cb8-87"><a href="#cb8-87" tabindex="-1"></a><span class="co">#&gt; -0.617848955 -1.662835019  2.074446939  0.978590982 -0.793286443  0.252351509 </span></span>
+<span id="cb8-88"><a href="#cb8-88" tabindex="-1"></a><span class="co">#&gt;           49           50           51           52           53           54 </span></span>
+<span id="cb8-89"><a href="#cb8-89" tabindex="-1"></a><span class="co">#&gt;  1.156356561 -0.449473176 -0.363323806  1.152172372 -1.440809735 -1.866773520 </span></span>
+<span id="cb8-90"><a href="#cb8-90" tabindex="-1"></a><span class="co">#&gt;           55           56           57           58           59           60 </span></span>
+<span id="cb8-91"><a href="#cb8-91" tabindex="-1"></a><span class="co">#&gt;  0.189559954 -0.858506945 -0.309992596 -1.198889104  0.696726010 -0.035497078 </span></span>
+<span id="cb8-92"><a href="#cb8-92" tabindex="-1"></a><span class="co">#&gt;           61           62           63           64           65           66 </span></span>
+<span id="cb8-93"><a href="#cb8-93" tabindex="-1"></a><span class="co">#&gt; -0.594649744  0.646085118  1.892162918  1.346958028  0.012140769 -1.050312804 </span></span>
+<span id="cb8-94"><a href="#cb8-94" tabindex="-1"></a><span class="co">#&gt;           67           68           69           70           71           72 </span></span>
+<span id="cb8-95"><a href="#cb8-95" tabindex="-1"></a><span class="co">#&gt;  0.598618566 -1.508218399 -0.521321175 -0.874142231  1.497519709  1.032511438 </span></span>
+<span id="cb8-96"><a href="#cb8-96" tabindex="-1"></a><span class="co">#&gt;           73           74           75           76           77           78 </span></span>
+<span id="cb8-97"><a href="#cb8-97" tabindex="-1"></a><span class="co">#&gt;  2.208163710  0.178475846  1.021361391  0.616360158 -0.448239907 -0.298894184 </span></span>
+<span id="cb8-98"><a href="#cb8-98" tabindex="-1"></a><span class="co">#&gt;           79           80           81           82           83           84 </span></span>
+<span id="cb8-99"><a href="#cb8-99" tabindex="-1"></a><span class="co">#&gt; -0.041513884  0.484623799 -0.711839662 -0.445277725  2.271897566  0.424028147 </span></span>
+<span id="cb8-100"><a href="#cb8-100" tabindex="-1"></a><span class="co">#&gt;           85           86           87           88           89           90 </span></span>
+<span id="cb8-101"><a href="#cb8-101" tabindex="-1"></a><span class="co">#&gt;  0.236369610  1.923468863 -1.537113657 -0.910885755  0.287247717  0.885761213 </span></span>
+<span id="cb8-102"><a href="#cb8-102" tabindex="-1"></a><span class="co">#&gt;           91           92           93           94           95           96 </span></span>
+<span id="cb8-103"><a href="#cb8-103" tabindex="-1"></a><span class="co">#&gt;  0.278271787 -1.099326747 -0.299846917 -0.670336465  1.075297214  0.241274096 </span></span>
+<span id="cb8-104"><a href="#cb8-104" tabindex="-1"></a><span class="co">#&gt;           97           98           99          100          101          102 </span></span>
+<span id="cb8-105"><a href="#cb8-105" tabindex="-1"></a><span class="co">#&gt;  1.521915286  0.863717913  0.560137775 -0.839407809 -1.485896784 -0.173199125 </span></span>
+<span id="cb8-106"><a href="#cb8-106" tabindex="-1"></a><span class="co">#&gt;          103          104          105          106          107          108 </span></span>
+<span id="cb8-107"><a href="#cb8-107" tabindex="-1"></a><span class="co">#&gt; -0.230361700 -0.594649744  0.499913855 -1.172602644 -0.046456880 -0.397268813 </span></span>
+<span id="cb8-108"><a href="#cb8-108" tabindex="-1"></a><span class="co">#&gt;          109          110          111          112          113          114 </span></span>
+<span id="cb8-109"><a href="#cb8-109" tabindex="-1"></a><span class="co">#&gt; -0.670336465  0.181786019 -0.202323795 -0.825310891  0.001891811 -0.577856052 </span></span>
+<span id="cb8-110"><a href="#cb8-110" tabindex="-1"></a><span class="co">#&gt;          115          116          117          118          119          120 </span></span>
+<span id="cb8-111"><a href="#cb8-111" tabindex="-1"></a><span class="co">#&gt; -0.520419080  1.827370061 -0.348396466 -1.215115771  0.250475472  0.752951062 </span></span>
+<span id="cb8-112"><a href="#cb8-112" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-113"><a href="#cb8-113" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-114"><a href="#cb8-114" tabindex="-1"></a><span class="co">#&gt; $expected_counts</span></span>
+<span id="cb8-115"><a href="#cb8-115" tabindex="-1"></a><span class="co">#&gt; NULL</span></span>
+<span id="cb8-116"><a href="#cb8-116" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-117"><a href="#cb8-117" tabindex="-1"></a><span class="co">#&gt; $apa</span></span>
+<span id="cb8-118"><a href="#cb8-118" tabindex="-1"></a><span class="co">#&gt; [1] &quot;Assumption checks were computed.&quot;</span></span>
+<span id="cb8-119"><a href="#cb8-119" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-120"><a href="#cb8-120" tabindex="-1"></a><span class="co">#&gt; $prompt</span></span>
+<span id="cb8-121"><a href="#cb8-121" tabindex="-1"></a><span class="co">#&gt; [1] &quot;Report assumption checks before interpreting inferential models, especially sparse cells, non-normal residuals, and high VIF values.&quot;</span></span>
+<span id="cb8-122"><a href="#cb8-122" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-123"><a href="#cb8-123" tabindex="-1"></a><span class="co">#&gt; attr(,&quot;class&quot;)</span></span>
+<span id="cb8-124"><a href="#cb8-124" tabindex="-1"></a><span class="co">#&gt; [1] &quot;sframe_assumption_report&quot;</span></span></code></pre></div>
 </div>
 <div id="define-the-plan" class="section level2">
 <h2>Define the plan</h2>
@@ -866,65 +776,96 @@ variables that fill each role. A correlation expects <code>x</code> and
 <code>y</code>. A regression expects <code>predictors</code> and a
 <code>dependent</code> variable. A group comparison expects a
 <code>group</code> and an <code>outcome</code>.</p>
-<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a>instr<span class="sc">$</span>analysis_plan <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
-<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">id =</span> <span class="st">&quot;RQ1&quot;</span>,</span>
-<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a>       <span class="at">research_question =</span> <span class="st">&quot;Is digital marketing perception associated with satisfaction?&quot;</span>,</span>
-<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a>       <span class="at">family =</span> <span class="st">&quot;association&quot;</span>, <span class="at">method =</span> <span class="st">&quot;correlation_pearson&quot;</span>,</span>
-<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a>       <span class="at">roles =</span> <span class="fu">list</span>(<span class="at">x =</span> <span class="st">&quot;digital_marketing&quot;</span>, <span class="at">y =</span> <span class="st">&quot;satisfaction&quot;</span>),</span>
-<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a>       <span class="at">options =</span> <span class="fu">list</span>(<span class="at">alpha =</span> <span class="fl">0.05</span>)),</span>
-<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">id =</span> <span class="st">&quot;RQ2&quot;</span>,</span>
-<span id="cb6-8"><a href="#cb6-8" tabindex="-1"></a>       <span class="at">research_question =</span> <span class="st">&quot;Do the three perception scales predict satisfaction?&quot;</span>,</span>
-<span id="cb6-9"><a href="#cb6-9" tabindex="-1"></a>       <span class="at">family =</span> <span class="st">&quot;regression&quot;</span>, <span class="at">method =</span> <span class="st">&quot;regression_linear&quot;</span>,</span>
-<span id="cb6-10"><a href="#cb6-10" tabindex="-1"></a>       <span class="at">roles =</span> <span class="fu">list</span>(<span class="at">predictors =</span> <span class="fu">c</span>(<span class="st">&quot;digital_marketing&quot;</span>, <span class="st">&quot;service_quality&quot;</span>, <span class="st">&quot;sustainability&quot;</span>),</span>
-<span id="cb6-11"><a href="#cb6-11" tabindex="-1"></a>                    <span class="at">dependent =</span> <span class="st">&quot;satisfaction&quot;</span>),</span>
-<span id="cb6-12"><a href="#cb6-12" tabindex="-1"></a>       <span class="at">options =</span> <span class="fu">list</span>(<span class="at">alpha =</span> <span class="fl">0.05</span>)),</span>
-<span id="cb6-13"><a href="#cb6-13" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">id =</span> <span class="st">&quot;RQ3&quot;</span>,</span>
-<span id="cb6-14"><a href="#cb6-14" tabindex="-1"></a>       <span class="at">research_question =</span> <span class="st">&quot;Do first-time and repeat visitors differ in behavioural intention?&quot;</span>,</span>
-<span id="cb6-15"><a href="#cb6-15" tabindex="-1"></a>       <span class="at">family =</span> <span class="st">&quot;group_comparison&quot;</span>, <span class="at">method =</span> <span class="st">&quot;mann_whitney&quot;</span>,</span>
-<span id="cb6-16"><a href="#cb6-16" tabindex="-1"></a>       <span class="at">roles =</span> <span class="fu">list</span>(<span class="at">group =</span> <span class="st">&quot;visit_type&quot;</span>, <span class="at">outcome =</span> <span class="st">&quot;behavioural_intention&quot;</span>),</span>
-<span id="cb6-17"><a href="#cb6-17" tabindex="-1"></a>       <span class="at">options =</span> <span class="fu">list</span>(<span class="at">alpha =</span> <span class="fl">0.05</span>))</span>
-<span id="cb6-18"><a href="#cb6-18" tabindex="-1"></a>)</span></code></pre></div>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a>instr<span class="sc">$</span>analysis_plan <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">id =</span> <span class="st">&quot;RQ1&quot;</span>,</span>
+<span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a>       <span class="at">research_question =</span> <span class="st">&quot;Is digital marketing perception associated with satisfaction?&quot;</span>,</span>
+<span id="cb9-4"><a href="#cb9-4" tabindex="-1"></a>       <span class="at">family =</span> <span class="st">&quot;association&quot;</span>, <span class="at">method =</span> <span class="st">&quot;correlation_pearson&quot;</span>,</span>
+<span id="cb9-5"><a href="#cb9-5" tabindex="-1"></a>       <span class="at">roles =</span> <span class="fu">list</span>(<span class="at">x =</span> <span class="st">&quot;digital_marketing&quot;</span>, <span class="at">y =</span> <span class="st">&quot;satisfaction&quot;</span>),</span>
+<span id="cb9-6"><a href="#cb9-6" tabindex="-1"></a>       <span class="at">options =</span> <span class="fu">list</span>(<span class="at">alpha =</span> <span class="fl">0.05</span>)),</span>
+<span id="cb9-7"><a href="#cb9-7" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">id =</span> <span class="st">&quot;RQ2&quot;</span>,</span>
+<span id="cb9-8"><a href="#cb9-8" tabindex="-1"></a>       <span class="at">research_question =</span> <span class="st">&quot;Do the three perception scales predict satisfaction?&quot;</span>,</span>
+<span id="cb9-9"><a href="#cb9-9" tabindex="-1"></a>       <span class="at">family =</span> <span class="st">&quot;regression&quot;</span>, <span class="at">method =</span> <span class="st">&quot;regression_linear&quot;</span>,</span>
+<span id="cb9-10"><a href="#cb9-10" tabindex="-1"></a>       <span class="at">roles =</span> <span class="fu">list</span>(<span class="at">predictors =</span> <span class="fu">c</span>(<span class="st">&quot;digital_marketing&quot;</span>, <span class="st">&quot;service_quality&quot;</span>, <span class="st">&quot;sustainability&quot;</span>),</span>
+<span id="cb9-11"><a href="#cb9-11" tabindex="-1"></a>                    <span class="at">dependent =</span> <span class="st">&quot;satisfaction&quot;</span>),</span>
+<span id="cb9-12"><a href="#cb9-12" tabindex="-1"></a>       <span class="at">options =</span> <span class="fu">list</span>(<span class="at">alpha =</span> <span class="fl">0.05</span>)),</span>
+<span id="cb9-13"><a href="#cb9-13" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">id =</span> <span class="st">&quot;RQ3&quot;</span>,</span>
+<span id="cb9-14"><a href="#cb9-14" tabindex="-1"></a>       <span class="at">research_question =</span> <span class="st">&quot;Do first-time and repeat visitors differ in behavioural intention?&quot;</span>,</span>
+<span id="cb9-15"><a href="#cb9-15" tabindex="-1"></a>       <span class="at">family =</span> <span class="st">&quot;group_comparison&quot;</span>, <span class="at">method =</span> <span class="st">&quot;mann_whitney&quot;</span>,</span>
+<span id="cb9-16"><a href="#cb9-16" tabindex="-1"></a>       <span class="at">roles =</span> <span class="fu">list</span>(<span class="at">group =</span> <span class="st">&quot;visit_type&quot;</span>, <span class="at">outcome =</span> <span class="st">&quot;behavioural_intention&quot;</span>),</span>
+<span id="cb9-17"><a href="#cb9-17" tabindex="-1"></a>       <span class="at">options =</span> <span class="fu">list</span>(<span class="at">alpha =</span> <span class="fl">0.05</span>))</span>
+<span id="cb9-18"><a href="#cb9-18" tabindex="-1"></a>)</span></code></pre></div>
 </div>
 <div id="run-the-plan" class="section level2">
 <h2>Run the plan</h2>
-<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a>results <span class="ot">&lt;-</span> <span class="fu">run_analysis_plan</span>(responses, instr)</span>
-<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a>results</span>
-<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a><span class="co">#&gt; Analysis Results: 3 research question(s)</span></span>
-<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb7-5"><a href="#cb7-5" tabindex="-1"></a><span class="co">#&gt; RQ 1: Is digital marketing perception associated with satisfaction?</span></span>
-<span id="cb7-6"><a href="#cb7-6" tabindex="-1"></a><span class="co">#&gt;   Test: correlation_pearson</span></span>
-<span id="cb7-7"><a href="#cb7-7" tabindex="-1"></a><span class="co">#&gt;   APA:  r(118) = 0.54, p &lt; .001</span></span>
-<span id="cb7-8"><a href="#cb7-8" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb7-9"><a href="#cb7-9" tabindex="-1"></a><span class="co">#&gt; RQ 2: Do the three perception scales predict satisfaction?</span></span>
-<span id="cb7-10"><a href="#cb7-10" tabindex="-1"></a><span class="co">#&gt;   Test: regression_linear</span></span>
-<span id="cb7-11"><a href="#cb7-11" tabindex="-1"></a><span class="co">#&gt;   APA:  R² = 0.383, F(3, 116) = 23.95, p &lt; .001</span></span>
-<span id="cb7-12"><a href="#cb7-12" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb7-13"><a href="#cb7-13" tabindex="-1"></a><span class="co">#&gt; RQ 3: Do first-time and repeat visitors differ in behavioural intention?</span></span>
-<span id="cb7-14"><a href="#cb7-14" tabindex="-1"></a><span class="co">#&gt;   Test: mann_whitney</span></span>
-<span id="cb7-15"><a href="#cb7-15" tabindex="-1"></a><span class="co">#&gt;   APA:  U = 1576, z = -0.98, p = 0.327, r = 0.09</span></span></code></pre></div>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a>results <span class="ot">&lt;-</span> <span class="fu">run_analysis_plan</span>(responses, instr)</span>
+<span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a><span class="fu">results_table</span>(results)</span></code></pre></div>
+<table>
+<colgroup>
+<col width="3%" />
+<col width="51%" />
+<col width="6%" />
+<col width="31%" />
+<col width="8%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">RQ</th>
+<th align="left">Research question</th>
+<th align="left">Method</th>
+<th align="right">Result (APA)</th>
+<th align="left">Effect</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">RQ1</td>
+<td align="left">Is digital marketing perception associated with
+satisfaction?</td>
+<td align="left">pearson</td>
+<td align="right">r(118) = 0.54, p &lt; .001</td>
+<td align="left">large</td>
+</tr>
+<tr class="even">
+<td align="left">RQ2</td>
+<td align="left">Do the three perception scales predict
+satisfaction?</td>
+<td align="left"></td>
+<td align="right">R² = 0.383, F(3, 116) = 23.95, p &lt; .001</td>
+<td align="left"></td>
+</tr>
+<tr class="odd">
+<td align="left">RQ3</td>
+<td align="left">Do first-time and repeat visitors differ in behavioural
+intention?</td>
+<td align="left"></td>
+<td align="right">U = 1576, z = -0.98, p = 0.327, r = 0.09</td>
+<td align="left">negligible</td>
+</tr>
+</tbody>
+</table>
 </div>
 <div id="read-a-single-result" class="section level2">
 <h2>Read a single result</h2>
 <p>Each result holds more than the printed line. It carries the APA
 statistic, the effect-size label where the technique reports one, a
 writing prompt, and the references that support the technique.</p>
-<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a>rq1 <span class="ot">&lt;-</span> results[[<span class="dv">1</span>]]</span>
-<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a></span>
-<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a>rq1<span class="sc">$</span>apa</span>
-<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a><span class="co">#&gt; [1] &quot;r(118) = 0.54, p &lt; .001&quot;</span></span>
-<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a>rq1<span class="sc">$</span>effect_label</span>
-<span id="cb8-6"><a href="#cb8-6" tabindex="-1"></a><span class="co">#&gt; [1] &quot;large&quot;</span></span>
-<span id="cb8-7"><a href="#cb8-7" tabindex="-1"></a>rq1<span class="sc">$</span>prompt</span>
-<span id="cb8-8"><a href="#cb8-8" tabindex="-1"></a><span class="co">#&gt; [1] &quot;There was a positive, large significant correlation between digital_marketing and satisfaction, r(118) = 0.54, p &lt; .001. Explain what this means for your research question.&quot;</span></span>
-<span id="cb8-9"><a href="#cb8-9" tabindex="-1"></a><span class="fu">unlist</span>(rq1<span class="sc">$</span>citations)</span>
-<span id="cb8-10"><a href="#cb8-10" tabindex="-1"></a><span class="co">#&gt;                                                                                                                                                                field_2018 </span></span>
-<span id="cb8-11"><a href="#cb8-11" tabindex="-1"></a><span class="co">#&gt;                                                                                   &quot;Field, A. (2018). *Discovering statistics using IBM SPSS statistics* (5th ed.). SAGE.&quot; </span></span>
-<span id="cb8-12"><a href="#cb8-12" tabindex="-1"></a><span class="co">#&gt;                                                                                                                                                                cohen_1988 </span></span>
-<span id="cb8-13"><a href="#cb8-13" tabindex="-1"></a><span class="co">#&gt;                                                                 &quot;Cohen, J. (1988). *Statistical power analysis for the behavioral sciences* (2nd ed.). Lawrence Erlbaum.&quot; </span></span>
-<span id="cb8-14"><a href="#cb8-14" tabindex="-1"></a><span class="co">#&gt;                                                                                                                                                                    r_core </span></span>
-<span id="cb8-15"><a href="#cb8-15" tabindex="-1"></a><span class="co">#&gt;                                                 &quot;R Core Team. (2026). *R: A language and environment for statistical computing*. R Foundation for Statistical Computing.&quot; </span></span>
-<span id="cb8-16"><a href="#cb8-16" tabindex="-1"></a><span class="co">#&gt;                                                                                                                                                               surveyframe </span></span>
-<span id="cb8-17"><a href="#cb8-17" tabindex="-1"></a><span class="co">#&gt; &quot;Sharafuddin, M. A. (2026). *surveyframe: A survey instrument workflow for R* (Version 0.3.0) [Computer software]. https://github.com/MohammedAliSharafuddin/surveyframe&quot;</span></span></code></pre></div>
+<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" tabindex="-1"></a>rq1 <span class="ot">&lt;-</span> results[[<span class="dv">1</span>]]</span>
+<span id="cb11-2"><a href="#cb11-2" tabindex="-1"></a></span>
+<span id="cb11-3"><a href="#cb11-3" tabindex="-1"></a>rq1<span class="sc">$</span>apa</span>
+<span id="cb11-4"><a href="#cb11-4" tabindex="-1"></a><span class="co">#&gt; [1] &quot;r(118) = 0.54, p &lt; .001&quot;</span></span>
+<span id="cb11-5"><a href="#cb11-5" tabindex="-1"></a>rq1<span class="sc">$</span>effect_label</span>
+<span id="cb11-6"><a href="#cb11-6" tabindex="-1"></a><span class="co">#&gt; [1] &quot;large&quot;</span></span>
+<span id="cb11-7"><a href="#cb11-7" tabindex="-1"></a>rq1<span class="sc">$</span>prompt</span>
+<span id="cb11-8"><a href="#cb11-8" tabindex="-1"></a><span class="co">#&gt; [1] &quot;There was a positive, large significant correlation between digital_marketing and satisfaction, r(118) = 0.54, p &lt; .001. Explain what this means for your research question.&quot;</span></span>
+<span id="cb11-9"><a href="#cb11-9" tabindex="-1"></a><span class="fu">unlist</span>(rq1<span class="sc">$</span>citations)</span>
+<span id="cb11-10"><a href="#cb11-10" tabindex="-1"></a><span class="co">#&gt;                                                                                                                                                         field_2018 </span></span>
+<span id="cb11-11"><a href="#cb11-11" tabindex="-1"></a><span class="co">#&gt;                                                                            &quot;Field, A. (2018). *Discovering statistics using IBM SPSS statistics* (5th ed.). SAGE.&quot; </span></span>
+<span id="cb11-12"><a href="#cb11-12" tabindex="-1"></a><span class="co">#&gt;                                                                                                                                                         cohen_1988 </span></span>
+<span id="cb11-13"><a href="#cb11-13" tabindex="-1"></a><span class="co">#&gt;                                                          &quot;Cohen, J. (1988). *Statistical power analysis for the behavioral sciences* (2nd ed.). Lawrence Erlbaum.&quot; </span></span>
+<span id="cb11-14"><a href="#cb11-14" tabindex="-1"></a><span class="co">#&gt;                                                                                                                                                             r_core </span></span>
+<span id="cb11-15"><a href="#cb11-15" tabindex="-1"></a><span class="co">#&gt;                                          &quot;R Core Team. (2026). *R: A language and environment for statistical computing*. R Foundation for Statistical Computing.&quot; </span></span>
+<span id="cb11-16"><a href="#cb11-16" tabindex="-1"></a><span class="co">#&gt;                                                                                                                                                        surveyframe </span></span>
+<span id="cb11-17"><a href="#cb11-17" tabindex="-1"></a><span class="co">#&gt; &quot;Sharafuddin, M. A. (2026). *surveyframe: Survey Instrument Workflows* (Version 0.3.2) [Computer software]. https://github.com/MohammedAliSharafuddin/surveyframe&quot;</span></span></code></pre></div>
 </div>
 <div id="render-the-results-report" class="section level2">
 <h2>Render the results report</h2>
@@ -932,7 +873,7 @@ writing prompt, and the references that support the technique.</p>
 with one section per research question, each holding the APA result, the
 writing prompt, a space for the interpretation, and a reference list
 compiled from the techniques used.</p>
-<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a><span class="fu">render_results</span>(results, instr, <span class="at">output_file =</span> <span class="st">&quot;results.html&quot;</span>, <span class="at">citation_format =</span> <span class="st">&quot;apa&quot;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" tabindex="-1"></a><span class="fu">render_results</span>(results, instr, <span class="at">output_file =</span> <span class="st">&quot;results.html&quot;</span>, <span class="at">citation_format =</span> <span class="st">&quot;apa&quot;</span>)</span></code></pre></div>
 </div>
 <div id="in-surveystudio" class="section level2">
 <h2>In SurveyStudio</h2>
@@ -940,12 +881,12 @@ compiled from the techniques used.</p>
 upload the responses, and the Analysis Plan screen runs the saved plan
 and shows a table of each question with its method and APA result. The
 full report is produced on the Export screen.</p>
-<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a><span class="fu">launch_studio</span>(</span>
-<span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a>  <span class="at">instrument     =</span> instr,</span>
-<span id="cb10-3"><a href="#cb10-3" tabindex="-1"></a>  <span class="at">responses      =</span> responses,</span>
-<span id="cb10-4"><a href="#cb10-4" tabindex="-1"></a>  <span class="at">screen         =</span> <span class="st">&quot;analysis&quot;</span>,</span>
-<span id="cb10-5"><a href="#cb10-5" tabindex="-1"></a>  <span class="at">launch.browser =</span> <span class="cn">FALSE</span></span>
-<span id="cb10-6"><a href="#cb10-6" tabindex="-1"></a>)</span></code></pre></div>
+<div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" tabindex="-1"></a><span class="fu">launch_studio</span>(</span>
+<span id="cb13-2"><a href="#cb13-2" tabindex="-1"></a>  <span class="at">instrument     =</span> instr,</span>
+<span id="cb13-3"><a href="#cb13-3" tabindex="-1"></a>  <span class="at">responses      =</span> responses,</span>
+<span id="cb13-4"><a href="#cb13-4" tabindex="-1"></a>  <span class="at">screen         =</span> <span class="st">&quot;analysis&quot;</span>,</span>
+<span id="cb13-5"><a href="#cb13-5" tabindex="-1"></a>  <span class="at">launch.browser =</span> <span class="cn">FALSE</span></span>
+<span id="cb13-6"><a href="#cb13-6" tabindex="-1"></a>)</span></code></pre></div>
 </div>
 
 

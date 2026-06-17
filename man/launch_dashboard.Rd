@@ -13,14 +13,13 @@ launch_dashboard(
 )
 }
 \arguments{
-\item{instrument}{An \code{sframe} object. When \code{NULL}, the bundled tourism
-services demo instrument is loaded.}
+\item{instrument}{An \code{sframe} object. Required. Calling \code{launch_dashboard()}
+with no instrument errors with guidance; use \code{\link[=launch_dashboard_demo]{launch_dashboard_demo()}} for
+the bundled demo or \code{\link[=launch_studio]{launch_studio()}} to upload interactively.}
 
 \item{responses}{A \code{data.frame} or \code{tibble} of survey responses, as
-produced by \code{\link[=read_responses]{read_responses()}} or \code{\link[=read_sheet_responses]{read_sheet_responses()}}. When NULL
-and \code{instrument} is also NULL, the bundled simulated demo responses are
-loaded. When NULL with a user-supplied instrument, the dashboard opens
-with instrument metadata and no response summaries.}
+produced by \code{\link[=read_responses]{read_responses()}} or \code{\link[=read_sheet_responses]{read_sheet_responses()}}. When NULL the
+dashboard opens with instrument metadata and no response summaries.}
 
 \item{port}{Integer or NULL. TCP port for the Shiny server. When NULL,
 Shiny selects an available port automatically.}
@@ -53,15 +52,16 @@ instrument.}
 \item{Raw data}{Scrollable response table with a CSV download button.}
 }
 
-The dashboard is read-only. Use it for descriptive exploration after
-collecting responses and before running formal analysis with
-\code{\link[=run_analysis_plan]{run_analysis_plan()}}.
+The dashboard is read-only and takes its data from R. It has no upload
+screen, so pass \code{instrument} and \code{responses} directly. To open and upload
+data interactively, use \code{\link[=launch_studio]{launch_studio()}}, which includes this same
+dashboard as its Dashboard tab. For a quick look at bundled demo data, use
+\code{\link[=launch_dashboard_demo]{launch_dashboard_demo()}}.
 }
 \examples{
-\donttest{
-# Open the bundled tourism-services response dashboard.
-# To build a questionnaire instead, use launch_builder().
-launch_dashboard()
+\dontrun{
+# For the bundled demo, use launch_dashboard_demo().
+# To upload data interactively, use launch_studio().
 
 # Open the dashboard with your own instrument and responses
 instr <- read_sframe(

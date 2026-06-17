@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+
+
+<title>Deploying a survey and collecting responses on free hosting</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+<style type="text/css">
+code {
+white-space: pre;
+}
+.sourceCode {
+overflow: visible;
+}
+</style>
+<style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Deploying a survey and collecting responses
+on free hosting</h1>
+
+
+
+<p>This guide takes a finished instrument to a live, public survey that
+writes responses into a Google Sheet. Every step is free, and the survey
+itself is a single HTML file that runs in any browser with no
+server.</p>
+<p>The deployment has three parts.</p>
+<ol style="list-style-type: decimal">
+<li>A Google Apps Script collector turns a Google Sheet into a response
+endpoint.</li>
+<li>The survey HTML carries that endpoint URL and posts each submission
+to it.</li>
+<li>A free static host serves the HTML file to respondents.</li>
+</ol>
+<p>You can do all of this from the SurveyBuilder without writing R, or
+from R with two function calls. Both routes produce the same files.</p>
+<div id="what-you-need" class="section level2">
+<h2>What you need</h2>
+<ul>
+<li>A Google account, for the Sheet and the Apps Script collector.</li>
+<li>A finished instrument, either an <code>.sframe</code> file from the
+SurveyBuilder or an <code>sframe</code> object in R.</li>
+<li>A free static host. This guide covers GitHub Pages and Blogger.
+Netlify Drop and Google Sites work the same way.</li>
+</ul>
+</div>
+<div id="step-1-create-the-google-sheet-and-the-collector" class="section level2">
+<h2>Step 1: Create the Google Sheet and the collector</h2>
+<p>Create an empty Google Sheet. The collector adds a
+<code>Responses</code> tab with the correct column headers on the first
+submission, so you do not prepare the sheet by hand.</p>
+<p>Generate the Apps Script collector. From the SurveyBuilder, open
+Survey settings, choose the Google Sheets tab, paste your Sheet URL, and
+click <strong>Download collector (.gs)</strong>. From R, call
+<code>export_google_sheet()</code>.</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a>study <span class="ot">&lt;-</span> <span class="fu">read_sframe</span>(<span class="st">&quot;my_study.sframe&quot;</span>)</span>
+<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a><span class="fu">export_google_sheet</span>(</span>
+<span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a>  study,</span>
+<span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a>  <span class="at">sheet_url  =</span> <span class="st">&quot;https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID&quot;</span>,</span>
+<span id="cb1-6"><a href="#cb1-6" tabindex="-1"></a>  <span class="at">output_dir =</span> <span class="st">&quot;.&quot;</span></span>
+<span id="cb1-7"><a href="#cb1-7" tabindex="-1"></a>)</span></code></pre></div>
+<p>Both routes write <code>surveyframe_collector.gs</code>. The file
+contains one column per question, with one column per sub-item for
+matrix questions, plus <code>respondent_id</code>,
+<code>started_at</code>, and <code>submitted_at</code>.</p>
+</div>
+<div id="step-2-deploy-the-collector-as-a-web-app" class="section level2">
+<h2>Step 2: Deploy the collector as a web app</h2>
+<ol style="list-style-type: decimal">
+<li>Open the Google Sheet.</li>
+<li>Click Extensions, then Apps Script.</li>
+<li>Paste the contents of <code>surveyframe_collector.gs</code>,
+replacing any existing code, and save.</li>
+<li>Click Deploy, then New deployment. Set the type to Web app.</li>
+<li>Set “Who has access” to Anyone.</li>
+<li>Authorise the script when Google prompts you.</li>
+<li>Copy the Web App URL. It ends in <code>/exec</code>.</li>
+</ol>
+<p>This URL is your collection endpoint. Keep it for the next step.</p>
+</div>
+<div id="step-3-put-the-endpoint-into-the-survey" class="section level2">
+<h2>Step 3: Put the endpoint into the survey</h2>
+<p>The exported survey posts each response to whatever endpoint it
+carries. Set the endpoint before you export.</p>
+<p>From the SurveyBuilder, paste the Web App URL into the Apps Script
+Web App URL field on the Google Sheets settings tab, then click
+<strong>Export survey</strong>. From R, store the URL on the instrument
+and call <code>export_static_survey()</code>.</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a>study<span class="sc">$</span>render<span class="sc">$</span>google_sheets_endpoint <span class="ot">&lt;-</span></span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a>  <span class="st">&quot;https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec&quot;</span></span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a><span class="fu">export_static_survey</span>(</span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a>  study,</span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a>  <span class="at">output_path =</span> <span class="st">&quot;index.html&quot;</span>,</span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a>  <span class="at">open        =</span> <span class="cn">FALSE</span></span>
+<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a>)</span></code></pre></div>
+<p>The result is a single HTML file. Each respondent who submits gets a
+CSV copy downloaded to their own device, and the same row is posted to
+the Google Sheet. The two paths are independent, so a failed post never
+loses a response.</p>
+<p>Name the file <code>index.html</code> if you plan to host it at the
+root of a site, because most hosts serve <code>index.html</code> as the
+default page.</p>
+</div>
+<div id="step-4a-host-on-github-pages" class="section level2">
+<h2>Step 4a: Host on GitHub Pages</h2>
+<p>GitHub Pages serves static files straight from a repository.</p>
+<ol style="list-style-type: decimal">
+<li>Create a public repository, for example <code>my-survey</code>.</li>
+<li>Upload <code>index.html</code> to the repository. Use the web
+uploader at Add file, then Upload files, or push with git.</li>
+<li>Open the repository Settings, then Pages.</li>
+<li>Under Build and deployment, set Source to Deploy from a branch,
+choose the <code>main</code> branch and the <code>/ (root)</code>
+folder, then Save.</li>
+<li>Wait for the green confirmation. Your survey is now live at
+<code>https://YOUR_USERNAME.github.io/my-survey/</code>.</li>
+</ol>
+<p>Share that link. To update the survey, re-export the HTML and upload
+it again over the old file.</p>
+</div>
+<div id="step-4b-host-on-blogger" class="section level2">
+<h2>Step 4b: Host on Blogger</h2>
+<p>Blogger can serve a survey inside a page.</p>
+<ol style="list-style-type: decimal">
+<li>In Blogger, create a new Page, not a Post.</li>
+<li>Switch the editor from Compose to HTML view.</li>
+<li>The exported survey is a full HTML document, so embed it in an
+iframe rather than pasting the whole file. Upload
+<code>index.html</code> to any static host first (GitHub Pages or
+Netlify Drop), then embed it:</li>
+</ol>
+<div class="sourceCode" id="cb3"><pre class="sourceCode html"><code class="sourceCode html"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">iframe</span><span class="ot"> src</span><span class="op">=</span><span class="st">&quot;https://YOUR_USERNAME.github.io/my-survey/&quot;</span></span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a><span class="ot">        style</span><span class="op">=</span><span class="st">&quot;width:100%;height:1200px;border:0&quot;</span><span class="dt">&gt;&lt;/</span><span class="kw">iframe</span><span class="dt">&gt;</span></span></code></pre></div>
+<ol start="4" style="list-style-type: decimal">
+<li>Publish the page and share its address.</li>
+</ol>
+<p>The iframe approach keeps the survey self-contained and avoids
+conflicts with the Blogger theme. The same iframe works in Google Sites,
+WordPress, and most content systems.</p>
+</div>
+<div id="step-5-read-the-responses-back" class="section level2">
+<h2>Step 5: Read the responses back</h2>
+<p>Once responses arrive in the Sheet, pull them into R for analysis.
+Use the Sheet ID or full URL.</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a>responses <span class="ot">&lt;-</span> <span class="fu">read_sheet_responses</span>(</span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>  <span class="at">sheet_id   =</span> <span class="st">&quot;https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID&quot;</span>,</span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>  <span class="at">instrument =</span> study</span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a>)</span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a></span>
+<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a>qr <span class="ot">&lt;-</span> <span class="fu">quality_report</span>(responses, study, <span class="at">respondent_id =</span> <span class="st">&quot;respondent_id&quot;</span>)</span></code></pre></div>
+<p>The returned data frame is validated against the instrument and is
+ready for <code>quality_report()</code>, <code>score_scales()</code>,
+<code>reliability_report()</code>, and
+<code>run_analysis_plan()</code>.</p>
+</div>
+<div id="updating-a-live-survey" class="section level2">
+<h2>Updating a live survey</h2>
+<p>Editing the instrument changes the questions, so the column set can
+change too. When you add, remove, or rename questions:</p>
+<ol style="list-style-type: decimal">
+<li>Re-export and re-deploy the collector so the headers match.</li>
+<li>Re-export the survey HTML and upload it over the hosted file.</li>
+</ol>
+<p>Existing rows in the Sheet stay in place. New submissions use the new
+columns.</p>
+</div>
+<div id="checklist" class="section level2">
+<h2>Checklist</h2>
+<ul>
+<li>Sheet created and collector deployed as a web app set to
+Anyone.</li>
+<li>Web App URL copied and stored on the instrument.</li>
+<li>Survey exported with the endpoint embedded.</li>
+<li>HTML uploaded to a static host and confirmed live.</li>
+<li>A test submission appears as a new row in the Sheet.</li>
+<li><code>read_sheet_responses()</code> returns that row in R.</li>
+</ul>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

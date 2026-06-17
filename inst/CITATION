@@ -1,11 +1,21 @@
+if (!exists("meta") || is.null(meta)) {
+  meta <- utils::packageDescription("surveyframe")
+}
+
+year <- if (!is.null(meta$Date) && nzchar(meta$Date)) {
+  format(as.Date(meta$Date), "%Y")
+} else {
+  format(Sys.Date(), "%Y")
+}
+
 bibentry(
   bibtype  = "Manual",
-  title    = "surveyframe: A Survey Instrument Workflow for R",
+  title    = "surveyframe: Survey Instrument Workflows",
   author   = person("Mohammed Ali", "Sharafuddin",
                     email = "mohammedali.page@gmail.com",
                     role  = c("aut", "cre"),
                     comment = c(ORCID = "0000-0001-5247-2964")),
-  year     = "2026",
-  note     = "R package version 0.3.0",
+  year     = year,
+  note     = paste("R package version", meta$Version),
   url      = "https://github.com/MohammedAliSharafuddin/surveyframe"
 )

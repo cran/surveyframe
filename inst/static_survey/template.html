@@ -21,14 +21,14 @@ input,textarea,select{font-family:inherit;font-size:14px}
 
 /* Header (Fix A) */
 .sf-hdr{display:flex;align-items:center;gap:14px;max-width:var(--card-w);margin:20px auto 0;padding:0 16px 16px;border-bottom:1px solid var(--cb)}
-.sf-hdr-logo{max-height:48px;max-width:120px;object-fit:contain}
-.sf-hdr-inst{font-size:13px;font-weight:600;color:var(--t2)}
+.sf-hdr-logo{height:48px;width:auto;max-width:240px;object-fit:contain}
+.sf-hdr-inst{font-size:15px;font-weight:600;color:var(--t1)}
 
 /* Progress */
 .prog-bar-wrap{position:sticky;top:0;z-index:50;background:var(--cf);border-bottom:1px solid var(--cb);padding:0}
 .prog-bar-inner{height:4px;background:var(--cp);transition:width .3s ease;min-width:0}
 .prog-hdr{display:flex;align-items:center;gap:10px;padding:10px 20px}
-.prog-title{font-size:13px;font-weight:600;color:var(--t2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.prog-title{font-size:12px;font-weight:600;color:var(--t2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .prog-pct{font-size:11px;color:var(--t3);flex-shrink:0}
 
 /* Layout */
@@ -137,6 +137,22 @@ textarea.inp-std{resize:vertical;min-height:80px}
 .err-banner{background:#fef2f2;border:1.5px solid #fecaca;border-radius:8px;
   padding:12px 16px;margin-bottom:18px;font-size:13px;color:#991b1b;display:none}
 .err-banner.show{display:block}
+
+/* Footer */
+.sf-footer{text-align:center;font-size:11px;color:var(--t3);padding:8px 16px 36px}
+.sf-footer a{color:var(--t3);font-weight:600;text-decoration:none}
+.sf-footer a:hover{text-decoration:underline}
+
+/* Mobile */
+@media (max-width:600px){
+  .card-body{padding:20px}
+  .frame{padding:16px 10px 48px}
+  .sf-hdr{margin-top:14px;padding-bottom:12px}
+  .wl-title{font-size:20px}
+  .star-btn{font-size:24px}
+  .prog-hdr{padding:9px 14px}
+  .btn{padding:10px 18px}
+}
 </style>
 </head>
 <body data-endpoint="{{ENDPOINT_URL}}">
@@ -147,12 +163,13 @@ textarea.inp-std{resize:vertical;min-height:80px}
 <div id="prog-bar-wrap" class="prog-bar-wrap" hidden>
   <div class="prog-bar-inner" id="progBar" style="width:0%"></div>
   <div class="prog-hdr">
-    <span class="prog-title" id="progTitle">{{SURVEY_TITLE}}</span>
+    <span class="prog-title" id="progTitle"></span>
     <span class="prog-pct" id="progPct">0%</span>
   </div>
 </div>
 
 <div class="frame" id="app"></div>
+<div class="sf-footer">Built with <a href="https://cran.r-project.org/package=surveyframe" target="_blank" rel="noopener">surveyframe</a></div>
 
 <script type="application/json" id="sf-data">{{INSTRUMENT_JSON}}</script>
 <script>
@@ -191,6 +208,11 @@ const choiceMap={};
 
 const branchMap={};
 (SF.branching||[]).forEach(function(rule){branchMap[rule.item_id]=rule;});
+
+// Items designated as quality checks render as Likert (inline radio) so
+// their choice layout matches regular scale items visually.
+const checkItemIds=new Set();
+(SF.checks||[]).forEach(function(ck){if(ck.item_id)checkItemIds.add(ck.item_id);});
 
 // ── Response state ─────────────────────────────────────────────────────────
 const responses={};
@@ -260,6 +282,10 @@ function renderItem(item){
   var cs=choiceMap[item.choice_set||'']||{values:[],labels:[]};
   if(t==='section_break') return renderSection(item);
   if(t==='text_block')    return renderTextBlock(item);
+  // Quality check items (attention / trap / instructional) that have a choice
+  // set render as Likert (inline radios) so their layout matches regular scale
+  // items. A check item with type single_choice would otherwise render stacked.
+  if(checkItemIds.has(item.id)&&item.choice_set)return wrapItem(item,renderLikert(item,cs));
   if(t==='likert')        return wrapItem(item,renderLikert(item,cs));
   if(t==='single_choice') return wrapItem(item,renderSingle(item,cs));
   if(t==='multiple_choice')return wrapItem(item,renderMulti(item,cs));
@@ -478,6 +504,8 @@ function validatePage(items){
       ok=false;
     }
   });
+  var banner=document.getElementById('survey-err');
+  if(banner)banner.classList.toggle('show',!ok);
   return ok;
 }
 
@@ -566,12 +594,17 @@ function updateProgress(){
   var wrap=document.getElementById('prog-bar-wrap');
   var bar=document.getElementById('progBar');
   var pct=document.getElementById('progPct');
+  var title=document.getElementById('progTitle');
   if(!wrap)return;
-  if(screen!=='survey'){wrap.hidden=true;return;}
+  // Honour the show-progress toggle and hide on single-page surveys, where a
+  // progress bar is meaningless.
+  var showProg=!(R.header&&R.header.show_progress===false);
+  if(screen!=='survey'||!showProg||maxPage<=1){wrap.hidden=true;return;}
   wrap.hidden=false;
   var p=Math.round((currentPage/maxPage)*100);
   if(bar)bar.style.width=p+'%';
   if(pct)pct.textContent=p+'%';
+  if(title)title.textContent='Page '+currentPage+' of '+maxPage;
 }
 function renderWelcome(){
   var el=document.getElementById('app');
@@ -599,7 +632,7 @@ function renderSurvey(){
     +'</div>';
   var paginationInfo=maxPage>1?'<div style="font-size:11px;color:var(--t3);margin-bottom:14px">Page '+currentPage+' of '+maxPage+'</div>':'';
   el.innerHTML='<div class="card"><div class="card-body">'
-    +(currentPage===1?'<div style="font-size:20px;font-weight:700;margin-bottom:4px">'+esc(SF.meta.title)+'</div>'+(SF.meta.description?'<div style="color:var(--t2);font-size:13px;margin-bottom:20px">'+esc(SF.meta.description)+'</div>':''):'')
+    +(currentPage===1?'<div style="font-size:22px;font-weight:700;margin-bottom:6px">'+esc(SF.meta.title)+'</div>'+(SF.meta.description?'<div style="color:var(--t2);font-size:13px;line-height:1.5;margin-bottom:20px">'+esc(SF.meta.description)+'</div>':''):'')
     +paginationInfo
     +'<div id="survey-err" class="err-banner">Please answer all required questions before continuing.</div>'
     +items.map(renderItem).join('')

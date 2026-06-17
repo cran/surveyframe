@@ -93,10 +93,9 @@ body{background:#f1f5f9;font-family:system-ui,-apple-system,'Segoe UI',sans-seri
 .item-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 @media(max-width:720px){.item-grid{grid-template-columns:1fr}}
 .tbl{width:100%%;border-collapse:collapse;font-size:12px}
-.tbl th{background:#f8fafc;padding:7px 10px;text-align:left;border-bottom:2px solid #e2e8f0;font-weight:600;color:#475569}
-.tbl td{padding:7px 10px;border-bottom:1px solid #f1f5f9;color:#0f172a}
-.tbl tr:last-child td{border-bottom:none}
-.tbl tr:hover td{background:#fafbfd}
+.tbl th{background:none;padding:7px 10px;text-align:left;border-top:2px solid #1a1a2e;border-bottom:1px solid #1a1a2e;font-weight:700;color:#1a1a2e}
+.tbl td{padding:7px 10px;border:none;color:#0f172a}
+.tbl tbody tr:last-child td{border-bottom:2px solid #1a1a2e}
 .bar-row{display:flex;align-items:center;gap:8px;margin-bottom:5px}
 .bar-lbl{font-size:11px;color:#475569;min-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .bar-bg{flex:1;background:#f1f5f9;border-radius:9999px;height:10px;overflow:hidden}
@@ -131,7 +130,7 @@ ui <- fluidPage(
   ),
   div(class = "db-hdr",
     tags$img(class = "db-hdr-logo",
-             src = "surveyframe-shiny-square-icon.png",
+             src = "sfdash/surveyframe-shiny-square-icon.png",
              alt = "surveyframe"),
     div(class = "db-hdr-t", TITLE),
     div(class = "db-hdr-sub",

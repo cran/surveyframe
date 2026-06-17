@@ -1,7 +1,7 @@
 {
   "hash": {
     "algo": "sha256",
-    "value": "a58a3eff1b5e66dc4d95c3a87ae68cf71fa8cb8c7982cbe4616e0980a2e406bb"
+    "value": "b6221976cb88be70a3c57df1b8e1034d10f6f20cc3995d47fea67b5dc11b9d3f"
   },
   "version": "0.3.0",
   "meta": {
@@ -226,7 +226,15 @@
       "test": "correlation_pearson",
       "alpha": 0.05,
       "interpretation": "Use the direction and size of the correlation to describe the relationship.",
-      "citations": []
+      "citations": [],
+      "family": "",
+      "method": "correlation_pearson",
+      "roles": [],
+      "options": [],
+      "decision_rule": "Use the direction and size of the correlation to describe the relationship.",
+      "reporting_references": [],
+      "status": "draft",
+      "requires_data": true
     },
     {
       "id": "rq_predict_sat",
@@ -235,7 +243,15 @@
       "test": "regression_linear",
       "alpha": 0.05,
       "interpretation": "Compare the regression coefficients to identify the strongest predictor.",
-      "citations": []
+      "citations": [],
+      "family": "",
+      "method": "regression_linear",
+      "roles": [],
+      "options": [],
+      "decision_rule": "Compare the regression coefficients to identify the strongest predictor.",
+      "reporting_references": [],
+      "status": "draft",
+      "requires_data": true
     },
     {
       "id": "rq_visit_bi",
@@ -244,7 +260,693 @@
       "test": "mann_whitney",
       "alpha": 0.05,
       "interpretation": "Report whether behavioural intention differs by visitor type.",
-      "citations": []
+      "citations": [],
+      "family": "",
+      "method": "mann_whitney",
+      "roles": [],
+      "options": [],
+      "decision_rule": "Report whether behavioural intention differs by visitor type.",
+      "reporting_references": [],
+      "status": "draft",
+      "requires_data": true
+    },
+    {
+      "id": "rq_freq",
+      "research_question": "What is the distribution of first-time and repeat visitors?",
+      "variables": "visit_type",
+      "test": "frequency",
+      "method": "frequency",
+      "alpha": 0.05,
+      "family": "descriptive",
+      "roles": [],
+      "options": [],
+      "decision_rule": "Report absolute and relative frequencies.",
+      "interpretation": "Report absolute and relative frequencies.",
+      "citations": [],
+      "reporting_references": [],
+      "status": "valid_plan",
+      "requires_data": true
+    },
+    {
+      "id": "rq_desc",
+      "research_question": "What are the central tendency and spread of all response items?",
+      "variables": ["dm_1", "dm_2", "dm_3", "sq_1", "sq_2", "sq_3", "sus_1", "sus_2", "sat_1", "sat_2", "bi_1", "bi_2"],
+      "test": "descriptives",
+      "method": "descriptives",
+      "alpha": 0.05,
+      "family": "descriptive",
+      "roles": [],
+      "options": [],
+      "decision_rule": "Inspect mean, SD, skewness, and kurtosis for each item.",
+      "interpretation": "Inspect mean, SD, skewness, and kurtosis for each item.",
+      "citations": [],
+      "reporting_references": [],
+      "status": "valid_plan",
+      "requires_data": true
+    },
+    {
+      "id": "rq_missing",
+      "research_question": "What is the pattern of missing responses across items?",
+      "variables": ["dm_1", "dm_2", "dm_3", "sq_1", "sq_2", "sq_3", "sus_1", "sus_2", "sat_1", "sat_2", "bi_1", "bi_2"],
+      "test": "missing_data",
+      "method": "missing_data",
+      "alpha": 0.05,
+      "family": "descriptive",
+      "roles": [],
+      "options": [],
+      "decision_rule": "Flag items with more than 10 per cent missing.",
+      "interpretation": "Flag items with more than 10 per cent missing.",
+      "citations": [],
+      "reporting_references": [],
+      "status": "valid_plan",
+      "requires_data": true
+    },
+    {
+      "id": "rq_quality",
+      "research_question": "Do respondents meet attention check and data quality thresholds?",
+      "test": "quality",
+      "method": "quality",
+      "alpha": 0.05,
+      "family": "data_quality",
+      "roles": [],
+      "options": [],
+      "decision_rule": "Exclude respondents who fail the attention check or complete in under 60 seconds.",
+      "interpretation": "Exclude respondents who fail the attention check or complete in under 60 seconds.",
+      "citations": [],
+      "reporting_references": [],
+      "status": "valid_plan",
+      "requires_data": true
+    },
+    {
+      "id": "rq_scale_desc",
+      "research_question": "What are the mean, SD, and range of each composite scale?",
+      "test": "scale_descriptives",
+      "method": "scale_descriptives",
+      "alpha": 0.05,
+      "family": "descriptive",
+      "roles": [],
+      "options": [],
+      "decision_rule": "Report scale-level descriptives alongside item-level results.",
+      "interpretation": "Report scale-level descriptives alongside item-level results.",
+      "citations": [],
+      "reporting_references": [],
+      "status": "valid_plan",
+      "requires_data": true
+    },
+    {
+      "id": "rq_alpha",
+      "research_question": "What is the Cronbach alpha internal consistency of each scale?",
+      "test": "reliability_alpha",
+      "method": "reliability_alpha",
+      "alpha": 0.05,
+      "family": "reliability",
+      "roles": [],
+      "options": [],
+      "decision_rule": "Flag any scale with alpha below 0.70 as requiring revision.",
+      "interpretation": "Flag any scale with alpha below 0.70 as requiring revision.",
+      "citations": [],
+      "reporting_references": [],
+      "status": "valid_plan",
+      "requires_data": true
+    },
+    {
+      "id": "rq_omega",
+      "research_question": "What is the McDonald omega reliability of each scale?",
+      "test": "reliability_omega",
+      "method": "reliability_omega",
+      "alpha": 0.05,
+      "family": "reliability",
+      "roles": [],
+      "options": [],
+      "decision_rule": "Compare omega to alpha; prefer omega when item loadings are unequal.",
+      "interpretation": "Compare omega to alpha; prefer omega when item loadings are unequal.",
+      "citations": [],
+      "reporting_references": [],
+      "status": "valid_plan",
+      "requires_data": true
+    },
+    {
+      "id": "rq_item_diag",
+      "research_question": "Which items show low item-total correlations or reduce alpha on removal?",
+      "test": "item_diagnostics",
+      "method": "item_diagnostics",
+      "alpha": 0.05,
+      "family": "reliability",
+      "roles": [],
+      "options": [],
+      "decision_rule": "Consider removing items with corrected item-total correlation below 0.30.",
+      "interpretation": "Consider removing items with corrected item-total correlation below 0.30.",
+      "citations": [],
+      "reporting_references": [],
+      "status": "valid_plan",
+      "requires_data": true
+    },
+    {
+      "id": "rq_efa_ready",
+      "research_question": "Does the inter-item correlation matrix support exploratory factor analysis?",
+      "variables": ["dm_1", "dm_2", "dm_3", "sq_1", "sq_2", "sq_3", "sus_1", "sus_2"],
+      "test": "efa_readiness",
+      "method": "efa_readiness",
+      "alpha": 0.05,
+      "family": "measurement",
+      "roles": [],
+      "options": [],
+      "decision_rule": "Proceed with EFA if KMO exceeds 0.60 and Bartlett test is significant.",
+      "interpretation": "Proceed with EFA if KMO exceeds 0.60 and Bartlett test is significant.",
+      "citations": [],
+      "reporting_references": [],
+      "status": "valid_plan",
+      "requires_data": true
+    },
+    {
+      "id": "rq_efa_sol",
+      "research_question": "How many factors emerge from digital marketing and service quality items?",
+      "variables": ["dm_1", "dm_2", "dm_3", "sq_1", "sq_2", "sq_3", "sus_1", "sus_2"],
+      "test": "efa_solution",
+      "method": "efa_solution",
+      "alpha": 0.05,
+      "family": "measurement",
+      "roles": [],
+      "options": {
+        "nfactors": 2
+      },
+      "decision_rule": "Retain factors with eigenvalue above 1 and inspect the scree plot.",
+      "interpretation": "Retain factors with eigenvalue above 1 and inspect the scree plot.",
+      "citations": [],
+      "reporting_references": [],
+      "status": "valid_plan",
+      "requires_data": true
+    },
+    {
+      "id": "rq_cfa_syntax",
+      "research_question": "What is the lavaan CFA syntax for the five-factor measurement model?",
+      "test": "cfa_lavaan_syntax",
+      "method": "cfa_lavaan_syntax",
+      "alpha": 0.05,
+      "family": "measurement",
+      "roles": {
+        "model": [
+          "tourism_cfa"
+        ]
+      },
+      "options": [],
+      "decision_rule": "Inspect syntax before fitting; confirm indicator counts meet CFA identification rules.",
+      "interpretation": "Inspect syntax before fitting; confirm indicator counts meet CFA identification rules.",
+      "citations": [],
+      "reporting_references": [],
+      "status": "valid_plan",
+      "requires_data": false
+    },
+    {
+      "id": "rq_sem_syntax",
+      "research_question": "What is the CB-SEM lavaan syntax for digital marketing predicting satisfaction and behavioural intention via service quality?",
+      "test": "sem_lavaan_syntax",
+      "method": "sem_lavaan_syntax",
+      "alpha": 0.05,
+      "family": "measurement",
+      "roles": {
+        "model": [
+          "tourism_sem"
+        ]
+      },
+      "options": [],
+      "decision_rule": "Review structural paths before fitting to confirm the model is identified.",
+      "interpretation": "Review structural paths before fitting to confirm the model is identified.",
+      "citations": [],
+      "reporting_references": [],
+      "status": "valid_plan",
+      "requires_data": false
+    },
+    {
+      "id": "rq_pls_syntax",
+      "research_question": "What is the PLS-SEM seminr syntax for the full structural model?",
+      "test": "seminr_syntax",
+      "method": "seminr_syntax",
+      "alpha": 0.05,
+      "family": "measurement",
+      "roles": {
+        "model": [
+          "tourism_sem"
+        ]
+      },
+      "options": [],
+      "decision_rule": "Use seminr syntax only when the seminr package is installed.",
+      "interpretation": "Use seminr syntax only when the seminr package is installed.",
+      "citations": [],
+      "reporting_references": [],
+      "status": "valid_plan",
+      "requires_data": false
+    },
+    {
+      "id": "rq_chisq",
+      "research_question": "Is visitor type associated with attention check response level?",
+      "variables": ["visit_type", "attention"],
+      "test": "chi_square",
+      "method": "chi_square",
+      "alpha": 0.05,
+      "family": "categorical",
+      "roles": [],
+      "options": [],
+      "decision_rule": "Report chi-square, degrees of freedom, p value, and Cramer V.",
+      "interpretation": "Report chi-square, degrees of freedom, p value, and Cramer V.",
+      "citations": [],
+      "reporting_references": [],
+      "status": "valid_plan",
+      "requires_data": true
+    },
+    {
+      "id": "rq_crosstab",
+      "research_question": "Is the distribution of satisfaction ratings different across visitor types?",
+      "variables": ["visit_type", "sat_1"],
+      "test": "crosstab",
+      "method": "crosstab",
+      "alpha": 0.05,
+      "family": "categorical",
+      "roles": [],
+      "options": [],
+      "decision_rule": "Inspect row percentages across visitor types and report the effect size.",
+      "interpretation": "Inspect row percentages across visitor types and report the effect size.",
+      "citations": [],
+      "reporting_references": [],
+      "status": "valid_plan",
+      "requires_data": true
+    },
+    {
+      "id": "rq_fisher",
+      "research_question": "Is there an association between visitor type and behavioural intention rating?",
+      "variables": ["visit_type", "bi_1"],
+      "test": "fisher_exact",
+      "method": "fisher_exact",
+      "alpha": 0.05,
+      "family": "categorical",
+      "roles": [],
+      "options": [],
+      "decision_rule": "Use Fisher p value when expected cell counts fall below 5.",
+      "interpretation": "Use Fisher p value when expected cell counts fall below 5.",
+      "citations": [],
+      "reporting_references": [],
+      "status": "valid_plan",
+      "requires_data": true
+    },
+    {
+      "id": "rq_ttest_ind",
+      "research_question": "Do first-time and repeat visitors differ in mean satisfaction score?",
+      "variables": ["visit_type", "satisfaction"],
+      "test": "t_test_ind",
+      "method": "t_test_ind",
+      "alpha": 0.05,
+      "family": "group_comparison",
+      "roles": [],
+      "options": [],
+      "decision_rule": "Report t, degrees of freedom, p value, and Cohen d.",
+      "interpretation": "Report t, degrees of freedom, p value, and Cohen d.",
+      "citations": [],
+      "reporting_references": [],
+      "status": "valid_plan",
+      "requires_data": true
+    },
+    {
+      "id": "rq_ttest_pair",
+      "research_question": "Do respondents rate the two satisfaction items differently?",
+      "variables": ["sat_1", "sat_2"],
+      "test": "t_test_pair",
+      "method": "t_test_pair",
+      "alpha": 0.05,
+      "family": "group_comparison",
+      "roles": [],
+      "options": [],
+      "decision_rule": "Report the mean difference, paired t statistic, and p value.",
+      "interpretation": "Report the mean difference, paired t statistic, and p value.",
+      "citations": [],
+      "reporting_references": [],
+      "status": "valid_plan",
+      "requires_data": true
+    },
+    {
+      "id": "rq_wilcoxon",
+      "research_question": "Is there a significant distributional difference between the first two service quality items?",
+      "variables": ["sq_1", "sq_2"],
+      "test": "wilcoxon_pair",
+      "method": "wilcoxon_pair",
+      "alpha": 0.05,
+      "family": "group_comparison",
+      "roles": [],
+      "options": [],
+      "decision_rule": "Report W statistic, p value, and rank-biserial correlation.",
+      "interpretation": "Report W statistic, p value, and rank-biserial correlation.",
+      "citations": [],
+      "reporting_references": [],
+      "status": "valid_plan",
+      "requires_data": true
+    },
+    {
+      "id": "rq_kruskal",
+      "research_question": "Does satisfaction differ across visitor types?",
+      "variables": ["visit_type", "satisfaction"],
+      "test": "kruskal_wallis",
+      "method": "kruskal_wallis",
+      "alpha": 0.05,
+      "family": "group_comparison",
+      "roles": [],
+      "options": [],
+      "decision_rule": "Report H statistic, degrees of freedom, p value, and eta-squared.",
+      "interpretation": "Report H statistic, degrees of freedom, p value, and eta-squared.",
+      "citations": [],
+      "reporting_references": [],
+      "status": "valid_plan",
+      "requires_data": true
+    },
+    {
+      "id": "rq_anova1",
+      "research_question": "Does mean behavioural intention differ between visitor types?",
+      "variables": ["visit_type", "behavioural_intention"],
+      "test": "anova_one",
+      "method": "anova_one",
+      "alpha": 0.05,
+      "family": "group_comparison",
+      "roles": [],
+      "options": [],
+      "decision_rule": "Report F, degrees of freedom, p value, and partial eta-squared.",
+      "interpretation": "Report F, degrees of freedom, p value, and partial eta-squared.",
+      "citations": [],
+      "reporting_references": [],
+      "status": "valid_plan",
+      "requires_data": true
+    },
+    {
+      "id": "rq_ancova",
+      "research_question": "Do visitor types differ in satisfaction after controlling for service quality?",
+      "test": "ancova",
+      "method": "ancova",
+      "alpha": 0.05,
+      "family": "group_comparison",
+      "roles": {
+        "group": [
+          "visit_type"
+        ],
+        "covariate": [
+          "service_quality"
+        ],
+        "outcome": [
+          "satisfaction"
+        ]
+      },
+      "options": [],
+      "decision_rule": "Report adjusted group means and the F test for the group factor after covariate removal.",
+      "interpretation": "Report adjusted group means and the F test for the group factor after covariate removal.",
+      "citations": [],
+      "reporting_references": [],
+      "status": "valid_plan",
+      "requires_data": true
+    },
+    {
+      "id": "rq_rep_anova",
+      "research_question": "Do mean ratings differ across the three digital marketing items within respondents?",
+      "variables": ["dm_1", "dm_2", "dm_3"],
+      "test": "repeated_anova",
+      "method": "repeated_anova",
+      "alpha": 0.05,
+      "family": "group_comparison",
+      "roles": [],
+      "options": [],
+      "decision_rule": "Report the within-subject F, degrees of freedom, p value, and partial eta-squared.",
+      "interpretation": "Report the within-subject F, degrees of freedom, p value, and partial eta-squared.",
+      "citations": [],
+      "reporting_references": [],
+      "status": "valid_plan",
+      "requires_data": true
+    },
+    {
+      "id": "rq_friedman",
+      "research_question": "Do ordinal ratings differ across the three service quality items within respondents?",
+      "variables": ["sq_1", "sq_2", "sq_3"],
+      "test": "friedman",
+      "method": "friedman",
+      "alpha": 0.05,
+      "family": "group_comparison",
+      "roles": [],
+      "options": [],
+      "decision_rule": "Report Friedman chi-square, degrees of freedom, and p value.",
+      "interpretation": "Report Friedman chi-square, degrees of freedom, and p value.",
+      "citations": [],
+      "reporting_references": [],
+      "status": "valid_plan",
+      "requires_data": true
+    },
+    {
+      "id": "rq_spearman",
+      "research_question": "Are service quality perceptions associated with sustainability perceptions?",
+      "variables": ["service_quality", "sustainability"],
+      "test": "correlation_spearman",
+      "method": "correlation_spearman",
+      "alpha": 0.05,
+      "family": "correlation",
+      "roles": [],
+      "options": [],
+      "decision_rule": "Report rho, sample size, and p value.",
+      "interpretation": "Report rho, sample size, and p value.",
+      "citations": [],
+      "reporting_references": [],
+      "status": "valid_plan",
+      "requires_data": true
+    },
+    {
+      "id": "rq_kendall",
+      "research_question": "Is sustainability perception associated with behavioural intention?",
+      "variables": ["sustainability", "behavioural_intention"],
+      "test": "correlation_kendall",
+      "method": "correlation_kendall",
+      "alpha": 0.05,
+      "family": "correlation",
+      "roles": [],
+      "options": [],
+      "decision_rule": "Report tau, sample size, and p value.",
+      "interpretation": "Report tau, sample size, and p value.",
+      "citations": [],
+      "reporting_references": [],
+      "status": "valid_plan",
+      "requires_data": true
+    },
+    {
+      "id": "rq_partial",
+      "research_question": "Is digital marketing associated with behavioural intention after controlling for satisfaction?",
+      "test": "partial_correlation",
+      "method": "partial_correlation",
+      "alpha": 0.05,
+      "family": "correlation",
+      "roles": {
+        "predictor": [
+          "digital_marketing"
+        ],
+        "outcome": [
+          "behavioural_intention"
+        ],
+        "control": [
+          "satisfaction"
+        ]
+      },
+      "options": [],
+      "decision_rule": "Report partial r, degrees of freedom, and p value.",
+      "interpretation": "Report partial r, degrees of freedom, and p value.",
+      "citations": [],
+      "reporting_references": [],
+      "status": "valid_plan",
+      "requires_data": true
+    },
+    {
+      "id": "rq_logit_bin",
+      "research_question": "Do digital marketing and service quality perceptions predict visitor type?",
+      "variables": ["digital_marketing", "service_quality", "visit_type"],
+      "test": "regression_logistic_binary",
+      "method": "regression_logistic_binary",
+      "alpha": 0.05,
+      "family": "regression",
+      "roles": [],
+      "options": [],
+      "decision_rule": "Report odds ratios with 95 per cent confidence intervals and Nagelkerke R-squared.",
+      "interpretation": "Report odds ratios with 95 per cent confidence intervals and Nagelkerke R-squared.",
+      "citations": [],
+      "reporting_references": [],
+      "status": "valid_plan",
+      "requires_data": true
+    },
+    {
+      "id": "rq_logit_ord",
+      "research_question": "Do digital marketing and sustainability perceptions predict ordered satisfaction?",
+      "variables": ["digital_marketing", "sustainability", "sat_1"],
+      "test": "regression_logistic_ordinal",
+      "method": "regression_logistic_ordinal",
+      "alpha": 0.05,
+      "family": "regression",
+      "roles": {
+        "predictors": [
+          "digital_marketing",
+          "sustainability"
+        ],
+        "outcome": [
+          "sat_1"
+        ]
+      },
+      "options": [],
+      "decision_rule": "Report proportional odds ratios and model fit indices.",
+      "interpretation": "Report proportional odds ratios and model fit indices.",
+      "citations": [],
+      "reporting_references": [],
+      "status": "valid_plan",
+      "requires_data": true
+    },
+    {
+      "id": "rq_moderation",
+      "research_question": "Does visitor type moderate the relationship between digital marketing and satisfaction?",
+      "test": "moderation",
+      "method": "moderation",
+      "alpha": 0.05,
+      "family": "regression",
+      "roles": {
+        "predictor": [
+          "digital_marketing"
+        ],
+        "moderator": [
+          "service_quality"
+        ],
+        "outcome": [
+          "satisfaction"
+        ]
+      },
+      "options": [],
+      "decision_rule": "Report the interaction coefficient, p value, and simple slopes.",
+      "interpretation": "Report the interaction coefficient, p value, and simple slopes.",
+      "citations": [],
+      "reporting_references": [],
+      "status": "valid_plan",
+      "requires_data": true
+    },
+    {
+      "id": "rq_mediation",
+      "research_question": "Does satisfaction mediate the path from digital marketing to behavioural intention?",
+      "test": "mediation",
+      "method": "mediation",
+      "alpha": 0.05,
+      "family": "regression",
+      "roles": {
+        "x": [
+          "digital_marketing"
+        ],
+        "mediator": [
+          "satisfaction"
+        ],
+        "y": [
+          "behavioural_intention"
+        ]
+      },
+      "options": [],
+      "decision_rule": "Report direct, indirect, and total effects with bootstrap confidence intervals.",
+      "interpretation": "Report direct, indirect, and total effects with bootstrap confidence intervals.",
+      "citations": [],
+      "reporting_references": [],
+      "status": "valid_plan",
+      "requires_data": true
+    }
+  ],
+  "models": [
+    {
+      "id": "tourism_cfa",
+      "label": "tourism_cfa",
+      "type": "cfa",
+      "engine": "lavaan",
+      "measurement": {
+        "constructs": [
+          {
+            "id": "digital_marketing",
+            "items": ["dm_1", "dm_2", "dm_3"],
+            "mode": "reflective"
+          },
+          {
+            "id": "service_quality",
+            "items": ["sq_1", "sq_2", "sq_3"],
+            "mode": "reflective"
+          },
+          {
+            "id": "sustainability",
+            "items": ["sus_1", "sus_2"],
+            "mode": "reflective"
+          },
+          {
+            "id": "satisfaction",
+            "items": ["sat_1", "sat_2"],
+            "mode": "reflective"
+          },
+          {
+            "id": "behavioural_intention",
+            "items": ["bi_1", "bi_2"],
+            "mode": "reflective"
+          }
+        ]
+      },
+      "structural": {
+        "paths": [],
+        "covariances": [],
+        "indirect": []
+      },
+      "options": []
+    },
+    {
+      "id": "tourism_sem",
+      "label": "tourism_sem",
+      "type": "cb_sem",
+      "engine": "lavaan",
+      "measurement": {
+        "constructs": [
+          {
+            "id": "digital_marketing",
+            "items": ["dm_1", "dm_2", "dm_3"],
+            "mode": "reflective"
+          },
+          {
+            "id": "service_quality",
+            "items": ["sq_1", "sq_2", "sq_3"],
+            "mode": "reflective"
+          },
+          {
+            "id": "sustainability",
+            "items": ["sus_1", "sus_2"],
+            "mode": "reflective"
+          },
+          {
+            "id": "satisfaction",
+            "items": ["sat_1", "sat_2"],
+            "mode": "reflective"
+          },
+          {
+            "id": "behavioural_intention",
+            "items": ["bi_1", "bi_2"],
+            "mode": "reflective"
+          }
+        ]
+      },
+      "structural": {
+        "paths": [
+          {
+            "from": "digital_marketing",
+            "to": "satisfaction"
+          },
+          {
+            "from": "service_quality",
+            "to": "satisfaction"
+          },
+          {
+            "from": "sustainability",
+            "to": "satisfaction"
+          },
+          {
+            "from": "satisfaction",
+            "to": "behavioural_intention"
+          }
+        ],
+        "covariances": [],
+        "indirect": []
+      },
+      "options": []
     }
   ],
   "render": {

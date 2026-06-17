@@ -1,11 +1,11 @@
 {
   "hash": {
     "algo": "sha256",
-    "value": "f941ce99ab032fb8449a9de891f4b5de4f4707de2d256d762cdc5e74f0d335dc"
+    "value": "a9b18b41964725f62d44a4e270a89c5f5328026e65d7c200718aba8d9d86d326"
   },
   "version": "0.3.0",
   "meta": {
-    "title": "surveyframe Input Types Demo",
+    "title": "Surveyframe Demo: Survey Title",
     "version": "0.3.0",
     "description": "Simulated questionnaire covering section breaks, text blocks, text, textarea, single choice, multiple choice, numeric, date, Likert, matrix, slider, ranking, rating, branching, attention checks, scored scales, and analysis plans.",
     "authors": "Mohammed Ali Sharafuddin",
@@ -19,57 +19,26 @@
       "label": "Section 1: Visit background",
       "type": "section_break",
       "required": false,
-      "choice_set": null,
-      "scale_id": null,
       "reverse": false,
-      "help": null,
-      "placeholder": null,
-      "matrix_items": null,
-      "slider_min": null,
-      "slider_max": null,
-      "slider_step": null,
-      "rating_max": null,
-      "rating_icon": null,
-      "section_intro": "This section demonstrates display-only section breaks.",
-      "page": null
+      "section_intro": "A few questions about your visit and how you planned it.",
+      "page": 1
     },
     {
       "id": "info_block",
       "label": "This is a display text block. It should not be treated as a response variable.",
       "type": "text_block",
       "required": false,
-      "choice_set": null,
-      "scale_id": null,
       "reverse": false,
-      "help": null,
-      "placeholder": null,
-      "matrix_items": null,
-      "slider_min": null,
-      "slider_max": null,
-      "slider_step": null,
-      "rating_max": null,
-      "rating_icon": null,
-      "section_intro": null,
-      "page": null
+      "page": 1
     },
     {
       "id": "respondent_name",
       "label": "Respondent display name",
       "type": "text",
       "required": false,
-      "choice_set": null,
-      "scale_id": null,
       "reverse": false,
-      "help": null,
       "placeholder": "Optional short name",
-      "matrix_items": null,
-      "slider_min": null,
-      "slider_max": null,
-      "slider_step": null,
-      "rating_max": null,
-      "rating_icon": null,
-      "section_intro": null,
-      "page": null
+      "page": 1
     },
     {
       "id": "visit_type",
@@ -77,18 +46,8 @@
       "type": "single_choice",
       "required": true,
       "choice_set": "visit_type",
-      "scale_id": null,
       "reverse": false,
-      "help": null,
-      "placeholder": null,
-      "matrix_items": null,
-      "slider_min": null,
-      "slider_max": null,
-      "slider_step": null,
-      "rating_max": null,
-      "rating_icon": null,
-      "section_intro": null,
-      "page": null
+      "page": 1
     },
     {
       "id": "visit_purpose",
@@ -96,37 +55,17 @@
       "type": "single_choice",
       "required": true,
       "choice_set": "visit_purpose",
-      "scale_id": null,
       "reverse": false,
-      "help": null,
-      "placeholder": null,
-      "matrix_items": null,
-      "slider_min": null,
-      "slider_max": null,
-      "slider_step": null,
-      "rating_max": null,
-      "rating_icon": null,
-      "section_intro": null,
-      "page": null
+      "page": 1
     },
     {
       "id": "other_purpose",
       "label": "Please specify the other purpose.",
       "type": "text",
       "required": false,
-      "choice_set": null,
-      "scale_id": null,
       "reverse": false,
-      "help": null,
       "placeholder": "Write the other purpose",
-      "matrix_items": null,
-      "slider_min": null,
-      "slider_max": null,
-      "slider_step": null,
-      "rating_max": null,
-      "rating_icon": null,
-      "section_intro": null,
-      "page": null
+      "page": 1
     },
     {
       "id": "information_channels",
@@ -134,56 +73,35 @@
       "type": "multiple_choice",
       "required": true,
       "choice_set": "channels",
-      "scale_id": null,
       "reverse": false,
       "help": "Select all that apply.",
-      "placeholder": null,
-      "matrix_items": null,
-      "slider_min": null,
-      "slider_max": null,
-      "slider_step": null,
-      "rating_max": null,
-      "rating_icon": null,
-      "section_intro": null,
-      "page": null
+      "page": 1
     },
     {
       "id": "booking_date",
       "label": "When did you make the booking?",
       "type": "date",
       "required": true,
-      "choice_set": null,
-      "scale_id": null,
       "reverse": false,
-      "help": null,
-      "placeholder": null,
-      "matrix_items": null,
-      "slider_min": null,
-      "slider_max": null,
-      "slider_step": null,
-      "rating_max": null,
-      "rating_icon": null,
-      "section_intro": null,
-      "page": null
+      "page": 1
     },
     {
       "id": "nights_stayed",
       "label": "How many nights did you stay?",
       "type": "numeric",
       "required": true,
-      "choice_set": null,
-      "scale_id": null,
       "reverse": false,
       "help": "Enter the number of nights.",
-      "placeholder": null,
-      "matrix_items": null,
-      "slider_min": null,
-      "slider_max": null,
-      "slider_step": null,
-      "rating_max": null,
-      "rating_icon": null,
-      "section_intro": null,
-      "page": null
+      "page": 1
+    },
+    {
+      "id": "sec_experience",
+      "label": "Section 2: Experience and service ratings",
+      "type": "section_break",
+      "required": false,
+      "reverse": false,
+      "section_intro": "Tell us how you rate the digital information and the service you received.",
+      "page": 2
     },
     {
       "id": "digital_ease",
@@ -193,16 +111,7 @@
       "choice_set": "agree5",
       "scale_id": "digital_experience",
       "reverse": false,
-      "help": null,
-      "placeholder": null,
-      "matrix_items": null,
-      "slider_min": null,
-      "slider_max": null,
-      "slider_step": null,
-      "rating_max": null,
-      "rating_icon": null,
-      "section_intro": null,
-      "page": null
+      "page": 2
     },
     {
       "id": "digital_trust",
@@ -212,16 +121,7 @@
       "choice_set": "agree5",
       "scale_id": "digital_experience",
       "reverse": false,
-      "help": null,
-      "placeholder": null,
-      "matrix_items": null,
-      "slider_min": null,
-      "slider_max": null,
-      "slider_step": null,
-      "rating_max": null,
-      "rating_icon": null,
-      "section_intro": null,
-      "page": null
+      "page": 2
     },
     {
       "id": "digital_confusion",
@@ -231,16 +131,7 @@
       "choice_set": "agree5",
       "scale_id": "digital_experience",
       "reverse": true,
-      "help": null,
-      "placeholder": null,
-      "matrix_items": null,
-      "slider_min": null,
-      "slider_max": null,
-      "slider_step": null,
-      "rating_max": null,
-      "rating_icon": null,
-      "section_intro": null,
-      "page": null
+      "page": 2
     },
     {
       "id": "service_matrix",
@@ -248,37 +139,20 @@
       "type": "matrix",
       "required": true,
       "choice_set": "agree5",
-      "scale_id": null,
       "reverse": false,
-      "help": null,
-      "placeholder": null,
       "matrix_items": ["Cleanliness", "Staff helpfulness", "Food quality", "Transport support"],
-      "slider_min": null,
-      "slider_max": null,
-      "slider_step": null,
-      "rating_max": null,
-      "rating_icon": null,
-      "section_intro": null,
-      "page": null
+      "page": 2
     },
     {
       "id": "value_slider",
       "label": "How would you rate value for money?",
       "type": "slider",
       "required": true,
-      "choice_set": null,
-      "scale_id": null,
       "reverse": false,
-      "help": null,
-      "placeholder": null,
-      "matrix_items": null,
       "slider_min": 0,
       "slider_max": 100,
       "slider_step": 5,
-      "rating_max": null,
-      "rating_icon": null,
-      "section_intro": null,
-      "page": null
+      "page": 2
     },
     {
       "id": "feature_ranking",
@@ -286,37 +160,27 @@
       "type": "ranking",
       "required": true,
       "choice_set": "feature_rank",
-      "scale_id": null,
       "reverse": false,
-      "help": null,
-      "placeholder": null,
-      "matrix_items": null,
-      "slider_min": null,
-      "slider_max": null,
-      "slider_step": null,
-      "rating_max": null,
-      "rating_icon": null,
-      "section_intro": null,
-      "page": null
+      "page": 2
     },
     {
       "id": "overall_rating",
       "label": "Overall experience rating",
       "type": "rating",
       "required": true,
-      "choice_set": null,
-      "scale_id": null,
       "reverse": false,
-      "help": null,
-      "placeholder": null,
-      "matrix_items": null,
-      "slider_min": null,
-      "slider_max": null,
-      "slider_step": null,
       "rating_max": 5,
       "rating_icon": "star",
-      "section_intro": null,
-      "page": null
+      "page": 2
+    },
+    {
+      "id": "sec_feedback",
+      "label": "Section 3: Intentions and feedback",
+      "type": "section_break",
+      "required": false,
+      "reverse": false,
+      "section_intro": "Your future intentions, a quick check, and any final comments.",
+      "page": 3
     },
     {
       "id": "recommend",
@@ -326,16 +190,7 @@
       "choice_set": "agree5",
       "scale_id": "behavioural_intention",
       "reverse": false,
-      "help": null,
-      "placeholder": null,
-      "matrix_items": null,
-      "slider_min": null,
-      "slider_max": null,
-      "slider_step": null,
-      "rating_max": null,
-      "rating_icon": null,
-      "section_intro": null,
-      "page": null
+      "page": 3
     },
     {
       "id": "reuse",
@@ -345,16 +200,7 @@
       "choice_set": "agree5",
       "scale_id": "behavioural_intention",
       "reverse": false,
-      "help": null,
-      "placeholder": null,
-      "matrix_items": null,
-      "slider_min": null,
-      "slider_max": null,
-      "slider_step": null,
-      "rating_max": null,
-      "rating_icon": null,
-      "section_intro": null,
-      "page": null
+      "page": 3
     },
     {
       "id": "attention",
@@ -362,18 +208,8 @@
       "type": "single_choice",
       "required": true,
       "choice_set": "agree5",
-      "scale_id": null,
       "reverse": false,
-      "help": null,
-      "placeholder": null,
-      "matrix_items": null,
-      "slider_min": null,
-      "slider_max": null,
-      "slider_step": null,
-      "rating_max": null,
-      "rating_icon": null,
-      "section_intro": null,
-      "page": null
+      "page": 3
     },
     {
       "id": "follow_up_permission",
@@ -381,37 +217,17 @@
       "type": "single_choice",
       "required": true,
       "choice_set": "yes_no",
-      "scale_id": null,
       "reverse": false,
-      "help": null,
-      "placeholder": null,
-      "matrix_items": null,
-      "slider_min": null,
-      "slider_max": null,
-      "slider_step": null,
-      "rating_max": null,
-      "rating_icon": null,
-      "section_intro": null,
-      "page": null
+      "page": 3
     },
     {
       "id": "open_comment",
       "label": "Please add any comments about your visit.",
       "type": "textarea",
       "required": false,
-      "choice_set": null,
-      "scale_id": null,
       "reverse": false,
-      "help": null,
       "placeholder": "Optional comment",
-      "matrix_items": null,
-      "slider_min": null,
-      "slider_max": null,
-      "slider_step": null,
-      "rating_max": null,
-      "rating_icon": null,
-      "section_intro": null,
-      "page": null
+      "page": 3
     }
   ],
   "choices": [
@@ -465,17 +281,14 @@
       "items": ["digital_ease", "digital_trust", "digital_confusion"],
       "method": "mean",
       "min_valid": 2,
-      "reverse_items": "digital_confusion",
-      "weights": null
+      "reverse_items": "digital_confusion"
     },
     {
       "id": "behavioural_intention",
       "label": "Behavioural intention",
       "items": ["recommend", "reuse"],
       "method": "mean",
-      "min_valid": 2,
-      "reverse_items": null,
-      "weights": null
+      "min_valid": 2
     }
   ],
   "branching": [
@@ -522,7 +335,8 @@
       "reporting_references": [],
       "citations": [],
       "status": "valid_plan",
-      "requires_data": true
+      "requires_data": true,
+      "alpha": 0.05
     },
     {
       "id": "rq_visit_rating",
@@ -547,10 +361,714 @@
       "reporting_references": [],
       "citations": [],
       "status": "valid_plan",
+      "requires_data": true,
+      "alpha": 0.05
+    },
+    {
+      "id": "rq_freq",
+      "research_question": "What is the distribution of visit purposes in the sample?",
+      "variables": "visit_purpose",
+      "test": "frequency",
+      "method": "frequency",
+      "alpha": 0.05,
+      "family": "descriptive",
+      "roles": [],
+      "options": [],
+      "decision_rule": "Report absolute and relative frequencies for each category.",
+      "interpretation": "Report absolute and relative frequencies for each category.",
+      "citations": [],
+      "reporting_references": [],
+      "status": "valid_plan",
+      "requires_data": true
+    },
+    {
+      "id": "rq_desc",
+      "research_question": "What are the central tendency and spread of all Likert and rating items?",
+      "variables": ["digital_ease", "digital_trust", "digital_confusion", "recommend", "reuse", "overall_rating"],
+      "test": "descriptives",
+      "method": "descriptives",
+      "alpha": 0.05,
+      "family": "descriptive",
+      "roles": [],
+      "options": [],
+      "decision_rule": "Inspect mean, SD, skewness, and kurtosis for each item.",
+      "interpretation": "Inspect mean, SD, skewness, and kurtosis for each item.",
+      "citations": [],
+      "reporting_references": [],
+      "status": "valid_plan",
+      "requires_data": true
+    },
+    {
+      "id": "rq_missing",
+      "research_question": "What is the pattern of missing responses across items?",
+      "variables": ["digital_ease", "digital_trust", "digital_confusion", "recommend", "reuse", "overall_rating", "nights_stayed"],
+      "test": "missing_data",
+      "method": "missing_data",
+      "alpha": 0.05,
+      "family": "descriptive",
+      "roles": [],
+      "options": [],
+      "decision_rule": "Flag items with more than 10 per cent missing.",
+      "interpretation": "Flag items with more than 10 per cent missing.",
+      "citations": [],
+      "reporting_references": [],
+      "status": "valid_plan",
+      "requires_data": true
+    },
+    {
+      "id": "rq_quality",
+      "research_question": "Do respondents meet attention check and data quality thresholds?",
+      "test": "quality",
+      "method": "quality",
+      "alpha": 0.05,
+      "family": "data_quality",
+      "roles": [],
+      "options": [],
+      "decision_rule": "Exclude respondents who fail the attention check or complete in under 60 seconds.",
+      "interpretation": "Exclude respondents who fail the attention check or complete in under 60 seconds.",
+      "citations": [],
+      "reporting_references": [],
+      "status": "valid_plan",
+      "requires_data": true
+    },
+    {
+      "id": "rq_scale_desc",
+      "research_question": "What are the mean, SD, and range of each composite scale?",
+      "test": "scale_descriptives",
+      "method": "scale_descriptives",
+      "alpha": 0.05,
+      "family": "descriptive",
+      "roles": [],
+      "options": [],
+      "decision_rule": "Report scale-level descriptives alongside item-level results.",
+      "interpretation": "Report scale-level descriptives alongside item-level results.",
+      "citations": [],
+      "reporting_references": [],
+      "status": "valid_plan",
+      "requires_data": true
+    },
+    {
+      "id": "rq_alpha",
+      "research_question": "What is the Cronbach alpha internal consistency of each scale?",
+      "test": "reliability_alpha",
+      "method": "reliability_alpha",
+      "alpha": 0.05,
+      "family": "reliability",
+      "roles": [],
+      "options": [],
+      "decision_rule": "Flag any scale with alpha below 0.70 as requiring revision.",
+      "interpretation": "Flag any scale with alpha below 0.70 as requiring revision.",
+      "citations": [],
+      "reporting_references": [],
+      "status": "valid_plan",
+      "requires_data": true
+    },
+    {
+      "id": "rq_omega",
+      "research_question": "What is the McDonald omega reliability of each scale?",
+      "test": "reliability_omega",
+      "method": "reliability_omega",
+      "alpha": 0.05,
+      "family": "reliability",
+      "roles": [],
+      "options": [],
+      "decision_rule": "Compare omega to alpha; prefer omega when item loadings are unequal.",
+      "interpretation": "Compare omega to alpha; prefer omega when item loadings are unequal.",
+      "citations": [],
+      "reporting_references": [],
+      "status": "valid_plan",
+      "requires_data": true
+    },
+    {
+      "id": "rq_item_diag",
+      "research_question": "Which items show low item-total correlations or reduce alpha on removal?",
+      "test": "item_diagnostics",
+      "method": "item_diagnostics",
+      "alpha": 0.05,
+      "family": "reliability",
+      "roles": [],
+      "options": [],
+      "decision_rule": "Consider removing items with corrected item-total correlation below 0.30.",
+      "interpretation": "Consider removing items with corrected item-total correlation below 0.30.",
+      "citations": [],
+      "reporting_references": [],
+      "status": "valid_plan",
+      "requires_data": true
+    },
+    {
+      "id": "rq_efa_ready",
+      "research_question": "Does the inter-item correlation matrix support exploratory factor analysis?",
+      "variables": ["digital_ease", "digital_trust", "digital_confusion", "recommend", "reuse"],
+      "test": "efa_readiness",
+      "method": "efa_readiness",
+      "alpha": 0.05,
+      "family": "measurement",
+      "roles": [],
+      "options": [],
+      "decision_rule": "Proceed with EFA if KMO exceeds 0.60 and Bartlett test is significant.",
+      "interpretation": "Proceed with EFA if KMO exceeds 0.60 and Bartlett test is significant.",
+      "citations": [],
+      "reporting_references": [],
+      "status": "valid_plan",
+      "requires_data": true
+    },
+    {
+      "id": "rq_efa_sol",
+      "research_question": "How many factors emerge from digital experience and behavioural intention items?",
+      "variables": ["digital_ease", "digital_trust", "digital_confusion", "recommend", "reuse"],
+      "test": "efa_solution",
+      "method": "efa_solution",
+      "alpha": 0.05,
+      "family": "measurement",
+      "roles": [],
+      "options": {
+        "nfactors": 2
+      },
+      "decision_rule": "Retain factors with eigenvalue above 1 and inspect the scree plot.",
+      "interpretation": "Retain factors with eigenvalue above 1 and inspect the scree plot.",
+      "citations": [],
+      "reporting_references": [],
+      "status": "valid_plan",
+      "requires_data": true
+    },
+    {
+      "id": "rq_cfa_syntax",
+      "research_question": "What is the lavaan CFA syntax for the two-factor measurement model?",
+      "test": "cfa_lavaan_syntax",
+      "method": "cfa_lavaan_syntax",
+      "alpha": 0.05,
+      "family": "measurement",
+      "roles": {
+        "model": [
+          "input_types_cfa"
+        ]
+      },
+      "options": [],
+      "decision_rule": "Inspect syntax before fitting; confirm indicator counts meet CFA identification rules.",
+      "interpretation": "Inspect syntax before fitting; confirm indicator counts meet CFA identification rules.",
+      "citations": [],
+      "reporting_references": [],
+      "status": "valid_plan",
+      "requires_data": false
+    },
+    {
+      "id": "rq_sem_syntax",
+      "research_question": "What is the CB-SEM lavaan syntax for digital experience predicting behavioural intention?",
+      "test": "sem_lavaan_syntax",
+      "method": "sem_lavaan_syntax",
+      "alpha": 0.05,
+      "family": "measurement",
+      "roles": {
+        "model": [
+          "input_types_sem"
+        ]
+      },
+      "options": [],
+      "decision_rule": "Review structural paths before fitting to confirm the model is identified.",
+      "interpretation": "Review structural paths before fitting to confirm the model is identified.",
+      "citations": [],
+      "reporting_references": [],
+      "status": "valid_plan",
+      "requires_data": false
+    },
+    {
+      "id": "rq_pls_syntax",
+      "research_question": "What is the PLS-SEM seminr syntax for the structural model?",
+      "test": "seminr_syntax",
+      "method": "seminr_syntax",
+      "alpha": 0.05,
+      "family": "measurement",
+      "roles": {
+        "model": [
+          "input_types_sem"
+        ]
+      },
+      "options": [],
+      "decision_rule": "Use seminr syntax only when the seminr package is installed.",
+      "interpretation": "Use seminr syntax only when the seminr package is installed.",
+      "citations": [],
+      "reporting_references": [],
+      "status": "valid_plan",
+      "requires_data": false
+    },
+    {
+      "id": "rq_chisq",
+      "research_question": "Is visitor type associated with attention check response level?",
+      "variables": ["visit_type", "attention"],
+      "test": "chi_square",
+      "method": "chi_square",
+      "alpha": 0.05,
+      "family": "categorical",
+      "roles": [],
+      "options": [],
+      "decision_rule": "Report chi-square, degrees of freedom, p value, and Cramer V.",
+      "interpretation": "Report chi-square, degrees of freedom, p value, and Cramer V.",
+      "citations": [],
+      "reporting_references": [],
+      "status": "valid_plan",
+      "requires_data": true
+    },
+    {
+      "id": "rq_crosstab",
+      "research_question": "Is visit purpose associated with follow-up permission?",
+      "variables": ["visit_purpose", "follow_up_permission"],
+      "test": "crosstab",
+      "method": "crosstab",
+      "alpha": 0.05,
+      "family": "categorical",
+      "roles": [],
+      "options": [],
+      "decision_rule": "Inspect row percentages and report the effect size.",
+      "interpretation": "Inspect row percentages and report the effect size.",
+      "citations": [],
+      "reporting_references": [],
+      "status": "valid_plan",
+      "requires_data": true
+    },
+    {
+      "id": "rq_fisher",
+      "research_question": "Is there an association between visitor type and follow-up permission?",
+      "variables": ["visit_type", "follow_up_permission"],
+      "test": "fisher_exact",
+      "method": "fisher_exact",
+      "alpha": 0.05,
+      "family": "categorical",
+      "roles": [],
+      "options": [],
+      "decision_rule": "Use Fisher p value; report phi for the 2 x 2 table.",
+      "interpretation": "Use Fisher p value; report phi for the 2 x 2 table.",
+      "citations": [],
+      "reporting_references": [],
+      "status": "valid_plan",
+      "requires_data": true
+    },
+    {
+      "id": "rq_ttest_ind",
+      "research_question": "Do first-time and repeat visitors differ in mean digital experience?",
+      "variables": ["visit_type", "digital_experience"],
+      "test": "t_test_ind",
+      "method": "t_test_ind",
+      "alpha": 0.05,
+      "family": "group_comparison",
+      "roles": [],
+      "options": [],
+      "decision_rule": "Report t, degrees of freedom, p value, and Cohen d.",
+      "interpretation": "Report t, degrees of freedom, p value, and Cohen d.",
+      "citations": [],
+      "reporting_references": [],
+      "status": "valid_plan",
+      "requires_data": true
+    },
+    {
+      "id": "rq_ttest_pair",
+      "research_question": "Do respondents rate recommend and reuse items differently?",
+      "variables": ["recommend", "reuse"],
+      "test": "t_test_pair",
+      "method": "t_test_pair",
+      "alpha": 0.05,
+      "family": "group_comparison",
+      "roles": [],
+      "options": [],
+      "decision_rule": "Report the mean difference, paired t statistic, and p value.",
+      "interpretation": "Report the mean difference, paired t statistic, and p value.",
+      "citations": [],
+      "reporting_references": [],
+      "status": "valid_plan",
+      "requires_data": true
+    },
+    {
+      "id": "rq_wilcoxon",
+      "research_question": "Is there a significant distributional difference between digital ease and digital trust ratings?",
+      "variables": ["digital_ease", "digital_trust"],
+      "test": "wilcoxon_pair",
+      "method": "wilcoxon_pair",
+      "alpha": 0.05,
+      "family": "group_comparison",
+      "roles": [],
+      "options": [],
+      "decision_rule": "Report W statistic, p value, and rank-biserial correlation.",
+      "interpretation": "Report W statistic, p value, and rank-biserial correlation.",
+      "citations": [],
+      "reporting_references": [],
+      "status": "valid_plan",
+      "requires_data": true
+    },
+    {
+      "id": "rq_kruskal",
+      "research_question": "Does overall rating differ across visit purposes?",
+      "variables": ["visit_purpose", "overall_rating"],
+      "test": "kruskal_wallis",
+      "method": "kruskal_wallis",
+      "alpha": 0.05,
+      "family": "group_comparison",
+      "roles": [],
+      "options": [],
+      "decision_rule": "Report H statistic, degrees of freedom, p value, and eta-squared.",
+      "interpretation": "Report H statistic, degrees of freedom, p value, and eta-squared.",
+      "citations": [],
+      "reporting_references": [],
+      "status": "valid_plan",
+      "requires_data": true
+    },
+    {
+      "id": "rq_anova1",
+      "research_question": "Does mean digital experience differ across visit purposes?",
+      "variables": ["visit_purpose", "digital_experience"],
+      "test": "anova_one",
+      "method": "anova_one",
+      "alpha": 0.05,
+      "family": "group_comparison",
+      "roles": [],
+      "options": [],
+      "decision_rule": "Report F, degrees of freedom, p value, and partial eta-squared.",
+      "interpretation": "Report F, degrees of freedom, p value, and partial eta-squared.",
+      "citations": [],
+      "reporting_references": [],
+      "status": "valid_plan",
+      "requires_data": true
+    },
+    {
+      "id": "rq_anova2",
+      "research_question": "Do visitor type and visit purpose interact in predicting overall rating?",
+      "test": "anova_two",
+      "method": "anova_two",
+      "alpha": 0.05,
+      "family": "group_comparison",
+      "roles": {
+        "factor_a": [
+          "visit_type"
+        ],
+        "factor_b": [
+          "visit_purpose"
+        ],
+        "outcome": [
+          "overall_rating"
+        ]
+      },
+      "options": [],
+      "decision_rule": "Report main effects and the interaction term with F, p value, and partial eta-squared.",
+      "interpretation": "Report main effects and the interaction term with F, p value, and partial eta-squared.",
+      "citations": [],
+      "reporting_references": [],
+      "status": "valid_plan",
+      "requires_data": true
+    },
+    {
+      "id": "rq_ancova",
+      "research_question": "Do visitor types differ in overall rating after controlling for nights stayed?",
+      "test": "ancova",
+      "method": "ancova",
+      "alpha": 0.05,
+      "family": "group_comparison",
+      "roles": {
+        "group": [
+          "visit_type"
+        ],
+        "covariate": [
+          "nights_stayed"
+        ],
+        "outcome": [
+          "overall_rating"
+        ]
+      },
+      "options": [],
+      "decision_rule": "Report adjusted group means and the F test for the group factor after covariate removal.",
+      "interpretation": "Report adjusted group means and the F test for the group factor after covariate removal.",
+      "citations": [],
+      "reporting_references": [],
+      "status": "valid_plan",
+      "requires_data": true
+    },
+    {
+      "id": "rq_rep_anova",
+      "research_question": "Do mean ratings differ across the three digital experience items within respondents?",
+      "variables": ["digital_ease", "digital_trust", "digital_confusion"],
+      "test": "repeated_anova",
+      "method": "repeated_anova",
+      "alpha": 0.05,
+      "family": "group_comparison",
+      "roles": [],
+      "options": [],
+      "decision_rule": "Report the within-subject F, degrees of freedom, p value, and partial eta-squared.",
+      "interpretation": "Report the within-subject F, degrees of freedom, p value, and partial eta-squared.",
+      "citations": [],
+      "reporting_references": [],
+      "status": "valid_plan",
+      "requires_data": true
+    },
+    {
+      "id": "rq_friedman",
+      "research_question": "Do ordinal ratings differ across the three digital experience items within respondents?",
+      "variables": ["digital_ease", "digital_trust", "digital_confusion"],
+      "test": "friedman",
+      "method": "friedman",
+      "alpha": 0.05,
+      "family": "group_comparison",
+      "roles": [],
+      "options": [],
+      "decision_rule": "Report Friedman chi-square, degrees of freedom, and p value.",
+      "interpretation": "Report Friedman chi-square, degrees of freedom, and p value.",
+      "citations": [],
+      "reporting_references": [],
+      "status": "valid_plan",
+      "requires_data": true
+    },
+    {
+      "id": "rq_spearman",
+      "research_question": "Are digital experience perceptions associated with overall rating?",
+      "variables": ["digital_experience", "overall_rating"],
+      "test": "correlation_spearman",
+      "method": "correlation_spearman",
+      "alpha": 0.05,
+      "family": "correlation",
+      "roles": [],
+      "options": [],
+      "decision_rule": "Report rho, sample size, and p value.",
+      "interpretation": "Report rho, sample size, and p value.",
+      "citations": [],
+      "reporting_references": [],
+      "status": "valid_plan",
+      "requires_data": true
+    },
+    {
+      "id": "rq_kendall",
+      "research_question": "Is nights stayed associated with overall rating?",
+      "variables": ["nights_stayed", "overall_rating"],
+      "test": "correlation_kendall",
+      "method": "correlation_kendall",
+      "alpha": 0.05,
+      "family": "correlation",
+      "roles": [],
+      "options": [],
+      "decision_rule": "Report tau, sample size, and p value.",
+      "interpretation": "Report tau, sample size, and p value.",
+      "citations": [],
+      "reporting_references": [],
+      "status": "valid_plan",
+      "requires_data": true
+    },
+    {
+      "id": "rq_partial",
+      "research_question": "Is digital experience associated with behavioural intention after controlling for overall rating?",
+      "test": "partial_correlation",
+      "method": "partial_correlation",
+      "alpha": 0.05,
+      "family": "correlation",
+      "roles": {
+        "predictor": [
+          "digital_experience"
+        ],
+        "outcome": [
+          "behavioural_intention"
+        ],
+        "control": [
+          "overall_rating"
+        ]
+      },
+      "options": [],
+      "decision_rule": "Report partial r, degrees of freedom, and p value.",
+      "interpretation": "Report partial r, degrees of freedom, and p value.",
+      "citations": [],
+      "reporting_references": [],
+      "status": "valid_plan",
+      "requires_data": true
+    },
+    {
+      "id": "rq_reg_lin",
+      "research_question": "Do digital experience and nights stayed predict overall rating?",
+      "variables": ["digital_experience", "nights_stayed", "overall_rating"],
+      "test": "regression_linear",
+      "method": "regression_linear",
+      "alpha": 0.05,
+      "family": "regression",
+      "roles": [],
+      "options": [],
+      "decision_rule": "Report standardised coefficients, R-squared, and F test.",
+      "interpretation": "Report standardised coefficients, R-squared, and F test.",
+      "citations": [],
+      "reporting_references": [],
+      "status": "valid_plan",
+      "requires_data": true
+    },
+    {
+      "id": "rq_logit_bin",
+      "research_question": "Do digital experience and overall rating predict follow-up permission?",
+      "variables": ["digital_experience", "overall_rating", "follow_up_permission"],
+      "test": "regression_logistic_binary",
+      "method": "regression_logistic_binary",
+      "alpha": 0.05,
+      "family": "regression",
+      "roles": [],
+      "options": [],
+      "decision_rule": "Report odds ratios with 95 per cent confidence intervals and Nagelkerke R-squared.",
+      "interpretation": "Report odds ratios with 95 per cent confidence intervals and Nagelkerke R-squared.",
+      "citations": [],
+      "reporting_references": [],
+      "status": "valid_plan",
+      "requires_data": true
+    },
+    {
+      "id": "rq_logit_ord",
+      "research_question": "Do digital experience and nights stayed predict ordered overall rating?",
+      "variables": ["digital_experience", "nights_stayed", "overall_rating"],
+      "test": "regression_logistic_ordinal",
+      "method": "regression_logistic_ordinal",
+      "alpha": 0.05,
+      "family": "regression",
+      "roles": {
+        "predictors": [
+          "digital_experience",
+          "nights_stayed"
+        ],
+        "outcome": [
+          "overall_rating"
+        ]
+      },
+      "options": [],
+      "decision_rule": "Report proportional odds ratios and model fit indices.",
+      "interpretation": "Report proportional odds ratios and model fit indices.",
+      "citations": [],
+      "reporting_references": [],
+      "status": "valid_plan",
+      "requires_data": true
+    },
+    {
+      "id": "rq_logit_mult",
+      "research_question": "Do digital experience and overall rating predict visit purpose category?",
+      "variables": ["digital_experience", "overall_rating", "visit_purpose"],
+      "test": "regression_logistic_multinomial",
+      "method": "regression_logistic_multinomial",
+      "alpha": 0.05,
+      "family": "regression",
+      "roles": {
+        "predictors": [
+          "digital_experience",
+          "overall_rating"
+        ],
+        "outcome": [
+          "visit_purpose"
+        ]
+      },
+      "options": [],
+      "decision_rule": "Report odds ratios for each category contrast and pseudo R-squared.",
+      "interpretation": "Report odds ratios for each category contrast and pseudo R-squared.",
+      "citations": [],
+      "reporting_references": [],
+      "status": "valid_plan",
+      "requires_data": true
+    },
+    {
+      "id": "rq_moderation",
+      "research_question": "Does visitor type moderate the relationship between digital experience and overall rating?",
+      "test": "moderation",
+      "method": "moderation",
+      "alpha": 0.05,
+      "family": "regression",
+      "roles": {
+        "predictor": [
+          "digital_experience"
+        ],
+        "moderator": [
+          "behavioural_intention"
+        ],
+        "outcome": [
+          "overall_rating"
+        ]
+      },
+      "options": [],
+      "decision_rule": "Report the interaction coefficient, p value, and simple slopes.",
+      "interpretation": "Report the interaction coefficient, p value, and simple slopes.",
+      "citations": [],
+      "reporting_references": [],
+      "status": "valid_plan",
+      "requires_data": true
+    },
+    {
+      "id": "rq_mediation",
+      "research_question": "Does overall rating mediate the path from digital experience to behavioural intention?",
+      "test": "mediation",
+      "method": "mediation",
+      "alpha": 0.05,
+      "family": "regression",
+      "roles": {
+        "x": [
+          "digital_experience"
+        ],
+        "mediator": [
+          "overall_rating"
+        ],
+        "y": [
+          "behavioural_intention"
+        ]
+      },
+      "options": [],
+      "decision_rule": "Report direct, indirect, and total effects with bootstrap confidence intervals.",
+      "interpretation": "Report direct, indirect, and total effects with bootstrap confidence intervals.",
+      "citations": [],
+      "reporting_references": [],
+      "status": "valid_plan",
       "requires_data": true
     }
   ],
-  "models": [],
+  "models": [
+    {
+      "id": "input_types_cfa",
+      "label": "input_types_cfa",
+      "type": "cfa",
+      "engine": "lavaan",
+      "measurement": {
+        "constructs": [
+          {
+            "id": "digital_experience",
+            "items": ["digital_ease", "digital_trust", "digital_confusion"],
+            "mode": "reflective"
+          },
+          {
+            "id": "behavioural_intention",
+            "items": ["recommend", "reuse"],
+            "mode": "reflective"
+          }
+        ]
+      },
+      "structural": {
+        "paths": [],
+        "covariances": [],
+        "indirect": []
+      },
+      "options": []
+    },
+    {
+      "id": "input_types_sem",
+      "label": "input_types_sem",
+      "type": "cb_sem",
+      "engine": "lavaan",
+      "measurement": {
+        "constructs": [
+          {
+            "id": "digital_experience",
+            "items": ["digital_ease", "digital_trust", "digital_confusion"],
+            "mode": "reflective"
+          },
+          {
+            "id": "behavioural_intention",
+            "items": ["recommend", "reuse"],
+            "mode": "reflective"
+          }
+        ]
+      },
+      "structural": {
+        "paths": [
+          {
+            "from": "digital_experience",
+            "to": "behavioural_intention"
+          }
+        ],
+        "covariances": [],
+        "indirect": []
+      },
+      "options": []
+    }
+  ],
   "render": {
     "mode": "standard",
     "theme": "#1f6f78",
@@ -568,9 +1086,10 @@
       "show_download": true
     },
     "header": {
-      "institution": "surveyframe demo",
-      "logo_base64": "",
-      "show_progress": true
+      "institution": "Surveyframe Demo: Title Card",
+      "logo_base64": "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",
+      "show_progress": true,
+      "logo_media_type": "image/png"
     }
   }
 }

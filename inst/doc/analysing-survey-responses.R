@@ -1,6 +1,23 @@
 ## ----setup, include = FALSE---------------------------------------------------
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 library(surveyframe)
+library(knitr)
+
+# Tabulate analysis-plan results the same way the report template does.
+results_table <- function(results) {
+  g <- function(r, f) { v <- r[[f]]; if (is.null(v) || !length(v)) "" else as.character(v)[1] }
+  df <- data.frame(
+    RQ       = vapply(results, g, "", "block_id"),
+    Question = vapply(results, g, "", "research_question"),
+    Method   = vapply(results, g, "", "method"),
+    Result   = vapply(results, g, "", "apa"),
+    Effect   = vapply(results, g, "", "effect_label"),
+    check.names = FALSE, stringsAsFactors = FALSE
+  )
+  kable(df, row.names = FALSE,
+        col.names = c("RQ", "Research question", "Method", "Result (APA)", "Effect"),
+        align = c("l", "l", "l", "r", "l"))
+}
 
 ## ----load---------------------------------------------------------------------
 demo      <- sframe_demo_data()
@@ -22,20 +39,41 @@ responses <- read_responses(
 dim(responses)
 
 ## ----screening----------------------------------------------------------------
-missing_data_report(responses, instr)
+mr <- missing_data_report(responses, instr)
+kable(mr$item_missing, digits = 2,
+      col.names = c("Variable", "Missing (n)", "Missing (%)", "Valid (n)"),
+      caption = "Item-level missingness")
 
-quality_report(
+qr <- quality_report(
   responses, instr,
   respondent_id = "respondent_id",
   submitted_at  = "submitted_at",
   started_at    = "started_at"
 )
+quality_summary <- data.frame(
+  Metric = c("Respondents", "Items", "Flagged for review", "Flag rate"),
+  Value  = c(qr$summary$n_respondents, qr$summary$n_items, qr$summary$n_flagged,
+             sprintf("%.1f%%", 100 * qr$summary$flag_rate)),
+  stringsAsFactors = FALSE
+)
+kable(quality_summary, align = c("l", "r"), caption = "Quality screening summary")
 
 ## ----score--------------------------------------------------------------------
 scored    <- score_scales(responses, instr, keep_items = TRUE, keep_meta = TRUE)
 scale_ids <- vapply(instr$scales, function(x) x$id, character(1))
+score_cols <- intersect(scale_ids, names(scored))
 
-head(scored[, intersect(scale_ids, names(scored)), drop = FALSE])
+kable(head(scored[, score_cols, drop = FALSE]), digits = 2,
+      caption = "Scale scores, first respondents")
+
+## ----score-distributions, fig.width = 7, fig.height = 3, fig.align = "left"----
+op <- par(mfrow = c(1, length(score_cols)), mar = c(4, 3, 2, 1))
+for (s in score_cols) {
+  v <- scored[[s]]; v <- v[is.finite(v)]
+  hist(v, col = "#16B3B1", border = "white", main = s,
+       xlab = "Score", ylab = "")
+}
+par(op)
 
 ## ----assumptions--------------------------------------------------------------
 assumption_report(
@@ -66,7 +104,7 @@ instr$analysis_plan <- list(
 
 ## ----run----------------------------------------------------------------------
 results <- run_analysis_plan(responses, instr)
-results
+results_table(results)
 
 ## ----single-result------------------------------------------------------------
 rq1 <- results[[1]]

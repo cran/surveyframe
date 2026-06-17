@@ -1,13 +1,26 @@
 ## ----setup, include = FALSE---------------------------------------------------
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 library(surveyframe)
+library(knitr)
 
 ## ----reliability, eval = requireNamespace("psych", quietly = TRUE)------------
 demo      <- sframe_demo_data()
 instr     <- demo$instrument
 responses <- demo$responses
 
-reliability_report(responses, instr, omega = TRUE)
+rr <- reliability_report(responses, instr, omega = TRUE)
+rel_df <- do.call(rbind, lapply(rr, function(s) data.frame(
+  Scale   = paste0(s$label, " (", s$scale_id, ")"),
+  Items   = s$n_items,
+  N       = s$n,
+  Alpha   = if (!is.null(s$alpha))   sprintf("%.2f", s$alpha)   else "n/a",
+  Omega_h = if (!is.null(s$omega_h)) sprintf("%.2f", s$omega_h) else "n/a",
+  Omega_t = if (!is.null(s$omega_t)) sprintf("%.2f", s$omega_t) else "n/a",
+  stringsAsFactors = FALSE)))
+kable(rel_df, row.names = FALSE,
+      col.names = c("Scale", "Items", "N", "Alpha", "Omega h", "Omega total"),
+      align = c("l", "c", "c", "r", "r", "r"),
+      caption = "Scale reliability statistics")
 
 ## ----item-report--------------------------------------------------------------
 demo      <- sframe_demo_data()
@@ -15,8 +28,9 @@ instr     <- demo$instrument
 responses <- demo$responses
 
 items <- item_report(responses, instr)
-names(items)
-items[[1]]
+first  <- items[[1]]
+kable(first$diagnostics, digits = 2,
+      caption = paste0("Item diagnostics: ", first$label, " (", first$scale_id, ")"))
 
 ## ----efa, eval = requireNamespace("psych", quietly = TRUE)--------------------
 efa_report(responses, instr)
@@ -35,7 +49,8 @@ published_loadings <- list(
 )
 
 validity <- validity_report(published_loadings)
-validity$reliability
+kable(validity$reliability, digits = 2,
+      caption = "Composite reliability and average variance extracted")
 
 ## ----validity-scores, eval = FALSE--------------------------------------------
 # validity_report(published_loadings, construct_scores = scored_constructs)

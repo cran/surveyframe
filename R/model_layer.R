@@ -511,12 +511,16 @@ efa_solution <- function(
                  class = c("sframe_validation_error", "sframe_error"))
   }
 
-  fit <- psych::fa(
-    item_data,
-    nfactors = nfactors,
-    fm = extraction,
-    rotate = rotation
-  )
+  # psych::fa() can print "R was not square, finding R from data" and warn;
+  # keep it quiet so reports and the console stay clean.
+  invisible(utils::capture.output(
+    fit <- suppressWarnings(suppressMessages(psych::fa(
+      item_data,
+      nfactors = nfactors,
+      fm = extraction,
+      rotate = rotation
+    )))
+  ))
   loadings <- as.data.frame(unclass(fit$loadings))
   loadings$item_id <- rownames(loadings)
   loadings <- loadings[, c("item_id", setdiff(names(loadings), "item_id")),

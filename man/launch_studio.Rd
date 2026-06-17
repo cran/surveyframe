@@ -53,7 +53,7 @@ draft, open an existing instrument, preview the survey, upload responses,
 review data quality, inspect reliability, plan analyses, and export outputs.
 }
 \examples{
-\donttest{
+\dontrun{
 launch_studio()
 
 demo <- sframe_demo_data()

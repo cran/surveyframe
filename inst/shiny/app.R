@@ -638,7 +638,13 @@ studio_variable_catalog <- function(instrument) {
   if (is.null(instrument)) {
     return(list())
   }
-  item_rows <- lapply(instrument$items %||% list(), function(item) {
+  # Display-only items are not response variables and must not appear as
+  # analysis variables or role choices.
+  question_items <- Filter(
+    function(item) !(item$type %in% c("section_break", "text_block")),
+    instrument$items %||% list()
+  )
+  item_rows <- lapply(question_items, function(item) {
     meta <- studio_level_meta(item = item)
     scale_membership <- item$scale_id %||% ""
     if (!nzchar(scale_membership) && length(instrument$scales %||% list()) > 0) {
@@ -803,15 +809,15 @@ if (identical(initial_tab, "auto")) {
   } else if (inherits(INITIAL_INSTRUMENT, "sframe")) {
     "preview"
   } else {
-    "build"
+    "open"
   }
 }
-if (!initial_tab %in% c("build", "open", "preview", "responses", "quality",
+if (!initial_tab %in% c("open", "preview", "responses", "quality",
                        "reliability", "analysis", "dashboard", "export")) {
   initial_tab <- if (inherits(INITIAL_INSTRUMENT, "sframe")) {
     "preview"
   } else {
-    "build"
+    "open"
   }
 }
 
@@ -850,7 +856,7 @@ ui <- fluidPage(
       }
       .studio-nav-item a:hover,
       .studio-nav-item a.active {
-        background: #22274a; color: #ffffff; border-left-color: #5b8dee;
+        background: #22274a; color: #ffffff; border-left-color: #16B3B1;
       }
       .studio-status {
         padding: 16px 20px; font-size: 12px;
@@ -859,6 +865,7 @@ ui <- fluidPage(
       .studio-main {
         margin-left: 240px; flex: 1; padding: 32px;
         min-height: 100vh; box-sizing: border-box;
+        min-width: 0;
       }
       .screen { display: none; }
       .screen.active { display: block; }
@@ -888,24 +895,48 @@ ui <- fluidPage(
       }
       .stat-box .stat-val { font-size: 28px; font-weight: 700; color: #1a1a2e; }
       .stat-box .stat-lbl { font-size: 12px; color: #6b718e; margin-top: 4px; }
-      table.sf-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+      table.sf-table { width: 100%; border-collapse: collapse; font-size: 14px;
+        display: block; overflow-x: auto; max-width: 100%; }
+      /* Academic (APA) tables: horizontal rules only, no shading, no vertical lines */
       .sf-table th {
-        background: #f7f8fa; text-align: left; padding: 8px 12px;
-        font-weight: 600; color: #444; border-bottom: 2px solid #e0e3ea;
+        background: none; text-align: left; padding: 8px 12px;
+        font-weight: 700; color: #1a1a2e;
+        border-top: 2px solid #1a1a2e; border-bottom: 1px solid #1a1a2e;
       }
-      .sf-table td { padding: 8px 12px; border-bottom: 1px solid #f0f1f4; vertical-align: top; }
-      .sf-table tr:last-child td { border-bottom: none; }
+      .sf-table td { padding: 8px 12px; border: none; vertical-align: top; overflow-wrap: anywhere; }
+      .sf-table tbody tr:last-child td { border-bottom: 2px solid #1a1a2e; }
       .btn-primary {
-        background: #5b8dee; color: #fff; border: none; border-radius: 6px;
+        background: #16B3B1; color: #fff; border: none; border-radius: 6px;
         padding: 9px 20px; font-size: 14px; cursor: pointer; font-weight: 600;
       }
-      .btn-primary:hover { background: #4a7de0; }
+      .btn-primary:hover { background: #129a98; }
       .btn-outline {
-        background: transparent; color: #5b8dee; border: 1.5px solid #5b8dee;
+        background: transparent; color: #16B3B1; border: 1.5px solid #16B3B1;
         border-radius: 6px; padding: 8px 18px; font-size: 14px;
         cursor: pointer; font-weight: 600;
       }
-      .btn-outline:hover { background: #eef3fd; }
+      .btn-outline:hover { background: #e6f7f7; }
+      /* Brand pill tabs (match the dashboard nav), used for the studio sub-tabs */
+      .studio-tabs .shiny-options-group {
+        display: flex; gap: 2px; flex-wrap: wrap; background: #1e293b;
+        padding: 6px; border-radius: 8px; margin: 4px 0 18px;
+      }
+      .studio-tabs .control-label { display: none; }
+      .studio-tabs .radio-inline { margin: 0; padding: 0; }
+      .studio-tabs .radio-inline input[type=radio] {
+        position: absolute; opacity: 0; pointer-events: none;
+      }
+      .studio-tabs .radio-inline span {
+        display: inline-block; padding: 7px 16px; border-radius: 6px;
+        font-size: 12px; font-weight: 600; color: rgba(255,255,255,.6);
+        cursor: pointer; transition: all .15s;
+      }
+      .studio-tabs .radio-inline:hover span {
+        background: rgba(255,255,255,.06); color: rgba(255,255,255,.85);
+      }
+      .studio-tabs .radio-inline input[type=radio]:checked + span {
+        background: #16B3B1; color: #fff;
+      }
       h2.screen-title {
         font-size: 22px; font-weight: 700; margin: 0 0 24px; color: #1a1a2e;
       }
@@ -941,9 +972,6 @@ ui <- fluidPage(
         "Survey", tags$span("Studio")
       ),
       tags$ul(class = "studio-nav",
-        tags$li(class = "studio-nav-item",
-          tags$a(href = "#", `data-tab` = "build",
-                 class = tab_link_class("build"), "Build Survey")),
         tags$li(class = "studio-nav-item",
           tags$a(href = "#", `data-tab` = "open",
                  class = tab_link_class("open"), "Open Instrument")),
@@ -994,137 +1022,6 @@ ui <- fluidPage(
         });
       ")),
 
-      tags$div(id = "screen-build", class = screen_class("build"),
-        tags$h2(class = "screen-title", "Build Survey"),
-        fluidRow(
-          column(7,
-            tags$div(class = "card",
-              tags$div(class = "card-title", "Survey metadata"),
-              textInput("draft_title", "Survey title", value = initial_builder$meta$title),
-              fluidRow(
-                column(6, textInput("draft_version", "Version", value = initial_builder$meta$version)),
-                column(6, textInput("draft_languages", "Languages", value = format_value(initial_builder$meta$languages)))
-              ),
-              textInput("draft_authors", "Authors", value = format_value(initial_builder$meta$authors)),
-              textAreaInput("draft_description", "Description",
-                            value = initial_builder$meta$description %||% "", rows = 4),
-              tags$div(class = "card-actions",
-                actionButton("go_preview_btn", "Preview Draft", class = "btn-primary"),
-                actionButton("new_survey_btn", "New Survey", class = "btn-outline")
-              )
-            ),
-
-            tags$div(class = "card",
-              tags$div(class = "card-title", "Choice sets"),
-              fluidRow(
-                column(4, textInput("choice_id", "Choice set ID", placeholder = "agree5")),
-                column(4, checkboxInput("choice_allow_other", "Allow 'Other'", value = FALSE)),
-                column(4, checkboxInput("choice_randomise", "Randomise order", value = FALSE))
-              ),
-              fluidRow(
-                column(6, textAreaInput("choice_values", "Stored values", rows = 5,
-                                        placeholder = "One value per line")),
-                column(6, textAreaInput("choice_labels", "Display labels", rows = 5,
-                                        placeholder = "One label per line"))
-              ),
-              tags$div(class = "card-actions",
-                actionButton("add_choice_btn", "Save Choice Set", class = "btn-primary"),
-                selectInput("remove_choice_id", "Delete choice set", choices = character(0)),
-                actionButton("remove_choice_btn", "Delete", class = "btn-outline")
-              )
-            ),
-            uiOutput("choices_table"),
-
-            tags$div(class = "card",
-              tags$div(class = "card-title", "Items"),
-              fluidRow(
-                column(4, textInput("item_id", "Item ID", placeholder = "sat_1")),
-                column(8, textInput("item_label", "Question text",
-                                    placeholder = "Overall, how satisfied are you?"))
-              ),
-              fluidRow(
-                column(4, selectInput("item_type", "Response type",
-                                      choices = c("single_choice", "multiple_choice",
-                                                  "likert", "numeric", "text",
-                                                  "textarea", "date"))),
-                column(4, selectInput("item_choice_set", "Choice set", choices = character(0))),
-                column(4, checkboxInput("item_required", "Required", value = FALSE))
-              ),
-              textInput("item_placeholder", "Placeholder", value = ""),
-              textAreaInput("item_help", "Help text", value = "", rows = 3),
-              tags$div(class = "card-actions",
-                actionButton("add_item_btn", "Save Item", class = "btn-primary"),
-                selectInput("remove_item_id", "Delete item", choices = character(0)),
-                actionButton("remove_item_btn", "Delete", class = "btn-outline")
-              )
-            ),
-            uiOutput("items_table")
-          ),
-
-          column(5,
-            uiOutput("builder_summary_card"),
-            uiOutput("builder_validation_card"),
-
-            tags$div(class = "card",
-              tags$div(class = "card-title", "Scales"),
-              textInput("scale_id", "Scale ID", placeholder = "satisfaction"),
-              textInput("scale_label", "Scale label", placeholder = "Satisfaction"),
-              checkboxGroupInput("scale_items", "Items", choices = character(0)),
-              radioButtons("scale_method", "Scoring method",
-                           choices = c("mean", "sum"), inline = TRUE),
-              numericInput("scale_min_valid", "Minimum valid items",
-                           value = NA, min = 1, step = 1),
-              checkboxGroupInput("scale_reverse_items", "Reverse-coded items", choices = character(0)),
-              tags$div(class = "card-actions",
-                actionButton("add_scale_btn", "Save Scale", class = "btn-primary"),
-                selectInput("remove_scale_id", "Delete scale", choices = character(0)),
-                actionButton("remove_scale_btn", "Delete", class = "btn-outline")
-              )
-            ),
-            uiOutput("scales_table"),
-
-            tags$div(class = "card",
-              tags$div(class = "card-title", "Branching rules"),
-              selectInput("branch_item_id", "Target item", choices = character(0)),
-              selectInput("branch_depends_on", "Depends on", choices = character(0)),
-              fluidRow(
-                column(6, selectInput("branch_operator", "Operator",
-                                      choices = c("==", "!=", "%in%", ">", ">=", "<", "<="))),
-                column(6, selectInput("branch_action", "Action", choices = c("show", "hide")))
-              ),
-              textInput("branch_value", "Match value", placeholder = "Use commas for %in%"),
-              tags$div(class = "card-actions",
-                actionButton("add_branch_btn", "Save Rule", class = "btn-primary"),
-                selectInput("remove_branch_key", "Delete rule", choices = character(0)),
-                actionButton("remove_branch_btn", "Delete", class = "btn-outline")
-              )
-            ),
-            uiOutput("branching_table"),
-
-            tags$div(class = "card",
-              tags$div(class = "card-title", "Quality checks"),
-              textInput("check_id", "Check ID", placeholder = "attn_1"),
-              selectInput("check_item_id", "Check item", choices = character(0)),
-              fluidRow(
-                column(6, selectInput("check_type", "Type",
-                                      choices = c("attention", "instructional", "trap"))),
-                column(6, selectInput("check_fail_action", "Fail action",
-                                      choices = c("flag", "exclude")))
-              ),
-              textInput("check_label", "Label", value = ""),
-              textInput("check_pass_values", "Pass values", placeholder = "4 or yes,no"),
-              textAreaInput("check_notes", "Notes", value = "", rows = 3),
-              tags$div(class = "card-actions",
-                actionButton("add_check_btn", "Save Check", class = "btn-primary"),
-                selectInput("remove_check_id", "Delete check", choices = character(0)),
-                actionButton("remove_check_btn", "Delete", class = "btn-outline")
-              )
-            ),
-            uiOutput("checks_table")
-          )
-        )
-      ),
-
       tags$div(id = "screen-open", class = screen_class("open"),
         tags$h2(class = "screen-title", "Open Instrument"),
         tags$div(class = "card",
@@ -1134,7 +1031,7 @@ ui <- fluidPage(
                     buttonLabel = "Browse .sframe file",
                     placeholder = "No file selected"),
           tags$p(class = "hint",
-            "Loaded instruments are copied into the builder so you can edit, preview, and re-export them."),
+            "Design questions, welcome screen, logo, and thank-you page in the SurveyBuilder, then load the .sframe here to preview, analyse, and re-export."),
           uiOutput("open_status")
         ),
         uiOutput("instrument_summary_card")
@@ -1162,6 +1059,31 @@ ui <- fluidPage(
           ),
           actionButton("load_responses_btn", "Load responses", class = "btn-primary")
         ),
+        tags$div(class = "card",
+          tags$div(class = "card-title", "Loading responses collected elsewhere"),
+          tags$p(class = "hint",
+            "Responses can come from the exported surveyframe survey or from another tool (Microsoft Forms, Qualtrics, Google Forms, and similar). Export them to CSV, then:"),
+          tags$ol(class = "hint", style = "margin: 0 0 12px; padding-left: 18px; line-height: 1.7",
+            tags$li("Open the matching instrument on the Open Instrument screen. The .sframe carries the analysis plan, so it is still required."),
+            tags$li("Make sure the CSV column names match the item IDs in that instrument (download the sample CSV below for the expected format)."),
+            tags$li("Browse the CSV above, set the respondent-ID and submitted-at columns if present, then click Load responses.")
+          ),
+          downloadButton("download_sample_csv", "Download sample CSV format", class = "btn-outline"),
+          actionButton("load_sample_btn", "Or load the bundled demo", class = "btn-outline")
+        ),
+        tags$div(class = "card",
+          tags$div(class = "card-title", "Read responses from a deployed Google Sheet"),
+          tags$p(class = "hint",
+            "If the survey was deployed with the surveyframe Google Sheets collector, read the live responses straight from the sheet. This needs the googlesheets4 package and access to the sheet."),
+          textInput("sheet_url", "Google Sheet ID or URL",
+                    placeholder = "https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID"),
+          fluidRow(
+            column(4, textInput("sheet_tab", "Sheet tab", value = "Responses")),
+            column(4, textInput("sheet_id_col", "Respondent ID column", value = "respondent_id")),
+            column(4, textInput("sheet_time_col", "Submitted-at column", value = "submitted_at"))
+          ),
+          actionButton("load_sheet_btn", "Read from Google Sheet", class = "btn-primary")
+        ),
         uiOutput("responses_summary_card")
       ),
 
@@ -1180,11 +1102,13 @@ ui <- fluidPage(
       tags$div(id = "screen-analysis", class = screen_class("analysis"),
         tags$h2(class = "screen-title", "Analysis Plan"),
         uiOutput("analysis_gate"),
-        radioButtons(
-          "analysis_stage", NULL,
-          choices = c("Plan", "Run", "Report"),
-          selected = "Plan",
-          inline = TRUE
+        tags$div(class = "studio-tabs",
+          radioButtons(
+            "analysis_stage", NULL,
+            choices = c("Plan" = "Plan", "Run preview" = "Run", "Report outline" = "Report"),
+            selected = "Plan",
+            inline = TRUE
+          )
         ),
         fluidRow(
           column(4, uiOutput("analysis_left_panel")),
@@ -1196,19 +1120,15 @@ ui <- fluidPage(
       tags$div(id = "screen-dashboard", class = screen_class("dashboard"),
         tags$h2(class = "screen-title", "Dashboard"),
         uiOutput("dashboard_gate"),
-        tags$div(class = "card",
-          tags$div(class = "card-title", "Response dashboard"),
-          tags$p(class = "hint",
-            "The dashboard is kept as a separate read-only Shiny launcher in v0.3."),
-          actionButton(
-            "open_response_dashboard",
-            "Open response dashboard",
-            class = "btn-primary"
-          ),
-          tags$p(class = "hint",
-            "From the R console, call launch_dashboard(instrument, responses) for the full dashboard.")
+        tags$div(class = "studio-tabs",
+          radioButtons(
+            "dashboard_view", NULL,
+            choices = c("Overview", "Items", "Scales", "Data"),
+            selected = "Overview",
+            inline = TRUE
+          )
         ),
-        uiOutput("dashboard_summary_card")
+        uiOutput("studio_dashboard_content")
       ),
 
       tags$div(id = "screen-export", class = screen_class("export"),
@@ -1218,7 +1138,7 @@ ui <- fluidPage(
           tags$div(class = "card-title", "Instrument file"),
           tags$p(class = "hint",
             "Download the current validated draft as a .sframe file."),
-          downloadButton("download_sframe_btn", "Download .sframe", class = "btn-primary")
+          uiOutput("export_sframe_ui")
         ),
         tags$div(class = "card",
           tags$div(class = "card-title", "Report contents"),
@@ -1230,9 +1150,11 @@ ui <- fluidPage(
           checkboxInput("rpt_analysis", "Include analysis-plan results", value = TRUE),
           checkboxInput("rpt_models", "Include saved models and syntax", value = TRUE),
           tags$br(),
-          downloadButton("download_report_btn", "Generate HTML report", class = "btn-primary"),
+          uiOutput("export_report_ui"),
           tags$p(class = "hint",
-            "Generates a self-contained HTML report. Quarto is optional; an internal HTML fallback is available.")
+            "Generates a self-contained HTML report. Quarto is optional; an internal HTML fallback is available."),
+          tags$p(class = "hint",
+            "To export the deployable survey HTML or the Google Sheets collector, use the SurveyBuilder, which owns survey design and deployment.")
         )
       )
     )
@@ -1276,16 +1198,20 @@ server <- function(input, output, session) {
   }
 
   builder_meta <- reactive({
+    # Design now happens in the SurveyBuilder; the studio Build screen was
+    # removed. Meta comes from the loaded instrument (rv$builder$meta); the
+    # draft_* inputs no longer exist, so each field falls back to it.
+    m <- rv$builder$meta %||% list()
     languages <- parse_csv(input$draft_languages %||% "")
     list(
-      title = trimws(input$draft_title %||% rv$builder$meta$title %||% "Untitled Survey"),
-      version = trimws(input$draft_version %||% rv$builder$meta$version %||% "0.1.0"),
-      description = trim_or_null(input$draft_description),
+      title = trimws(input$draft_title %||% m$title %||% "Untitled Survey"),
+      version = trimws(input$draft_version %||% m$version %||% "0.1.0"),
+      description = trim_or_null(input$draft_description) %||% (m$description %||% NULL),
       authors = {
         values <- parse_csv(input$draft_authors %||% "")
-        if (length(values) == 0) NULL else values
+        if (length(values) == 0) (m$authors %||% NULL) else values
       },
-      languages = if (length(languages) == 0) "en" else languages
+      languages = if (length(languages) == 0) (m$languages %||% "en") else languages
     )
   })
 
@@ -1298,7 +1224,8 @@ server <- function(input, output, session) {
       branching = rv$builder$branching,
       checks = rv$builder$checks,
       analysis_plan = rv$builder$analysis_plan %||% list(),
-      models = rv$builder$models %||% list()
+      models = rv$builder$models %||% list(),
+      render = rv$builder$render %||% list()
     )
   })
 
@@ -1375,8 +1302,8 @@ server <- function(input, output, session) {
     rv$instrument <- NULL
     rv$responses <- NULL
     sync_builder_inputs(rv$builder)
-    showNotification("Started a new survey draft.", type = "message")
-    switch_tab("build")
+    showNotification("Cleared the loaded instrument.", type = "message")
+    switch_tab("open")
   })
 
   observeEvent(input$go_preview_btn, {
@@ -1636,8 +1563,8 @@ server <- function(input, output, session) {
       rv$instrument <- loaded
       rv$responses <- NULL
       sync_builder_inputs(rv$builder)
-      showNotification("Instrument loaded into the builder.", type = "message")
-      switch_tab("build")
+      showNotification("Instrument loaded. Showing the survey preview.", type = "message")
+      switch_tab("preview")
     }, error = function(e) {
       showNotification(paste("Error:", conditionMessage(e)), type = "error")
     })
@@ -1662,6 +1589,62 @@ server <- function(input, output, session) {
       showNotification(paste("Error:", conditionMessage(e)), type = "error")
     })
   })
+
+  observeEvent(input$load_sheet_btn, {
+    req(rv$instrument)
+    sheet <- trim_or_null(input$sheet_url)
+    if (is.null(sheet)) {
+      showNotification("Enter the Google Sheet ID or URL first.", type = "warning")
+      return(invisible(NULL))
+    }
+    if (!requireNamespace("googlesheets4", quietly = TRUE)) {
+      showNotification(
+        "Reading from Google Sheets needs the googlesheets4 package. Install it, then try again.",
+        type = "error", duration = NULL)
+      return(invisible(NULL))
+    }
+    tryCatch({
+      rv$responses <- surveyframe::read_sheet_responses(
+        sheet_id      = sheet,
+        instrument    = rv$instrument,
+        sheet_name    = trim_or_null(input$sheet_tab) %||% "Responses",
+        respondent_id = trim_or_null(input$sheet_id_col),
+        submitted_at  = trim_or_null(input$sheet_time_col)
+      )
+      showNotification(paste(nrow(rv$responses), "responses read from the Google Sheet."),
+                       type = "message")
+      switch_tab("quality")
+    }, error = function(e) {
+      showNotification(paste("Google Sheet error:", conditionMessage(e)), type = "error")
+    })
+  })
+
+  observeEvent(input$load_sample_btn, {
+    tryCatch({
+      demo <- surveyframe::sframe_input_types_demo_data()
+      rv$builder <- builder_state_from_instrument(demo$instrument)
+      rv$instrument <- demo$instrument
+      rv$responses <- demo$responses
+      sync_builder_inputs(rv$builder)
+      showNotification(
+        paste0("Sample loaded: ", nrow(demo$responses),
+               " responses. Explore Quality, Reliability, Analysis Plan, and Dashboard."),
+        type = "message"
+      )
+      switch_tab("dashboard")
+    }, error = function(e) {
+      showNotification(paste("Could not load sample:", conditionMessage(e)), type = "error")
+    })
+  })
+
+  output$download_sample_csv <- downloadHandler(
+    filename = function() "surveyframe_input_types_responses.csv",
+    content = function(file) {
+      src <- system.file("extdata", "surveyframe_input_types_responses.csv",
+                         package = "surveyframe")
+      file.copy(src, file, overwrite = TRUE)
+    }
+  )
 
   output$sidebar_status <- renderUI({
     draft <- draft_result()
@@ -1856,71 +1839,29 @@ server <- function(input, output, session) {
   output$survey_preview_items <- renderUI({
     instr <- preview_instrument()
     req(instr)
-
-    choices_lookup <- stats::setNames(
-      lapply(instr$choices, function(cs) {
-        stats::setNames(as.character(cs$values), cs$labels)
-      }),
-      vapply(instr$choices, function(cs) cs$id, character(1))
-    )
-
-    branch_lookup <- list()
-    for (rule in instr$branching) {
-      branch_lookup[[rule$item_id]] <- rule
+    # Render the exact deployable survey so the preview is identical to what
+    # respondents see. Reuses the single static-survey template through
+    # export_static_survey() instead of re-creating the layout with widgets.
+    tmp <- tempfile(fileext = ".html")
+    ok <- tryCatch({
+      suppressMessages(surveyframe::export_static_survey(
+        instr, output_path = tmp, open = FALSE, overwrite = TRUE
+      ))
+      TRUE
+    }, error = function(e) FALSE)
+    if (!isTRUE(ok)) {
+      return(tags$p(class = "hint",
+        "Add at least one question and pass validation to preview the survey."))
     }
-
-    items_ui <- lapply(instr$items, function(item) {
-      rule <- branch_lookup[[item$id]]
-      if (!is.null(rule)) {
-        dep_val <- input[[rule$depends_on]]
-        visible <- switch(rule$operator,
-          "==" = identical(dep_val, rule$value),
-          "!=" = !identical(dep_val, rule$value),
-          "%in%" = length(dep_val) > 0 && any(dep_val %in% rule$value),
-          ">" = suppressWarnings(as.numeric(dep_val) > as.numeric(rule$value)),
-          ">=" = suppressWarnings(as.numeric(dep_val) >= as.numeric(rule$value)),
-          "<" = suppressWarnings(as.numeric(dep_val) < as.numeric(rule$value)),
-          "<=" = suppressWarnings(as.numeric(dep_val) <= as.numeric(rule$value)),
-          FALSE
-        )
-        visible <- isTRUE(visible)
-        if (identical(rule$action, "hide")) {
-          visible <- !visible
-        }
-        if (!visible) {
-          return(NULL)
-        }
-      }
-
-      cs <- if (!is.null(item$choice_set) && nzchar(item$choice_set)) {
-        choices_lookup[[item$choice_set]]
-      } else {
-        NULL
-      }
-      input_widget <- switch(
-        item$type,
-        single_choice = radioButtons(item$id, item$label, choices = cs %||% character(0)),
-        multiple_choice = checkboxGroupInput(item$id, item$label, choices = cs %||% character(0)),
-        likert = radioButtons(item$id, item$label, choices = cs %||% character(0), inline = TRUE),
-        numeric = numericInput(item$id, item$label, value = NA),
-        text = textInput(item$id, item$label, placeholder = item$placeholder %||% ""),
-        textarea = textAreaInput(item$id, item$label, placeholder = item$placeholder %||% ""),
-        date = dateInput(item$id, item$label),
-        textInput(item$id, item$label)
-      )
-
-      tagList(
-        tags$div(style = "margin-bottom: 20px;",
-          input_widget,
-          if (!is.null(item$help)) tags$p(class = "hint", item$help)
-        )
-      )
-    })
-
+    html <- paste(readLines(tmp, warn = FALSE, encoding = "UTF-8"), collapse = "\n")
     tagList(
-      tags$p(class = "hint", style = "margin-bottom: 16px;",
-        "Preview responses stay in this session and are discarded when you leave."),
-      do.call(tagList, items_ui)
+      tags$p(class = "hint", style = "margin-bottom: 12px;",
+        "This is the exact deployable survey. Anything entered here stays in this preview."),
+      tags$iframe(
+        srcdoc = html,
+        style = "width:100%;height:78vh;border:1px solid var(--cb);border-radius:10px;background:#fff;",
+        title = "Survey preview"
+      )
     )
   })
 
@@ -1962,37 +1903,73 @@ server <- function(input, output, session) {
   output$quality_output <- renderUI({
     req(rv$instrument, rv$responses)
     qr <- quality_result()
+    n <- qr$summary$n_respondents
+    n_flag <- qr$summary$n_flagged %||% 0L
+    stat_box <- function(v, l) tags$div(class = "stat-box",
+      tags$div(class = "stat-val", v), tags$div(class = "stat-lbl", l))
+
     tagList(
       tags$div(class = "card",
         tags$div(class = "card-title", "Summary"),
         tags$div(class = "stat-row",
-          tags$div(class = "stat-box",
-            tags$div(class = "stat-val", qr$summary$n_respondents),
-            tags$div(class = "stat-lbl", "Respondents")),
-          tags$div(class = "stat-box",
-            tags$div(class = "stat-val", qr$summary$n_items),
-            tags$div(class = "stat-lbl", "Items")),
-          tags$div(class = "stat-box",
-            tags$div(class = "stat-val", sprintf("%.1f%%", qr$summary$flag_rate * 100)),
-            tags$div(class = "stat-lbl", "Flagged"))
-        )
+          stat_box(n, "Respondents"),
+          stat_box(qr$summary$n_items, "Items"),
+          stat_box(n - n_flag, "Clean"),
+          stat_box(sprintf("%d (%.1f%%)", n_flag, qr$summary$flag_rate * 100), "Flagged")
+        ),
+        tags$p(class = "hint",
+          "A respondent is flagged if caught by any check below: a failed attention check, straight-lining a scale, completing too fast, missing more than the threshold, or being a duplicate row.")
       ),
+
       if (length(qr$attention) > 0) {
         rows <- lapply(qr$attention, function(chk) {
           tags$tr(
             tags$td(chk$check_id),
             tags$td(chk$type),
-            tags$td(sprintf("%.1f%%", chk$pass_rate * 100)),
-            tags$td(chk$n_fail)
+            tags$td(chk$n_pass %||% NA),
+            tags$td(chk$n_fail),
+            tags$td(sprintf("%.1f%%", chk$pass_rate * 100))
           )
         })
         table_card("Attention checks",
-          headers = c("Check ID", "Type", "Pass rate", "Failures"),
+          headers = c("Check ID", "Type", "n pass", "n fail", "Pass rate"),
           rows = rows,
           empty_label = "No checks.")
       },
+
+      if (length(qr$straightline %||% list()) > 0) {
+        rows <- lapply(qr$straightline, function(s) {
+          tags$tr(
+            tags$td(s$scale_id),
+            tags$td(s$n_items),
+            tags$td(length(s$flagged_rows %||% integer(0))),
+            tags$td(sprintf("%.1f%%", (s$flag_rate %||% 0) * 100))
+          )
+        })
+        table_card("Straight-lining by scale",
+          headers = c("Scale", "Items", "Flagged", "Rate"),
+          rows = rows,
+          empty_label = "No multi-item scales.")
+      },
+
       tags$div(class = "card",
-        tags$div(class = "card-title", "Missingness"),
+        tags$div(class = "card-title", "Completion time"),
+        if (isTRUE(qr$timing$available)) {
+          tags$p(sprintf(
+            "Median completion %.0f seconds. %d respondent(s) (%.1f%%) flagged as too fast.",
+            qr$timing$median_sec %||% NA_real_,
+            qr$timing$n_flagged %||% 0L,
+            (qr$timing$flag_rate %||% 0) * 100))
+        } else {
+          tags$p(class = "hint",
+            qr$timing$reason %||% "Timing analysis needs started_at and submitted_at columns.")
+        }
+      ),
+
+      tags$div(class = "card",
+        tags$div(class = "card-title", "Duplicates and missingness"),
+        tags$p(sprintf("%d duplicate response row(s) detected.",
+                       qr$duplicates$n_duplicates %||% 0L)),
         tags$p(sprintf(
           "%.1f%% of respondents exceed the %.0f%% missing threshold.",
           mean(qr$missing$respondent_miss > qr$missing$flagged_threshold, na.rm = TRUE) * 100,
@@ -2172,8 +2149,14 @@ server <- function(input, output, session) {
     req(rv$instrument)
     stage <- input$analysis_stage %||% "Plan"
     if (identical(stage, "Run")) {
+      full_plan  <- rv$instrument$analysis_plan %||% list()
+      run_plan   <- Filter(function(b) !isFALSE(b$requires_data), full_plan)
+      syntax_n   <- length(full_plan) - length(run_plan)
       return(tagList(
-        plan_table_ui(rv$instrument$analysis_plan %||% list()),
+        plan_table_ui(run_plan),
+        if (syntax_n > 0) tags$p(class = "hint", paste0(
+          syntax_n, " syntax-only method(s) excluded from the run queue ",
+          "(generate lavaan or seminr strings without response data).")),
         uiOutput("analysis_results_output")
       ))
     }
@@ -2633,45 +2616,247 @@ server <- function(input, output, session) {
     NULL
   })
 
-  output$dashboard_summary_card <- renderUI({
+  # Inline response dashboard, ported from launch_dashboard() and wired to the
+  # studio's reactive instrument and responses (base-R charts, no new imports).
+  dash_theme <- "#16B3B1"
+  dash_q_items <- reactive({
+    Filter(function(i) !(i$type %in% c("section_break", "text_block")),
+           rv$instrument$items %||% list())
+  })
+  dash_find <- function(components, id) {
+    for (cp in components %||% list()) if (identical(cp$id, id)) return(cp)
+    NULL
+  }
+
+  output$studio_dashboard_content <- renderUI({
     req(rv$instrument)
+    if (is.null(rv$responses)) return(NULL)
+    view <- input$dashboard_view %||% "Overview"
+    resp <- rv$responses
+    instr <- rv$instrument
+
+    if (identical(view, "Overview")) {
+      date_range <- "Not available"
+      if ("submitted_at" %in% names(resp)) {
+        dts <- suppressWarnings(as.Date(substr(as.character(resp$submitted_at), 1, 10)))
+        dts <- dts[!is.na(dts)]
+        if (length(dts) > 1) {
+          date_range <- paste0(format(min(dts), "%d %b"), " to ",
+                               format(max(dts), "%d %b %Y"))
+        }
+      }
+      kpi <- function(v, l) tags$div(class = "stat-box",
+        tags$div(class = "stat-val", v), tags$div(class = "stat-lbl", l))
+      return(tagList(
+        tags$div(class = "stat-row",
+          kpi(nrow(resp), "Responses"),
+          kpi(length(dash_q_items()), "Items"),
+          kpi(length(instr$scales %||% list()), "Scales"),
+          kpi(length(instr$checks %||% list()), "Checks"),
+          kpi(date_range, "Date range")
+        ),
+        tags$div(class = "card",
+          tags$div(class = "card-title", "Instrument summary"),
+          tags$p(class = "hint", paste0(
+            "Title: ", instr$meta$title %||% "Untitled",
+            "  |  Version: ", instr$meta$version %||% "Not available",
+            "  |  Mode: ", instr$render$mode %||% "standard"))
+        )
+      ))
+    }
+
+    if (identical(view, "Items")) {
+      qi <- dash_q_items()
+      if (!length(qi)) return(tags$div(class = "card", "No question items."))
+      ch <- stats::setNames(
+        vapply(qi, `[[`, character(1), "id"),
+        vapply(qi, function(i) paste0(i$id, ": ", substr(i$label %||% "", 1, 40)),
+               character(1)))
+      return(tagList(
+        selectInput("dash_item_sel", "Select item", choices = ch, width = "420px"),
+        tags$div(class = "card",
+          tags$div(class = "card-title", "Response distribution"),
+          shiny::plotOutput("studio_item_chart", height = "300px")),
+        uiOutput("studio_item_table")
+      ))
+    }
+
+    if (identical(view, "Scales")) {
+      scs <- instr$scales %||% list()
+      if (!length(scs)) return(tags$div(class = "card", "No scales defined."))
+      ch <- stats::setNames(
+        vapply(scs, `[[`, character(1), "id"),
+        vapply(scs, function(s) paste0(s$id, ": ", s$label), character(1)))
+      def_rows <- lapply(scs, function(s) {
+        tags$tr(
+          tags$td(s$id),
+          tags$td(s$label %||% ""),
+          tags$td(s$method %||% s$scoring %||% "mean"),
+          tags$td(paste(s$items, collapse = ", ")),
+          tags$td(paste(s$reverse %||% character(0), collapse = ", "))
+        )
+      })
+      return(tagList(
+        selectInput("dash_scale_sel", "Select scale", choices = ch, width = "380px"),
+        tags$div(class = "card",
+          tags$div(class = "card-title", "Scale score distribution"),
+          shiny::plotOutput("studio_scale_chart", height = "280px")),
+        table_card("Scale definitions",
+          headers = c("ID", "Label", "Method", "Items", "Reverse items"),
+          rows = def_rows, empty_label = "No scales defined.")
+      ))
+    }
+
     tags$div(class = "card",
-      tags$div(class = "card-title", rv$instrument$meta$title %||% "Dashboard data"),
-      tags$div(class = "stat-row",
-        tags$div(class = "stat-box",
-          tags$div(class = "stat-val", length(rv$instrument$items %||% list())),
-          tags$div(class = "stat-lbl", "Items")),
-        tags$div(class = "stat-box",
-          tags$div(class = "stat-val", length(rv$instrument$scales %||% list())),
-          tags$div(class = "stat-lbl", "Scales")),
-        tags$div(class = "stat-box",
-          tags$div(class = "stat-val", if (is.null(rv$responses)) 0 else nrow(rv$responses)),
-          tags$div(class = "stat-lbl", "Responses")),
-        tags$div(class = "stat-box",
-          tags$div(class = "stat-val", if (is.null(rv$responses)) 0 else ncol(rv$responses)),
-          tags$div(class = "stat-lbl", "Columns"))
-      )
+      tags$div(class = "card-title", "Raw responses"),
+      downloadButton("dash_dl_csv", "Download CSV", class = "btn-outline"),
+      tags$p(class = "hint", paste0("Showing the first 200 of ", nrow(resp), " rows.")),
+      tags$div(style = "overflow-x:auto", shiny::tableOutput("studio_raw_table"))
     )
   })
 
-  observeEvent(input$open_response_dashboard, {
-    if (is.null(rv$instrument)) {
-      showNotification(
-        "Load or build an instrument before opening the dashboard.",
-        type = "error"
-      )
-      return()
+  output$studio_item_chart <- shiny::renderPlot({
+    req(rv$instrument, rv$responses, input$dash_item_sel)
+    resp <- rv$responses
+    item <- dash_find(rv$instrument$items, input$dash_item_sel)
+    if (is.null(item) || !input$dash_item_sel %in% names(resp)) {
+      plot.new(); text(.5, .5, "No data for this item.", col = "#94a3b8"); return()
     }
-    showNotification(
-      "Opening dashboard in a separate R/Shiny session is recommended. Use launch_dashboard(instrument, responses) from the R console.",
-      type = "message"
-    )
+    col_data <- resp[[input$dash_item_sel]]
+    t <- item$type
+    op <- par(mar = c(4, 9, 2, 1), bg = "white"); on.exit(par(op))
+    if (t %in% c("likert", "single_choice", "multiple_choice")) {
+      cs <- dash_find(rv$instrument$choices, item$choice_set %||% "")
+      if (!is.null(cs)) {
+        freq <- table(factor(col_data, levels = as.character(cs$values)))
+        names(freq) <- cs$labels
+      } else {
+        freq <- table(col_data)
+      }
+      barplot(freq, horiz = TRUE, las = 1, col = dash_theme, border = NA,
+              xlab = "Frequency", cex.names = .8, cex.axis = .8)
+    } else if (t %in% c("numeric", "slider", "rating")) {
+      num <- suppressWarnings(as.numeric(col_data)); num <- num[!is.na(num)]
+      if (!length(num)) { plot.new(); text(.5, .5, "No numeric data."); return() }
+      hist(num, col = dash_theme, border = "white", main = NULL,
+           xlab = item$label, ylab = "Count", las = 1, cex.axis = .8)
+    } else {
+      plot.new()
+      text(.5, .5, paste0("Chart unavailable for type '", t, "'."), col = "#94a3b8")
+    }
+  }, bg = "white")
+  shiny::outputOptions(output, "studio_item_chart", suspendWhenHidden = FALSE)
+
+  output$studio_item_table <- renderUI({
+    req(rv$instrument, rv$responses, input$dash_item_sel)
+    resp <- rv$responses
+    item <- dash_find(rv$instrument$items, input$dash_item_sel)
+    if (is.null(item) || !input$dash_item_sel %in% names(resp)) return(NULL)
+    col_data <- resp[[input$dash_item_sel]]
+    if (item$type %in% c("likert", "single_choice", "multiple_choice")) {
+      cs <- dash_find(rv$instrument$choices, item$choice_set %||% "")
+      if (!is.null(cs)) {
+        freq <- table(factor(col_data, levels = as.character(cs$values)))
+        labs <- cs$labels
+        vals <- as.character(cs$values)
+      } else {
+        freq <- table(col_data); labs <- names(freq); vals <- names(freq)
+      }
+      tot <- sum(freq)
+      rows <- lapply(seq_along(freq), function(i) tags$tr(
+        tags$td(vals[i]), tags$td(labs[i]), tags$td(as.integer(freq[i])),
+        tags$td(if (tot > 0) sprintf("%.1f%%", 100 * freq[i] / tot) else "0%")
+      ))
+      table_card("Frequency counts",
+        headers = c("Value", "Label", "Count", "Percent"),
+        rows = rows, empty_label = "No responses.")
+    } else if (item$type %in% c("numeric", "slider", "rating")) {
+      num <- suppressWarnings(as.numeric(col_data)); num <- num[!is.na(num)]
+      if (!length(num)) return(NULL)
+      rows <- list(tags$tr(
+        tags$td(length(num)), tags$td(round(mean(num), 2)), tags$td(round(stats::sd(num), 2)),
+        tags$td(round(min(num), 2)), tags$td(round(stats::median(num), 2)), tags$td(round(max(num), 2))
+      ))
+      table_card("Summary statistics",
+        headers = c("N", "Mean", "SD", "Min", "Median", "Max"),
+        rows = rows, empty_label = "No numeric data.")
+    } else {
+      NULL
+    }
   })
+  shiny::outputOptions(output, "studio_item_table", suspendWhenHidden = FALSE)
+
+  output$studio_scale_chart <- shiny::renderPlot({
+    req(rv$instrument, rv$responses, input$dash_scale_sel)
+    resp <- rv$responses
+    sc <- dash_find(rv$instrument$scales, input$dash_scale_sel)
+    if (is.null(sc)) return()
+    cols <- intersect(sc$items, names(resp))
+    if (!length(cols)) {
+      plot.new(); text(.5, .5, "Scale items not in responses.", col = "#94a3b8"); return()
+    }
+    nums <- lapply(resp[cols], function(x) suppressWarnings(as.numeric(x)))
+    scores <- rowMeans(do.call(cbind, nums), na.rm = TRUE); scores <- scores[!is.na(scores)]
+    if (!length(scores)) {
+      plot.new(); text(.5, .5, "No valid scale scores.", col = "#94a3b8"); return()
+    }
+    op <- par(mar = c(4, 4, 2, 1), bg = "white"); on.exit(par(op))
+    hist(scores, col = dash_theme, border = "white", main = NULL,
+         xlab = paste0(sc$label, " score"), ylab = "Count", las = 1, cex.axis = .8)
+    abline(v = mean(scores), col = "#dc2626", lwd = 2, lty = 2)
+  }, bg = "white")
+  shiny::outputOptions(output, "studio_scale_chart", suspendWhenHidden = FALSE)
+
+  output$studio_raw_table <- shiny::renderTable({
+    req(rv$responses)
+    head(rv$responses, 200)
+  }, striped = TRUE, hover = TRUE, bordered = FALSE, width = "100%", na = "")
+
+  output$dash_dl_csv <- downloadHandler(
+    filename = function() {
+      paste0(gsub("[^a-zA-Z0-9]", "_", rv$instrument$meta$title %||% "survey"),
+             "_responses.csv")
+    },
+    content = function(file) {
+      utils::write.csv(rv$responses, file, row.names = FALSE, na = "")
+    }
+  )
 
   output$export_gate <- renderUI({
     if (is.null(rv$instrument)) {
       tags$div(class = "card",
         "Build or open a valid instrument before exporting files.")
+    }
+  })
+
+  # A non-clickable placeholder shown when an export is not yet possible, so the
+  # user cannot trigger a download that would error.
+  export_disabled_btn <- function(label, hint) {
+    tagList(
+      tags$button(type = "button", class = "btn btn-primary", disabled = NA,
+        style = "opacity: .5; cursor: not-allowed;",
+        shiny::icon("download"), " ", label),
+      tags$p(class = "hint", hint)
+    )
+  }
+
+  output$export_sframe_ui <- renderUI({
+    if (isTRUE(draft_result()$valid)) {
+      downloadButton("download_sframe_btn", "Download .sframe", class = "btn-primary")
+    } else {
+      export_disabled_btn(
+        "Download .sframe",
+        "Open or build a valid instrument before downloading the .sframe file.")
+    }
+  })
+
+  output$export_report_ui <- renderUI({
+    if (!is.null(rv$instrument)) {
+      downloadButton("download_report_btn", "Generate HTML report", class = "btn-primary")
+    } else {
+      export_disabled_btn(
+        "Generate HTML report",
+        "Open or build a valid instrument before generating the report.")
     }
   })
 
@@ -2717,6 +2902,20 @@ server <- function(input, output, session) {
       })
     }
   )
+
+  # Screens are shown and hidden with custom CSS classes, so Shiny would suspend
+  # the content outputs inside hidden screens and not always wake them on switch.
+  # Keep the per-screen content outputs evaluated so every tab renders reliably.
+  for (.oid in c(
+    "instrument_summary_card", "survey_preview_items", "responses_summary_card",
+    "quality_output", "reliability_output",
+    "analysis_left_panel", "analysis_middle_panel", "analysis_right_panel",
+    "analysis_results_output", "studio_dashboard_content",
+    "export_sframe_ui", "export_report_ui",
+    "download_sframe_btn", "download_report_btn"
+  )) {
+    shiny::outputOptions(output, .oid, suspendWhenHidden = FALSE)
+  }
 }
 
 shinyApp(ui = ui, server = server)

@@ -1,6 +1,23 @@
 ## ----setup, include = FALSE---------------------------------------------------
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 library(surveyframe)
+library(knitr)
+
+# Tabulate analysis-plan results the same way the report template does.
+results_table <- function(results) {
+  g <- function(r, f) { v <- r[[f]]; if (is.null(v) || !length(v)) "" else as.character(v)[1] }
+  df <- data.frame(
+    RQ       = vapply(results, g, "", "block_id"),
+    Question = vapply(results, g, "", "research_question"),
+    Method   = vapply(results, g, "", "method"),
+    Result   = vapply(results, g, "", "apa"),
+    Effect   = vapply(results, g, "", "effect_label"),
+    check.names = FALSE, stringsAsFactors = FALSE
+  )
+  kable(df, row.names = FALSE,
+        col.names = c("RQ", "Research question", "Method", "Result (APA)", "Effect"),
+        align = c("l", "l", "l", "r", "l"))
+}
 
 ## ----choices------------------------------------------------------------------
 likert5 <- sf_choices(
@@ -399,17 +416,20 @@ cat("Columns:    ", ncol(responses), "\n")
 
 ## ----quality------------------------------------------------------------------
 qr <- quality_report(responses, study, respondent_id = "respondent_id")
-cat("Respondents:", qr$summary$n_respondents, "\n")
-cat("Items:      ", qr$summary$n_items,       "\n")
-cat("Flagged:    ", qr$summary$n_flagged,      "\n")
+quality_summary <- data.frame(
+  Metric = c("Respondents", "Items", "Flagged for review", "Flag rate"),
+  Value  = c(qr$summary$n_respondents, qr$summary$n_items, qr$summary$n_flagged,
+             sprintf("%.1f%%", 100 * qr$summary$flag_rate)),
+  stringsAsFactors = FALSE
+)
+kable(quality_summary, align = c("l", "r"), caption = "Quality screening summary")
 
 ## ----missing------------------------------------------------------------------
 mr <- missing_data_report(responses, study)
-# mr is a list; $item_missing, $respondent_missing, $mcar, and $apa are the
-# main slots. Check names(mr) to see all available components.
-names(mr)
-items_miss <- mr$item_missing
-items_miss[items_miss$missing_pct > 0, c("variable", "missing_n", "missing_pct")]
+# mr holds $item_missing, $respondent_missing, $patterns, $mcar, and $apa.
+kable(mr$item_missing, digits = 2,
+      col.names = c("Variable", "Missing (n)", "Missing (%)", "Valid (n)"),
+      caption = "Item-level missingness")
 # $apa provides a plain-language summary suitable for a methods section.
 cat(mr$apa, "\n")
 
@@ -418,13 +438,51 @@ scored <- score_scales(responses, study)
 
 scale_cols <- c("DMRE", "DMAU", "DMEU", "DMPV",
                 "DSQA", "DSQT", "DSUQ", "TS", "BI")
-round(colMeans(scored[, scale_cols], na.rm = TRUE), 2)
+
+# Display scale means and standard deviations as a table
+scale_summary <- data.frame(
+  Scale = scale_cols,
+  Mean  = round(colMeans(scored[, scale_cols], na.rm = TRUE), 2),
+  SD    = round(apply(scored[, scale_cols], 2, sd, na.rm = TRUE), 2),
+  row.names = NULL
+)
+kable(scale_summary, digits = 2, caption = "Scale score summary")
+
+## ----score-distributions, fig.width = 7, fig.height = 4, fig.align = "left"----
+op <- par(mfrow = c(3, 3), mar = c(4, 3, 2, 1))
+for (s in scale_cols) {
+  v <- scored[[s]]; v <- v[is.finite(v)]
+  hist(v, col = "#16B3B1", border = "white", main = s, xlab = "Score", ylab = "")
+}
+par(op)
 
 ## ----reliability--------------------------------------------------------------
 if (requireNamespace("psych", quietly = TRUE)) {
   rr <- reliability_report(scored, study, omega = FALSE)
-  print(rr)
+  rel_df <- do.call(rbind, lapply(rr, function(s) data.frame(
+    Scale   = paste0(s$label, " (", s$scale_id, ")"),
+    Items   = s$n_items,
+    N       = s$n,
+    Alpha   = if (!is.null(s$alpha)) sprintf("%.2f", s$alpha) else "n/a",
+    stringsAsFactors = FALSE)))
+  kable(rel_df, row.names = FALSE, align = c("l", "c", "c", "r"),
+        caption = "Scale reliability")
 }
+
+## ----efa, eval=FALSE----------------------------------------------------------
+# if (requireNamespace("psych", quietly = TRUE)) {
+#   er <- efa_report(scored, study)
+#   print(er)
+# }
+
+## ----validity, eval=FALSE-----------------------------------------------------
+# # Supply a named list of loadings (construct -> item loadings vector)
+# loadings_list <- list(
+#   DMRE = c(dm_1 = 0.78, dm_2 = 0.82, dm_3 = 0.75),
+#   TS   = c(ts_1 = 0.84, ts_2 = 0.80)
+# )
+# vr <- validity_report(loadings_list)
+# print(vr$reliability)
 
 ## ----plan---------------------------------------------------------------------
 study$analysis_plan <- list(
@@ -473,18 +531,20 @@ study$analysis_plan <- list(
 
 length(study$analysis_plan)
 
+## ----assumptions--------------------------------------------------------------
+if (requireNamespace("psych", quietly = TRUE)) {
+  ar <- assumption_report(scored, study)
+  print(ar)
+}
+
 ## ----run-plan-----------------------------------------------------------------
 results <- run_analysis_plan(scored, study)
 
 ## ----show-results-------------------------------------------------------------
-for (r in results) {
-  cat(sprintf("[%s] %s\n  APA:    %s\n  Effect: %s\n  Prompt: %s\n\n",
-              r$id,
-              r$research_question,
-              r$apa,
-              r$effect_label,
-              r$prompt))
-}
+results_table(results)
+
+## ----show-prompt--------------------------------------------------------------
+cat(results[[1]]$prompt)
 
 ## ----render-results-----------------------------------------------------------
 results_path <- render_results(

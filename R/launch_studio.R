@@ -29,7 +29,7 @@
 #'   [read_responses()]
 #'
 #' @examples
-#' \donttest{
+#' \dontrun{
 #' launch_studio()
 #'
 #' demo <- sframe_demo_data()

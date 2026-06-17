@@ -348,12 +348,13 @@ syntax for the modelling stage. It does not fit the models. This
 vignette builds the three models from the published Thailand study
 (Sharafuddin, Madhavan, and Wangtueai 2024). The syntax steps need no
 raw data, so every chunk below runs as written.</p>
-<p>The constructs are digital marketing effectiveness (DME), built from
-relevance and engagement (DMRE), accessibility and usefulness (DMAU),
-ease of use (DMEU), and perceived value (DMPV); destination service
-quality (DSQ), built from accommodation (DSQA) and local transport
-(DSQT); destination sustainability quality (DSUQ); tourist satisfaction
-(TS); and behavioural intention (BI).</p>
+<p>There are five constructs. Digital marketing effectiveness (DME) is
+built from relevance and engagement (DMRE), accessibility and usefulness
+(DMAU), ease of use (DMEU), and perceived value (DMPV). Destination
+service quality (DSQ) is built from accommodation (DSQA) and local
+transport (DSQT). The remaining three are destination sustainability
+quality (DSUQ), tourist satisfaction (TS), and behavioural intention
+(BI).</p>
 <div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a>dmre <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="st">&quot;dmre_&quot;</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">4</span>); dmau <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="st">&quot;dmau_&quot;</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">3</span>)</span>
 <span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a>dmeu <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="st">&quot;dmeu_&quot;</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">3</span>); dmpv <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="st">&quot;dmpv_&quot;</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">4</span>)</span>
 <span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a>dsqa <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="st">&quot;dsqa_&quot;</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">3</span>); dsqt <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="st">&quot;dsqt_&quot;</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">5</span>)</span>

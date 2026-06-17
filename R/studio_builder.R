@@ -107,7 +107,8 @@ sframe_builder_empty_state <- function() {
     branching = list(),
     checks = list(),
     analysis_plan = list(),
-    models = list()
+    models = list(),
+    render = list()
   )
 }
 
@@ -139,7 +140,8 @@ sframe_builder_state_from_instrument <- function(instrument = NULL) {
     branching = lapply(instrument$branching %||% list(), sframe_builder_as_branch),
     checks = lapply(instrument$checks %||% list(), sframe_builder_as_check),
     analysis_plan = instrument$analysis_plan %||% list(),
-    models = instrument$models %||% list()
+    models = instrument$models %||% list(),
+    render = instrument$render %||% list()
   )
 }
 
@@ -151,7 +153,8 @@ sframe_builder_compose_instrument <- function(
     branching = list(),
     checks = list(),
     analysis_plan = list(),
-    models = list()
+    models = list(),
+    render = list()
 ) {
   choices <- lapply(choices, sframe_builder_as_choice)
   items <- lapply(items, sframe_builder_as_item)
@@ -190,7 +193,8 @@ sframe_builder_compose_instrument <- function(
     languages = meta$languages %||% "en",
     components = c(choices, items, scales, branching, checks),
     analysis_plan = analysis_plan,
-    models = models
+    models = models,
+    render = render %||% list()
   )
 }
 
@@ -200,6 +204,8 @@ sframe_builder_compose_instrument <- function(
 #' @param choices,items,scales,branching,checks Lists of draft components.
 #' @param analysis_plan List of draft analysis-plan blocks.
 #' @param models List of draft model specifications.
+#' @param render List of rendering settings (welcome, header/logo, thankyou,
+#'   theme) carried from the loaded instrument so previews and exports match.
 #'
 #' @return A list with `valid`, `problems`, and `instrument`.
 #' @export
@@ -211,7 +217,8 @@ sframe_builder_validate_draft <- function(
     branching = list(),
     checks = list(),
     analysis_plan = list(),
-    models = list()
+    models = list(),
+    render = list()
 ) {
   instrument <- sframe_builder_compose_instrument(
     meta = meta,
@@ -221,7 +228,8 @@ sframe_builder_validate_draft <- function(
     branching = branching,
     checks = checks,
     analysis_plan = analysis_plan,
-    models = models
+    models = models,
+    render = render
   )
 
   validation <- validate_sframe(instrument, strict = FALSE)

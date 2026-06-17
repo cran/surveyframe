@@ -351,9 +351,11 @@ questionnaire builder. It runs in the browser, saves
 <code>.sframe</code> files, and authors the analysis plan and the model.
 It does not compute statistics.</li>
 <li><code>launch_studio()</code> opens SurveyStudio, the workflow hub.
-With R behind it, it builds, previews, uploads responses, runs quality
-and reliability checks, runs the analysis plan, and exports the
-report.</li>
+With R behind it, it opens a designed instrument, previews it exactly as
+deployed, uploads responses, runs quality and reliability checks, runs
+the analysis plan, and exports the report, the deployable survey, and
+the Sheets collector. Survey design itself stays in the
+SurveyBuilder.</li>
 <li><code>launch_dashboard()</code> opens a read-only response explorer
 for an instrument and response data that already exist.</li>
 </ul>
@@ -370,7 +372,7 @@ SurveyBuilder and SurveyStudio.</p>
 <span id="cb1-7"><a href="#cb1-7" tabindex="-1"></a><span class="co">#&gt;            date          likert          matrix multiple_choice         numeric </span></span>
 <span id="cb1-8"><a href="#cb1-8" tabindex="-1"></a><span class="co">#&gt;               1               5               1               1               1 </span></span>
 <span id="cb1-9"><a href="#cb1-9" tabindex="-1"></a><span class="co">#&gt;         ranking          rating   section_break   single_choice          slider </span></span>
-<span id="cb1-10"><a href="#cb1-10" tabindex="-1"></a><span class="co">#&gt;               1               1               1               4               1 </span></span>
+<span id="cb1-10"><a href="#cb1-10" tabindex="-1"></a><span class="co">#&gt;               1               1               3               4               1 </span></span>
 <span id="cb1-11"><a href="#cb1-11" tabindex="-1"></a><span class="co">#&gt;            text      text_block        textarea </span></span>
 <span id="cb1-12"><a href="#cb1-12" tabindex="-1"></a><span class="co">#&gt;               2               1               1</span></span>
 <span id="cb1-13"><a href="#cb1-13" tabindex="-1"></a><span class="fu">dim</span>(responses)</span>
@@ -407,9 +409,12 @@ generate the Apps Script collector.</p>
 <div id="surveystudio-the-screens" class="section level2">
 <h2>SurveyStudio: the screens</h2>
 <p>SurveyStudio is a Shiny application, so it can run R. Its left
-navigation lists nine screens in this order: Build Survey, Open
-Instrument, Preview Survey, Upload Responses, Quality Dashboard,
-Reliability, Analysis Plan, Dashboard, and Export.</p>
+navigation lists eight screens in this order: Open Instrument, Preview
+Survey, Upload Responses, Quality Dashboard, Reliability, Analysis Plan,
+Dashboard, and Export. Survey design is done in the SurveyBuilder, and
+the studio opens the resulting <code>.sframe</code>. The Preview Survey
+screen renders the exact deployable survey, identical to the exported
+HTML.</p>
 <p>The Analysis Plan screen does two jobs. It edits the plan, with the
 same research question, method, significance level, and role fields as
 the builder. It also runs the plan. When response data have been
