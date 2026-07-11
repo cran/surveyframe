@@ -553,7 +553,11 @@ render_report <- function(
       )
     }, character(1))
   } else {
-    results <- tryCatch(run_analysis_plan(data, instrument), error = function(e) e)
+    results <- tryCatch(
+      run_analysis_plan(data, instrument,
+                        plots = requireNamespace("ggplot2", quietly = TRUE)),
+      error = function(e) e
+    )
     if (inherits(results, "error")) {
       return(sprintf(
         "<h2>Analysis Plan</h2><p>%s</p>",
@@ -567,11 +571,19 @@ render_report <- function(
       if (is.data.frame(result$table)) {
         table_html <- .render_report_table(result$table, "Results table")
       }
+      # The chart for this result renders directly under its table, as one
+      # unit per research question, rather than in a separate section.
+      plot_html <- ""
+      if (!is.null(result$plot)) {
+        img <- tryCatch(.render_report_ggplot_png(result$plot), error = function(e) NULL)
+        if (!is.null(img)) plot_html <- img
+      }
       sprintf(
         paste(
           "<div class=\"rq-block\">",
           "<h3>RQ %d: %s</h3>",
           "<p class=\"apa\"><strong>Result:</strong> %s</p>",
+          "%s",
           "%s",
           "</div>",
           sep = "\n"
@@ -579,7 +591,8 @@ render_report <- function(
         i,
         htmltools_escape(result$research_question %||% paste("Research Question", i)),
         htmltools_escape(result$apa %||% result$error %||% ""),
-        table_html
+        table_html,
+        plot_html
       )
     }, character(1))
   }
@@ -624,9 +637,9 @@ render_report <- function(
 }
 
 # Render a base-R plot to a base64-embedded PNG <img> for the HTML fallback.
-.render_report_plot_png <- function(draw) {
+.render_report_plot_png <- function(draw, height = 320) {
   tmp <- tempfile(fileext = ".png")
-  grDevices::png(tmp, width = 720, height = 320, res = 96, bg = "white")
+  grDevices::png(tmp, width = 720, height = height, res = 96, bg = "white")
   ok <- tryCatch({ draw(); TRUE }, error = function(e) FALSE)
   grDevices::dev.off()
   if (!isTRUE(ok) || !file.exists(tmp)) return(NULL)
@@ -634,6 +647,25 @@ render_report <- function(
   unlink(tmp)
   sprintf(
     "<img alt=\"distribution\" style=\"max-width:100%%;height:auto\" src=\"data:image/png;base64,%s\">",
+    openssl::base64_encode(raw)
+  )
+}
+
+# Render a ggplot object to a base64-embedded PNG <img> for the HTML
+# fallback, same embedding pattern as .render_report_plot_png() above but
+# for the ggplot2 objects run_analysis_plan(plots = TRUE) attaches.
+.render_report_ggplot_png <- function(gg) {
+  if (!requireNamespace("ggplot2", quietly = TRUE)) return(NULL)
+  tmp <- tempfile(fileext = ".png")
+  ok <- tryCatch({
+    ggplot2::ggsave(tmp, gg, width = 7.2, height = 4.2, dpi = 110, bg = "white")
+    TRUE
+  }, error = function(e) FALSE)
+  if (!isTRUE(ok) || !file.exists(tmp)) return(NULL)
+  raw <- readBin(tmp, "raw", file.info(tmp)$size)
+  unlink(tmp)
+  sprintf(
+    "<img alt=\"result chart\" style=\"max-width:100%%;height:auto\" src=\"data:image/png;base64,%s\">",
     openssl::base64_encode(raw)
   )
 }
@@ -669,11 +701,20 @@ render_report <- function(
         table(col)
       }
       if (!sum(freq)) next
-      img <- .render_report_plot_png(function() {
-        op <- graphics::par(mar = c(4, 11, 1, 1)); on.exit(graphics::par(op))
-        graphics::barplot(freq, horiz = TRUE, las = 1, col = theme,
-                          border = NA, xlab = "Frequency", cex.names = .8)
-      })
+      if (identical(t, "likert") && length(freq) >= 2) {
+        # A Likert item is an ordered agree/disagree scale: a diverging bar
+        # shows which way opinion leans, unlike a plain frequency bar.
+        img <- .render_report_plot_png(
+          function() sframe_draw_likert_diverging(freq, theme),
+          height = if (length(freq) <= 5) 320 else 320 + 22 * length(freq)
+        )
+      } else {
+        img <- .render_report_plot_png(function() {
+          op <- graphics::par(mar = c(4, 11, 1, 1)); on.exit(graphics::par(op))
+          graphics::barplot(freq, horiz = TRUE, las = 1, col = theme,
+                            border = NA, xlab = "Frequency", cex.names = .8)
+        })
+      }
     } else if (t %in% c("numeric", "slider", "rating")) {
       num <- suppressWarnings(as.numeric(col)); num <- num[!is.na(num)]
       if (!length(num)) next

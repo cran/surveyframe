@@ -9,7 +9,8 @@ read_sheet_responses(
   instrument,
   sheet_name = "Responses",
   respondent_id = "respondent_id",
-  submitted_at = "submitted_at"
+  submitted_at = "submitted_at",
+  meta_cols = NULL
 )
 }
 \arguments{
@@ -25,6 +26,11 @@ Defaults to \code{"respondent_id"}.}
 
 \item{submitted_at}{Character or NULL. Column holding submission
 timestamps. Defaults to \code{"submitted_at"}.}
+
+\item{meta_cols}{Character vector or NULL. Additional sheet columns to
+accept as metadata without a warning, for example bridge fields a host
+application appends to each submission. \code{"started_at"} is always
+included.}
 }
 \value{
 A \code{data.frame} validated against the instrument, ready for

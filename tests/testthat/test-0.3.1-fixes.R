@@ -159,3 +159,84 @@ test_that("fix-ef: static export falls back to image/png when media type absent"
     info = "absent media type must not produce image/jpeg in the output"
   )
 })
+
+test_that("0.3.3: item page assignments survive assembly, round trip, and export", {
+  cs <- sf_choices("pg5", 1:5, c("SD", "D", "N", "A", "SA"))
+  i1 <- sf_item("pq_1", "Q1", type = "likert", choice_set = "pg5", page = 1L)
+  i2 <- sf_item("pq_2", "Q2", type = "likert", choice_set = "pg5", page = 2L)
+  instr <- sf_instrument("Page regression", components = list(cs, i1, i2))
+  instr$items[[2]]$page <- 3L
+
+  expect_identical(instr$items[[1]]$page, 1L)
+  expect_identical(instr$items[[2]]$page, 3L)
+
+  p <- tempfile(fileext = ".sframe")
+  on.exit(unlink(p), add = TRUE)
+  write_sframe(instr, p, overwrite = TRUE)
+  x <- read_sframe(p)
+  expect_identical(x$items[[1]]$page, 1L)
+  expect_identical(x$items[[2]]$page, 3L)
+
+  h <- tempfile(fileext = ".html")
+  on.exit(unlink(h), add = TRUE)
+  export_static_survey(instr, output_path = h, open = FALSE, overwrite = TRUE)
+  html <- paste(readLines(h, warn = FALSE), collapse = "")
+  expect_match(html, "\"page\":1", fixed = TRUE)
+  expect_match(html, "\"page\":3", fixed = TRUE)
+})
+
+test_that("0.3.3: exported survey posts to Apps Script without a CORS preflight", {
+  cs <- sf_choices("cg5", 1:5, c("SD", "D", "N", "A", "SA"))
+  i1 <- sf_item("cq_1", "Q1", type = "likert", choice_set = "cg5")
+  instr <- sf_instrument("CORS regression", components = list(cs, i1))
+  h <- tempfile(fileext = ".html")
+  on.exit(unlink(h), add = TRUE)
+  export_static_survey(instr, output_path = h, open = FALSE, overwrite = TRUE,
+                       endpoint_url = "https://script.google.com/macros/s/X/exec")
+  html <- paste(readLines(h, warn = FALSE), collapse = "")
+  expect_match(html, "mode:'no-cors'", fixed = TRUE)
+  expect_match(html, "'Content-Type':'text/plain'", fixed = TRUE)
+  expect_false(grepl("'Content-Type':'application/json'", html, fixed = TRUE))
+})
+
+test_that("0.3.3: multiple_choice items export one 0/1 column per option", {
+  cs <- sf_choices("mc", c("a", "b", "c"), c("Alpha", "Beta", "Gamma"))
+  i1 <- sf_item("q1", "Pick any", type = "multiple_choice", choice_set = "mc")
+  instr <- sf_instrument("Multi-select export", components = list(cs, i1))
+
+  gs <- export_google_sheet(instr, sheet_url = "x", output_dir = tempdir())
+  on.exit(unlink(gs), add = TRUE)
+  cols_line <- grep("EXPECTED_COLUMNS", readLines(gs), value = TRUE)[1]
+  expect_match(cols_line, "q1__a", fixed = TRUE)
+  expect_match(cols_line, "q1__b", fixed = TRUE)
+  expect_match(cols_line, "q1__c", fixed = TRUE)
+  expect_false(grepl("\"q1\"", cols_line, fixed = TRUE))
+
+  h <- tempfile(fileext = ".html")
+  on.exit(unlink(h), add = TRUE)
+  export_static_survey(instr, output_path = h, open = FALSE, overwrite = TRUE)
+  html <- paste(readLines(h, warn = FALSE), collapse = "")
+  expect_match(html, "multiple_choice", fixed = TRUE)
+
+  df <- data.frame(
+    respondent_id = "R1", submitted_at = as.character(Sys.time()),
+    q1__a = "1", q1__b = "0", q1__c = "1",
+    stringsAsFactors = FALSE
+  )
+  resp <- expect_no_warning(read_responses(df, instr, respondent_id = "respondent_id",
+                                           submitted_at = "submitted_at"))
+  expect_true(all(c("q1__a", "q1__b", "q1__c") %in% colnames(resp)))
+})
+
+test_that("0.3.3: matrix table carries data-col attributes for the mobile stacked layout", {
+  cs <- sf_choices("ag3", 1:3, c("Disagree", "Neutral", "Agree"))
+  i1 <- sf_item("m1", "Rate these", type = "matrix", choice_set = "ag3",
+               matrix_items = c("Row A", "Row B"))
+  instr <- sf_instrument("Matrix mobile", components = list(cs, i1))
+  h <- tempfile(fileext = ".html")
+  on.exit(unlink(h), add = TRUE)
+  export_static_survey(instr, output_path = h, open = FALSE, overwrite = TRUE)
+  html <- paste(readLines(h, warn = FALSE), collapse = "")
+  expect_match(html, 'data-col=', fixed = TRUE)
+  expect_match(html, ".matrix-tbl td:not(.rl)::before", fixed = TRUE)
+})

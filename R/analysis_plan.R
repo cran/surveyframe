@@ -155,6 +155,9 @@ sframe_run_frequency <- function(data, vars, weights = NULL) {
   err <- sframe_require_columns(data, c(col, weights), "Frequency table")
   if (!is.null(err)) return(list(test = "frequency", error = err))
   vals <- data[[col]]
+  # Empty strings are non-responses (a collected sheet stores "" for items a
+  # respondent never saw); count them as missing, not as a category.
+  vals[!is.na(vals) & vals == ""] <- NA
   tbl <- sort(table(vals, useNA = "ifany"), decreasing = TRUE)
   pct <- round(prop.table(tbl) * 100, 1)
   weighted <- NULL
@@ -196,6 +199,9 @@ sframe_run_crosstab <- function(data, vars, options = list()) {
   if (!is.null(err)) return(list(test = "crosstab", error = err))
   r <- data[[vars[1]]]
   c <- data[[vars[2]]]
+  # Empty strings are non-responses, not a category (see sframe_run_frequency)
+  r[!is.na(r) & r == ""] <- NA
+  c[!is.na(c) & c == ""] <- NA
   complete <- !is.na(r) & !is.na(c)
   r <- r[complete]; c <- c[complete]
   tbl <- table(r, c)
@@ -782,7 +788,79 @@ sframe_result_from_report <- function(report, test = report$method %||% "") {
   out
 }
 
-sframe_run_one_block <- function(block, data, instrument) {
+# v0.3.4: formatted result tables for the inferential runners, suitable for
+# knitr::kable(). Built centrally from each runner's existing fields so the
+# runners themselves stay untouched; results that already carry a table
+# (frequency, crosstab) keep it.
+sframe_result_table <- function(result) {
+  if (!is.null(result$table) || !is.null(result$error)) return(result$table)
+  fmt <- function(x, d = 2) {
+    ifelse(is.na(x), "", formatC(as.numeric(x), digits = d, format = "f"))
+  }
+  test <- result$test %||% ""
+  switch(
+    test,
+    correlation_pearson  = ,
+    correlation_spearman = ,
+    correlation_kendall  = data.frame(
+      Statistic = switch(result$method,
+                         pearson  = "Pearson r",
+                         spearman = "Spearman rho",
+                         kendall  = "Kendall tau",
+                         "Correlation"),
+      n = result$n,
+      df = result$df,
+      Estimate = fmt(result$r),
+      p = sframe_p_string(result$p),
+      `Effect size` = result$effect_label %||% "",
+      check.names = FALSE, stringsAsFactors = FALSE
+    ),
+    regression_linear = {
+      co <- result$coefficients
+      if (!is.data.frame(co)) return(NULL)
+      data.frame(
+        Term = rownames(co),
+        Estimate = fmt(co[[1]]),
+        `Std. error` = fmt(co[[2]]),
+        t = fmt(co[[3]]),
+        p = vapply(co[[4]], sframe_p_string, character(1)),
+        check.names = FALSE, stringsAsFactors = FALSE, row.names = NULL
+      )
+    },
+    t_test_ind = data.frame(
+      Group = result$groups,
+      n = c(result$n1, result$n2),
+      Mean = fmt(c(result$mean1, result$mean2)),
+      SD = fmt(c(result$sd1, result$sd2)),
+      stringsAsFactors = FALSE
+    ),
+    mann_whitney = data.frame(
+      Group = result$groups,
+      n = c(result$n1, result$n2),
+      Median = fmt(c(result$median1, result$median2)),
+      stringsAsFactors = FALSE
+    ),
+    anova_one = data.frame(
+      Statistic = "F",
+      df1 = result$df1, df2 = result$df2,
+      Estimate = fmt(result$F_stat),
+      p = sframe_p_string(result$p),
+      `Eta squared` = fmt(result$eta2, 3),
+      check.names = FALSE, stringsAsFactors = FALSE
+    ),
+    kruskal_wallis = data.frame(
+      Statistic = "H",
+      df = result$df,
+      Estimate = fmt(result$H),
+      p = sframe_p_string(result$p),
+      `Eta squared` = fmt(result$eta2, 3),
+      check.names = FALSE, stringsAsFactors = FALSE
+    ),
+    NULL
+  )
+}
+
+sframe_run_one_block <- function(block, data, instrument, plots = FALSE) {
   test <- sframe_analysis_method(block)
   roles <- sframe_analysis_roles(block)
   vars <- sframe_vars_for_method(test, roles, block)
@@ -819,6 +897,9 @@ sframe_run_one_block <- function(block, data, instrument) {
         if (is.null(model)) list(test = test, error = "SEM syntax requires a saved model role.")
         else list(test = test, syntax = sem_lavaan_syntax(model, instrument), apa = "CB-SEM lavaan syntax generated.", prompt = "Inspect measurement and structural syntax before fitting.")
       },
+      # pls_sem is accepted as an alias: real instruments declare the method
+      # by the model type, so both ids resolve to the seminr syntax runner
+      pls_sem            = ,
       seminr_syntax      = {
         model_id <- sframe_role_values(roles, "model", "")[1]
         model <- sframe_model_by_id(instrument, model_id)
@@ -865,6 +946,12 @@ sframe_run_one_block <- function(block, data, instrument) {
   result$decision_rule     <- block$decision_rule %||% block$interpretation %||% ""
   result$interpretation    <- block$interpretation %||% block$decision_rule %||% ""
   result$citations         <- sframe_citations_for_test(test)
+  if (is.null(result$table)) {
+    result$table <- tryCatch(sframe_result_table(result), error = function(e) NULL)
+  }
+  if (isTRUE(plots) && is.null(result$plot)) {
+    result$plot <- sframe_plot_for_result(result, data)
+  }
   result
 }
 
@@ -881,11 +968,18 @@ sframe_run_one_block <- function(block, data, instrument) {
 #' @param instrument An `sframe` object containing an `analysis_plan`.
 #' @param scored Logical. Whether to automatically score scales before running
 #'   the analysis. Defaults to `TRUE`.
+#' @param plots Logical. When `TRUE` and ggplot2 is installed, supported
+#'   blocks gain a `$plot` element holding a brand-styled ggplot object:
+#'   bar charts for frequency and chi-square blocks, scatter plots with a
+#'   regression overlay for correlation and linear-regression blocks.
+#'   Defaults to `FALSE`.
 #'
 #' @return An object of class `sframe_analysis_results`, a list with one
 #'   element per analysis block. Each element contains the test result,
-#'   APA string, interpretation prompt, and reporting-reference metadata. Pass
-#'   to [render_results()] to generate a formatted report.
+#'   APA string, interpretation prompt, and reporting-reference metadata.
+#'   Inferential blocks also carry a `$table` data frame suitable for
+#'   `knitr::kable()`. Pass to [render_results()] to generate a formatted
+#'   report.
 #' @export
 #' @seealso [render_results()], [read_sheet_responses()]
 #'
@@ -904,9 +998,13 @@ sframe_run_one_block <- function(block, data, instrument) {
 #' )
 #' results <- run_analysis_plan(responses, instr)
 #' print(results)
-run_analysis_plan <- function(data, instrument, scored = TRUE) {
+run_analysis_plan <- function(data, instrument, scored = TRUE, plots = FALSE) {
   sframe_check_instrument(instrument)
   stopifnot(is.data.frame(data))
+  if (isTRUE(plots)) {
+    rlang::check_installed("ggplot2",
+      reason = "to attach plots to analysis results (plots = TRUE).")
+  }
 
   plan <- instrument$analysis_plan
   if (is.null(plan) || length(plan) == 0) {
@@ -927,7 +1025,8 @@ run_analysis_plan <- function(data, instrument, scored = TRUE) {
     )
   }
 
-  results <- lapply(plan, sframe_run_one_block, data = data, instrument = instrument)
+  results <- lapply(plan, sframe_run_one_block, data = data,
+                    instrument = instrument, plots = plots)
   structure(results, class = "sframe_analysis_results")
 }
 
@@ -945,6 +1044,13 @@ print.sframe_analysis_results <- function(x, ...) {
     }
   }
   invisible(x)
+}
+
+# Escape HTML and render the limited markdown used in citations (*italic*) so
+# references show as italics rather than literal asterisks.
+sframe_md_em <- function(x) {
+  x <- htmltools_escape(x)
+  gsub("\\*([^*]+)\\*", "<em>\\1</em>", x)
 }
 
 #' Render analysis results to a formatted HTML report
@@ -985,13 +1091,6 @@ print.sframe_analysis_results <- function(x, ...) {
 #' out <- render_results(results, instr,
 #'                       output_file = tempfile(fileext = ".html"))
 #' file.exists(out)
-# Escape HTML and render the limited markdown used in citations (*italic*) so
-# references show as italics rather than literal asterisks.
-sframe_md_em <- function(x) {
-  x <- htmltools_escape(x)
-  gsub("\\*([^*]+)\\*", "<em>\\1</em>", x)
-}
-
 render_results <- function(
     results         = NULL,
     instrument,

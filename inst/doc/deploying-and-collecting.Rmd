@@ -54,8 +54,11 @@ export_google_sheet(
 ```
 
 Both routes write `surveyframe_collector.gs`. The file contains one column per
-question, with one column per sub-item for matrix questions, plus
-`respondent_id`, `started_at`, and `submitted_at`.
+question, plus `respondent_id`, `started_at`, and `submitted_at`. Matrix,
+multiple-choice, and ranking questions expand into more than one column: a
+matrix gets one column per row, a multiple-choice question gets one 0/1
+column per option, and a ranking question gets one column per option holding
+its rank.
 
 ## Step 2: Deploy the collector as a web app
 

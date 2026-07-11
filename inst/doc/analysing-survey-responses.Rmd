@@ -177,6 +177,16 @@ results <- run_analysis_plan(responses, instr)
 results_table(results)
 ```
 
+Pass `plots = TRUE` to attach a brand-styled `ggplot2` chart to each result
+that supports one (descriptive, correlation, chi-square, and regression
+blocks). The chart sits in `$plot` alongside the existing `$table` and
+`$apa` elements.
+
+```{r run-plots, eval = requireNamespace("ggplot2", quietly = TRUE)}
+results_plots <- run_analysis_plan(responses, instr, plots = TRUE)
+results_plots[[1]]$plot
+```
+
 ## Read a single result
 
 Each result holds more than the printed line. It carries the APA statistic, the

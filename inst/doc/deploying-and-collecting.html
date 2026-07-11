@@ -383,9 +383,12 @@ click <strong>Download collector (.gs)</strong>. From R, call
 <span id="cb1-6"><a href="#cb1-6" tabindex="-1"></a>  <span class="at">output_dir =</span> <span class="st">&quot;.&quot;</span></span>
 <span id="cb1-7"><a href="#cb1-7" tabindex="-1"></a>)</span></code></pre></div>
 <p>Both routes write <code>surveyframe_collector.gs</code>. The file
-contains one column per question, with one column per sub-item for
-matrix questions, plus <code>respondent_id</code>,
-<code>started_at</code>, and <code>submitted_at</code>.</p>
+contains one column per question, plus <code>respondent_id</code>,
+<code>started_at</code>, and <code>submitted_at</code>. Matrix,
+multiple-choice, and ranking questions expand into more than one column:
+a matrix gets one column per row, a multiple-choice question gets one
+0/1 column per option, and a ranking question gets one column per option
+holding its rank.</p>
 </div>
 <div id="step-2-deploy-the-collector-as-a-web-app" class="section level2">
 <h2>Step 2: Deploy the collector as a web app</h2>

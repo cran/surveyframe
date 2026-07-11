@@ -405,3 +405,65 @@ test_that("ordinal and multinomial logistic runners fail gracefully or run when 
   }
   expect_true(is.list(multi) || inherits(multi, "error"))
 })
+
+test_that("0.3.3: free-text path labels become valid lavaan parameter names", {
+  model <- sf_model(
+    "m_lbl",
+    "Labelled model",
+    type = "cb_sem",
+    constructs = list(
+      sf_construct("SAT", "Satisfaction", c("sat_1", "sat_2")),
+      sf_construct("LOY", "Loyalty", "sat_3", mode = "single_item")
+    ),
+    paths = list(sf_path("SAT", "LOY", "H1: SAT positively influences LOY"))
+  )
+  syntax <- sem_lavaan_syntax(model)
+  expect_match(syntax, "LOY ~ H1*SAT", fixed = TRUE)
+  expect_false(grepl("positively influences", syntax, fixed = TRUE))
+
+  skip_if_not_installed("lavaan")
+  pt <- lavaan::lavaanify(syntax)
+  expect_true("H1" %in% pt$label)
+})
+
+test_that("0.3.3: seminr syntax loads seminr and uses real summary accessors", {
+  pls <- sf_model(
+    "pls_smoke",
+    type = "pls_sem",
+    constructs = list(
+      sf_construct("SAT", "Satisfaction", c("sat_1", "sat_2"), mode = "composite"),
+      sf_construct("LOY", "Loyalty", "sat_3", mode = "single_item")
+    ),
+    paths = list(sf_path("SAT", "LOY"))
+  )
+  syntax <- seminr_syntax(pls)
+  expect_match(syntax, "library(seminr)", fixed = TRUE)
+  expect_match(syntax, "model_summary <- summary(pls_model)", fixed = TRUE)
+  expect_match(syntax, "model_summary$validity$htmt", fixed = TRUE)
+  expect_false(grepl("^reliability\\(pls_model\\)", syntax))
+})
+
+test_that("0.3.3: run_analysis_plan accepts pls_sem as a seminr_syntax alias", {
+  instr <- make_v03_instrument()
+  pls <- sf_model(
+    "pls_alias",
+    type = "pls_sem",
+    constructs = list(
+      sf_construct("SAT", "Satisfaction", c("sat_1", "sat_2"), mode = "composite"),
+      sf_construct("LOY", "Loyalty", "sat_3", mode = "single_item")
+    ),
+    paths = list(sf_path("SAT", "LOY"))
+  )
+  instr <- add_model(instr, pls)
+  instr$analysis_plan <- list(list(
+    id = "RQ_pls",
+    research_question = "Does satisfaction predict loyalty?",
+    family = "measurement",
+    method = "pls_sem",
+    roles = list(model = "pls_alias"),
+    options = list(alpha = 0.05)
+  ))
+  res <- run_analysis_plan(make_v03_responses(20), instr, scored = FALSE)
+  expect_null(res[[1]]$error)
+  expect_match(res[[1]]$syntax, "estimate_pls", fixed = TRUE)
+})

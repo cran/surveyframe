@@ -1,3 +1,92 @@
+# surveyframe 0.3.3
+
+This release adds an opt-in plotting layer, fixes bugs surfaced by the
+package's first field deployment, and redesigns the survey-taking
+experience. ggplot2 joins Suggests; hard dependencies are unchanged.
+
+## Analysis and plotting
+
+* New `plots` argument on `run_analysis_plan()` (default `FALSE`). When
+  `TRUE`, supported analysis blocks return a ggplot object in `$plot`: bar
+  charts for frequency and chi-square blocks, and scatter plots with a
+  regression overlay for correlation and regression blocks.
+* New exported `theme_surveyframe()`, a publication-oriented ggplot2 theme
+  with an accessible fixed-order series palette. All plots use it.
+* Inferential runners return a `$table` data frame ready for
+  `knitr::kable()`; the HTML report shows these tables automatically.
+* Frequency and cross-tab runners treat empty strings as missing values, so
+  partially completed responses no longer form a blank category.
+* Ranking items now export one column per option holding its rank
+  (`item__option = 1` for the top choice), so ranks are directly analysable.
+  Multiple-choice items likewise export one 0/1 column per option instead
+  of a single comma-joined column. `read_responses()` accepts the expanded
+  columns for ranking, matrix, and multiple-choice items without warnings.
+* `render_report()` now attaches each analysis block's chart directly under
+  its result table, in both the Quarto and internal HTML report paths,
+  instead of tables and plots appearing in separate places.
+* Likert items in the report's response-distributions section get a
+  diverging stacked bar chart (darkest at each pole, lightest next to
+  neutral) instead of a plain frequency bar, so the direction and strength
+  of opinion is visible at a glance.
+
+## Survey experience
+
+* A full redesign of the exported survey: larger serif question typography,
+  bordered option cards with selection ticks, numbered Likert squares,
+  restyled matrix, slider, and ranking blocks, and a slim top progress bar.
+  Every colour derives from the instrument's single theme colour, so one
+  colour choice re-skins the whole survey. Touch targets meet a 44 pixel
+  minimum on phones.
+* Branching rules on one question now combine with AND, and hiding a
+  controlling question also hides everything that depends on it, so
+  screening logic behaves as declared even when answers change.
+* Single-page surveys show answered-questions progress (for example
+  "12 of 44 answered"); numeric questions respect declared minimum and
+  maximum bounds.
+* Branching rules can now show and hide section breaks and text blocks, so
+  a branched text block works as a screen-out message ("Sorry, you are not
+  eligible") and section headings disappear with their questions.
+* A matrix question reflows into stacked, labelled row-cards below 600
+  pixels instead of a table that needs horizontal scrolling to complete.
+* The exported survey meets WCAG 2.2 AA on an instrumented audit: every
+  input carries an accessible name, keyboard focus is visible on option
+  cards, errors are announced to assistive technology, required questions
+  are marked beyond colour, ranking items gain keyboard reorder buttons,
+  headings are real headings, and all touch targets and text contrast meet
+  the standard.
+
+## Data collection
+
+* Fixed a bug that silently blocked submissions from hosted surveys: the
+  Google Apps Script POST now avoids the CORS preflight that Apps Script
+  never answers. Collectors no longer emit columns for section breaks or
+  text blocks.
+* `read_sheet_responses()` gains a `meta_cols` argument for extra sheet
+  columns a host application appends, and SurveyStudio's dashboard now
+  computes completion times from imported sheet responses.
+
+## Model syntax
+
+* `sem_lavaan_syntax()` turns free-text path labels into valid lavaan
+  parameter names (a label starting "H1:" becomes the parameter `H1`).
+* `seminr_syntax()` output loads seminr and uses `summary()` accessors, so
+  the generated code runs as pasted.
+* `run_analysis_plan()` accepts `pls_sem` as an alias for `seminr_syntax`.
+
+## SurveyBuilder and report
+
+* Opening a `.sframe` verifies and reports its SHA-256 integrity status.
+* New choice questions start with a fresh option set, and editing shared
+  options forks the set first, so options never leak between questions.
+* The analysis-plan modal blocks using one variable in two roles, and the
+  test suggester handles Likert items and multi-group comparisons sensibly.
+* Reports print generated model syntax in code blocks and show reliability
+  results as a table.
+* "+ Add question" now opens the question-type picker instead of silently
+  adding a Likert item, and the redundant icon-only button next to it is
+  gone. Survey settings live only in the sidebar; the top bar no longer
+  duplicates that entry point.
+
 # surveyframe 0.3.2
 
 This release corrects the package citation, completes the S3 method surface for
@@ -124,9 +213,11 @@ methods, and no new bundled datasets.
   path for users who already have a response CSV, and points to
   `browseVignettes("surveyframe")`.
 
----
-
 # surveyframe 0.3.0
+
+The first CRAN release of the full workflow: a typed instrument object
+carrying the questions, the analysis plan, and the measurement model, with
+deployment, collection, analysis, and reporting built around it.
 
 ## New features
 
@@ -182,15 +273,11 @@ methods, and no new bundled datasets.
 
 * Added `launch_dashboard()`. Opens a five-panel Shiny dashboard for
   exploring collected response data alongside the instrument definition,
-  without modifying either. The panels are:
-
-  | Panel | Content |
-  |---|---|
-  | Overview | Response count, date range, instrument metadata |
-  | Items | Per-item bar charts, histograms, and frequency tables |
-  | Scales | Scale score distributions with mean overlay |
-  | Quality | Attention-check pass rates |
-  | Raw data | Scrollable response table with CSV download |
+  without modifying either. The panels are: Overview (response count, date
+  range, instrument metadata), Items (per-item bar charts, histograms, and
+  frequency tables), Scales (scale score distributions with mean overlay),
+  Quality (attention-check pass rates), and Raw data (a scrollable response
+  table with CSV download).
 
   When called without arguments the dashboard loads the bundled tourism
   services demo. When called with a user-supplied instrument and no
@@ -256,8 +343,6 @@ interpretation `prompt` field to guide write-up.
   `section_break` and `text_block` to appear as response columns.
 * `validate_sframe()` now checks model references, analysis-plan roles,
   invalid model IDs, duplicate model IDs, and model indicator/path integrity.
-* The package title and description were tightened for CRAN submission and
-  avoid overclaiming.
 
 * `launch_builder(open = TRUE)` opens the SurveyBuilder HTML in the system's
   default browser via `utils::browseURL()`.
@@ -298,56 +383,22 @@ interpretation `prompt` field to guide write-up.
 * Reworked the vignette set into a coherent workflow covering instrument
   building, response analysis, reliability and validity, EFA/CFA/SEM/PLS
   syntax generation, and GUI usage.
-* Added `cran-comments.md` with platform list, dependency justification,
-  bundled-asset description, and a `\dontrun{}` use justification table.
+* The demo launchers (`launch_builder_demo()`, `launch_studio_demo()`, and
+  `launch_dashboard_demo()`) open in the browser with the demo instrument,
+  scales, and analysis plan preloaded, so no manual file loading is needed.
+* The interactive package demo (`demo("survey")`) walks through the whole
+  workflow with step-by-step prompts.
 
-* `launch_builder_demo()` now injects the demo instrument JSON directly into
-  a temporary copy of `survey_builder.html`. The demo questions, scales, and
-  analysis plan are visible immediately on launch — no manual Load .sframe
-  step is needed.
-* `launch_studio_demo()` and `launch_dashboard_demo()` now pass
-  `launch.browser = TRUE` so the browser always opens automatically.
-* `inst/shiny/dashboard/app.R`: replaced `library(shiny)` with a
-  `requireNamespace` check and explicit `shiny::` namespace prefixes for CRAN
-  policy compliance.
-* `db_quality_ui()`: `class = flag_class` added to `tags$tr()` so quality
-  rows are colour-coded by flag status.
-* `db_data_ui()`: download-button background colour now uses
-  `sprintf("...%s...", THEME)` instead of `background:var(--cp,#2563eb)` so
-  the button respects the active dashboard theme.
-* `db_overview_ui()`: date parsing is now delegated to `dashboard_parse_date()`
-  for robust, error-free date display.
-* `render_report()` and `render_results()`: HTML report tables now use APA
-  formatting — horizontal rules only, no vertical borders, no row shading.
-  A significance footnote is appended automatically when a p-value column is
-  detected.
-* `demo/survey.R`: complete UX rewrite with section headers, contextual pause
-  prompts, "In the browser: ->" guidance, `ask_yn()` yes/no prompts, and a
-  conversational mode for static survey export. All output is ASCII-safe.
-* `dashboard_parse_date()` completely rewritten. No longer throws
-  `Error in as.POSIXlt.character: character string is not in a standard
-  unambiguous format`. Now tries six explicit format templates in priority
-  order (ISO 8601 Z-suffix, ISO 8601 no-tz, space datetime, date-only,
-  UK dd/mm/yyyy, US mm/dd/yyyy) with `tryCatch` on each, plus a wrapped
-  fallback. Non-matching strings return `NA` instead of an error.
-* Dashboard Items and Scales tabs: `outputOptions(output, "item_chart",
-  suspendWhenHidden = FALSE)` and `outputOptions(output, "scale_chart",
-  suspendWhenHidden = FALSE)` added. Response distribution and Scale score
-  distribution charts now render as soon as the user switches to those tabs
-  instead of appearing blank.
+## Dashboard and report polish
 
-## Future direction: v0.4
-
-* MCDM and DEMATEL fall outside v0.3 scope. Planned v0.4 work includes
-  MCDM input fields, AHP pairwise-comparison matrices, DEMATEL direct
-  influence matrices, TOPSIS/VIKOR/PROMETHEE/ELECTRE planning, MCDM data
-  validation and consistency checks, DEMATEL thresholding and causal diagram
-  export, advanced SEM and PLS-SEM execution, higher-order constructs,
-  multi-group SEM planning, a diagram-based model builder, complex survey
-  design weighting, JASP/jamovi-friendly exports, and report-writer
-  integration after the data and model schemas stabilise.
-
----
+* The dashboard parses response dates in the common formats (ISO 8601,
+  date-only, UK and US day orders) instead of erroring on non-standard
+  strings, colour-codes quality rows by flag status, matches the download
+  button to the active theme, and draws the Items and Scales charts as soon
+  as their tabs open.
+* HTML report tables use APA formatting, with horizontal rules only and a
+  significance footnote added automatically when a p-value column is
+  present.
 
 # surveyframe 0.1.0
 

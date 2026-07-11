@@ -427,3 +427,26 @@ test_that("render_report includes reliability when data supplied", {
   expect_true(grepl("Reliability|alpha|Cronbach", html, ignore.case = TRUE))
   unlink(tmp)
 })
+
+test_that("0.3.3: SurveyBuilder has one settings entry point and one Add-question control", {
+  builder_path <- system.file("builder", "survey_builder.html", package = "surveyframe")
+  if (!nzchar(builder_path)) builder_path <- file.path("..", "..", "inst", "builder", "survey_builder.html")
+  skip_if(!file.exists(builder_path), "builder HTML not found")
+  html <- paste(readLines(builder_path, warn = FALSE, encoding = "UTF-8"), collapse = "\n")
+
+  # The top bar no longer duplicates the sidebar's settings entry point
+  expect_false(grepl('class="btn btn-s btn-sm btn-gear"', html, fixed = TRUE))
+  expect_match(html, "sb-title-btn", fixed = TRUE)
+
+  # "+ Add question" opens the type picker instead of silently adding a
+  # Likert item, and the empty canvas offers exactly two secondary actions
+  expect_match(html, 'id="fabMoreBtn"', fixed = TRUE)
+  expect_match(html, 'onclick="toggleFabMenu()"', fixed = TRUE)
+  # The primary "+ Add question" button opens the picker rather than
+  # silently defaulting to Likert (the picker's own "Likert scale" menu
+  # item legitimately still calls qAdd(\'likert\'), so check the specific
+  # fab-row button rather than the whole file).
+  fab_row <- sub(".*(<div class=\"fab-row\">.*?</div>).*", "\\1", html)
+  expect_false(grepl("qAdd('likert')", fab_row, fixed = TRUE))
+  expect_match(html, "sb-empty-cta", fixed = TRUE)
+})

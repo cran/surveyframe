@@ -83,8 +83,42 @@ read_responses <- function(
   declared  <- c(respondent_id, submitted_at, meta_cols)
   data_cols <- colnames(data)
 
+  # Matrix and ranking items arrive from the collectors as one column per
+  # sub-item or option (item__sub, item__option). Accept those expansions
+  # alongside the base id: an expanded multi-column item is not "missing"
+  # when its base column is absent, and its expansion columns are never
+  # "undeclared".
+  choice_values_for <- function(id) {
+    for (cs in instrument$choices) {
+      if (identical(cs$id, id)) return(as.character(cs$values))
+    }
+    character(0)
+  }
+  expanded_ids <- unlist(lapply(response_items, function(i) {
+    if (identical(i$type, "matrix") && length(i$matrix_items) > 0L) {
+      paste0(i$id, "__", i$matrix_items)
+    } else if (identical(i$type, "ranking") && !is.null(i$choice_set)) {
+      vals <- choice_values_for(i$choice_set)
+      if (length(vals) > 0L) paste0(i$id, "__", vals) else character(0)
+    } else if (identical(i$type, "multiple_choice") && !is.null(i$choice_set)) {
+      vals <- choice_values_for(i$choice_set)
+      if (length(vals) > 0L) paste0(i$id, "__", vals) else character(0)
+    } else {
+      character(0)
+    }
+  }), use.names = FALSE)
+  multi_ids <- vapply(
+    Filter(function(i) identical(i$type, "matrix") ||
+             identical(i$type, "ranking") ||
+             identical(i$type, "multiple_choice"), response_items),
+    function(i) i$id, character(1)
+  )
+  covered_by_expansion <- multi_ids[vapply(multi_ids, function(id) {
+    any(startsWith(data_cols, paste0(id, "__")))
+  }, logical(1))]
+
   # Check required item columns are present
-  missing_items <- setdiff(item_ids, data_cols)
+  missing_items <- setdiff(item_ids, c(data_cols, covered_by_expansion))
   if (length(missing_items) > 0) {
     sframe_warn_missing(
       paste0(
@@ -96,7 +130,8 @@ read_responses <- function(
   }
 
   # Handle undeclared columns
-  undeclared <- setdiff(data_cols, c(item_ids, display_item_ids, declared))
+  undeclared <- setdiff(data_cols,
+                        c(item_ids, expanded_ids, display_item_ids, declared))
   if (length(undeclared) > 0) {
     if (strict) {
       sframe_abort_import(
@@ -118,9 +153,13 @@ read_responses <- function(
     }
   }
 
-  # Reorder: metadata first, then items in instrument order, then undeclared
+  # Reorder: metadata first, then items in instrument order (expanded
+  # columns follow their base item), then undeclared
+  ordered_item_cols <- unlist(lapply(response_items, function(i) {
+    c(i$id, expanded_ids[startsWith(expanded_ids, paste0(i$id, "__"))])
+  }), use.names = FALSE)
   ordered_cols <- intersect(
-    c(declared, item_ids, display_item_ids, undeclared),
+    c(declared, ordered_item_cols, display_item_ids, undeclared),
     data_cols
   )
 

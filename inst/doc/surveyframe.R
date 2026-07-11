@@ -303,6 +303,9 @@ html_path <- export_static_survey(
 )
 file.exists(html_path)
 
+## ----theme--------------------------------------------------------------------
+study$render$theme <- "#0f766e"
+
 ## ----gs-export----------------------------------------------------------------
 script_path <- export_google_sheet(
   study,
@@ -545,6 +548,11 @@ results_table(results)
 
 ## ----show-prompt--------------------------------------------------------------
 cat(results[[1]]$prompt)
+
+## ----run-plan-plots, eval=requireNamespace("ggplot2", quietly = TRUE), fig.width=7, fig.height=4.5----
+results_p <- run_analysis_plan(scored, study, plots = TRUE)
+first_plot <- Filter(function(r) !is.null(r$plot), results_p)[[1]]
+first_plot$plot
 
 ## ----render-results-----------------------------------------------------------
 results_path <- render_results(

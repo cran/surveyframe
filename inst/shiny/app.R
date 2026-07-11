@@ -1897,7 +1897,14 @@ server <- function(input, output, session) {
   quality_result <- reactive({
     req(rv$instrument, rv$responses)
     id_col <- trim_or_null(input$resp_id_col)
-    surveyframe::quality_report(rv$responses, rv$instrument, respondent_id = id_col)
+    # Timing analysis needs the timestamp columns passed explicitly; detect
+    # the standard collector columns so sheet imports get completion times.
+    sub_col <- if ("submitted_at" %in% names(rv$responses)) "submitted_at"
+    st_col  <- if ("started_at" %in% names(rv$responses)) "started_at"
+    surveyframe::quality_report(rv$responses, rv$instrument,
+                                respondent_id = id_col,
+                                submitted_at = sub_col,
+                                started_at = st_col)
   })
 
   output$quality_output <- renderUI({

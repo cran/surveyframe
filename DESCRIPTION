@@ -1,6 +1,6 @@
 Package: surveyframe
 Title: Survey Instrument Workflows
-Version: 0.3.2
+Version: 0.3.3
 Authors@R: c(
     person(
       given = "Mohammed Ali",
@@ -26,17 +26,17 @@ Encoding: UTF-8
 Language: en-GB
 Depends: R (>= 4.1.0)
 Imports: jsonlite (>= 1.8.0), rlang (>= 1.1.0), openssl (>= 2.1.0)
-Suggests: googlesheets4 (>= 1.1.0), shiny (>= 1.7.0), psych (>= 2.3.0),
-        MASS, nnet, digest (>= 0.6.0), lavaan (>= 0.6-0), testthat (>=
-        3.0.0), knitr, rmarkdown
+Suggests: ggplot2 (>= 3.4.0), googlesheets4 (>= 1.1.0), shiny (>=
+        1.7.0), psych (>= 2.3.0), MASS, nnet, digest (>= 0.6.0), lavaan
+        (>= 0.6-0), testthat (>= 3.0.0), knitr, rmarkdown
 VignetteBuilder: knitr
 Config/testthat/edition: 3
 Config/roxygen2/version: 8.0.0
 RoxygenNote: 8.0.0
 NeedsCompilation: no
-Packaged: 2026-06-17 14:47:51 UTC; maxx
+Packaged: 2026-07-11 16:30:54 UTC; maxx
 Author: Mohammed Ali Sharafuddin [aut, cre] (ORCID:
     <https://orcid.org/0000-0001-5247-2964>)
 Maintainer: Mohammed Ali Sharafuddin <mohammedali.page@gmail.com>
 Repository: CRAN
-Date/Publication: 2026-06-17 18:00:02 UTC
+Date/Publication: 2026-07-11 18:30:03 UTC

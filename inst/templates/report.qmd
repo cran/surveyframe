@@ -225,8 +225,15 @@ for (item in q_items) {
     } else freq <- table(col)
     if (!sum(freq)) next
     cat(sprintf("\n**%s**\n\n", item$label %||% item$id))
-    op <- par(mar = c(4, 11, 1, 1)); barplot(freq, horiz = TRUE, las = 1,
-      col = THEME, border = NA, xlab = "Frequency", cex.names = .8); par(op)
+    if (identical(t, "likert") && length(freq) >= 2) {
+      # A Likert item is an ordered agree/disagree scale: a diverging bar
+      # shows which way opinion leans in one glance, unlike a plain
+      # frequency bar that does not distinguish "agree" from "disagree".
+      sframe_draw_likert_diverging(freq, THEME)
+    } else {
+      op <- par(mar = c(4, 11, 1, 1)); barplot(freq, horiz = TRUE, las = 1,
+        col = THEME, border = NA, xlab = "Frequency", cex.names = .8); par(op)
+    }
     cat("\n\n")
   } else if (t %in% c("numeric", "slider", "rating")) {
     num <- suppressWarnings(as.numeric(col)); num <- num[!is.na(num)]
@@ -273,7 +280,7 @@ if (is.null(rr)) {
       Omega_t = if (!is.null(s$omega_t)) sprintf("%.2f", s$omega_t) else "n/a",
       stringsAsFactors=FALSE)))
   print(kable(rel_df,
-    col.names=c("Scale","Items","N","Alpha","Omega h","Omega total"),
+    col.names=c("Scale","Items","N","Alpha","Omega h","Omega total"),
     align=c("l","c","c","r","r","r"),
     caption="Scale reliability statistics"))
 }
@@ -296,7 +303,10 @@ if (!has_data) {
       cat(sprintf("**Interpretation prompt:** %s\n\n", rq$interpretation))
   }
 } else {
-  results <- tryCatch(run_analysis_plan(responses, instrument), error=function(e) NULL)
+  results <- tryCatch(
+    run_analysis_plan(responses, instrument,
+                      plots = requireNamespace("ggplot2", quietly = TRUE)),
+    error=function(e) NULL)
   if (is.null(results)) {
     cat("Analysis plan could not be executed. Check that variable names match response columns.\n\n")
   } else {
@@ -306,11 +316,38 @@ if (!has_data) {
       if (!is.null(r$error)) {
         cat(sprintf("> **Error:** %s\n\n", r$error))
       } else {
-        cat(sprintf("**Result:** %s\n\n", r$apa %||% ""))
+        scale_entries <- Filter(function(e) is.list(e) && !is.null(e$scale_id), r)
+        if (!is.null(r$apa)) {
+          cat(sprintf("**Result:** %s\n\n", r$apa))
+        } else if (length(scale_entries) == 0) {
+          cat("**Result:** see the matching section of this report above.\n\n")
+        }
+        if (!is.null(r$syntax)) {
+          cat("````\n")
+          cat(r$syntax)
+          cat("\n````\n\n")
+        }
+        if (is.null(r$apa) && length(scale_entries) > 0) {
+          rel_tab <- do.call(rbind, lapply(scale_entries, function(s)
+            data.frame(
+              Scale = paste0(s$label %||% s$scale_id, " (", s$scale_id, ")"),
+              Items = s$n_items %||% NA,
+              Alpha = if (!is.null(s$alpha)) sprintf("%.2f", s$alpha) else "n/a",
+              stringsAsFactors = FALSE)))
+          print(kable(rel_tab, align = c("l", "c", "r"), row.names = FALSE))
+          cat("\n")
+        }
         if (!is.null(r$effect_label))
           cat(sprintf("**Effect size:** %s\n\n", r$effect_label))
         if (!is.null(r$table) && is.data.frame(r$table))
           print(kable(r$table, digits = 2))
+        # The chart for this result sits directly under its table, as one
+        # unit per research question, rather than in a separate section.
+        if (!is.null(r$plot)) {
+          cat("\n")
+          print(r$plot)
+          cat("\n")
+        }
         if (nzchar(r$interpretation %||% ""))
           cat(sprintf("\n**Interpretation:** %s\n\n", r$interpretation))
         if (length(r$citations) > 0) {

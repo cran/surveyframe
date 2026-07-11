@@ -1,7 +1,7 @@
 {
   "hash": {
     "algo": "sha256",
-    "value": "a9b18b41964725f62d44a4e270a89c5f5328026e65d7c200718aba8d9d86d326"
+    "value": "2283401c79649815436f588796623473fe5fc21491e14ced2a447f4594922d0c"
   },
   "version": "0.3.0",
   "meta": {
@@ -92,7 +92,9 @@
       "required": true,
       "reverse": false,
       "help": "Enter the number of nights.",
-      "page": 1
+      "page": 1,
+      "slider_min": 0,
+      "slider_max": 365
     },
     {
       "id": "sec_experience",

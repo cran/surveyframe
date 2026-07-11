@@ -106,6 +106,10 @@ instr$analysis_plan <- list(
 results <- run_analysis_plan(responses, instr)
 results_table(results)
 
+## ----run-plots, eval = requireNamespace("ggplot2", quietly = TRUE)------------
+results_plots <- run_analysis_plan(responses, instr, plots = TRUE)
+results_plots[[1]]$plot
+
 ## ----single-result------------------------------------------------------------
 rq1 <- results[[1]]
 

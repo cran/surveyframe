@@ -4,7 +4,7 @@
 \alias{run_analysis_plan}
 \title{Run a pre-planned analysis from an instrument's analysis plan}
 \usage{
-run_analysis_plan(data, instrument, scored = TRUE)
+run_analysis_plan(data, instrument, scored = TRUE, plots = FALSE)
 }
 \arguments{
 \item{data}{A \code{tibble} or \code{data.frame} of responses, typically produced by
@@ -14,12 +14,20 @@ run_analysis_plan(data, instrument, scored = TRUE)
 
 \item{scored}{Logical. Whether to automatically score scales before running
 the analysis. Defaults to \code{TRUE}.}
+
+\item{plots}{Logical. When \code{TRUE} and ggplot2 is installed, supported
+blocks gain a \verb{$plot} element holding a brand-styled ggplot object:
+bar charts for frequency and chi-square blocks, scatter plots with a
+regression overlay for correlation and linear-regression blocks.
+Defaults to \code{FALSE}.}
 }
 \value{
 An object of class \code{sframe_analysis_results}, a list with one
 element per analysis block. Each element contains the test result,
-APA string, interpretation prompt, and reporting-reference metadata. Pass
-to \code{\link[=render_results]{render_results()}} to generate a formatted report.
+APA string, interpretation prompt, and reporting-reference metadata.
+Inferential blocks also carry a \verb{$table} data frame suitable for
+\code{knitr::kable()}. Pass to \code{\link[=render_results]{render_results()}} to generate a formatted
+report.
 }
 \description{
 Executes every analysis block defined in the instrument's \code{analysis_plan}

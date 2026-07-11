@@ -437,11 +437,42 @@ html_path <- export_static_survey(
 file.exists(html_path)
 ```
 
+### What the respondent sees
+
+The exported survey carries its own design, independent of the SurveyBuilder
+or SurveyStudio chrome used to build it. Question text sits in a serif
+typeface, options render as bordered cards with a selection tick, Likert
+items render as numbered squares, and a slim progress bar tracks completion.
+Every one of those colours derives from the instrument's single theme colour,
+so the line below re-skins the whole survey without touching anything else.
+
+```{r theme}
+study$render$theme <- "#0f766e"
+```
+
+Two things about the export matter for planning a real deployment.
+
+* **It is designed for a phone first.** Option cards and touch targets meet a
+  44 pixel minimum, and a matrix question (see the input-types demo in the
+  SurveyBuilder vignette) reflows from a table into stacked, labelled cards
+  below 600 pixels of width, so no question ever needs horizontal scrolling
+  to complete on a small screen.
+* **It meets WCAG 2.2 AA.** Every control carries an accessible name, keyboard
+  focus is visible on option cards, a validation error is announced to
+  assistive technology, and required questions are marked by more than
+  colour alone.
+
 ### Generate the Google Sheets collector script
 
-`export_google_sheet()` writes a Google Apps Script file. Deploy it in a Google
-Sheet and it creates a response tab with the correct column headers, including
-one column per matrix sub-item.
+`export_google_sheet()` writes a Google Apps Script file. Deploy it in a
+Google Sheet and it creates a response tab with the correct column headers.
+Matrix, multiple-choice, and ranking questions each need more than one
+column, so the collector expands them automatically: a matrix gets one column
+per row, a multiple-choice question gets one 0/1 column per option, and a
+ranking question gets one column per option holding its rank. A five-option
+multiple-choice item named `channels`, for example, becomes five columns,
+`channels__option1` through `channels__option5`, each holding `0` or `1`,
+ready for analysis with no string-splitting step.
 
 ```{r gs-export}
 script_path <- export_google_sheet(
@@ -814,6 +845,23 @@ The researcher fills in the substantive interpretation. The package supplies
 the statistic and the label. This separation is intentional: statistical
 significance and practical significance are distinct judgements.
 
+### Plots on demand
+
+When ggplot2 is installed, `plots = TRUE` attaches a brand-styled chart to
+every supported block: bar charts for frequency and chi-square blocks, and
+scatter plots with a regression overlay for correlation and regression
+blocks. Plotting stays opt-in, so nothing changes for installations without
+ggplot2.
+
+```{r run-plan-plots, eval=requireNamespace("ggplot2", quietly = TRUE), fig.width=7, fig.height=4.5}
+results_p <- run_analysis_plan(scored, study, plots = TRUE)
+first_plot <- Filter(function(r) !is.null(r$plot), results_p)[[1]]
+first_plot$plot
+```
+
+Inferential blocks also return a `$table` data frame ready for
+`knitr::kable()`, and the HTML report picks both up automatically.
+
 ---
 
 ## Results report
@@ -833,7 +881,12 @@ cat("Size:", round(file.size(results_path) / 1024, 1), "KB\n")
 ```
 
 The results report contains one section per research question, with the APA
-statistic, effect size, writing prompt, and the reference for the chosen method.
+statistic, effect size, writing prompt, and the reference for the chosen
+method, each paired with its own chart drawn directly beneath its table. A
+Likert item's distribution renders as a diverging stacked bar, with agreement
+and disagreement categories running away from a shared zero line and any
+neutral category split evenly across it, so the balance of opinion is
+readable at a glance rather than inferred from a plain frequency bar.
 
 ```{r render-report}
 render_report(
