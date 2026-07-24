@@ -23,6 +23,8 @@ params:
   include_missing:     true
   include_descriptives: true
   include_models:      true
+  plot_palette:        "web"
+  interpretations_path: ""
   instrument_hash:     ""
 execute:
   echo:    false
@@ -39,6 +41,14 @@ library(knitr)
 instrument <- readRDS(params$instrument_path)
 has_data   <- nzchar(params$data_path) && file.exists(params$data_path)
 responses  <- if (has_data) readRDS(params$data_path) else NULL
+# Written interpretations keyed by analysis-plan block id, supplied by
+# render_report(interpretations = ...). Empty when none were given.
+interps    <- if (nzchar(params$interpretations_path %||% "") &&
+                  file.exists(params$interpretations_path)) {
+  readRDS(params$interpretations_path)
+} else {
+  list()
+}
 ```
 
 ```{=html}
@@ -97,25 +107,33 @@ cat(sprintf("**Validation status:** %s\n\n",
 ```{r codebook, eval=params$include_codebook}
 #| tbl-cap: "Survey items"
 cb <- codebook_report(instrument)
-items_d <- cb$items_table
+items_d <- sframe_codebook_items_display(cb)
 items_d$reverse  <- ifelse(items_d$reverse,  "Yes", "")
 items_d$required <- ifelse(items_d$required, "Yes", "")
-kable(items_d,
-  col.names = c("ID","Label","Type","Choice set","Scale","Reverse","Required"),
+kable(format = "html", items_d,
+  col.names = c("ID","Label","Type","Response options","Scale","Reverse","Required"),
   align = c("l","l","l","l","l","c","c"))
-```
-
-```{r codebook-choices, eval=params$include_codebook && nrow(cb$choices_table) > 0}
-#| tbl-cap: "Choice sets"
-kable(cb$choices_table,
-  col.names = c("Choice set","Value","Label"), align = c("l","l","l"))
 ```
 
 ```{r codebook-scales, eval=params$include_codebook && nrow(cb$scales_table) > 0}
 #| tbl-cap: "Scale definitions"
-kable(cb$scales_table,
+kable(format = "html", cb$scales_table,
   col.names = c("ID","Label","Method","Items (n)","Item IDs"),
   align = c("l","l","l","c","l"))
+```
+
+```{r codebook-plan, eval=params$include_codebook && !is.null(cb$plan_table) && nrow(cb$plan_table) > 0}
+#| tbl-cap: "Pre-declared analysis plan"
+kable(format = "html", cb$plan_table,
+  col.names = c("ID","Research question","Method","Variables","Decision rule"),
+  align = c("l","l","l","l","l"))
+```
+
+```{r codebook-models, eval=params$include_codebook && !is.null(cb$models_table) && nrow(cb$models_table) > 0}
+#| tbl-cap: "Measurement and structural models"
+kable(format = "html", cb$models_table,
+  col.names = c("ID","Label","Type","Engine","Constructs","Paths"),
+  align = c("l","l","l","l","c","c"))
 ```
 
 ---
@@ -140,7 +158,7 @@ attn_df <- do.call(rbind, lapply(qr$attention, function(a)
     Pass_rate=sprintf("%.1f%%", a$pass_rate*100),
     Failures=a$n_fail, Action=a$fail_action,
     stringsAsFactors=FALSE)))
-kable(attn_df, align=c("l","l","r","r","l"))
+kable(format = "html", attn_df, align=c("l","l","r","r","l"))
 ```
 
 ```{r quality-missing, eval=params$include_quality && has_data}
@@ -151,7 +169,7 @@ cat(sprintf("**Respondent missingness:** %.1f%% exceed the %.0f%% threshold.\n\n
 high_miss <- qr$missing$item_miss_rate[qr$missing$item_miss_rate > 0.10]
 if (length(high_miss) > 0) {
   cat("Items with >10% missing:\n\n")
-  print(kable(data.frame(Item=names(high_miss),
+  print(kable(format = "html", data.frame(Item=names(high_miss),
     Missing=sprintf("%.1f%%", high_miss*100), stringsAsFactors=FALSE),
     align=c("l","r")))
 } else { cat("No items exceed 10% missing values.\n\n") }
@@ -162,7 +180,7 @@ if (length(high_miss) > 0) {
 sl_df <- do.call(rbind, lapply(qr$straightline, function(s)
   data.frame(Scale=s$scale_id, Items=s$n_items,
     Flagged=sprintf("%.1f%%", s$flag_rate*100), stringsAsFactors=FALSE)))
-kable(sl_df, align=c("l","c","r"))
+kable(format = "html", sl_df, align=c("l","c","r"))
 ```
 
 ---
@@ -175,10 +193,12 @@ mr <- tryCatch(missing_data_report(responses, instrument), error = function(e) N
 if (is.null(mr)) {
   cat("Missing-data diagnostics could not be computed from the supplied data.\n\n")
 } else {
-  print(kable(mr$item_missing, digits = 2, caption = "Item-wise missingness"))
-  print(kable(mr$patterns, digits = 2, caption = "Missing-data patterns"))
+  print(kable(format = "html", mr$item_missing, digits = 2, caption = "Item-wise missingness"))
+  patterns_display <- mr$patterns[, intersect(c("description", "n", "percent"), names(mr$patterns)), drop = FALSE]
+  print(kable(format = "html", patterns_display, digits = 2, caption = "Missing-data patterns",
+              col.names = c("Pattern", "n", "Percent")))
   if (!is.null(mr$scale_missing_rules) && nrow(mr$scale_missing_rules) > 0)
-    print(kable(mr$scale_missing_rules, digits = 2, caption = "Scale missing rules"))
+    print(kable(format = "html", mr$scale_missing_rules, digits = 2, caption = "Scale missing rules"))
 }
 ```
 
@@ -192,7 +212,7 @@ dr <- tryCatch(descriptives_report(responses), error = function(e) NULL)
 if (is.null(dr)) {
   cat("Descriptive statistics could not be computed from the supplied data.\n\n")
 } else {
-  print(kable(dr$table, digits = 2, caption = "Descriptive statistics"))
+  print(kable(format = "html", dr$table, digits = 2, caption = "Descriptive statistics"))
 }
 ```
 
@@ -212,11 +232,55 @@ choice_by <- function(id) {
 q_items <- Filter(function(i) !(i$type %in% c("section_break", "text_block")),
                   instrument$items %||% list())
 
-# One bar chart per categorical item, one histogram per numeric item
+has_ggplot <- requireNamespace("ggplot2", quietly = TRUE)
+plot_palette <- params$plot_palette %||% "web"
+
+# A scale's separate Likert items get one grouped diverging chart, the same
+# way a matrix question's rows do, instead of scattering a related batch of
+# items across several single-item charts.
+scale_groups <- sframe_likert_scale_groups(instrument)
+group_of <- character(0)
+for (g in scale_groups) {
+  ids <- vapply(g$items, function(i) i$id, character(1))
+  group_of[ids] <- g$scale_id
+}
+rendered_groups <- character(0)
+
+# One bar chart per categorical item, one histogram per numeric item. Every
+# chart here shares the ggplot2 theme_surveyframe() (theme_classic()-based)
+# look used everywhere else in the report, so this section reads as one
+# consistent chart family rather than a mix of base-R and ggplot styling.
 for (item in q_items) {
+  t <- item$type
+  if (item$id %in% names(group_of)) {
+    gid <- group_of[[item$id]]
+    if (gid %in% rendered_groups || !has_ggplot) next
+    rendered_groups <- c(rendered_groups, gid)
+    g <- scale_groups[[gid]]
+    gg <- sframe_plot_likert_scale(g$items, responses, g$choice_set, g$title,
+                                   palette = plot_palette)
+    if (is.null(gg)) next
+    cat(sprintf("\n**%s**\n\n", g$title))
+    print(gg)
+    cat("\n\n")
+    next
+  }
+  if (identical(t, "matrix")) {
+    # A matrix question has no base response column of its own, only one
+    # expanded <id>__<row> column per row, so it needs its own existence
+    # check and its own chart: every row plotted together, grouped, rather
+    # than as separate single-item charts that lose the question's grouping.
+    if (!has_ggplot) next
+    cs <- choice_by(item$choice_set %||% "")
+    gg <- sframe_plot_likert_matrix(item, responses, cs, palette = plot_palette)
+    if (is.null(gg)) next
+    cat(sprintf("\n**%s**\n\n", item$label %||% item$id))
+    print(gg)
+    cat("\n\n")
+    next
+  }
   if (!item$id %in% names(responses)) next
   col <- responses[[item$id]]
-  t <- item$type
   if (t %in% c("likert", "single_choice", "multiple_choice")) {
     cs <- choice_by(item$choice_set %||% "")
     if (!is.null(cs)) {
@@ -230,6 +294,8 @@ for (item in q_items) {
       # shows which way opinion leans in one glance, unlike a plain
       # frequency bar that does not distinguish "agree" from "disagree".
       sframe_draw_likert_diverging(freq, THEME)
+    } else if (has_ggplot) {
+      print(sframe_plot_item_chart(item, col, cs, palette = plot_palette))
     } else {
       op <- par(mar = c(4, 11, 1, 1)); barplot(freq, horiz = TRUE, las = 1,
         col = THEME, border = NA, xlab = "Frequency", cex.names = .8); par(op)
@@ -239,8 +305,12 @@ for (item in q_items) {
     num <- suppressWarnings(as.numeric(col)); num <- num[!is.na(num)]
     if (!length(num)) next
     cat(sprintf("\n**%s**\n\n", item$label %||% item$id))
-    op <- par(mar = c(4, 4, 1, 1)); hist(num, col = THEME, border = "white",
-      main = NULL, xlab = item$label, ylab = "Count", las = 1); par(op)
+    if (has_ggplot) {
+      print(sframe_plot_item_chart(item, col, NULL, palette = plot_palette))
+    } else {
+      op <- par(mar = c(4, 4, 1, 1)); hist(num, col = THEME, border = "white",
+        main = NULL, xlab = item$label, ylab = "Count", las = 1); par(op)
+    }
     cat("\n\n")
   }
 }
@@ -253,9 +323,13 @@ for (sc in instrument$scales %||% list()) {
   scores <- rowMeans(do.call(cbind, nums), na.rm = TRUE); scores <- scores[!is.na(scores)]
   if (!length(scores)) next
   cat(sprintf("\n**%s (scale score)**\n\n", sc$label %||% sc$id))
-  op <- par(mar = c(4, 4, 1, 1)); hist(scores, col = THEME, border = "white",
-    main = NULL, xlab = paste0(sc$label %||% sc$id, " score"), ylab = "Count", las = 1)
-  abline(v = mean(scores), col = "#dc2626", lwd = 2, lty = 2); par(op)
+  if (has_ggplot) {
+    print(sframe_plot_scale_chart(scores, sc$label %||% sc$id, palette = plot_palette))
+  } else {
+    op <- par(mar = c(4, 4, 1, 1)); hist(scores, col = THEME, border = "white",
+      main = NULL, xlab = paste0(sc$label %||% sc$id, " score"), ylab = "Count", las = 1)
+    abline(v = mean(scores), col = "#dc2626", lwd = 2, lty = 2); par(op)
+  }
   cat("\n\n")
 }
 ```
@@ -279,7 +353,7 @@ if (is.null(rr)) {
       Omega_h = if (!is.null(s$omega_h)) sprintf("%.2f", s$omega_h) else "n/a",
       Omega_t = if (!is.null(s$omega_t)) sprintf("%.2f", s$omega_t) else "n/a",
       stringsAsFactors=FALSE)))
-  print(kable(rel_df,
+  print(kable(format = "html", rel_df,
     col.names=c("Scale","Items","N","Alpha","Omega h","Omega total"),
     align=c("l","c","c","r","r","r"),
     caption="Scale reliability statistics"))
@@ -301,11 +375,15 @@ if (!has_data) {
       cat(sprintf("**Variables:** %s\n\n", paste(rq$variables, collapse = ", ")))
     if (nzchar(rq$interpretation %||% ""))
       cat(sprintf("**Interpretation prompt:** %s\n\n", rq$interpretation))
+    override <- interps[[rq$id %||% ""]] %||% ""
+    if (nzchar(override))
+      cat(sprintf("**Interpretation:** %s\n\n", override))
   }
 } else {
   results <- tryCatch(
     run_analysis_plan(responses, instrument,
-                      plots = requireNamespace("ggplot2", quietly = TRUE)),
+                      plots = requireNamespace("ggplot2", quietly = TRUE),
+                      plot_palette = params$plot_palette %||% "web"),
     error=function(e) NULL)
   if (is.null(results)) {
     cat("Analysis plan could not be executed. Check that variable names match response columns.\n\n")
@@ -334,13 +412,13 @@ if (!has_data) {
               Items = s$n_items %||% NA,
               Alpha = if (!is.null(s$alpha)) sprintf("%.2f", s$alpha) else "n/a",
               stringsAsFactors = FALSE)))
-          print(kable(rel_tab, align = c("l", "c", "r"), row.names = FALSE))
+          print(kable(format = "html", rel_tab, align = c("l", "c", "r"), row.names = FALSE))
           cat("\n")
         }
         if (!is.null(r$effect_label))
           cat(sprintf("**Effect size:** %s\n\n", r$effect_label))
         if (!is.null(r$table) && is.data.frame(r$table))
-          print(kable(r$table, digits = 2))
+          print(kable(format = "html", r$table, digits = 2))
         # The chart for this result sits directly under its table, as one
         # unit per research question, rather than in a separate section.
         if (!is.null(r$plot)) {
@@ -348,8 +426,16 @@ if (!has_data) {
           print(r$plot)
           cat("\n")
         }
-        if (nzchar(r$interpretation %||% ""))
+        override <- interps[[r$block_id %||% r$id %||% ""]] %||% ""
+        if (nzchar(override)) {
+          # A written interpretation renders alongside the pre-declared
+          # decision rule, so the prospective contract stays visible.
+          if (nzchar(r$decision_rule %||% ""))
+            cat(sprintf("\n**Planned decision rule:** %s\n\n", r$decision_rule))
+          cat(sprintf("\n**Interpretation:** %s\n\n", override))
+        } else if (nzchar(r$interpretation %||% "")) {
           cat(sprintf("\n**Interpretation:** %s\n\n", r$interpretation))
+        }
         if (length(r$citations) > 0) {
           cat("**References:**\n\n")
           lapply(r$citations, function(cit) cat(sprintf("- %s\n", cit)))

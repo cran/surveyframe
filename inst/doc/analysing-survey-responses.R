@@ -66,7 +66,7 @@ score_cols <- intersect(scale_ids, names(scored))
 kable(head(scored[, score_cols, drop = FALSE]), digits = 2,
       caption = "Scale scores, first respondents")
 
-## ----score-distributions, fig.width = 7, fig.height = 3, fig.align = "left"----
+## ----score-distributions, fig.width = 7, fig.height = 3, fig.align = "left", fig.alt = "Histograms of the scored scale distributions, one panel per scale"----
 op <- par(mfrow = c(1, length(score_cols)), mar = c(4, 3, 2, 1))
 for (s in score_cols) {
   v <- scored[[s]]; v <- v[is.finite(v)]
@@ -106,7 +106,7 @@ instr$analysis_plan <- list(
 results <- run_analysis_plan(responses, instr)
 results_table(results)
 
-## ----run-plots, eval = requireNamespace("ggplot2", quietly = TRUE)------------
+## ----run-plots, eval = requireNamespace("ggplot2", quietly = TRUE), fig.alt = "Chart attached to the first analysis-plan result by run_analysis_plan with plots enabled"----
 results_plots <- run_analysis_plan(responses, instr, plots = TRUE)
 results_plots[[1]]$plot
 

@@ -1,4 +1,5 @@
 ---
+lang: en-GB
 title: "Survey design and live results: a tourism services example"
 output:
   rmarkdown::html_vignette:
@@ -36,12 +37,23 @@ results_table <- function(results) {
 <style>
 body { color: #1a1a2e; }
 h1, h2, h3 { color: #1a1a2e; }
-a { color: #16B3B1; }
+a { color: #0e7c7a; }
 table { border-collapse: collapse; margin: 1em 0; }
 table caption { caption-side: top; font-style: italic; color: #444; padding-bottom: .3em; }
 th { border-top: 2px solid #1a1a2e; border-bottom: 1px solid #1a1a2e; padding: 6px 12px; }
 td { padding: 5px 12px; border: none; }
 tbody tr:last-child td { border-bottom: 2px solid #1a1a2e; }
+/* WCAG 2.2 AA pass: darker link and syntax-token colours (at least
+   4.5:1 on the #f7f7f7 code background), wrapped code lines instead of a
+   keyboard-inaccessible scroll region, empty per-line anchors removed from
+   the accessibility tree, and 24px minimum TOC link targets. */
+code span.at { color: #576419; }
+code span.dv, code span.fl, code span.bn { color: #276245; }
+code span.co { color: #396a80; }
+pre, pre code { white-space: pre-wrap; word-break: break-word; }
+div.sourceCode { overflow: visible; }
+pre.sourceCode a:empty { display: none; }
+#TOC a { display: inline-block; min-height: 24px; }
 </style>
 ```
 
@@ -668,7 +680,7 @@ scale_summary <- data.frame(
 kable(scale_summary, digits = 2, caption = "Scale score summary")
 ```
 
-```{r score-distributions, fig.width = 7, fig.height = 4, fig.align = "left"}
+```{r score-distributions, fig.width = 7, fig.height = 4, fig.align = "left", fig.alt = "Histograms of the scored scale distributions, one panel per scale"}
 op <- par(mfrow = c(3, 3), mar = c(4, 3, 2, 1))
 for (s in scale_cols) {
   v <- scored[[s]]; v <- v[is.finite(v)]
@@ -853,7 +865,7 @@ scatter plots with a regression overlay for correlation and regression
 blocks. Plotting stays opt-in, so nothing changes for installations without
 ggplot2.
 
-```{r run-plan-plots, eval=requireNamespace("ggplot2", quietly = TRUE), fig.width=7, fig.height=4.5}
+```{r run-plan-plots, eval=requireNamespace("ggplot2", quietly = TRUE), fig.width=7, fig.height=4.5, fig.alt="Chart attached to the first analysis-plan result by run_analysis_plan with plots enabled"}
 results_p <- run_analysis_plan(scored, study, plots = TRUE)
 first_plot <- Filter(function(r) !is.null(r$plot), results_p)[[1]]
 first_plot$plot

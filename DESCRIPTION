@@ -1,6 +1,6 @@
 Package: surveyframe
 Title: Survey Instrument Workflows
-Version: 0.3.3
+Version: 0.3.4
 Authors@R: c(
     person(
       given = "Mohammed Ali",
@@ -20,7 +20,8 @@ Description: Supports survey research workflows built around a typed
     an interactive response dashboard, codebook generation, and reproducible
     HTML reporting.
 License: MIT + file LICENSE
-URL: https://github.com/MohammedAliSharafuddin/surveyframe
+URL: https://mohammedalisharafuddin.github.io/surveyframe/,
+        https://github.com/MohammedAliSharafuddin/surveyframe
 BugReports: https://github.com/MohammedAliSharafuddin/surveyframe/issues
 Encoding: UTF-8
 Language: en-GB
@@ -28,15 +29,16 @@ Depends: R (>= 4.1.0)
 Imports: jsonlite (>= 1.8.0), rlang (>= 1.1.0), openssl (>= 2.1.0)
 Suggests: ggplot2 (>= 3.4.0), googlesheets4 (>= 1.1.0), shiny (>=
         1.7.0), psych (>= 2.3.0), MASS, nnet, digest (>= 0.6.0), lavaan
-        (>= 0.6-0), testthat (>= 3.0.0), knitr, rmarkdown
+        (>= 0.6-0), testthat (>= 3.0.0), knitr, rmarkdown, naniar (>=
+        1.0.0), pagedown (>= 0.20)
 VignetteBuilder: knitr
 Config/testthat/edition: 3
 Config/roxygen2/version: 8.0.0
 RoxygenNote: 8.0.0
 NeedsCompilation: no
-Packaged: 2026-07-11 16:30:54 UTC; maxx
+Packaged: 2026-07-24 22:04:00 UTC; maxx
 Author: Mohammed Ali Sharafuddin [aut, cre] (ORCID:
     <https://orcid.org/0000-0001-5247-2964>)
 Maintainer: Mohammed Ali Sharafuddin <mohammedali.page@gmail.com>
 Repository: CRAN
-Date/Publication: 2026-07-11 18:30:03 UTC
+Date/Publication: 2026-07-24 23:00:02 UTC

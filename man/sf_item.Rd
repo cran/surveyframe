@@ -21,6 +21,8 @@ sf_item(
   slider_step = NULL,
   rating_max = NULL,
   rating_icon = NULL,
+  date_min = NULL,
+  date_max = NULL,
   section_intro = NULL,
   page = NULL
 )
@@ -61,6 +63,12 @@ respondent.}
 \item{rating_max}{Integer or NULL. Maximum rating for \code{"rating"} type.}
 
 \item{rating_icon}{Character or NULL. Icon type: \code{"star"} or \code{"heart"}.}
+
+\item{date_min}{Character or Date or NULL. Earliest selectable date for
+\code{"date"} type, as \code{"YYYY-MM-DD"}.}
+
+\item{date_max}{Character or Date or NULL. Latest selectable date for
+\code{"date"} type, as \code{"YYYY-MM-DD"}.}
 
 \item{section_intro}{Character or NULL. Intro text for \code{"section_break"} type.}
 

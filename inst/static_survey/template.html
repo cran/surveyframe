@@ -51,6 +51,9 @@ input,textarea,select{font-family:inherit;font-size:15px}
 .ty-ic{font-size:52px;text-align:center;margin-bottom:14px;color:var(--cp)}
 .ty-title{font-family:var(--serif);font-size:27px;font-weight:500;text-align:center;margin-bottom:8px}
 .ty-msg{color:var(--t2);text-align:center;font-size:15px;margin-bottom:22px;white-space:pre-wrap}
+.ty-note{background:var(--tint);border:1px solid var(--tint-bd);border-radius:6px;
+  padding:10px 14px;font-size:13px;color:var(--t2);text-align:center;margin-bottom:16px}
+.ty-acts{display:flex;flex-wrap:wrap;gap:10px;justify-content:center}
 
 /* Buttons */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;
@@ -484,7 +487,11 @@ function renderTextarea(item){
 }
 function renderDate(item){
   var saved=responses[item.id]||'';
-  return'<input type="date" class="inp-std inp-narrow" id="inp_'+esc(item.id)+'" value="'+esc(saved)+'"'+ariaFor(item)
+  // date_min/date_max limit the native picker; typed dates are re-checked
+  // in validatePage since the picker bounds do not block manual entry.
+  var mn=item.date_min?' min="'+esc(item.date_min)+'"':'';
+  var mx=item.date_max?' max="'+esc(item.date_max)+'"':'';
+  return'<input type="date" class="inp-std inp-narrow" id="inp_'+esc(item.id)+'" value="'+esc(saved)+'"'+mn+mx+ariaFor(item)
     +' onchange="setResp(\''+esc(item.id)+'\',this.value)">';
 }
 function renderSlider(item){
@@ -612,6 +619,25 @@ function rankMove(itemId,v,dir){
 // ── Validation ─────────────────────────────────────────────────────────────
 function validatePage(items){
   var ok=true;
+  // An answered date outside its declared bounds is an error even on a
+  // non-required item, because manual typing bypasses the picker limits.
+  items.forEach(function(item){
+    if(item.type!=='date'||!isVisible(item.id))return;
+    var v=responses[item.id];
+    if(!v)return;
+    var msg='';
+    if(item.date_min&&v<item.date_min)msg='Please pick a date on or after '+item.date_min+'.';
+    if(item.date_max&&v>item.date_max)msg='Please pick a date on or before '+item.date_max+'.';
+    if(msg){
+      var err=document.getElementById('err_'+item.id);
+      if(err){err.textContent=msg;err.classList.add('show');}
+      if(ok){
+        var el=document.getElementById('item_'+item.id);
+        if(el)el.scrollIntoView({behavior:'smooth',block:'center'});
+      }
+      ok=false;
+    }
+  });
   items.forEach(function(item){
     if(!item.required||!isVisible(item.id))return;
     var t=item.type;
@@ -710,7 +736,11 @@ function doSubmit(){
     }
   });
   var csvStr=toCsv([row]);
-  downloadCsv(csvStr,(SF.meta.title||'survey')+'_response_'+respId+'.csv');
+  // The CSV is kept in memory for the optional thank-you download button.
+  // No automatic download on submit: when an endpoint collects the
+  // response, a forced file download is unwanted noise, and even without
+  // one the download is offered as a button, never forced.
+  window._lastCsv={csv:csvStr,name:(SF.meta.title||'survey')+'_response_'+respId+'.csv'};
   if(ENDPOINT){
     // no-cors with a text/plain body: an application/json header triggers a
     // CORS preflight that Google Apps Script never answers, so the POST is
@@ -833,12 +863,29 @@ function renderSurvey(){
 }
 function renderThankyou(){
   var el=document.getElementById('app');
+  // The download button appears when the designer enabled it, or whenever
+  // no collector endpoint exists (the downloaded CSV is then the only copy
+  // of the response, so it must stay reachable, as a choice, never forced).
+  var showDl=(TY.show_download||!ENDPOINT)&&window._lastCsv;
+  var offlineNote=(!ENDPOINT&&window._lastCsv)
+    ?'<div class="ty-note">This survey has no online collector. Download your response below and return the file to the researcher.</div>':'';
+  var dlBtn=showDl
+    ?'<button type="button" class="btn btn-p" onclick="downloadCsv(window._lastCsv.csv,window._lastCsv.name)">Download my response (CSV)</button>':'';
+  var again='<button type="button" class="btn btn-s" onclick="window.location.reload()">Submit another response</button>';
+  var cont=TY.redirect_url
+    ?'<a class="btn btn-s" style="text-decoration:none" href="'+esc(TY.redirect_url)+'">Continue</a>':'';
   el.innerHTML='<div class="card"><div class="card-body">'
     +'<div class="ty-ic">&#10004;</div>'
     +'<div class="ty-title">Thank You</div>'
     +'<div class="ty-msg">'+esc(TY.message||'Your response has been recorded. Thank you for participating.')+'</div>'
-    +(TY.show_download?'<button type="button" class="btn btn-s" style="margin:0 auto;display:flex" onclick="window.location.reload()">Submit another response</button>':'')
+    +offlineNote
+    +'<div class="ty-acts">'+dlBtn+cont+again+'</div>'
     +'</div></div>';
+  // Auto-redirect only when nothing on this screen needs the respondent's
+  // attention (no download offer), so the file is never yanked away.
+  if(TY.redirect_url&&!showDl){
+    setTimeout(function(){window.location.href=TY.redirect_url;},2500);
+  }
 }
 
 // ── Init ───────────────────────────────────────────────────────────────────

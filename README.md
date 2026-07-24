@@ -1,4 +1,4 @@
-<img src="man/figures/readme-logo.png" align="right" width="220" alt="surveyframe" />
+<img src="man/figures/readme-logo.png" align="right" width="220" alt="surveyframe" style="margin-top: 2rem;" />
 
 # surveyframe
 
@@ -289,9 +289,11 @@ Interactive functions such as `launch_builder(open = TRUE)`, `launch_studio()`,
 `render_survey()`, and `launch_dashboard()` are available for manual use. Tests
 and examples avoid opening browsers.
 
-## v0.4 scope
+## Roadmap
 
-MCDM and DEMATEL fall outside v0.3 scope. These methods are scheduled for v0.4.
+Small-sample inference helpers, validated by a simulation study of survey
+methods, are planned for v0.4. Multi-criteria decision-making methods
+(MCDM) and DEMATEL are planned for v0.5.
 
 ## Citation
 
@@ -301,12 +303,14 @@ citation("surveyframe")
 
 ## Related resources
 
-- Quantitative Analysis with Small Samples, a companion textbook on statistical
-  inference when sample sizes are small:
-  <https://flairmi.com/textbooks/smallsamplelab.html>
-- Small-sample inference helpers, validated by a simulation study of survey
-  methods, are planned for a future surveyframe version. The textbook above
-  describes the methods that surveyframe will add and when to prefer each one.
+- Sharafuddin, M. A., Jaleel, A. A., and Madhavan, M. (2026).
+  *Quantitative Analysis with Small Samples: A Practical Guide for Students
+  and Early-Career Researchers* (Version 0.1.0) [Book]. Zenodo.
+  <https://doi.org/10.5281/zenodo.20221929>. A companion textbook on
+  statistical inference when sample sizes are small, also available at
+  <https://flairmi.com/textbooks/smallsamplelab.html>. It describes the
+  small-sample methods that surveyframe will add in v0.4 and when to prefer
+  each one.
 
 ## License
 

@@ -4,14 +4,25 @@
 \alias{validity_report}
 \title{Validity report for construct models}
 \usage{
-validity_report(loadings, construct_scores = NULL)
+validity_report(loadings, construct_scores = NULL, items_by_construct = NULL)
 }
 \arguments{
 \item{loadings}{A data.frame with columns \code{construct}, \code{item}, and
 \code{loading}, or a named list of loading vectors by construct.}
 
 \item{construct_scores}{Optional data.frame of construct scores for
-Fornell-Larcker, HTMT, and inter-construct correlations.}
+Fornell-Larcker and inter-construct correlations.}
+
+\item{items_by_construct}{Optional named list, one element per construct,
+each a data.frame of that construct's item-level responses. When
+supplied, \code{htmt} is the Henseler heterotrait-monotrait ratio: the mean
+absolute heterotrait-heteromethod correlation over the geometric mean
+of the two constructs' mean absolute monotrait-heteromethod
+correlations. Constructs with a single item have no monotrait
+correlations, so their HTMT entries are \code{NA}. Without this argument,
+\code{htmt} falls back to the absolute inter-construct correlation matrix
+from \code{construct_scores} (the pre-0.3.4 behaviour); the \code{htmt_method}
+element records which was computed.}
 }
 \value{
 An object of class \code{sframe_validity_report}.

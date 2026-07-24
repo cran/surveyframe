@@ -74,7 +74,10 @@ sframe_timing_report <- function(
       threshold_seconds = time_min,
       flagged_rows = integer(0),
       n_flagged = 0L,
-      flag_rate = if (n == 0) 0 else 0,
+      # Always 0 here: this is the "timing unavailable" branch, so no rows
+      # were ever flagged. Written as a plain 0 rather than the misleading
+      # if (n == 0) 0 else 0 (both branches returned the same value).
+      flag_rate = 0,
       parse_fail_rows = integer(0),
       negative_rows = integer(0)
     )

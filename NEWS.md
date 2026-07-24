@@ -1,3 +1,144 @@
+# surveyframe 0.3.4
+
+This release completes the plotting, interface, statistics, and reporting
+work started in 0.3.3. Every analysis family now has a chart, every effect
+size ships with a confidence interval, reports accept written
+interpretations and print to PDF, both dashboards gain quality and
+correlation panels, date questions gain bounds, and the builder and
+vignettes pass a WCAG 2.2 AA accessibility audit. Hard dependencies are
+unchanged. naniar and pagedown join Suggests.
+
+## Effect sizes and intervals
+
+* Four new exported helpers, all base R: `bootstrap_ci()` (percentile
+  bootstrap for any statistic), `cohens_d_ci()`, `cramers_v_ci()`, and
+  `eta_sq_ci()`.
+* Analysis-plan runners attach a confidence interval to their effect size
+  as a new result key: `d_ci` on the t-tests, `r_ci` on Mann-Whitney and
+  Wilcoxon, `eta_ci` on ANOVA and Kruskal-Wallis, `ci` on the correlations
+  (analytic Fisher z for Pearson, bootstrap for the rank methods), and
+  `v_ci` on chi-square and cross-tabulation.
+* APA strings and writing prompts now carry the interval, for example
+  `d = 0.62 [0.18, 1.05]`. Data too small for an interval keeps the
+  previous string.
+
+## Psychometrics
+
+* `validity_report()` computes the Henseler heterotrait-monotrait ratio
+  when item-level data is supplied through the new `items_by_construct`
+  argument. Without it, the previous correlation-based fallback applies
+  and the `htmt_method` element records which was used.
+* `missing_data_report()` runs Little's MCAR test when naniar is
+  installed. Without naniar the result is unchanged.
+* `reliability_report()` records why omega is unavailable for a scale in
+  an `omega_note`, and the reliability chart names those scales in its
+  subtitle.
+* `efa_solution()` adds three tidy data frames ready for plotting and
+  reporting: `loadings_long`, `communalities_table`, and
+  `variance_table`.
+
+## Reports and codebook
+
+* `render_report(format = "pdf")` prints the HTML report to PDF through
+  pagedown, which requires a local Chrome or Chromium. HTML output is
+  unchanged and remains the default.
+* The report's built-in styling now uses a small set of CSS variables, so
+  a re-theme is a one-line change, and a print stylesheet paginates the
+  report cleanly. Tables carry captions and header scopes, and every
+  embedded chart has descriptive alternative text.
+* The codebook now includes the pre-declared analysis plan and the saved
+  measurement and structural models, so one document fully records the
+  instrument a study used.
+* The codebook's items table shows each item's actual response options and
+  scale label directly, instead of an id that needed a separate choice-sets
+  table to decode.
+* Analysis-result tables (frequency, cross-tabulation, group comparisons,
+  regression coefficients, and the rest) show item, scale, and
+  response-option labels instead of the underlying ids and coded values.
+* Report tables render as properly split HTML tables in both the Quarto and
+  internal HTML report paths.
+
+## Written interpretations in reports
+
+* New `interpretations` argument on `render_report()` and
+  `render_results()`. Pass a named list keyed by analysis-plan block id to
+  add a written interpretation to each research question after the results
+  are known. The report shows it beside the pre-declared decision rule, so
+  the prospective plan stays visible next to the post-hoc narrative.
+  Interpretations are report content only and are never written into the
+  instrument file.
+* SurveyStudio's Export screen gains an Interpretations card: one block per
+  research question, in reading order (result table, chart, planned
+  decision rule, then the interpretation), shown with the live result once
+  responses are loaded. The generated report includes whatever you write
+  there.
+* A "Copy result" button on each Interpretations block copies the whole
+  result, table, chart, and the interpretation as written, as one block,
+  for pasting into a document.
+* The SurveyBuilder Report outline now edits the planned decision rule
+  inline, in sync with the research-question dialogue.
+
+## Charts
+
+* `run_analysis_plan(plots = TRUE)` now attaches a chart to every
+  supported family: regression diagnostics (4 panels), EFA scree and
+  loadings heatmap, reliability bars, mosaic and crosstab, correlation
+  heatmap, quality flag rates, group-comparison boxplots, paired slope
+  charts, raw-variable distributions, repeated-measures profiles, a
+  partial-correlation residual scatter, logistic-regression odds-ratio
+  forest plots, a moderation interaction plot, and a mediation effect
+  chart. Every analysis-plan block now returns a table, a chart, or
+  generated syntax.
+* Distribution shape by variable draws as a violin per variable, instead
+  of a bar chart of the skewness and kurtosis summary statistics.
+* A scale's separate Likert items, and a matrix question's rows, draw as
+  one grouped diverging chart, instead of one chart per item.
+* New `plot()` methods for descriptives, EFA, quality, reliability,
+  validity, missing-data, and analysis-results objects. `plot(results)`
+  draws every attached chart, and `plot(results, which = "rq_id")` returns
+  one.
+* New `plot_palette` argument on `run_analysis_plan()` and
+  `render_report()`: `"web"` for brand colour on screen, `"print"` for
+  black and white suitable for print and journal submission. SurveyStudio
+  exposes the choice as a Chart theme option on the Export screen.
+* SurveyStudio's Analyse screen shows one result card per research
+  question with its chart beneath the statistic.
+* Both dashboards (the standalone response dashboard and the SurveyStudio
+  Dashboard tab) gain a straight-lining flag-rate chart, a missing-data
+  chart, and a scale-score correlation heatmap. All dashboard charts keep
+  a base-graphics fallback, so ggplot2 remains optional.
+
+## Survey design
+
+* Date questions accept `date_min` and `date_max` bounds in `sf_item()`,
+  the SurveyBuilder, and the exported survey. The date picker enforces the
+  bounds and typed dates outside them show a clear message.
+* The SurveyBuilder ships a library of 14 preset choice sets, regenerates
+  item ids safely when the response type changes, and expands matrix,
+  ranking, and multiple-choice items into the same per-option variables
+  that `read_responses()` produces.
+* The survey thank-you page no longer forces a CSV download. It offers a
+  "Download my response" button and honours a configured redirect.
+
+## Accessibility
+
+* The SurveyBuilder interface passes an instrumented WCAG 2.2 AA audit
+  with zero findings across its build, preview, and analyse screens and
+  dialogues.
+* All 7 vignettes pass the same audit: language metadata, AA contrast for
+  links and code highlighting, wrapped code blocks, keyboard-reachable
+  content, and alternative text on every chart.
+
+## Bug fixes
+
+* `sf_item()`'s `date_min` and `date_max` no longer accept an ambiguous
+  date string (for example `"01/02/2024"`); only `"YYYY-MM-DD"` or a
+  `Date` object is accepted, and anything else is a validation error
+  rather than a silently misparsed date.
+* `bootstrap_ci()`, `cohens_d_ci()`, `cramers_v_ci()`, and `eta_sq_ci()`
+  no longer alter the random-number seed for code that runs after a
+  reproducible, seeded call.
+
 # surveyframe 0.3.3
 
 This release adds an opt-in plotting layer, fixes bugs surfaced by the

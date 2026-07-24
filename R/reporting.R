@@ -102,16 +102,100 @@ codebook_report <- function(instrument, format = c("html", "md")) {
     )
   }
 
+  # The pre-declared analysis plan and the measurement models belong in the
+  # codebook, so one document fully records the instrument a study used.
+  plan_table <- if (length(instrument$analysis_plan %||% list()) > 0) {
+    data.frame(
+      id = vapply(instrument$analysis_plan, function(b) b$id %||% "", character(1)),
+      research_question = vapply(instrument$analysis_plan,
+        function(b) b$research_question %||% "", character(1)),
+      method = vapply(instrument$analysis_plan, sframe_analysis_method, character(1)),
+      variables = vapply(instrument$analysis_plan,
+        function(b) paste(sframe_analysis_vars(b), collapse = ", "), character(1)),
+      decision_rule = vapply(instrument$analysis_plan,
+        function(b) b$decision_rule %||% b$interpretation %||% "", character(1)),
+      stringsAsFactors = FALSE,
+      check.names = FALSE
+    )
+  } else {
+    data.frame(
+      id = character(0), research_question = character(0),
+      method = character(0), variables = character(0),
+      decision_rule = character(0),
+      stringsAsFactors = FALSE, check.names = FALSE
+    )
+  }
+
+  models_table <- if (length(instrument$models %||% list()) > 0) {
+    data.frame(
+      id = vapply(instrument$models, function(m) m$id %||% "", character(1)),
+      label = vapply(instrument$models, function(m) m$label %||% "", character(1)),
+      type = vapply(instrument$models, function(m) m$type %||% "", character(1)),
+      engine = vapply(instrument$models, function(m) m$engine %||% "", character(1)),
+      n_constructs = vapply(instrument$models, function(m) {
+        length(sframe_model_constructs(m))
+      }, integer(1)),
+      n_paths = vapply(instrument$models, function(m) {
+        length(m$structural$paths %||% list())
+      }, integer(1)),
+      stringsAsFactors = FALSE,
+      check.names = FALSE
+    )
+  } else {
+    data.frame(
+      id = character(0), label = character(0), type = character(0),
+      engine = character(0), n_constructs = integer(0), n_paths = integer(0),
+      stringsAsFactors = FALSE, check.names = FALSE
+    )
+  }
+
   structure(
     list(
       instrument_meta = instrument$meta,
       items_table     = items_table,
       choices_table   = choices_table,
       scales_table    = scales_table,
+      plan_table      = plan_table,
+      models_table    = models_table,
       format          = format
     ),
     class = "sframe_codebook"
   )
+}
+
+#' Enrich a codebook's items table for display
+#'
+#' Replaces `items_table`'s `choice_set` id with the choice set's actual
+#' response options ("1 = Strongly disagree; 2 = Disagree; ...") and its
+#' `scale_id` with the scale's label, so each row of the printed codebook is
+#' self-contained. [codebook_report()] itself keeps the raw ids (for joining
+#' `items_table` to `choices_table`/`scales_table` programmatically); this
+#' is for the rendered document, where a reader should not need to
+#' cross-reference a separate table just to see what "1" means on a scale
+#' shared by many items.
+#'
+#' @param cb An `sframe_codebook` object from [codebook_report()].
+#' @return A data.frame, `cb$items_table` with `choice_set` and `scale_id`
+#'   replaced by display text.
+#' @export
+#' @seealso [codebook_report()]
+sframe_codebook_items_display <- function(cb) {
+  stopifnot(inherits(cb, "sframe_codebook"))
+  items_d <- cb$items_table
+  scale_label_of <- function(id) {
+    if (is.null(id) || !nzchar(id)) return("")
+    hit <- cb$scales_table$label[cb$scales_table$id == id]
+    if (length(hit)) hit[1] else id
+  }
+  options_of <- function(cs_id) {
+    if (is.null(cs_id) || !nzchar(cs_id)) return("")
+    rows <- cb$choices_table[cb$choices_table$choice_set_id == cs_id, , drop = FALSE]
+    if (nrow(rows) == 0) return(cs_id)
+    paste(sprintf("%s = %s", rows$value, rows$label), collapse = "; ")
+  }
+  items_d$scale_id <- vapply(items_d$scale_id, scale_label_of, character(1))
+  items_d$choice_set <- vapply(items_d$choice_set, options_of, character(1))
+  items_d
 }
 
 #' @exportS3Method print sframe_codebook
@@ -144,7 +228,11 @@ print.sframe_codebook <- function(x, ...) {
 #'   temporary file is written and its path returned.
 #' @param output_path Character or NULL. Alias for `output_file`. If both are
 #'   supplied, `output_file` takes precedence.
-#' @param format Character. Output format. Currently `"html"`.
+#' @param format Character. Output format: `"html"` (default) or `"pdf"`.
+#'   PDF output renders the HTML report and prints it through
+#'   [pagedown::chrome_print()], which requires the pagedown package (in
+#'   Suggests) and a local Chrome or Chromium installation. The HTML path
+#'   is unchanged.
 #' @param include_quality Logical. Whether to include the data quality report.
 #'   Requires `data`. Defaults to `TRUE`.
 #' @param include_reliability Logical. Whether to include reliability
@@ -159,6 +247,17 @@ print.sframe_codebook <- function(x, ...) {
 #'   when `data` are supplied and the instrument has an `analysis_plan`.
 #' @param include_models Logical. Whether to include saved model JSON and
 #'   generated syntax blocks. Defaults to `TRUE`.
+#' @param plot_palette One of `"web"` (brand colours, for on-screen reading)
+#'   or `"print"` (black, grey, and white, for a journal-ready or
+#'   print-friendly report). Applied to every chart the report embeds.
+#'   See `sframe_brand()`.
+#' @param interpretations Named list or NULL. Written interpretations keyed
+#'   by analysis-plan block id, added after the results are known. When a
+#'   block has an entry, its report section shows the pre-declared decision
+#'   rule under a "Planned decision rule" label followed by the written
+#'   text under an "Interpretation" label. Blocks without an entry render
+#'   exactly as they do when this argument is NULL. Interpretations are
+#'   report content only and are never written into the instrument.
 #'
 #' @return The output file path, invisibly.
 #' @export
@@ -194,20 +293,62 @@ render_report <- function(
     data              = NULL,
     output_file       = NULL,
     output_path       = NULL,
-    format            = c("html"),
+    format            = c("html", "pdf"),
     include_quality   = TRUE,
     include_reliability = TRUE,
     include_codebook  = TRUE,
     include_missing   = TRUE,
     include_descriptives = TRUE,
     include_analysis  = TRUE,
-    include_models    = TRUE
+    include_models    = TRUE,
+    plot_palette      = c("web", "print"),
+    interpretations   = NULL
 ) {
   sframe_check_instrument(instrument)
+  plot_palette <- rlang::arg_match(plot_palette)
+  interpretations <- sframe_clean_interpretations(interpretations)
 
   format <- rlang::arg_match(format)
-  dest <- output_file %||% output_path %||% tempfile(fileext = ".html")
+  dest <- output_file %||% output_path %||%
+    tempfile(fileext = paste0(".", format))
   dest <- path.expand(dest)
+
+  # PDF is strictly additive: build the HTML report exactly as the html
+  # path does, then print it through Chrome. Requires pagedown (Suggests)
+  # and a local Chrome or Chromium.
+  if (identical(format, "pdf")) {
+    if (!requireNamespace("pagedown", quietly = TRUE)) {
+      rlang::abort(
+        "Package 'pagedown' is needed for PDF output. Install it, or use format = 'html'.",
+        class = c("sframe_missing_package", "sframe_error")
+      )
+    }
+    html_tmp <- tempfile(fileext = ".html")
+    on.exit(unlink(html_tmp, force = TRUE), add = TRUE)
+    render_report(
+      instrument, data = data, output_file = html_tmp, format = "html",
+      include_quality = include_quality,
+      include_reliability = include_reliability,
+      include_codebook = include_codebook,
+      include_missing = include_missing,
+      include_descriptives = include_descriptives,
+      include_analysis = include_analysis,
+      include_models = include_models,
+      plot_palette = plot_palette,
+      interpretations = interpretations
+    )
+    printed <- tryCatch(
+      pagedown::chrome_print(input = html_tmp, output = dest),
+      error = function(e) {
+        rlang::abort(
+          paste0("PDF printing failed: ", conditionMessage(e),
+                 ". pagedown::chrome_print() needs a local Chrome or Chromium; use format = 'html' if none is available."),
+          class = "sframe_error"
+        )
+      }
+    )
+    return(invisible(dest))
+  }
 
   output_dir <- dirname(dest)
   if (!dir.exists(output_dir)) {
@@ -235,6 +376,7 @@ render_report <- function(
     # Write instrument and data to temp RDS for the template to read
     tmp_instr <- tempfile(fileext = ".rds")
     tmp_data  <- tempfile(fileext = ".rds")
+    tmp_interp <- tempfile(fileext = ".rds")
     temp_rds <- tmp_instr
     saveRDS(instrument, tmp_instr)
     if (!is.null(data)) {
@@ -243,11 +385,18 @@ render_report <- function(
     } else {
       tmp_data <- ""
     }
+    if (length(interpretations) > 0) {
+      saveRDS(interpretations, tmp_interp)
+      temp_rds <- c(temp_rds, tmp_interp)
+    } else {
+      tmp_interp <- ""
+    }
     on.exit(unlink(temp_rds, force = TRUE), add = TRUE)
 
     params <- list(
       instrument_path     = tmp_instr,
       data_path           = tmp_data,
+      interpretations_path = tmp_interp,
       include_quality     = include_quality && !is.null(data),
       include_reliability = include_reliability && !is.null(data),
       include_codebook    = include_codebook,
@@ -255,6 +404,7 @@ render_report <- function(
       include_descriptives = include_descriptives && !is.null(data),
       include_analysis    = include_analysis,
       include_models      = include_models,
+      plot_palette        = plot_palette,
       instrument_hash     = sframe_hash_value(instrument)
     )
 
@@ -310,10 +460,38 @@ render_report <- function(
     include_missing     = include_missing && !is.null(data),
     include_descriptives = include_descriptives && !is.null(data),
     include_analysis    = include_analysis,
-    include_models      = include_models
+    include_models      = include_models,
+    plot_palette        = plot_palette,
+    interpretations     = interpretations
   )
 
   invisible(dest)
+}
+
+# Drop entries that cannot be rendered: unnamed values, non-character
+# values, and empty strings. Returns a named list of single strings, or an
+# empty list, so downstream code can index it without further checks.
+sframe_clean_interpretations <- function(interpretations) {
+  if (is.null(interpretations)) return(list())
+  if (!is.list(interpretations) && !is.character(interpretations)) {
+    rlang::abort(
+      "`interpretations` must be a named list or named character vector keyed by analysis-plan block id.",
+      class = "sframe_error"
+    )
+  }
+  interpretations <- as.list(interpretations)
+  keys <- names(interpretations) %||% character(0)
+  out <- list()
+  for (i in seq_along(interpretations)) {
+    key <- if (i <= length(keys)) keys[[i]] else ""
+    value <- interpretations[[i]]
+    if (!nzchar(key %||% "")) next
+    if (!is.character(value) || length(value) != 1 || is.na(value)) next
+    value <- trimws(value)
+    if (!nzchar(value)) next
+    out[[key]] <- value
+  }
+  out
 }
 
 .render_report_html <- function(
@@ -326,7 +504,9 @@ render_report <- function(
     include_missing = TRUE,
     include_descriptives = TRUE,
     include_analysis = TRUE,
-    include_models = TRUE
+    include_models = TRUE,
+    plot_palette = "web",
+    interpretations = list()
 ) {
   meta <- instrument$meta %||% list()
   sections <- character(0)
@@ -335,18 +515,30 @@ render_report <- function(
     cb <- codebook_report(instrument)
     codebook_parts <- c(
       "<h2>Codebook</h2>",
-      .render_report_table(cb$items_table, "Survey items")
+      .render_report_table(sframe_codebook_items_display(cb), "Survey items",
+        col.names = c("ID", "Label", "Type", "Response options", "Scale",
+                      "Reverse", "Required"))
     )
-    if (nrow(cb$choices_table) > 0) {
-      codebook_parts <- c(
-        codebook_parts,
-        .render_report_table(cb$choices_table, "Choice sets")
-      )
-    }
     if (nrow(cb$scales_table) > 0) {
       codebook_parts <- c(
         codebook_parts,
-        .render_report_table(cb$scales_table, "Scale definitions")
+        .render_report_table(cb$scales_table, "Scale definitions",
+          col.names = c("ID", "Label", "Method", "Items (n)", "Item IDs"))
+      )
+    }
+    if (!is.null(cb$plan_table) && nrow(cb$plan_table) > 0) {
+      codebook_parts <- c(
+        codebook_parts,
+        .render_report_table(cb$plan_table, "Pre-declared analysis plan",
+          col.names = c("ID", "Research question", "Method", "Variables",
+                        "Decision rule"))
+      )
+    }
+    if (!is.null(cb$models_table) && nrow(cb$models_table) > 0) {
+      codebook_parts <- c(
+        codebook_parts,
+        .render_report_table(cb$models_table, "Measurement and structural models",
+          col.names = c("ID", "Label", "Type", "Engine", "Constructs", "Paths"))
       )
     }
     sections <- c(sections, sprintf("<section>%s</section>", paste(codebook_parts, collapse = "\n")))
@@ -381,11 +573,13 @@ render_report <- function(
     missing_html <- if (inherits(mr, "error")) {
       sprintf("<h2>Missing Data</h2><p>%s</p>", htmltools_escape(conditionMessage(mr)))
     } else {
+      patterns_display <- mr$patterns[, intersect(c("description", "n", "percent"), names(mr$patterns)), drop = FALSE]
       paste(
         "<h2>Missing Data</h2>",
         .render_report_table(mr$item_missing, "Item-wise missingness"),
         .render_report_table(mr$respondent_missing, "Respondent-wise missingness"),
-        .render_report_table(mr$patterns, "Missing-data patterns"),
+        .render_report_table(patterns_display, "Missing-data patterns",
+                             col.names = c("Pattern", "n", "Percent")),
         .render_report_table(mr$scale_missing_rules, "Scale missing rules"),
         collapse = "\n"
       )
@@ -409,8 +603,10 @@ render_report <- function(
     }
     sections <- c(sections, sprintf("<section>%s</section>", descriptives_html))
 
-    dist_html <- tryCatch(.render_report_distributions(instrument, data),
-                          error = function(e) "")
+    dist_html <- tryCatch(
+      .render_report_distributions(instrument, data, plot_palette = plot_palette),
+      error = function(e) ""
+    )
     if (nzchar(dist_html)) sections <- c(sections, dist_html)
   }
 
@@ -449,7 +645,9 @@ render_report <- function(
   }
 
   if (isTRUE(include_analysis) && length(instrument$analysis_plan %||% list()) > 0) {
-    analysis_html <- .render_report_analysis_section(instrument, data)
+    analysis_html <- .render_report_analysis_section(instrument, data,
+                                                     plot_palette = plot_palette,
+                                                     interpretations = interpretations)
     sections <- c(sections, sprintf("<section>%s</section>", analysis_html))
   }
 
@@ -491,22 +689,45 @@ render_report <- function(
       "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">",
       "<title>%s</title>",
       "<style>",
-      "body { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; max-width: 900px; margin: 0 auto; padding: 32px 20px; color: #1a1a2e; line-height: 1.6; }",
-      "h1, h2, h3 { color: #1a1a2e; }",
-      "a { color: #16B3B1; }",
-      "section { margin: 0 0 28px; padding-bottom: 12px; border-bottom: 1px solid #d9e2ec; }",
+      "/* Brand palette as CSS variables: a theme is a one-line change here.",
+      "   --sf-accent is the AA-safe teal (>= 4.5:1 on white). */",
+      ":root {",
+      "  --sf-ink: #1a1a2e;",
+      "  --sf-accent: #0e7c7a;",
+      "  --sf-muted: #52606d;",
+      "  --sf-faint: #5b6b80;",
+      "  --sf-line: #d9e2ec;",
+      "  --sf-panel: #f8fafc;",
+      "  --sf-rule: #000;",
+      "}",
+      "body { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; max-width: 900px; margin: 0 auto; padding: 32px 20px; color: var(--sf-ink); line-height: 1.6; }",
+      "h1, h2, h3 { color: var(--sf-ink); }",
+      "a { color: var(--sf-accent); }",
+      "section { margin: 0 0 28px; padding-bottom: 12px; border-bottom: 1px solid var(--sf-line); }",
       "table { display: block; overflow-x: auto; max-width: 100%%; border-collapse: collapse; margin: 16px 0 2px; font-size: .93em; }",
       "caption { text-align: left; font-style: italic; font-size: .95em; margin-bottom: 4px; }",
-      "thead tr { border-top: 2px solid #000; border-bottom: 1px solid #000; }",
-      "tbody tr:last-child td { border-bottom: 2px solid #000; }",
+      "thead tr { border-top: 2px solid var(--sf-rule); border-bottom: 1px solid var(--sf-rule); }",
+      "tbody tr:last-child td { border-bottom: 2px solid var(--sf-rule); }",
       "th, td { border: none; padding: 5px 12px; text-align: left; vertical-align: top; }",
       "th { font-weight: 700; background: none; }",
       ".tbl-note { font-size: .85em; font-style: italic; color: #333; margin-top: 3px; margin-bottom: 16px; }",
-      ".meta { color: #52606d; margin-bottom: 24px; }",
-      ".rq-block { margin: 18px 0; padding: 14px; background: #f8fafc; border: 1px solid #d9e2ec; border-radius: 6px; }",
-      ".apa { color: #1a1a2e; }",
-      ".sf-foot { text-align: center; font-size: 12px; color: #94a3b8; margin-top: 48px; padding-top: 16px; border-top: 1px solid #eee; }",
-      ".sf-foot a { color: #16B3B1; font-weight: 600; text-decoration: none; }",
+      ".meta { color: var(--sf-muted); margin-bottom: 24px; }",
+      ".rq-block { margin: 18px 0; padding: 14px; background: var(--sf-panel); border: 1px solid var(--sf-line); border-radius: 6px; }",
+      ".apa { color: var(--sf-ink); }",
+      ".sf-foot { text-align: center; font-size: 12px; color: var(--sf-faint); margin-top: 48px; padding-top: 16px; border-top: 1px solid #eee; }",
+      ".sf-foot a { color: var(--sf-accent); font-weight: 600; text-decoration: none; }",
+      "/* Print (and PDF via pagedown): paginate cleanly, keep a result",
+      "   block and a table's header with its rows, drop the panel tint. */",
+      "@media print {",
+      "  body { max-width: none; padding: 0; }",
+      "  section { border-bottom: none; }",
+      "  .rq-block { break-inside: avoid; background: none; border: 1px solid var(--sf-line); }",
+      "  table { display: table; overflow-x: visible; }",
+      "  thead { display: table-header-group; }",
+      "  tr, img { break-inside: avoid; }",
+      "  h2, h3 { break-after: avoid; }",
+      "  a { color: var(--sf-ink); text-decoration: none; }",
+      "}",
       "</style>",
       "</head>",
       "<body>",
@@ -528,34 +749,53 @@ render_report <- function(
   invisible(output_path)
 }
 
-.render_report_analysis_section <- function(instrument, data = NULL) {
+.render_report_analysis_section <- function(instrument, data = NULL,
+                                            plot_palette = "web",
+                                            interpretations = list()) {
   plan <- instrument$analysis_plan %||% list()
   if (length(plan) == 0) {
     return("")
   }
 
+  # The written interpretation and the pre-declared decision rule render as
+  # a pair, so the post-hoc narrative never displaces the prospective
+  # contract. Without an override, output is unchanged.
+  interp_html <- function(block_id, decision_rule) {
+    override <- interpretations[[block_id %||% ""]] %||% ""
+    if (!nzchar(override)) return("")
+    rule_html <- if (nzchar(decision_rule %||% "")) {
+      sprintf("<p><strong>Planned decision rule:</strong> %s</p>",
+              htmltools_escape(decision_rule))
+    } else ""
+    paste0(rule_html,
+           sprintf("<p><strong>Interpretation:</strong> %s</p>",
+                   htmltools_escape(override)))
+  }
+
   blocks <- if (is.null(data)) {
     vapply(seq_along(plan), function(i) {
       rq <- plan[[i]]
-      sprintf(
-        paste(
+      extra <- interp_html(rq$id, rq$decision_rule %||% rq$interpretation)
+      paste(
+        c(
           "<div class=\"rq-block\">",
-          "<h3>RQ %d: %s</h3>",
-          "<p><strong>Planned test:</strong> %s</p>",
-          "<p><strong>Variables:</strong> %s</p>",
-          "</div>",
-          sep = "\n"
+          sprintf("<h3>RQ %d: %s</h3>", i,
+                  htmltools_escape(rq$research_question %||% paste("Research Question", i))),
+          sprintf("<p><strong>Planned test:</strong> %s</p>",
+                  htmltools_escape(sframe_analysis_method(rq))),
+          sprintf("<p><strong>Variables:</strong> %s</p>",
+                  htmltools_escape(paste(sframe_analysis_vars(rq), collapse = ", "))),
+          if (nzchar(extra)) extra,
+          "</div>"
         ),
-        i,
-        htmltools_escape(rq$research_question %||% paste("Research Question", i)),
-        htmltools_escape(sframe_analysis_method(rq)),
-        htmltools_escape(paste(sframe_analysis_vars(rq), collapse = ", "))
+        collapse = "\n"
       )
     }, character(1))
   } else {
     results <- tryCatch(
       run_analysis_plan(data, instrument,
-                        plots = requireNamespace("ggplot2", quietly = TRUE)),
+                        plots = requireNamespace("ggplot2", quietly = TRUE),
+                        plot_palette = plot_palette),
       error = function(e) e
     )
     if (inherits(results, "error")) {
@@ -573,26 +813,52 @@ render_report <- function(
       }
       # The chart for this result renders directly under its table, as one
       # unit per research question, rather than in a separate section.
+      rq_label <- result$research_question %||% paste("research question", i)
       plot_html <- ""
       if (!is.null(result$plot)) {
-        img <- tryCatch(.render_report_ggplot_png(result$plot), error = function(e) NULL)
+        img <- tryCatch(
+          .render_report_ggplot_png(result$plot,
+                                    alt = paste("Chart for", rq_label)),
+          error = function(e) NULL
+        )
         if (!is.null(img)) plot_html <- img
       }
-      sprintf(
-        paste(
+      # Regression diagnostics are four separate panels, not one plot, so
+      # they render as four stacked images beneath the main chart rather
+      # than forcing a combined-grob dependency just to arrange them.
+      if (is.list(result$diagnostic_plots)) {
+        diag_imgs <- vapply(seq_along(result$diagnostic_plots), function(di) {
+          img <- tryCatch(
+            .render_report_ggplot_png(
+              result$diagnostic_plots[[di]],
+              alt = sprintf("Regression diagnostic panel %d for %s", di, rq_label)),
+            error = function(e) NULL
+          )
+          img %||% ""
+        }, character(1))
+        plot_html <- paste(c(plot_html, diag_imgs[diag_imgs != ""]), collapse = "\n")
+      }
+      extra <- interp_html(result$block_id %||% result$id, result$decision_rule)
+      # A CFA/SEM/PLS-SEM syntax block has no table or chart to show: its
+      # entire output is the generated syntax text, so that goes where a
+      # table or chart normally would rather than leaving the block blank.
+      syntax_html <- if (!is.null(result$syntax)) {
+        sprintf("<pre><code>%s</code></pre>", htmltools_escape(result$syntax))
+      } else ""
+      paste(
+        c(
           "<div class=\"rq-block\">",
-          "<h3>RQ %d: %s</h3>",
-          "<p class=\"apa\"><strong>Result:</strong> %s</p>",
-          "%s",
-          "%s",
-          "</div>",
-          sep = "\n"
+          sprintf("<h3>RQ %d: %s</h3>", i,
+                  htmltools_escape(result$research_question %||% paste("Research Question", i))),
+          sprintf("<p class=\"apa\"><strong>Result:</strong> %s</p>",
+                  htmltools_escape(result$apa %||% result$error %||% "")),
+          table_html,
+          plot_html,
+          syntax_html,
+          if (nzchar(extra)) extra,
+          "</div>"
         ),
-        i,
-        htmltools_escape(result$research_question %||% paste("Research Question", i)),
-        htmltools_escape(result$apa %||% result$error %||% ""),
-        table_html,
-        plot_html
+        collapse = "\n"
       )
     }, character(1))
   }
@@ -654,7 +920,7 @@ render_report <- function(
 # Render a ggplot object to a base64-embedded PNG <img> for the HTML
 # fallback, same embedding pattern as .render_report_plot_png() above but
 # for the ggplot2 objects run_analysis_plan(plots = TRUE) attaches.
-.render_report_ggplot_png <- function(gg) {
+.render_report_ggplot_png <- function(gg, alt = "result chart") {
   if (!requireNamespace("ggplot2", quietly = TRUE)) return(NULL)
   tmp <- tempfile(fileext = ".png")
   ok <- tryCatch({
@@ -665,17 +931,18 @@ render_report <- function(
   raw <- readBin(tmp, "raw", file.info(tmp)$size)
   unlink(tmp)
   sprintf(
-    "<img alt=\"result chart\" style=\"max-width:100%%;height:auto\" src=\"data:image/png;base64,%s\">",
-    openssl::base64_encode(raw)
+    "<img alt=\"%s\" style=\"max-width:100%%;height:auto\" src=\"data:image/png;base64,%s\">",
+    htmltools_escape(alt), openssl::base64_encode(raw)
   )
 }
 
 # Distribution plots (item bar charts, scale histograms) for the HTML fallback,
 # matching the dashboard. Used only when Quarto is unavailable.
-.render_report_distributions <- function(instrument, data) {
+.render_report_distributions <- function(instrument, data, plot_palette = "web") {
   if (is.null(data)) return("")
   theme <- instrument$render$theme %||% "#16B3B1"
   if (!grepl("^#[0-9A-Fa-f]{3,6}$", theme)) theme <- "#16B3B1"
+  has_ggplot <- requireNamespace("ggplot2", quietly = TRUE)
   choice_by <- function(id) {
     for (c in instrument$choices %||% list()) if (identical(c$id, id)) return(c)
     NULL
@@ -686,11 +953,54 @@ render_report <- function(
   )
   blocks <- character(0)
 
+  # A scale's separate Likert items get one grouped diverging chart, the
+  # same way a matrix question's rows do, instead of scattering a related
+  # batch of items across several single-item charts. group_of[[item_id]]
+  # points back to which scale's group it belongs to; rendered tracks which
+  # groups have already produced their one chart, so only the first member
+  # item encountered triggers it.
+  scale_groups <- sframe_likert_scale_groups(instrument)
+  group_of <- character(0)
+  for (g in scale_groups) {
+    ids <- vapply(g$items, function(i) i$id, character(1))
+    group_of[ids] <- g$scale_id
+  }
+  rendered_groups <- character(0)
+
   for (item in q_items) {
-    if (!item$id %in% names(data)) next
-    col <- data[[item$id]]
     t <- item$type
     img <- NULL
+    if (item$id %in% names(group_of)) {
+      gid <- group_of[[item$id]]
+      if (!gid %in% rendered_groups && has_ggplot) {
+        rendered_groups <- c(rendered_groups, gid)
+        g <- scale_groups[[gid]]
+        gg <- sframe_plot_likert_scale(g$items, data, g$choice_set, g$title,
+                                       palette = plot_palette)
+        img <- .render_report_ggplot_png(gg, alt = paste("Distribution of", g$title))
+        if (!is.null(img)) {
+          blocks <- c(blocks, sprintf("<h3>%s</h3>%s", htmltools_escape(g$title), img))
+        }
+      }
+      next
+    }
+    if (identical(t, "matrix")) {
+      # A matrix question has no base response column, only one expanded
+      # <id>__<row> column per row, so it needs its own existence check and
+      # its own chart: every row grouped together, not one chart per row.
+      if (has_ggplot) {
+        cs <- choice_by(item$choice_set %||% "")
+        gg <- sframe_plot_likert_matrix(item, data, cs, palette = plot_palette)
+        img <- .render_report_ggplot_png(gg, alt = paste("Distribution of", item$label %||% item$id))
+      }
+      if (!is.null(img)) {
+        blocks <- c(blocks, sprintf("<h3>%s</h3>%s",
+          htmltools_escape(item$label %||% item$id), img))
+      }
+      next
+    }
+    if (!item$id %in% names(data)) next
+    col <- data[[item$id]]
     if (t %in% c("likert", "single_choice", "multiple_choice")) {
       cs <- choice_by(item$choice_set %||% "")
       freq <- if (!is.null(cs)) {
@@ -708,6 +1018,12 @@ render_report <- function(
           function() sframe_draw_likert_diverging(freq, theme),
           height = if (length(freq) <= 5) 320 else 320 + 22 * length(freq)
         )
+      } else if (has_ggplot) {
+        # Shares theme_surveyframe() (theme_classic()-based) with every
+        # other chart in the report instead of a differently styled base-R
+        # bar chart.
+        gg <- sframe_plot_item_chart(item, col, cs, palette = plot_palette)
+        img <- .render_report_ggplot_png(gg, alt = paste("Distribution of", item$label %||% item$id))
       } else {
         img <- .render_report_plot_png(function() {
           op <- graphics::par(mar = c(4, 11, 1, 1)); on.exit(graphics::par(op))
@@ -718,11 +1034,16 @@ render_report <- function(
     } else if (t %in% c("numeric", "slider", "rating")) {
       num <- suppressWarnings(as.numeric(col)); num <- num[!is.na(num)]
       if (!length(num)) next
-      img <- .render_report_plot_png(function() {
-        op <- graphics::par(mar = c(4, 4, 1, 1)); on.exit(graphics::par(op))
-        graphics::hist(num, col = theme, border = "white", main = NULL,
-                       xlab = item$label, ylab = "Count", las = 1)
-      })
+      if (has_ggplot) {
+        gg <- sframe_plot_item_chart(item, col, NULL, palette = plot_palette)
+        img <- .render_report_ggplot_png(gg, alt = paste("Distribution of", item$label %||% item$id))
+      } else {
+        img <- .render_report_plot_png(function() {
+          op <- graphics::par(mar = c(4, 4, 1, 1)); on.exit(graphics::par(op))
+          graphics::hist(num, col = theme, border = "white", main = NULL,
+                         xlab = item$label, ylab = "Count", las = 1)
+        })
+      }
     }
     if (!is.null(img)) {
       blocks <- c(blocks, sprintf("<h3>%s</h3>%s",
@@ -737,12 +1058,17 @@ render_report <- function(
     scores <- rowMeans(do.call(cbind, nums), na.rm = TRUE)
     scores <- scores[!is.na(scores)]
     if (!length(scores)) next
-    img <- .render_report_plot_png(function() {
-      op <- graphics::par(mar = c(4, 4, 1, 1)); on.exit(graphics::par(op))
-      graphics::hist(scores, col = theme, border = "white", main = NULL,
-        xlab = paste0(sc$label %||% sc$id, " score"), ylab = "Count", las = 1)
-      graphics::abline(v = mean(scores), col = "#dc2626", lwd = 2, lty = 2)
-    })
+    if (has_ggplot) {
+      gg <- sframe_plot_scale_chart(scores, sc$label %||% sc$id, palette = plot_palette)
+      img <- .render_report_ggplot_png(gg, alt = paste((sc$label %||% sc$id), "scale score distribution"))
+    } else {
+      img <- .render_report_plot_png(function() {
+        op <- graphics::par(mar = c(4, 4, 1, 1)); on.exit(graphics::par(op))
+        graphics::hist(scores, col = theme, border = "white", main = NULL,
+          xlab = paste0(sc$label %||% sc$id, " score"), ylab = "Count", las = 1)
+        graphics::abline(v = mean(scores), col = "#dc2626", lwd = 2, lty = 2)
+      })
+    }
     if (!is.null(img)) {
       blocks <- c(blocks, sprintf("<h3>%s (scale score)</h3>%s",
         htmltools_escape(sc$label %||% sc$id), img))
@@ -754,7 +1080,18 @@ render_report <- function(
           paste(blocks, collapse = "\n"))
 }
 
-.render_report_table <- function(x, caption = NULL, note = NULL) {
+# Turn snake_case data-frame names into "Title Case" table headings, e.g.
+# "research_question" -> "Research question", "n_items" -> "N items".
+.sframe_title_case_names <- function(names) {
+  vapply(names, function(nm) {
+    words <- strsplit(gsub("_", " ", nm), " ")[[1]]
+    if (!length(words)) return(nm)
+    words[1] <- paste0(toupper(substring(words[1], 1, 1)), substring(words[1], 2))
+    paste(words, collapse = " ")
+  }, character(1), USE.NAMES = FALSE)
+}
+
+.render_report_table <- function(x, caption = NULL, note = NULL, col.names = NULL) {
   if (!is.data.frame(x) || nrow(x) == 0) {
     return("")
   }
@@ -771,14 +1108,19 @@ render_report <- function(
     ignore.case = TRUE
   ))
 
+  # Raw data frame names (e.g. "research_question", "n_items") are internal
+  # identifiers, not reader-facing labels: title-case them with spaces unless
+  # the caller supplies its own headings.
+  display_names <- col.names %||% .sframe_title_case_names(colnames(x))
+
   header <- paste(
-    sprintf("<th>%s</th>", htmltools_escape(colnames(x))),
+    sprintf("<th scope=\"col\">%s</th>", htmltools_escape_each(display_names)),
     collapse = ""
   )
   rows <- paste(
     apply(x, 1, function(row) {
       cells <- paste(
-        sprintf("<td>%s</td>", htmltools_escape(as.character(row))),
+        sprintf("<td>%s</td>", htmltools_escape_each(as.character(row))),
         collapse = ""
       )
       sprintf("<tr>%s</tr>", cells)

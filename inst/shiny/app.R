@@ -741,6 +741,81 @@ studio_next_plan_id <- function(plan) {
   paste0("RQ", length(plan %||% list()) + 1L)
 }
 
+# Deterministic Shiny input id for a plan block's Export-screen
+# interpretation field. The queue index keeps ids unique even when two
+# sanitised block ids collide.
+studio_interp_input_id <- function(i, block_id) {
+  paste0("rpt_interp_", i, "_", studio_safe_id(block_id, prefix = "rq"))
+}
+
+# Embed a ggplot as a base64 PNG tag so result cards can carry their charts
+# inside renderUI without registering one dynamic plot output per research
+# question. Same sizing as the report's HTML fallback.
+studio_ggplot_img <- function(gg, alt = "result chart") {
+  if (is.null(gg) || !requireNamespace("ggplot2", quietly = TRUE)) {
+    return(NULL)
+  }
+  tmp <- tempfile(fileext = ".png")
+  ok <- tryCatch({
+    ggplot2::ggsave(tmp, gg, width = 7.2, height = 4.2, dpi = 110, bg = "white")
+    TRUE
+  }, error = function(e) FALSE)
+  if (!isTRUE(ok) || !file.exists(tmp)) {
+    return(NULL)
+  }
+  raw <- readBin(tmp, "raw", file.info(tmp)$size)
+  unlink(tmp)
+  tags$img(alt = alt, style = "max-width:100%;height:auto",
+           src = paste0("data:image/png;base64,", openssl::base64_encode(raw)))
+}
+
+# Render a result's $table data frame as the same APA-styled table used
+# elsewhere in the studio, so the results canvas shows the actual numbers
+# instead of just the prose APA string.
+studio_result_table_tag <- function(tbl) {
+  if (!is.data.frame(tbl) || nrow(tbl) == 0) {
+    return(NULL)
+  }
+  num_cols <- vapply(tbl, is.numeric, logical(1))
+  if (any(num_cols)) {
+    tbl[num_cols] <- lapply(tbl[num_cols], function(col) round(col, 3))
+  }
+  header <- tags$tr(do.call(tagList, lapply(colnames(tbl), tags$th)))
+  body_rows <- lapply(seq_len(nrow(tbl)), function(r) {
+    tags$tr(do.call(tagList, lapply(tbl[r, , drop = TRUE], function(cell) {
+      tags$td(as.character(cell))
+    })))
+  })
+  tags$table(class = "sf-table", tags$thead(header), tags$tbody(do.call(tagList, body_rows)))
+}
+
+# The chart(s) attached to one analysis-plan result: the main chart, plus a
+# regression's four diagnostic panels stacked beneath it, matching the
+# report's table-plus-plot pairing.
+studio_result_plot_tags <- function(result) {
+  plot_tags <- list(studio_ggplot_img(result$plot))
+  if (is.list(result$diagnostic_plots)) {
+    plot_tags <- c(plot_tags,
+      lapply(result$diagnostic_plots, studio_ggplot_img, alt = "regression diagnostic"))
+  }
+  Filter(Negate(is.null), plot_tags)
+}
+
+# The canvas's "Copy result" button: a JASP/jamovi output canvas lets you
+# copy one output block without generating a whole report, so the same
+# affordance belongs here. The click handler (window.studioCopyResultBlock,
+# defined once in the page's <script> block) builds the clipboard content
+# client-side from the block's live DOM, including the current
+# interpretation text, the table, and the chart image, not just an APA
+# string, so it survives a paste into Word or LibreOffice as a rich block.
+studio_copy_result_btn <- function() {
+  tags$button(
+    type = "button", class = "btn-outline studio-copy-btn",
+    onclick = "studioCopyResultBlock(this)",
+    "Copy result"
+  )
+}
+
 studio_safe_id <- function(x, prefix = "M") {
   x <- gsub("[^A-Za-z0-9_]", "_", trimws(x %||% ""))
   if (!nzchar(x)) {
@@ -952,7 +1027,13 @@ ui <- fluidPage(
       .vmeta { border-bottom: 1px solid #f0f1f4; padding: 10px 0; }
       .vmeta:last-child { border-bottom: none; }
       .vmeta-id { font-size: 13px; font-weight: 700; color: #1a1a2e; }
-      .vmeta-lbl { font-size: 12px; color: #4b5563; margin: 2px 0 5px; }
+      .vmeta-lbl { font-size: 12px; color: #4b5563; margin: 2px 0 5px; display: block; }
+      .result-canvas-block .sf-table { margin: 10px 0; }
+      .result-canvas-block img { margin: 8px 0; border: 1px solid #f0f1f4; border-radius: 6px; }
+      .result-canvas-block textarea {
+        min-height: 160px; resize: vertical; font-size: 14px; line-height: 1.5;
+      }
+      .studio-copy-btn { margin: 10px 0; padding: 5px 14px; font-size: 12px; }
       .vbadge {
         display: inline-block; border: 1px solid #d9e2ec; border-radius: 999px;
         padding: 2px 7px; margin: 2px 3px 2px 0; font-size: 11px;
@@ -1020,6 +1101,48 @@ ui <- fluidPage(
           $('#screen-' + tab).addClass('active');
           Shiny.setInputValue('current_tab', tab, {priority: 'event'});
         });
+
+        // Copies a whole result-canvas block (title, badges, APA line,
+        // table, chart, decision rule, and the interpretation as currently
+        // typed) as one rich-text unit, so pasting into Word/LibreOffice/
+        // Google Docs brings the table and chart image over instead of a
+        // flat text dump. Built client-side from the live DOM (not from a
+        // string baked in at render time) so the interpretation textarea's
+        // current value is included even though it was typed after the
+        // page loaded.
+        window.studioCopyResultBlock = function(btn) {
+          var block = btn.closest('.result-canvas-block');
+          if (!block) return;
+          var clone = block.cloneNode(true);
+          var cloneBtn = clone.querySelector('.studio-copy-btn');
+          if (cloneBtn) cloneBtn.remove();
+          var ta = block.querySelector('textarea');
+          var taClone = clone.querySelector('textarea');
+          if (ta && taClone) {
+            var div = document.createElement('div');
+            div.style.whiteSpace = 'pre-wrap';
+            div.textContent = ta.value || '';
+            taClone.parentNode.replaceChild(div, taClone);
+          }
+          var html = '<div>' + clone.innerHTML + '</div>';
+          var text = clone.textContent || '';
+          var restore = function() {
+            var t = btn.textContent;
+            btn.textContent = 'Copied';
+            setTimeout(function() { btn.textContent = t; }, 1400);
+          };
+          if (window.ClipboardItem && navigator.clipboard && navigator.clipboard.write) {
+            var item = new ClipboardItem({
+              'text/html': new Blob([html], {type: 'text/html'}),
+              'text/plain': new Blob([text], {type: 'text/plain'})
+            });
+            navigator.clipboard.write([item]).then(restore, function() {
+              navigator.clipboard.writeText(text).then(restore);
+            });
+          } else {
+            navigator.clipboard.writeText(text).then(restore);
+          }
+        };
       ")),
 
       tags$div(id = "screen-open", class = screen_class("open"),
@@ -1090,13 +1213,16 @@ ui <- fluidPage(
       tags$div(id = "screen-quality", class = screen_class("quality"),
         tags$h2(class = "screen-title", "Quality Dashboard"),
         uiOutput("quality_gate"),
-        uiOutput("quality_output")
+        uiOutput("quality_output"),
+        plotOutput("studio_quality_chart", height = "260px"),
+        plotOutput("studio_missing_chart", height = "260px")
       ),
 
       tags$div(id = "screen-reliability", class = screen_class("reliability"),
         tags$h2(class = "screen-title", "Reliability"),
         uiOutput("reliability_gate"),
-        uiOutput("reliability_output")
+        uiOutput("reliability_output"),
+        plotOutput("studio_reliability_chart", height = "300px")
       ),
 
       tags$div(id = "screen-analysis", class = screen_class("analysis"),
@@ -1149,7 +1275,23 @@ ui <- fluidPage(
           checkboxInput("rpt_reliability", "Include reliability", value = TRUE),
           checkboxInput("rpt_analysis", "Include analysis-plan results", value = TRUE),
           checkboxInput("rpt_models", "Include saved models and syntax", value = TRUE),
-          tags$br(),
+          shiny::radioButtons(
+            "rpt_palette", "Chart theme",
+            choices = c(
+              "Colour (on-screen reading)" = "web",
+              "Black and white (print and journal submission)" = "print"
+            ),
+            selected = "web"
+          )
+        ),
+        tags$div(class = "card",
+          tags$div(class = "card-title", "Interpretations"),
+          tags$p(class = "hint",
+            "Write an interpretation for each research question before exporting. The report shows it alongside the pre-declared decision rule. Interpretations go into the report only, never into the instrument file."),
+          uiOutput("export_interpretations_ui")
+        ),
+        tags$div(class = "card",
+          tags$div(class = "card-title", "Generate"),
           uiOutput("export_report_ui"),
           tags$p(class = "hint",
             "Generates a self-contained HTML report. Quarto is optional; an internal HTML fallback is available."),
@@ -2001,6 +2143,60 @@ server <- function(input, output, session) {
     )
   })
 
+  # plot() dispatches to plot.sframe_quality_report()/plot.sframe_reliability_report()
+  # (ggplot2, guarded); returns NULL and draws nothing when ggplot2 is absent
+  # or the report has no plottable rows, so these panels degrade quietly
+  # rather than erroring.
+  output$studio_quality_chart <- shiny::renderPlot({
+    req(rv$instrument, rv$responses)
+    gg <- tryCatch(graphics::plot(quality_result()), error = function(e) NULL)
+    if (!is.null(gg)) print(gg)
+  }, bg = "white")
+
+  output$studio_missing_chart <- shiny::renderPlot({
+    req(rv$instrument, rv$responses)
+    mr <- tryCatch(
+      surveyframe::missing_data_report(rv$responses, rv$instrument),
+      error = function(e) NULL
+    )
+    if (is.null(mr)) return()
+    gg <- tryCatch(graphics::plot(mr), error = function(e) NULL)
+    if (!is.null(gg)) print(gg)
+  }, bg = "white")
+
+  # Scale-score correlation heatmap for the Dashboard tab's Scales view.
+  # Scores are local row means per scale, matching the standalone dashboard.
+  output$studio_scale_cor_chart <- shiny::renderPlot({
+    req(rv$instrument, rv$responses)
+    resp <- rv$responses
+    scs <- Filter(function(s) length(intersect(s$items, names(resp))) > 0,
+                  rv$instrument$scales %||% list())
+    if (length(scs) < 2) {
+      plot.new(); text(.5, .5, "Define at least two scales to see correlations.", col = "#94a3b8")
+      return()
+    }
+    scored <- as.data.frame(lapply(scs, function(sc) {
+      nums <- lapply(resp[intersect(sc$items, names(resp))],
+                     function(x) suppressWarnings(as.numeric(x)))
+      rowMeans(do.call(cbind, nums), na.rm = TRUE)
+    }))
+    names(scored) <- vapply(scs, `[[`, character(1), "id")
+    gg <- tryCatch(
+      surveyframe::sframe_plot_correlation_matrix(scored, names(scored)),
+      error = function(e) NULL
+    )
+    if (!is.null(gg)) { print(gg); return() }
+    plot.new(); text(.5, .5, "Install ggplot2 to see the correlation heatmap.", col = "#94a3b8")
+  }, bg = "white")
+
+  output$studio_reliability_chart <- shiny::renderPlot({
+    req(rv$instrument, rv$responses)
+    rr <- reliability_result()
+    if (is.null(rr) || length(rr) == 0) return()
+    gg <- tryCatch(graphics::plot(rr), error = function(e) NULL)
+    if (!is.null(gg)) print(gg)
+  }, bg = "white")
+
   output$reliability_output <- renderUI({
     req(rv$instrument, rv$responses)
     rr <- reliability_result()
@@ -2387,6 +2583,40 @@ server <- function(input, output, session) {
     showNotification("Analysis plan saved.", type = "message")
   })
 
+  # One shared execution of the analysis plan (with charts when ggplot2 is
+  # installed), reused by the Run result cards and the Export screen's
+  # Interpretations card, so the plan does not run once per consumer.
+  # Depends on input$rpt_palette so switching the Export screen's Chart
+  # theme radio re-renders the preview charts in the chosen palette instead
+  # of leaving them fixed at whatever palette was active on first run.
+  analysis_results_r <- reactive({
+    req(rv$instrument)
+    if (is.null(rv$responses)) {
+      return(NULL)
+    }
+    tryCatch(
+      surveyframe::run_analysis_plan(
+        rv$responses, rv$instrument,
+        plots = requireNamespace("ggplot2", quietly = TRUE),
+        plot_palette = input$rpt_palette %||% "web"
+      ),
+      error = function(e) e
+    )
+  })
+
+  # Rendering a chart to an embeddable base64 PNG (studio_ggplot_img()) is
+  # the expensive part of a results canvas with 30+ blocks, so it happens
+  # once per result here and both the Run stage cards and the Export
+  # screen's Interpretations canvas reuse the same tags instead of each
+  # re-encoding every chart.
+  analysis_result_plot_tags_r <- reactive({
+    results <- analysis_results_r()
+    if (is.null(results) || inherits(results, "error")) {
+      return(list())
+    }
+    lapply(results, studio_result_plot_tags)
+  })
+
   output$analysis_results_output <- renderUI({
     req(rv$instrument)
     if (length(rv$instrument$analysis_plan %||% list()) == 0) {
@@ -2398,27 +2628,46 @@ server <- function(input, output, session) {
         tags$p(class = "hint", "Upload response data to run saved analysis plans.")))
     }
 
-    results <- tryCatch(
-      surveyframe::run_analysis_plan(rv$responses, rv$instrument),
-      error = function(e) e
-    )
+    results <- analysis_results_r()
     if (inherits(results, "error")) {
       return(tags$div(class = "card",
         tags$div(class = "card-title", "Run results"),
         tags$p(conditionMessage(results))))
     }
 
-    rows <- lapply(results, function(result) {
-      tags$tr(
-        tags$td(result$id %||% ""),
-        tags$td(result$test %||% result$method %||% ""),
-        tags$td(result$apa %||% result$error %||% "")
+    all_plot_tags <- analysis_result_plot_tags_r()
+    cards <- lapply(seq_along(results), function(i) {
+      result <- results[[i]]
+      # The chart sits inside its result card, directly under the APA
+      # string, matching the report's table-plus-plot pairing. Regression
+      # adds its four diagnostic panels beneath the main chart.
+      plot_tags <- all_plot_tags[[i]] %||% list()
+      tags$div(class = "card",
+        tags$div(class = "card-title",
+          sprintf("RQ %d: %s", i, result$block_id %||% "")),
+        tags$p(result$research_question %||% ""),
+        tags$div(
+          tags$span(class = "vbadge", result$test %||% result$method %||% ""),
+          if (!is.null(result$effect_label)) {
+            tags$span(class = "vbadge", paste(result$effect_label, "effect"))
+          }
+        ),
+        if (!is.null(result$error)) {
+          tags$p(class = "hint", paste("Error:", result$error))
+        } else {
+          tagList(
+            tags$p(tags$strong("Result: "),
+                   result$apa %||% "See the matching section of the report."),
+            studio_result_table_tag(result$table),
+            # A CFA/SEM/PLS-SEM syntax block has no table or chart: its
+            # whole output is the generated syntax text.
+            if (!is.null(result$syntax)) tags$pre(class = "sf-code", result$syntax)
+          )
+        },
+        if (length(plot_tags) > 0) do.call(tagList, plot_tags)
       )
     })
-    table_card("Run results",
-      headers = c("ID", "Method", "APA result"),
-      rows = rows,
-      empty_label = "No results were returned.")
+    do.call(tagList, cards)
   })
 
   observeEvent(input$delete_analysis_plan_btn, {
@@ -2708,6 +2957,11 @@ server <- function(input, output, session) {
         tags$div(class = "card",
           tags$div(class = "card-title", "Scale score distribution"),
           shiny::plotOutput("studio_scale_chart", height = "280px")),
+        if (length(scs) >= 2) {
+          tags$div(class = "card",
+            tags$div(class = "card-title", "Scale score correlations"),
+            shiny::plotOutput("studio_scale_cor_chart", height = "320px"))
+        },
         table_card("Scale definitions",
           headers = c("ID", "Label", "Method", "Items", "Reverse items"),
           rows = def_rows, empty_label = "No scales defined.")
@@ -2731,9 +2985,11 @@ server <- function(input, output, session) {
     }
     col_data <- resp[[input$dash_item_sel]]
     t <- item$type
+    cs <- dash_find(rv$instrument$choices, item$choice_set %||% "")
+    gg <- tryCatch(sframe_plot_item_chart(item, col_data, cs), error = function(e) NULL)
+    if (!is.null(gg)) { print(gg); return() }
     op <- par(mar = c(4, 9, 2, 1), bg = "white"); on.exit(par(op))
     if (t %in% c("likert", "single_choice", "multiple_choice")) {
-      cs <- dash_find(rv$instrument$choices, item$choice_set %||% "")
       if (!is.null(cs)) {
         freq <- table(factor(col_data, levels = as.character(cs$values)))
         names(freq) <- cs$labels
@@ -2807,6 +3063,8 @@ server <- function(input, output, session) {
     if (!length(scores)) {
       plot.new(); text(.5, .5, "No valid scale scores.", col = "#94a3b8"); return()
     }
+    gg <- tryCatch(sframe_plot_scale_chart(scores, sc$label), error = function(e) NULL)
+    if (!is.null(gg)) { print(gg); return() }
     op <- par(mar = c(4, 4, 2, 1), bg = "white"); on.exit(par(op))
     hist(scores, col = dash_theme, border = "white", main = NULL,
          xlab = paste0(sc$label, " score"), ylab = "Count", las = 1, cex.axis = .8)
@@ -2883,6 +3141,100 @@ server <- function(input, output, session) {
     }
   )
 
+  # The Interpretations card is a JASP/JAMOVI-style output canvas: every
+  # research question is one self-contained block in reading order (badges,
+  # the APA line, the numbers table, the chart), the planned decision rule
+  # sits directly above the box where you write the interpretation that
+  # answers it, and a "Copy result" button gets one output out without
+  # generating a whole report. This is the single place to read a result and
+  # write about it, rather than switching between the Run stage (which has
+  # the chart but no writing box) and a text-only interpretation list.
+  output$export_interpretations_ui <- renderUI({
+    req(rv$instrument)
+    plan <- rv$instrument$analysis_plan %||% list()
+    if (length(plan) == 0) {
+      return(tags$p(class = "hint",
+        "Save analysis plans on the Analyse screen to add interpretations."))
+    }
+    results <- NULL
+    all_plot_tags <- list()
+    if (!is.null(rv$responses)) {
+      results <- analysis_results_r()
+      if (inherits(results, "error")) {
+        results <- NULL
+      } else {
+        all_plot_tags <- analysis_result_plot_tags_r()
+      }
+    }
+    result_block_ids <- if (!is.null(results)) {
+      vapply(results, function(r) r$block_id %||% "", character(1))
+    } else {
+      character(0)
+    }
+    fields <- lapply(seq_along(plan), function(i) {
+      block <- plan[[i]]
+      block_id <- block$id %||% ""
+      fld <- studio_interp_input_id(i, block_id)
+      result <- NULL
+      plot_tags <- list()
+      hit_idx <- match(block_id, result_block_ids)
+      if (!is.na(hit_idx)) {
+        result <- results[[hit_idx]]
+        plot_tags <- all_plot_tags[[hit_idx]] %||% list()
+      }
+      tags$div(class = "card result-canvas-block",
+        tags$div(class = "card-title", sprintf("RQ %d: %s", i, block_id)),
+        tags$p(block$research_question %||% ""),
+        tags$div(
+          tags$span(class = "vbadge", block$method %||% block$test %||% ""),
+          if (!is.null(result) && !is.null(result$effect_label)) {
+            tags$span(class = "vbadge", paste(result$effect_label, "effect"))
+          }
+        ),
+        if (is.null(result)) {
+          tags$p(class = "hint",
+            "Upload response data to see the result while you write.")
+        } else if (!is.null(result$error)) {
+          tags$p(class = "hint", paste("Error:", result$error))
+        } else {
+          tagList(
+            tags$p(tags$strong("Result: "), result$apa %||% ""),
+            studio_result_table_tag(result$table),
+            if (!is.null(result$syntax)) tags$pre(class = "sf-code", result$syntax),
+            do.call(tagList, plot_tags)
+          )
+        },
+        studio_copy_result_btn(),
+        if (nzchar(block$decision_rule %||% "")) {
+          tags$p(class = "hint",
+            paste("Planned decision rule:", block$decision_rule))
+        },
+        tags$label(class = "vmeta-lbl", "Interpretation"),
+        textAreaInput(fld, NULL,
+          value = shiny::isolate(input[[fld]] %||% ""),
+          rows = 8, width = "100%",
+          placeholder = "State what this result means for the research question.")
+      )
+    })
+    do.call(tagList, fields)
+  })
+
+  # Collect the non-empty Export-screen interpretation fields as the named
+  # list render_report() expects, keyed by plan block id.
+  studio_collect_interpretations <- function() {
+    plan <- rv$instrument$analysis_plan %||% list()
+    out <- list()
+    for (i in seq_along(plan)) {
+      block_id <- plan[[i]]$id %||% ""
+      if (!nzchar(block_id)) next
+      text <- trim_or_null(input[[studio_interp_input_id(i, block_id)]])
+      if (!is.null(text)) {
+        out[[block_id]] <- text
+      }
+    }
+    if (length(out) > 0) out else NULL
+  }
+
   output$download_report_btn <- downloadHandler(
     filename = function() {
       paste0(
@@ -2902,7 +3254,9 @@ server <- function(input, output, session) {
           include_descriptives = isTRUE(input$rpt_descriptives),
           include_reliability = isTRUE(input$rpt_reliability),
           include_analysis = isTRUE(input$rpt_analysis),
-          include_models = isTRUE(input$rpt_models)
+          include_models = isTRUE(input$rpt_models),
+          plot_palette = input$rpt_palette %||% "web",
+          interpretations = studio_collect_interpretations()
         )
       }, error = function(e) {
         showNotification(paste("Report error:", conditionMessage(e)), type = "error")
@@ -2916,9 +3270,11 @@ server <- function(input, output, session) {
   for (.oid in c(
     "instrument_summary_card", "survey_preview_items", "responses_summary_card",
     "quality_output", "reliability_output",
+    "studio_quality_chart", "studio_reliability_chart",
+    "studio_missing_chart", "studio_scale_cor_chart",
     "analysis_left_panel", "analysis_middle_panel", "analysis_right_panel",
     "analysis_results_output", "studio_dashboard_content",
-    "export_sframe_ui", "export_report_ui",
+    "export_sframe_ui", "export_report_ui", "export_interpretations_ui",
     "download_sframe_btn", "download_report_btn"
   )) {
     shiny::outputOptions(output, .oid, suspendWhenHidden = FALSE)

@@ -11,7 +11,9 @@
   --cd:#dc2626;--cd-l:#fee2e2;--cs:#16a34a;
   --cw:#d97706;--cw-l:#fef3c7;
   --cf:#fff;--cg:#f1f5f9;--cb:#e2e8f0;
-  --t1:#0f172a;--t2:#475569;--t3:#94a3b8;
+  /* --t3 sits on white and #f1f5f9 surfaces only (the dark sidebar has its
+     own --st tokens); #5b6b80 keeps >=4.5:1 on both (WCAG 2.2 AA). */
+  --t1:#0f172a;--t2:#475569;--t3:#5b6b80;
   --sb:#1e293b;--st:#cbd5e1;--sh:#2d3f57;--sa:#3b82f6;
   --font:"Segoe UI",system-ui,-apple-system,sans-serif;
   --th:48px;--sw:224px;--iw:320px;
@@ -29,26 +31,34 @@ input,textarea,select{font-family:inherit;font-size:13px}
 .shell{display:flex;flex:1;overflow:hidden}
 
 /* -- Topbar --------------------------------------------------------------- */
-.topbar{display:flex;align-items:center;gap:10px;height:var(--th);
+/* Three-zone grid: brand left, mode switcher truly centred, actions right.
+   The centred modes fix the "three buttons left, four right" imbalance:
+   each zone reads as its own group instead of one lopsided row. */
+.topbar{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;
+  gap:10px;height:var(--th);
   padding:0 16px;background:var(--cf);border-bottom:1px solid var(--cb);
   flex-shrink:0;z-index:100;box-shadow:0 1px 0 var(--cb)}
-.tb-brand{font-size:14px;font-weight:700;padding-right:12px;
-  border-right:1px solid var(--cb);white-space:nowrap;color:var(--t1)}
+.tb-brand{font-size:14px;font-weight:700;white-space:nowrap;color:var(--t1);
+  justify-self:start}
 .tb-brand span{color:var(--cp)}
-.tb-modes{display:flex;gap:2px;background:var(--cg);border-radius:10px;padding:3px}
+.tb-modes{display:flex;gap:2px;background:var(--cg);border-radius:10px;padding:3px;
+  justify-self:center}
 .m-btn{padding:5px 14px;border-radius:6px;font-size:12px;font-weight:500;
   color:var(--t2);transition:all var(--d1)}
 .m-btn[aria-pressed=true]{background:var(--cf);color:var(--cp);font-weight:600;
   box-shadow:0 1px 3px rgba(0,0,0,.1)}
 .m-btn:hover:not([aria-pressed=true]){color:var(--t1)}
-.tb-r{margin-left:auto;display:flex;align-items:center;gap:8px}
+.tb-r{justify-self:end;display:flex;align-items:center;gap:8px}
+.tb-sep{width:1px;height:18px;background:var(--cb)}
 .tb-hist{display:flex;gap:2px}
 .tb-hist button{padding:4px 7px;border-radius:5px;color:var(--t3);
   font-size:11px;transition:all var(--d1)}
 .tb-hist button:hover:not(:disabled){background:var(--cg);color:var(--t1)}
 .tb-hist button:disabled{opacity:.3;cursor:not-allowed}
 .save-st{font-size:11px;color:var(--t3)}
-.save-st.dirty{color:var(--cw)}.save-st.saved{color:var(--cs)}
+/* Darker than the shared --cw/--cs tokens: this is 11px text on white,
+   which needs >=4.5:1 (WCAG 2.2 AA). */
+.save-st.dirty{color:#b45309}.save-st.saved{color:#15803d}
 
 /* -- Buttons -------------------------------------------------------------- */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:5px;
@@ -71,11 +81,16 @@ input,textarea,select{font-family:inherit;font-size:13px}
 .sidebar{width:var(--sw);flex-shrink:0;background:var(--sb);
   display:flex;flex-direction:column;overflow:hidden}
 .sb-top{padding:10px;border-bottom:1px solid rgba(255,255,255,.07)}
-.sb-title-btn{width:100%;display:flex;align-items:center;gap:6px;padding:6px 8px;
-  border-radius:6px;color:var(--st);font-size:12px;font-weight:500;
-  transition:background var(--d1);text-align:left}
-.sb-title-btn:hover{background:var(--sh)}
-.sb-title-txt{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sb-title{padding:4px 8px 6px;color:var(--st);font-size:12px;font-weight:600;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* The single, obviously-primary settings entry point (owner decision
+   2026-07-11): full-width, filled with the brand colour, above search. */
+.sb-settings-cta{width:100%;display:flex;align-items:center;justify-content:center;
+  gap:7px;padding:8px 10px;border-radius:6px;background:var(--cp);color:#fff;
+  font-size:12px;font-weight:600;border:none;cursor:pointer;
+  transition:filter var(--d1)}
+.sb-settings-cta:hover{filter:brightness(1.12)}
+.sb-settings-cta:focus-visible{outline:2px solid #fff;outline-offset:2px}
 .sb-search{position:relative;margin-top:7px}
 .sb-search input{width:100%;background:rgba(255,255,255,.08);
   border:1px solid rgba(255,255,255,.1);border-radius:6px;
@@ -84,13 +99,6 @@ input,textarea,select{font-family:inherit;font-size:13px}
 .sb-search input:focus{outline:none;background:rgba(255,255,255,.12)}
 .sb-si{position:absolute;left:8px;top:50%;transform:translateY(-50%);
   color:rgba(255,255,255,.3);font-size:11px;pointer-events:none}
-.setup-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px}
-.setup-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;
-  gap:3px;min-height:46px;border:1px solid rgba(255,255,255,.08);
-  border-radius:6px;background:rgba(255,255,255,.04);color:rgba(255,255,255,.72);
-  font-size:10px;font-weight:600;transition:all var(--d1)}
-.setup-btn:hover{background:rgba(255,255,255,.1);color:#fff;border-color:rgba(255,255,255,.16)}
-.setup-btn span{font-size:15px;line-height:1}
 .sb-body{flex:1;overflow-y:auto;padding:6px}
 .sb-body::-webkit-scrollbar{width:3px}
 .sb-body::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12);border-radius:3px}
@@ -102,6 +110,13 @@ input,textarea,select{font-family:inherit;font-size:13px}
   padding:9px;min-height:38px;border-radius:6px;background:var(--cp);color:#fff;
   font-size:12px;font-weight:600;transition:background var(--d1)}
 .fab:hover,.fab.active{background:var(--cp-d)}
+.fab-mini{flex:1;display:flex;align-items:center;justify-content:center;gap:5px;
+  padding:6px 4px;min-height:30px;border-radius:6px;
+  border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.05);
+  color:rgba(255,255,255,.75);font-size:11px;font-weight:600;
+  transition:all var(--d1)}
+.fab-mini:hover,.fab-mini.active{background:rgba(255,255,255,.12);color:#fff;
+  border-color:rgba(255,255,255,.2)}
 .fab-menu{display:none;background:var(--sh);border-radius:6px;overflow:hidden;
   border:1px solid rgba(255,255,255,.08);max-height:260px;overflow-y:auto;
   margin-bottom:6px}
@@ -265,6 +280,11 @@ input,textarea,select{font-family:inherit;font-size:13px}
 .cq button{padding:2px 7px;border-radius:9999px;border:1px solid var(--cb);
   font-size:10px;color:var(--t2);transition:all var(--d1)}
 .cq button:hover{border-color:var(--cp);color:var(--cp);background:var(--cp-l)}
+/* Inspector quick-fill template chips (same sets as the modal's .cq row) */
+.tpl-chips{display:flex;gap:4px;flex-wrap:wrap;margin:-4px 0 10px}
+.tpl-chips button{padding:2px 7px;border-radius:9999px;border:1px solid var(--cb);
+  font-size:10px;color:var(--t2);transition:all var(--d1);background:var(--cf)}
+.tpl-chips button:hover{border-color:var(--cp);color:var(--cp);background:var(--cp-l)}
 
 /* -- Variable checkboxes -------------------------------------------------- */
 .vcbs{max-height:150px;overflow-y:auto;border:1.5px solid var(--cb);
@@ -307,7 +327,13 @@ input,textarea,select{font-family:inherit;font-size:13px}
 .alert-w{background:var(--cw-l);color:#78350f;border:1px solid #fde68a;
   padding:9px 12px;border-radius:6px;font-size:12px;line-height:1.5}
 
-/* -- Preview -------------------------------------------------------------- */
+/* -- Preview --------------------------------------------------------------
+   Theme B renderer, mirroring inst/static_survey/template.html so the
+   Preview tab matches the exported survey: serif question typography,
+   numbered Likert squares, bordered choice cards with key chips and ticks,
+   underline text inputs, and a slim theme-coloured progress strip. All
+   tints derive from --pvc (the SURVEY theme colour, set on #pvFrame by
+   renderPreview), never from the builder chrome's own --cp. */
 .pv-mode{flex-direction:column;background:var(--cg)}
 .pv-bar{padding:8px 20px;background:var(--cf);border-bottom:1px solid var(--cb);
   display:flex;align-items:center;gap:12px;flex-shrink:0}
@@ -317,70 +343,130 @@ input,textarea,select{font-family:inherit;font-size:13px}
   color:var(--t2);cursor:pointer;transition:all var(--d1)}
 .pvtab.active{background:var(--cf);color:var(--cp);font-weight:600;
   box-shadow:0 1px 3px rgba(0,0,0,.08)}
-.pv-frame{flex:1;overflow-y:auto;padding:24px}
+.pv-frame{flex:1;overflow-y:auto;padding:24px;
+  --pvc:#2563eb;
+  --pv-serif:Georgia,'Times New Roman',serif;
+  --pv-tint:color-mix(in srgb,var(--pvc) 8%,#ffffff);
+  --pv-tint-bd:color-mix(in srgb,var(--pvc) 30%,#dbe3e6)}
+.pv-prog{max-width:620px;margin:0 auto 10px;height:3px;border-radius:2px;
+  background:color-mix(in srgb,var(--pvc) 14%,#ffffff);overflow:hidden;
+  display:flex;align-items:center}
+.pv-prog-in{height:100%;background:var(--pvc);border-radius:2px;
+  transition:width .3s ease}
 .pv-card{background:var(--cf);border-radius:12px;
   box-shadow:0 2px 8px rgba(0,0,0,.07);padding:32px;
   max-width:620px;margin:0 auto}
-.pv-title{font-size:22px;font-weight:700;margin-bottom:6px}
+.pv-title{font-family:var(--pv-serif);font-size:24px;font-weight:500;
+  letter-spacing:-.2px;margin-bottom:6px}
 .pv-desc{color:var(--t2);margin-bottom:20px;font-size:13px;line-height:1.6}
 .pv-intro{line-height:1.7;margin-bottom:14px;font-size:13px}
-.pv-consent{background:var(--cg);border:1.5px solid var(--cb);
+.pv-consent{background:var(--pv-tint);border:1px solid var(--pv-tint-bd);
   border-radius:6px;padding:10px 12px;font-size:12px;color:var(--t2);margin-bottom:14px}
-.pv-sec{border-top:2px solid var(--cp);margin:24px 0 14px;padding-top:14px}
-.pv-sec-t{font-size:16px;font-weight:600}
+.pv-eyebrow{font-size:12px;color:var(--pvc);margin-bottom:10px;font-weight:600}
+.pv-sec{margin:24px 0 14px;padding-top:14px;position:relative}
+.pv-sec::before{content:"";position:absolute;top:0;left:0;width:44px;height:2px;
+  background:var(--pvc)}
+.pv-sec-t{font-family:var(--pv-serif);font-size:18px;font-weight:500;
+  letter-spacing:-.2px}
 .pv-sec-sub{color:var(--t2);margin-top:4px;font-size:12px}
-.pv-txtblk{background:var(--cp-l);border-left:3px solid var(--cp);
+.pv-txtblk{background:var(--pv-tint);border-left:3px solid var(--pvc);
   padding:10px 12px;border-radius:0 6px 6px 0;margin-bottom:14px;
-  font-size:12px;line-height:1.6;color:#1e40af}
-.pv-item{margin-bottom:18px}
-.pv-ql{font-weight:600;margin-bottom:7px;display:flex;gap:5px;
-  align-items:flex-start;font-size:13px}
-.pv-req-mk{color:var(--cd);font-size:10px;margin-top:2px}
-.pv-help-t{font-size:11px;color:var(--t3);margin-top:2px;font-weight:400}
-.pv-opts{display:flex;flex-direction:column;gap:5px}
-.pv-opts.inl{flex-direction:row;flex-wrap:wrap;gap:12px}
-.pv-opt{display:flex;align-items:center;gap:6px;font-size:12px;cursor:default}
-.pv-inp{border:1.5px solid var(--cb);border-radius:6px;padding:6px 9px;
-  width:100%;font-size:12px;background:var(--cf)}
+  font-size:12px;line-height:1.6;color:var(--t2)}
+.pv-item{margin-bottom:22px}
+.pv-ql{font-family:var(--pv-serif);font-weight:500;margin-bottom:9px;
+  display:flex;gap:6px;align-items:flex-start;font-size:15px}
+.pv-req-mk{color:var(--pvc);font-size:12px;margin-top:2px;flex-shrink:0}
+.pv-help-t{font-size:11px;color:var(--t3);margin:-4px 0 8px;font-weight:400}
+/* Likert: numbered squares with tiny labels */
+.pv-lik-row{display:flex;gap:7px;overflow-x:auto;padding-bottom:2px}
+.pv-lik-opt{flex:1;min-width:46px;display:flex;flex-direction:column;
+  align-items:center;gap:3px;padding:8px 3px;border:1px solid var(--cb);
+  border-radius:6px;background:var(--cf);cursor:pointer;text-align:center;
+  transition:all .12s;box-shadow:0 1px 0 rgba(18,33,43,.03);position:relative}
+.pv-lik-opt:hover{border-color:var(--pvc);background:var(--pv-tint)}
+.pv-lik-opt:has(input:checked){background:var(--pvc);border-color:var(--pvc)}
+.pv-lik-opt input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.pv-lik-num{font-size:15px;font-weight:600;color:var(--t2);line-height:1.2}
+.pv-lik-opt:has(input:checked) .pv-lik-num{color:#fff}
+.pv-lik-lbl{font-size:10px;color:var(--t2);line-height:1.25;max-width:70px}
+.pv-lik-opt:has(input:checked) .pv-lik-lbl{color:color-mix(in srgb,#ffffff 82%,var(--pvc))}
+/* Choice: bordered option cards with key chips and a tick */
+.pv-opts{display:flex;flex-direction:column;gap:7px;counter-reset:pvopt}
+.pv-opt{display:flex;align-items:center;gap:10px;padding:9px 12px;
+  border:1px solid var(--cb);border-radius:6px;background:var(--cf);
+  cursor:pointer;transition:all .12s;font-size:13px;position:relative;
+  box-shadow:0 1px 0 rgba(18,33,43,.03);counter-increment:pvopt}
+.pv-opt::before{content:counter(pvopt,upper-alpha);width:22px;height:22px;
+  flex-shrink:0;border:1px solid var(--cb);border-radius:4px;background:var(--cf);
+  display:flex;align-items:center;justify-content:center;font-size:11px;
+  font-weight:700;color:var(--t2)}
+.pv-opt:hover{border-color:var(--pvc);background:var(--pv-tint)}
+.pv-opt:has(input:checked){border-color:var(--pvc);background:var(--pv-tint);
+  box-shadow:inset 0 0 0 1px var(--pvc)}
+.pv-opt:has(input:checked)::before{background:var(--pvc);border-color:var(--pvc);color:#fff}
+.pv-opt::after{content:"\2713";margin-left:auto;color:var(--pvc);
+  font-weight:700;visibility:hidden}
+.pv-opt:has(input:checked)::after{visibility:visible}
+.pv-opt input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+/* Short text / number / date: editorial underline inputs */
+.pv-inp{width:100%;border:none;border-bottom:2px solid var(--cb);border-radius:0;
+  padding:7px 2px;font-size:15px;font-family:var(--pv-serif);color:var(--t1);
+  background:transparent;transition:border-color .15s}
+.pv-inp:focus{outline:none;border-bottom-color:var(--pvc)}
+textarea.pv-inp{border:1px solid var(--cb);border-radius:6px;padding:9px 11px;
+  font-size:13px;font-family:inherit}
+textarea.pv-inp:focus{border-color:var(--pvc);
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--pvc) 13%,transparent)}
 .pv-matrix{border-collapse:collapse;width:100%;font-size:11px;margin-top:8px}
 .pv-matrix th{background:var(--cg);padding:6px 10px;text-align:center;
   border:1px solid var(--cb);font-weight:600}
 .pv-matrix td{padding:6px 10px;border:1px solid var(--cb);text-align:center}
+.pv-matrix td input{accent-color:var(--pvc)}
 .pv-matrix .rl{text-align:left!important;font-weight:500}
 .pv-slider-w{display:flex;flex-direction:column;gap:4px}
-.pv-slider{width:100%}
+.pv-slider{width:100%;accent-color:var(--pvc)}
 .pv-slider-r{display:flex;justify-content:space-between;font-size:10px;color:var(--t3)}
-.pv-stars{display:flex;gap:4px;margin-top:5px;font-size:24px;color:var(--cb)}
-.pv-ranklist{border:1.5px solid var(--cb);border-radius:6px;padding:7px;margin-top:7px}
-.pv-rankitem{display:flex;align-items:center;gap:8px;padding:5px 7px;
-  background:var(--cg);border-radius:4px;margin-bottom:3px;
-  font-size:12px;color:var(--t2)}
+.pv-stars{display:flex;gap:4px;margin-top:5px;font-size:24px;
+  color:color-mix(in srgb,var(--cb) 80%,#ffffff)}
+.pv-ranklist{display:flex;flex-direction:column;gap:7px;margin-top:7px;
+  counter-reset:pvrank}
+.pv-rankitem{display:flex;align-items:center;gap:10px;padding:9px 12px;
+  border:1px solid var(--cb);border-radius:6px;background:var(--cf);
+  font-size:13px;color:var(--t1);counter-increment:pvrank}
+.pv-rankitem::before{content:counter(pvrank);width:22px;height:22px;flex-shrink:0;
+  border-radius:5px;background:var(--pvc);color:#fff;display:flex;
+  align-items:center;justify-content:center;font-size:11px;font-weight:700}
 .pv-submit{margin-top:24px}
-.pv-submit button{width:100%;padding:11px;border-radius:10px;color:#fff;
+.pv-submit button{width:100%;padding:11px;border-radius:6px;color:#fff;
   font-size:14px;font-weight:600;cursor:default;border:none}
 .pv-nav{display:flex;align-items:center;gap:8px;margin-top:22px}
-.pv-nav button{border:1.5px solid var(--cb);background:var(--cf);
-  border-radius:8px;padding:8px 12px;font-size:12px;font-weight:600;color:var(--t2)}
+.pv-nav button{border:1px solid var(--cb);background:var(--cf);
+  border-radius:6px;padding:8px 12px;font-size:12px;font-weight:600;color:var(--t2)}
 .pv-nav button:disabled{opacity:.45;cursor:default}
 .pv-nav .pv-count{flex:1;text-align:center;font-size:11px;color:var(--t3)}
 .pv-ty{text-align:center;padding:40px 20px}
-.pv-ty-ic{font-size:48px;margin-bottom:12px}
-.pv-ty-t{font-size:20px;font-weight:700;margin-bottom:7px}
+.pv-ty-ic{font-size:48px;margin-bottom:12px;color:var(--pvc)}
+.pv-ty-t{font-family:var(--pv-serif);font-size:22px;font-weight:500;margin-bottom:7px}
 .pv-ty-m{color:var(--t2);font-size:13px;line-height:1.6}
 
 /* -- Analyse -------------------------------------------------------------- */
-.an-mode{overflow:hidden}
+/* flex-direction:column keeps the sub-tab strip ABOVE the three-pane split
+   (.mp.active is a flex row by default, which laid the strip out as a
+   full-height rail beside the panes; .an-split's calc(100% - 44px) height
+   always assumed a 44px strip on top). */
+.an-mode{overflow:hidden;flex-direction:column}
 .an-tabs{display:flex;gap:4px;padding:8px 10px;border-bottom:1px solid var(--cb);
   background:var(--cf);flex-shrink:0}
 .an-tab{border:1px solid var(--cb);background:var(--cg);border-radius:7px;
   padding:6px 10px;font-size:11px;font-weight:600;color:var(--t2);cursor:pointer}
 .an-tab.active{background:var(--t1);color:#fff;border-color:var(--t1)}
-.an-split{display:grid;grid-template-columns:270px minmax(320px,1fr) 320px;height:calc(100% - 44px);overflow:hidden}
+/* Two panes: the left column carries variables, the output summary, and the
+   Model Builder in one scroll; the plans pane takes the rest of the width
+   so adding and reading plans is the dominant activity. */
+.an-split{display:grid;grid-template-columns:320px minmax(0,1fr);height:calc(100% - 44px);overflow:hidden}
 .an-vars{background:var(--cf);border-right:1px solid var(--cb);
   display:flex;flex-direction:column;overflow:hidden}
 .an-rqs{display:flex;flex-direction:column;overflow:hidden;background:var(--cg)}
-.an-output{display:flex;flex-direction:column;overflow:hidden;background:var(--cf);
-  border-left:1px solid var(--cb)}
 .pan-hdr{padding:10px 14px;border-bottom:1px solid var(--cb);
   display:flex;align-items:center;justify-content:space-between;
   flex-shrink:0;background:var(--cf)}
@@ -414,7 +500,7 @@ input,textarea,select{font-family:inherit;font-size:13px}
 .rqs-body{flex:1;overflow-y:auto;padding:14px}
 .an-mid-caption{padding:8px 14px;font-size:11px;line-height:1.5;color:var(--t3);background:var(--cg);border-bottom:1px solid var(--cb)}
 .an-mid-caption:empty{display:none}
-.an-mid-caption code{font-size:10px;background:var(--cb);padding:1px 4px;border-radius:4px}
+.an-mid-caption code{font-size:10px;background:var(--cb);color:var(--t2);padding:1px 4px;border-radius:4px}
 .rq-card{background:var(--cf);border:1.5px solid var(--cb);border-radius:10px;
   padding:14px;margin-bottom:10px;cursor:pointer;transition:border-color var(--d1)}
 .rq-card.rq-drag .rq-num{cursor:grab}
@@ -441,6 +527,40 @@ input,textarea,select{font-family:inherit;font-size:13px}
 .an-empty-ic{font-size:32px;margin-bottom:12px;opacity:.4}
 .an-empty-t{font-size:13px;font-weight:600;color:var(--t2);margin-bottom:5px}
 .an-empty-b{font-size:12px}
+/* Report outline: a document-shaped skeleton of the render_report() output,
+   with an empty table and a figure placeholder per plan (the table+plot
+   pairing the R report produces), not a repeat of the plan cards. */
+.rs-doc{background:var(--cf);border:1px solid var(--cb);border-radius:8px;
+  padding:26px 30px;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+.rs-title{font-size:18px;font-weight:700;margin-bottom:2px}
+.rs-meta{font-size:11px;color:var(--t3);margin-bottom:18px;padding-bottom:12px;
+  border-bottom:1px solid var(--cb)}
+.rs-h2{font-size:13px;font-weight:700;margin:18px 0 6px;color:var(--t1)}
+.rs-h3{font-size:12px;font-weight:600;margin:14px 0 4px;color:var(--t1)}
+.rs-p{font-size:11px;color:var(--t3);line-height:1.5;margin-bottom:8px}
+.rs-method{font-size:11px;color:var(--t2);margin-bottom:8px}
+.rs-tbl{width:100%;border-collapse:collapse;margin-bottom:8px}
+.rs-tbl th{font-size:10px;text-transform:uppercase;letter-spacing:.04em;
+  color:var(--t3);border-top:1.5px solid var(--t2);border-bottom:1px solid var(--cb);
+  padding:5px 8px;text-align:left;font-weight:600}
+.rs-tbl td{border-bottom:1px solid var(--cb);padding:7px 8px}
+.rs-tbl .rs-ph{background:var(--cg);border-radius:3px;height:8px;width:70%}
+.rs-fig{border:1.5px dashed var(--cb);border-radius:6px;background:var(--cg);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:4px;padding:22px 12px;margin-bottom:6px;color:var(--t3)}
+.rs-fig-ic{font-size:20px;opacity:.5}
+.rs-fig-cap{font-size:10px;font-style:italic}
+.rs-refs{font-size:11px;color:var(--t2);line-height:1.7}
+/* Inline decision-rule editing in the outline: writes back to the plan
+   block, same field the RQ modal edits. */
+.rs-interp{margin-bottom:10px}
+.rs-interp-lbl{display:block;font-size:10px;text-transform:uppercase;
+  letter-spacing:.04em;color:var(--t3);font-weight:600;margin-bottom:3px}
+.rs-interp textarea{width:100%;font-size:11px;color:var(--t2);
+  background:var(--cf);border:1px solid var(--cb);border-radius:6px;
+  padding:7px 9px;resize:vertical;min-height:40px;font-family:inherit;
+  line-height:1.5}
+.rs-interp textarea:focus{outline:2px solid var(--cp);outline-offset:1px}
 /* suggestion box */
 .suggest-box{background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;
   padding:8px 12px;font-size:12px;color:#1e40af;margin-top:4px;
@@ -469,9 +589,14 @@ input,textarea,select{font-family:inherit;font-size:13px}
 .conf-m{font-size:12px;color:var(--t2);margin-bottom:14px;line-height:1.5}
 .conf-acts{display:flex;gap:7px;justify-content:flex-end}
 
-/* -- Recovery banner ------------------------------------------------------ */
-.rec-ban{background:var(--cw-l);border-bottom:1px solid #fde68a;padding:7px 18px;
-  display:flex;align-items:center;gap:10px;font-size:12px;color:#78350f;flex-shrink:0}
+/* -- Recovery banner ------------------------------------------------------
+   A floating overlay, not an in-flow bar: it must never push the topbar
+   and panels down while it is visible. */
+.rec-ban{position:fixed;top:10px;left:50%;transform:translateX(-50%);
+  z-index:300;max-width:560px;width:calc(100% - 32px);
+  background:var(--cw-l);border:1px solid #fde68a;border-radius:8px;
+  box-shadow:0 4px 14px rgba(0,0,0,.15);padding:9px 14px;
+  display:flex;align-items:center;gap:10px;font-size:12px;color:#78350f}
 .rec-ban[hidden]{display:none}
 .rec-msg{flex:1}
 
@@ -506,9 +631,10 @@ kbd{display:inline-block;padding:1px 5px;border:1px solid var(--cb);
       <button type="button" id="redoBtn" title="Redo (Ctrl+Y)" onclick="redo()" disabled>&#8631;</button>
     </div>
     <span class="save-st" id="saveSt">No changes</span>
-    <!-- Survey settings lives only in the sidebar title button (below) to
-         avoid a duplicate entry point; the top bar is reserved for
-         document actions (Open, Export, Save). -->
+    <span class="tb-sep" aria-hidden="true"></span>
+    <!-- Survey settings lives only in the sidebar CTA (below) to avoid a
+         duplicate entry point; the top bar is reserved for document
+         actions (Open, Export, Save). -->
     <button type="button" class="btn btn-s btn-sm" onclick="openFile()">Open</button>
     <button type="button" class="btn btn-s btn-sm" onclick="exportSurveyHtml()" title="Export a deployable, self-contained survey HTML">Export survey</button>
     <button type="button" class="btn btn-p btn-sm" onclick="saveSframe()">Save .sframe</button>
@@ -520,25 +646,27 @@ kbd{display:inline-block;padding:1px 5px;border:1px solid var(--cb);
 <!-- Sidebar -->
 <aside class="sidebar" aria-label="Survey structure">
   <div class="sb-top">
-    <button type="button" class="sb-title-btn" onclick="openSettings('meta')" aria-label="Edit survey settings">
-      <span class="sb-title-txt" id="sbTitle">Untitled Survey</span>
-      <span style="opacity:.4;font-size:10px">&#9881;</span>
+    <!-- ONE settings entry point (owner decision 2026-07-11): the former
+         clickable-title gear and the Welcome/Logo/Thank You strip are
+         consolidated into this single primary CTA. Welcome, header/logo,
+         and thank-you pages are tabs inside the settings dialog. -->
+    <div class="sb-title" id="sbTitle">Untitled Survey</div>
+    <button type="button" class="sb-settings-cta" onclick="openSettings('meta')">
+      <span aria-hidden="true">&#9881;</span> Survey settings
     </button>
     <div class="sb-search">
       <span class="sb-si">&#128269;</span>
       <input type="search" id="itemSearch" placeholder="Search items"
              aria-label="Search items" oninput="renderItemList()">
     </div>
-    <div class="setup-strip" aria-label="Survey page setup">
-      <button type="button" class="setup-btn" onclick="openSettings('welcome')" title="Edit welcome page"><span>&#128075;</span>Welcome</button>
-      <button type="button" class="setup-btn" onclick="openSettings('header')" title="Add logo and header"><span>&#128247;</span>Logo</button>
-      <button type="button" class="setup-btn" onclick="openSettings('thankyou')" title="Edit thank-you page"><span>&#10003;</span>Thank You</button>
-    </div>
   </div>
   <div class="sb-body" id="itemList" role="list" aria-label="Survey items"></div>
   <div class="sb-footer">
-    <!-- Collapsible add-item menu (shown above the button row) -->
-    <div class="fab-menu" id="fabMenu">
+    <!-- The former single Add-question menu is split into four controls
+         (v0.3.4 builder rework): question types, section break, branching,
+         and configuration each get their own entry so type-picking is not
+         conflated with structure or configuration. -->
+    <div class="fab-menu" id="fabMenu" aria-label="Question types">
       <div class="fg"><div class="fg-lbl">Questions</div>
         <button type="button" class="fi" onclick="qAdd('likert');closeFabMenu()"><span class="fi-ic">&#9679;</span>Likert scale</button>
         <button type="button" class="fi" onclick="qAdd('single_choice');closeFabMenu()"><span class="fi-ic">&#9900;</span>Single choice</button>
@@ -551,21 +679,28 @@ kbd{display:inline-block;padding:1px 5px;border:1px solid var(--cb);
         <button type="button" class="fi" onclick="qAdd('ranking');closeFabMenu()"><span class="fi-ic">&#8597;</span>Ranking</button>
         <button type="button" class="fi" onclick="qAdd('rating');closeFabMenu()"><span class="fi-ic">★</span>Rating</button>
         <button type="button" class="fi" onclick="qAdd('date');closeFabMenu()"><span class="fi-ic">&#128197;</span>Date</button>
-      </div>
-      <div class="fg"><div class="fg-lbl">Structure</div>
-        <button type="button" class="fi" onclick="qAdd('section_break');closeFabMenu()"><span class="fi-ic">&#8212;</span>Section break</button>
         <button type="button" class="fi" onclick="qAdd('text_block');closeFabMenu()"><span class="fi-ic">&#128221;</span>Text block</button>
       </div>
+    </div>
+    <div class="fab-menu" id="cfgMenu" aria-label="Configuration">
       <div class="fg"><div class="fg-lbl">Configure</div>
-        <button type="button" class="fi" onclick="openChoiceModal();closeFabMenu()"><span class="fi-ic">&#9673;</span>Choice set</button>
-        <button type="button" class="fi" onclick="openScaleModal();closeFabMenu()"><span class="fi-ic">&#128208;</span>Scale</button>
-        <button type="button" class="fi" onclick="openBranchModal();closeFabMenu()"><span class="fi-ic">&#8627;</span>Branching rule</button>
-        <button type="button" class="fi" onclick="openCheckModal();closeFabMenu()"><span class="fi-ic">&#10003;</span>Attention check</button>
+        <button type="button" class="fi" onclick="openChoiceModal();closeCfgMenu()"><span class="fi-ic">&#9673;</span>Choice set</button>
+        <button type="button" class="fi" onclick="openScaleModal();closeCfgMenu()"><span class="fi-ic">&#128208;</span>Scale</button>
+        <button type="button" class="fi" onclick="openCheckModal();closeCfgMenu()"><span class="fi-ic">&#10003;</span>Attention check</button>
       </div>
     </div>
     <div class="fab-row">
       <button type="button" class="fab" id="fabMoreBtn" aria-haspopup="true" aria-controls="fabMenu"
               title="Choose a question type" onclick="toggleFabMenu()">+ Add question</button>
+    </div>
+    <div class="fab-row" style="margin-top:6px">
+      <button type="button" class="fab-mini" title="Insert a section break"
+              onclick="qAdd('section_break')"><span aria-hidden="true">&#8212;</span> Section</button>
+      <button type="button" class="fab-mini" title="Add a branching rule"
+              onclick="openBranchModal()"><span aria-hidden="true">&#8627;</span> Branch</button>
+      <button type="button" class="fab-mini" id="cfgMoreBtn" aria-haspopup="true" aria-controls="cfgMenu"
+              title="Choice sets, scales, and attention checks"
+              onclick="toggleCfgMenu()"><span aria-hidden="true">&#9881;</span> Configure</button>
     </div>
   </div>
 </aside>
@@ -619,25 +754,17 @@ kbd{display:inline-block;padding:1px 5px;border:1px solid var(--cb);
       <button type="button" class="an-tab" data-an-tab="run" onclick="setAnalyseTab('run')">Run preview</button>
       <button type="button" class="an-tab" data-an-tab="report" onclick="setAnalyseTab('report')">Report outline</button>
     </div>
+    <!-- Two-pane split (owner feedback 2026-07-16): the former right-hand
+         "Output preview and model builder" column is removed so the plans
+         pane is the dominant surface. The Model Builder and the output
+         summary live in the left column, below the variable list. -->
     <div class="an-split">
       <div class="an-vars">
-        <div class="pan-hdr"><span class="pan-hdr-t">Variables and constructs</span></div>
-        <div class="an-vars-body" id="anVars"></div>
-      </div>
-      <div class="an-rqs">
-        <div class="pan-hdr">
-          <span class="pan-hdr-t" id="anMidTitle">Analysis plans</span>
-          <button type="button" class="btn btn-p btn-sm" onclick="openRQModal()">+ Add plan</button>
-        </div>
-        <div class="an-mid-caption" id="anMidCaption"></div>
-        <div class="rqs-body" id="rqsBody"></div>
-      </div>
-      <div class="an-output">
-        <div class="pan-hdr"><span class="pan-hdr-t">Output preview and model builder</span></div>
-        <div class="rqs-body">
-          <div class="preview-card" id="anOutputPreview">Choose an analysis method to preview planned tables, decision rules, and reporting references.</div>
-          <div style="height:12px"></div>
-          <div class="preview-card">
+        <div class="pan-hdr"><span class="pan-hdr-t">Variables and model</span></div>
+        <div class="an-vars-body">
+          <div id="anVars"></div>
+          <div class="preview-card" id="anOutputPreview" style="margin:10px 8px">Choose an analysis method to preview planned tables, decision rules, and reporting references.</div>
+          <div class="preview-card" style="margin:0 8px 10px">
             <strong>Model Builder</strong>
             <p style="margin:6px 0 10px">Create constructs from scales, choose lavaan or seminr syntax, and save model JSON into the .sframe file.</p>
             <div class="field"><label class="fl" for="mb-type">Output engine</label><div class="fc"><select id="mb-type"><option value="cfa">lavaan CFA</option><option value="cb_sem">lavaan CB-SEM</option><option value="pls_sem">seminr PLS-SEM</option></select></div></div>
@@ -653,6 +780,14 @@ kbd{display:inline-block;padding:1px 5px;border:1px solid var(--cb);
             <textarea id="modelSyntaxOut" class="syntax-box" readonly placeholder="Model syntax or JSON appears here."></textarea>
           </div>
         </div>
+      </div>
+      <div class="an-rqs">
+        <div class="pan-hdr">
+          <span class="pan-hdr-t" id="anMidTitle">Analysis plans</span>
+          <button type="button" class="btn btn-p" onclick="openRQModal()">+ Add plan</button>
+        </div>
+        <div class="an-mid-caption" id="anMidCaption"></div>
+        <div class="rqs-body" id="rqsBody"></div>
       </div>
     </div>
   </div>
@@ -688,7 +823,7 @@ kbd{display:inline-block;padding:1px 5px;border:1px solid var(--cb);
       </div>
       <div class="frow">
         <div class="field"><label class="fl" for="s-submit">Submit label</label><div class="fc"><input type="text" id="s-submit"></div></div>
-        <div class="field"><label class="fl" for="s-theme">Theme colour</label><div class="fc color-row"><input type="color" id="s-theme-picker" value="#2563eb" oninput="syncThemeFromPicker()"><input type="text" id="s-theme" placeholder="#2563eb" oninput="syncThemeFromText()"></div></div>
+        <div class="field"><label class="fl" for="s-theme">Theme colour</label><div class="fc color-row"><input type="color" id="s-theme-picker" value="#2563eb" aria-label="Theme colour picker" oninput="syncThemeFromPicker()"><input type="text" id="s-theme" placeholder="#2563eb" oninput="syncThemeFromText()"></div></div>
       </div>
     </div>
     <div class="stp" id="sp-welcome">
@@ -925,6 +1060,9 @@ input,textarea,select{font-family:inherit;font-size:15px}
 .ty-ic{font-size:52px;text-align:center;margin-bottom:14px;color:var(--cp)}
 .ty-title{font-family:var(--serif);font-size:27px;font-weight:500;text-align:center;margin-bottom:8px}
 .ty-msg{color:var(--t2);text-align:center;font-size:15px;margin-bottom:22px;white-space:pre-wrap}
+.ty-note{background:var(--tint);border:1px solid var(--tint-bd);border-radius:6px;
+  padding:10px 14px;font-size:13px;color:var(--t2);text-align:center;margin-bottom:16px}
+.ty-acts{display:flex;flex-wrap:wrap;gap:10px;justify-content:center}
 
 /* Buttons */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;
@@ -1358,7 +1496,11 @@ function renderTextarea(item){
 }
 function renderDate(item){
   var saved=responses[item.id]||'';
-  return'<input type="date" class="inp-std inp-narrow" id="inp_'+esc(item.id)+'" value="'+esc(saved)+'"'+ariaFor(item)
+  // date_min/date_max limit the native picker; typed dates are re-checked
+  // in validatePage since the picker bounds do not block manual entry.
+  var mn=item.date_min?' min="'+esc(item.date_min)+'"':'';
+  var mx=item.date_max?' max="'+esc(item.date_max)+'"':'';
+  return'<input type="date" class="inp-std inp-narrow" id="inp_'+esc(item.id)+'" value="'+esc(saved)+'"'+mn+mx+ariaFor(item)
     +' onchange="setResp(\''+esc(item.id)+'\',this.value)">';
 }
 function renderSlider(item){
@@ -1486,6 +1628,25 @@ function rankMove(itemId,v,dir){
 // ── Validation ─────────────────────────────────────────────────────────────
 function validatePage(items){
   var ok=true;
+  // An answered date outside its declared bounds is an error even on a
+  // non-required item, because manual typing bypasses the picker limits.
+  items.forEach(function(item){
+    if(item.type!=='date'||!isVisible(item.id))return;
+    var v=responses[item.id];
+    if(!v)return;
+    var msg='';
+    if(item.date_min&&v<item.date_min)msg='Please pick a date on or after '+item.date_min+'.';
+    if(item.date_max&&v>item.date_max)msg='Please pick a date on or before '+item.date_max+'.';
+    if(msg){
+      var err=document.getElementById('err_'+item.id);
+      if(err){err.textContent=msg;err.classList.add('show');}
+      if(ok){
+        var el=document.getElementById('item_'+item.id);
+        if(el)el.scrollIntoView({behavior:'smooth',block:'center'});
+      }
+      ok=false;
+    }
+  });
   items.forEach(function(item){
     if(!item.required||!isVisible(item.id))return;
     var t=item.type;
@@ -1584,7 +1745,11 @@ function doSubmit(){
     }
   });
   var csvStr=toCsv([row]);
-  downloadCsv(csvStr,(SF.meta.title||'survey')+'_response_'+respId+'.csv');
+  // The CSV is kept in memory for the optional thank-you download button.
+  // No automatic download on submit: when an endpoint collects the
+  // response, a forced file download is unwanted noise, and even without
+  // one the download is offered as a button, never forced.
+  window._lastCsv={csv:csvStr,name:(SF.meta.title||'survey')+'_response_'+respId+'.csv'};
   if(ENDPOINT){
     // no-cors with a text/plain body: an application/json header triggers a
     // CORS preflight that Google Apps Script never answers, so the POST is
@@ -1707,12 +1872,29 @@ function renderSurvey(){
 }
 function renderThankyou(){
   var el=document.getElementById('app');
+  // The download button appears when the designer enabled it, or whenever
+  // no collector endpoint exists (the downloaded CSV is then the only copy
+  // of the response, so it must stay reachable, as a choice, never forced).
+  var showDl=(TY.show_download||!ENDPOINT)&&window._lastCsv;
+  var offlineNote=(!ENDPOINT&&window._lastCsv)
+    ?'<div class="ty-note">This survey has no online collector. Download your response below and return the file to the researcher.</div>':'';
+  var dlBtn=showDl
+    ?'<button type="button" class="btn btn-p" onclick="downloadCsv(window._lastCsv.csv,window._lastCsv.name)">Download my response (CSV)</button>':'';
+  var again='<button type="button" class="btn btn-s" onclick="window.location.reload()">Submit another response</button>';
+  var cont=TY.redirect_url
+    ?'<a class="btn btn-s" style="text-decoration:none" href="'+esc(TY.redirect_url)+'">Continue</a>':'';
   el.innerHTML='<div class="card"><div class="card-body">'
     +'<div class="ty-ic">&#10004;</div>'
     +'<div class="ty-title">Thank You</div>'
     +'<div class="ty-msg">'+esc(TY.message||'Your response has been recorded. Thank you for participating.')+'</div>'
-    +(TY.show_download?'<button type="button" class="btn btn-s" style="margin:0 auto;display:flex" onclick="window.location.reload()">Submit another response</button>':'')
+    +offlineNote
+    +'<div class="ty-acts">'+dlBtn+cont+again+'</div>'
     +'</div></div>';
+  // Auto-redirect only when nothing on this screen needs the respondent's
+  // attention (no download offer), so the file is never yanked away.
+  if(TY.redirect_url&&!showDl){
+    setTimeout(function(){window.location.href=TY.redirect_url;},2500);
+  }
 }
 
 // ── Init ───────────────────────────────────────────────────────────────────
@@ -1857,8 +2039,10 @@ function conf2(title,msg,okLbl){okLbl=okLbl||'Delete';document.getElementById('c
 function resConf(v){document.getElementById('confOv').classList.remove('open');if(_cRes){_cRes(v);_cRes=null;}}
 
 // -- Fab menu toggle --------------------------------------------------------
-function toggleFabMenu(){var m=document.getElementById('fabMenu'),b=document.getElementById('fabMoreBtn');m.classList.toggle('open');b.classList.toggle('active');}
+function toggleFabMenu(){closeCfgMenu();var m=document.getElementById('fabMenu'),b=document.getElementById('fabMoreBtn');m.classList.toggle('open');b.classList.toggle('active');}
 function closeFabMenu(){document.getElementById('fabMenu').classList.remove('open');document.getElementById('fabMoreBtn').classList.remove('active');}
+function toggleCfgMenu(){closeFabMenu();var m=document.getElementById('cfgMenu'),b=document.getElementById('cfgMoreBtn');m.classList.toggle('open');b.classList.toggle('active');}
+function closeCfgMenu(){document.getElementById('cfgMenu').classList.remove('open');document.getElementById('cfgMoreBtn').classList.remove('active');}
 // Close menu when clicking outside
 document.addEventListener('click',function(e){var m=document.getElementById('fabMenu'),b=document.getElementById('fabMoreBtn');if(m&&m.classList.contains('open')&&!m.contains(e.target)&&!b.contains(e.target))closeFabMenu();});
 
@@ -1867,9 +2051,52 @@ function setMode(m){document.querySelectorAll('.m-btn').forEach(function(b){b.se
 
 // -- Modals -----------------------------------------------------------------
 function openModal(id){document.getElementById(id).classList.add('open');}
-function closeModal(id){document.getElementById(id).classList.remove('open');}
+function closeModal(id){document.getElementById(id).classList.remove('open');if(id==='m-rq')stopRQPlaceholders();}
+
+// -- Animated sample placeholders (Add Analysis Plan modal) -----------------
+// The Research question and Planned decision rule placeholders cycle
+// through several method-appropriate samples with a typewriter effect, so
+// the fields read as a living prompt rather than one static example.
+// Placeholders only show while a field is empty, so typing is never
+// disturbed. Under prefers-reduced-motion the samples still rotate, with
+// no keystroke animation.
+var RQ_SAMPLES=[
+  'Is there a significant difference in satisfaction between first-time and repeat visitors?',
+  'Is digital marketing effectiveness associated with behavioural intention?',
+  'Does service quality predict overall satisfaction?',
+  'What is the distribution of responses across age groups?',
+  'Does the measurement model fit the six-construct structure?'
+];
+var DR_SAMPLES=[
+  'If p < .05, conclude the groups differ and report the effect size with its direction.',
+  'A positive correlation with p < .05 supports the association; report r and its magnitude.',
+  'If the coefficient is significant, service quality is retained as a predictor in the model.',
+  'Report the three most frequent categories and their percentages.',
+  'CFI at or above .95 and RMSEA at or below .06 support the hypothesised structure.'
+];
+var rqPhTimers=[];
+function animatePlaceholder(elId,samples){
+  var el=document.getElementById(elId);if(!el)return null;
+  var reduced=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var si=0,ci=0,holding=0;
+  el.setAttribute('placeholder',reduced?samples[0]:'');
+  return setInterval(function(){
+    if(reduced){si=(si+1)%samples.length;el.setAttribute('placeholder',samples[si]);return;}
+    var s=samples[si];
+    if(holding>0){holding--;if(holding===0){si=(si+1)%samples.length;ci=0;}return;}
+    ci++;el.setAttribute('placeholder',s.slice(0,ci));
+    if(ci>=s.length)holding=55; // ~2.2s hold at 40ms ticks
+  },reduced?4000:40);
+}
+function startRQPlaceholders(){
+  stopRQPlaceholders();
+  rqPhTimers.push(animatePlaceholder('rq-q',RQ_SAMPLES));
+  rqPhTimers.push(animatePlaceholder('rq-interp',DR_SAMPLES));
+  rqPhTimers=rqPhTimers.filter(Boolean);
+}
+function stopRQPlaceholders(){rqPhTimers.forEach(clearInterval);rqPhTimers=[];}
 document.addEventListener('keydown',function(e){
-  if(e.key==='Escape')document.querySelectorAll('.mov.open').forEach(function(m){m.classList.remove('open');});
+  if(e.key==='Escape'){document.querySelectorAll('.mov.open').forEach(function(m){m.classList.remove('open');});stopRQPlaceholders();}
   if((e.ctrlKey||e.metaKey)&&e.key==='s'){e.preventDefault();saveSframe();}
   if((e.ctrlKey||e.metaKey)&&e.key==='z'){e.preventDefault();undo();}
   if((e.ctrlKey||e.metaKey)&&(e.key==='y'||e.key==='Z')){e.preventDefault();redo();}
@@ -2066,10 +2293,13 @@ function dStart(e,idx){dragSrc=idx;e.currentTarget.classList.add('dragging');}
 function dOver(e,idx,ev){e.preventDefault();document.querySelectorAll('.ic').forEach(function(c){c.classList.remove('drag-t','drag-b','dragging');});var card=e.currentTarget,rect=card.getBoundingClientRect();card.classList.add(ev.clientY<rect.top+rect.height/2?'drag-t':'drag-b');}
 function dDrop(e,idx){e.preventDefault();document.querySelectorAll('.ic').forEach(function(c){c.classList.remove('drag-t','drag-b','dragging');});if(dragSrc===null||dragSrc===idx){dragSrc=null;return;}snap();var moved=S.items.splice(dragSrc,1)[0];var tgt=dragSrc<idx?idx-1:idx;S.items.splice(tgt,0,moved);dragSrc=null;renderItemList();}
 // Plan reorder (Plan tab only; index maps 1:1 to S.analysis_plan)
+// Plan-card drag-reorder is id-based (not index-based) so it works on both
+// the Plan tab (all plans) and the Run preview queue (data-requiring plans
+// only, where display indices differ from S.analysis_plan indices).
 var planDragSrc=null;
-function pStart(e,idx){planDragSrc=idx;e.currentTarget.classList.add('dragging');e.stopPropagation();}
-function pOver(e,idx){e.preventDefault();document.querySelectorAll('#rqsBody .rq-card').forEach(function(c){c.classList.remove('drag-t','drag-b');});var card=e.currentTarget,rect=card.getBoundingClientRect();card.classList.add(e.clientY<rect.top+rect.height/2?'drag-t':'drag-b');}
-function pDrop(e,idx){e.preventDefault();e.stopPropagation();document.querySelectorAll('#rqsBody .rq-card').forEach(function(c){c.classList.remove('drag-t','drag-b','dragging');});if(planDragSrc===null||planDragSrc===idx){planDragSrc=null;return;}snap();var moved=S.analysis_plan.splice(planDragSrc,1)[0];var tgt=planDragSrc<idx?idx-1:idx;S.analysis_plan.splice(tgt,0,moved);planDragSrc=null;setDirty();renderAnalyse();}
+function pStart(e,id){planDragSrc=id;e.currentTarget.classList.add('dragging');e.stopPropagation();}
+function pOver(e,id){e.preventDefault();document.querySelectorAll('#rqsBody .rq-card').forEach(function(c){c.classList.remove('drag-t','drag-b');});var card=e.currentTarget,rect=card.getBoundingClientRect();card.classList.add(e.clientY<rect.top+rect.height/2?'drag-t':'drag-b');}
+function pDrop(e,id){e.preventDefault();e.stopPropagation();var before=false;var card=e.currentTarget;if(card&&card.classList.contains('drag-t'))before=true;document.querySelectorAll('#rqsBody .rq-card').forEach(function(c){c.classList.remove('drag-t','drag-b','dragging');});if(planDragSrc===null||planDragSrc===id){planDragSrc=null;return;}var srcIdx=S.analysis_plan.findIndex(function(r){return r.id===planDragSrc;});var tgtIdx=S.analysis_plan.findIndex(function(r){return r.id===id;});if(srcIdx<0||tgtIdx<0){planDragSrc=null;return;}snap();var moved=S.analysis_plan.splice(srcIdx,1)[0];tgtIdx=S.analysis_plan.findIndex(function(r){return r.id===id;});S.analysis_plan.splice(before?tgtIdx:tgtIdx+1,0,moved);planDragSrc=null;setDirty();renderAnalyse();}
 function pEnd(e){planDragSrc=null;document.querySelectorAll('#rqsBody .rq-card').forEach(function(c){c.classList.remove('drag-t','drag-b','dragging');});}
 
 // -- Inspector --------------------------------------------------------------
@@ -2103,6 +2333,53 @@ function parseChoiceLines(txt){
   });
   return{values:vals,labels:lbls};
 }
+// Preset choice-set library. Single source for (a) the inspector's
+// quick-fill chips, (b) the "Presets" group in the inspector's Choice set
+// dropdown, and (c) applyCsTemplate(). Presets are materialised into
+// S.choices only when actually used, so an untouched survey carries none.
+var PRESET_CHOICE_SETS={
+  agree5:{label:'Agreement (5-point)',values:[1,2,3,4,5],labels:['Strongly disagree','Disagree','Neutral','Agree','Strongly agree']},
+  agree7:{label:'Agreement (7-point)',values:[1,2,3,4,5,6,7],labels:['Strongly disagree','Disagree','Somewhat disagree','Neutral','Somewhat agree','Agree','Strongly agree']},
+  satisfaction5:{label:'Satisfaction (5-point)',values:[1,2,3,4,5],labels:['Very dissatisfied','Dissatisfied','Neutral','Satisfied','Very satisfied']},
+  freq:{label:'Frequency (5-point)',values:[1,2,3,4,5],labels:['Never','Rarely','Sometimes','Often','Always']},
+  importance:{label:'Importance (5-point)',values:[1,2,3,4,5],labels:['Not important','Slightly important','Moderately important','Very important','Extremely important']},
+  likelihood5:{label:'Likelihood (5-point)',values:[1,2,3,4,5],labels:['Very unlikely','Unlikely','Neutral','Likely','Very likely']},
+  quality5:{label:'Quality (5-point)',values:[1,2,3,4,5],labels:['Very poor','Poor','Fair','Good','Excellent']},
+  nps11:{label:'0-10 recommendation (NPS)',values:[0,1,2,3,4,5,6,7,8,9,10],labels:['0','1','2','3','4','5','6','7','8','9','10']},
+  yesno:{label:'Yes / No',values:['yes','no'],labels:['Yes','No']},
+  yesnounsure:{label:'Yes / No / Unsure',values:['yes','no','unsure'],labels:['Yes','No','Unsure']},
+  gender:{label:'Gender',values:['female','male','non_binary','prefer_not_to_say'],labels:['Female','Male','Non-binary','Prefer not to say']},
+  age_group:{label:'Age group',values:['18_24','25_34','35_44','45_54','55_64','65_plus'],labels:['18-24','25-34','35-44','45-54','55-64','65 or older']},
+  education:{label:'Education level',values:['secondary_or_below','diploma','bachelor','master','doctorate'],labels:['Secondary or below','Diploma or certificate','Bachelor degree','Master degree','Doctorate']},
+  employment:{label:'Employment status',values:['full_time','part_time','self_employed','student','not_employed'],labels:['Employed full-time','Employed part-time','Self-employed','Student','Not employed']}
+};
+// Materialise a preset into S.choices (no duplicate if already present) and
+// return its choice-set id.
+function ensurePresetChoiceSet(key){
+  var tpl=PRESET_CHOICE_SETS[key];if(!tpl)return null;
+  if(!S.choices.find(function(c){return c.id===key;})){
+    S.choices.push({id:key,values:tpl.values.slice(),labels:tpl.labels.slice(),allow_other:false,randomise:false});
+  }
+  return key;
+}
+function applyCsTemplate(name){
+  if(!selId)return;
+  var tpl=PRESET_CHOICE_SETS[name];if(!tpl)return;
+  var item=S.items.find(function(i){return i.id===selId;});if(!item)return;
+  snap();
+  var id=item.choice_set||safeId(item.id+'_choices');
+  // Same fork-before-edit rule as saveItemChoices(): never rewrite a set
+  // that other questions share.
+  var shared=S.items.some(function(i){return i.id!==item.id&&i.choice_set===id;});
+  if(shared)id=safeId(item.id+'_choices');
+  item.choice_set=id;
+  var ex=S.choices.findIndex(function(c){return c.id===id;});
+  var prior=ex>=0?S.choices[ex]:{};
+  var cs={id:id,values:tpl.values.slice(),labels:tpl.labels.slice(),allow_other:!!prior.allow_other,randomise:!!prior.randomise};
+  if(ex>=0)S.choices[ex]=cs;else S.choices.push(cs);
+  setDirty();renderItemList();renderInspBody(item);
+  toast('Template applied','ok');
+}
 function saveItemChoices(){
   if(!selId)return;
   var idx=S.items.findIndex(function(i){return i.id===selId;});if(idx<0)return;
@@ -2126,7 +2403,11 @@ function saveItemChoices(){
 }
 function renderInspBody(item){
   var isSec=item.type==='section_break',isTxt=item.type==='text_block';
-  var csO=[['','select'],...S.choices.map(function(c){return[c.id,c.id+' ('+c.values.length+' opts)'];})];
+  // Existing sets first, then the preset library (skipping presets already
+  // materialised into S.choices under their own key). Choosing a preset:*
+  // entry creates the set on the fly in updF().
+  var csO=[['','select'],...S.choices.map(function(c){return[c.id,c.id+' ('+c.values.length+' opts)'];}),
+    ...Object.keys(PRESET_CHOICE_SETS).filter(function(k){return !S.choices.find(function(c){return c.id===k;});}).map(function(k){return['preset:'+k,'Preset: '+PRESET_CHOICE_SETS[k].label];})];
   var scO=[['','none'],...S.scales.map(function(s){return[s.id,s.id+': '+s.label];})];
   var tO=[['likert','Likert'],['single_choice','Single choice'],['multiple_choice','Multiple choice'],['numeric','Numeric'],['text','Short text'],['textarea','Long text'],['date','Date'],['matrix','Matrix'],['slider','Slider'],['ranking','Ranking'],['rating','Rating']];
   function fld(lbl,ctrl,hint,req){var m=ctrl.match(/id="([^"]+)"/);var forA=m?' for="'+m[1]+'"':'';return'<div class="field"><label class="fl"'+forA+'>'+lbl+(req?'<span class="fr">*</span>':'')+'</label><div class="fc">'+ctrl+'</div>'+(hint?'<span class="fhint">'+hint+'</span>':'')+'</div>';}
@@ -2142,10 +2423,12 @@ function renderInspBody(item){
   var config=isSec||isTxt?'':fgs('Configuration',
     fld('Response type',sel('fi-type',tO,item.type))+
     (NCS.includes(item.type)?fld('Choice set',sel('fi-cs',csO,item.choice_set||'')):'') +
-    (NCS.includes(item.type)?fld('Choice labels','<textarea id="fi-choice-lines" rows="5" placeholder="One option per line, or value = Label" onblur="saveItemChoices()">'+esc(itemChoiceLines(item))+'</textarea>','For single choice, these are the respondent-facing category labels.'):'') +
+    (NCS.includes(item.type)?fld('Choice labels','<textarea id="fi-choice-lines" rows="5" placeholder="One option per line, or value = Label" onblur="saveItemChoices()">'+esc(itemChoiceLines(item))+'</textarea>','For single choice, these are the respondent-facing category labels.')+
+      '<div class="fc tpl-chips" role="group" aria-label="Quick-fill choice templates"><button type="button" onclick="applyCsTemplate(\'agree5\')">5-pt agree</button><button type="button" onclick="applyCsTemplate(\'agree7\')">7-pt agree</button><button type="button" onclick="applyCsTemplate(\'yesno\')">Yes / No</button><button type="button" onclick="applyCsTemplate(\'freq\')">Frequency</button><button type="button" onclick="applyCsTemplate(\'importance\')">Importance</button></div>':'') +
     (item.type==='matrix'?fld('Matrix row labels',ta('fi-mrows',(item.matrix_items||[]).join('\n'),'One label per line'),'One per line.'):'') +
     (item.type==='slider'?'<div class="frow">'+fld('Min',inp('fi-smin',item.slider_min||0,'','number'))+fld('Max',inp('fi-smax',item.slider_max||100,'','number'))+fld('Step',inp('fi-sstep',item.slider_step||1,'','number'))+'</div>':'') +
     (item.type==='rating'?'<div class="frow">'+fld('Max stars',inp('fi-rmax',item.rating_max||5,'','number'))+fld('Icon',sel('fi-ricon',[['star','Star ★'],['heart','Heart ♥']],item.rating_icon||'star'))+'</div>':'') +
+    (item.type==='date'?'<div class="frow">'+fld('Earliest date',inp('fi-dmin',item.date_min||'','','date'))+fld('Latest date',inp('fi-dmax',item.date_max||'','','date'))+'</div>':'') +
     fld('Scale',sel('fi-scale',scO,item.scale_id||''))+
     fld('Page number',inp('fi-page',item.page||'','Leave blank','number'),'Group items across pages.')
   );
@@ -2157,7 +2440,7 @@ function renderInspBody(item){
   );
   document.getElementById('inspBody').innerHTML=identity+config+options;
 }
-var FMAP={'fi-lbl':'label','fi-intro':'section_intro','fi-type':'type','fi-cs':'choice_set','fi-scale':'scale_id','fi-help':'help','fi-ph':'placeholder','fi-req':'required','fi-rev':'reverse','fi-smin':'slider_min','fi-smax':'slider_max','fi-sstep':'slider_step','fi-rmax':'rating_max','fi-ricon':'rating_icon','fi-page':'page','fi-mrows':'matrix_items'};
+var FMAP={'fi-lbl':'label','fi-intro':'section_intro','fi-type':'type','fi-cs':'choice_set','fi-scale':'scale_id','fi-help':'help','fi-ph':'placeholder','fi-req':'required','fi-rev':'reverse','fi-smin':'slider_min','fi-smax':'slider_max','fi-sstep':'slider_step','fi-rmax':'rating_max','fi-ricon':'rating_icon','fi-dmin':'date_min','fi-dmax':'date_max','fi-page':'page','fi-mrows':'matrix_items'};
 function updF(id){
   if(!selId)return;var idx=S.items.findIndex(function(i){return i.id===selId;});if(idx<0)return;
   var el=document.getElementById(id);if(!el)return;
@@ -2166,22 +2449,95 @@ function updF(id){
   if(f==='matrix_items')v=v.split('\n').map(function(s){return s.trim();}).filter(Boolean);
   else if(['slider_min','slider_max','slider_step','rating_max'].includes(f))v=parseFloat(v)||0;
   else if(f==='page')v=v?parseInt(v):null;
-  else if(f==='choice_set'||f==='scale_id')v=v||null;
+  else if(f==='date_min'||f==='date_max'){
+    v=v||null;
+    // ISO date strings compare correctly as strings.
+    var other=f==='date_min'?S.items[idx].date_max:S.items[idx].date_min;
+    if(v&&other&&(f==='date_min'?v>other:v<other)){
+      toast('Earliest date must not be after the latest date.','err');
+    }
+  }
+  else if(f==='choice_set'){
+    // A "preset:key" selection materialises the preset into S.choices first.
+    if(v&&v.indexOf('preset:')===0)v=ensurePresetChoiceSet(v.slice(7));
+    v=v||null;
+  }
+  else if(f==='scale_id')v=v||null;
   else if(f==='help'||f==='placeholder')v=v||null;
+  var prevType=S.items[idx].type;
   S.items[idx][f]=v;
   if(f==='type'){
     if(NCS.includes(v)&&!S.items[idx].choice_set){
       S.items[idx].choice_set=['likert','matrix'].includes(v)?ensureChoiceSet('agree'):ensureChoiceSet('basic');
     }
+    // If the item still carries its auto-generated id for the OLD type
+    // (e.g. sin_1 after switching Single choice to Multiple choice), the
+    // user never customised it, so regenerate it for the new type and
+    // propagate the rename everywhere the old id is referenced.
+    var oldId=S.items[idx].id;
+    if(new RegExp('^'+typePrefix(prevType)+'_\\d+$').test(oldId)&&prevType!==v){
+      var newId=nextItemId(v,oldId);
+      renameItemRefs(oldId,newId);
+      selId=newId;
+      var inspIdEl=document.getElementById('inspId');if(inspIdEl)inspIdEl.textContent=newId;
+    }
     document.getElementById('inspTypeLbl').textContent=TL[v]||v;renderInspBody(S.items[idx]);
   }
+  if(f==='choice_set')renderInspBody(S.items[idx]);
   renderItemList();
+}
+// Auto-id helpers shared by qAdd() and the type-change rename above.
+function typePrefix(type){return {'section_break':'sec','text_block':'txt'}[type]||type.slice(0,3);}
+function nextItemId(type,excludeId){
+  var prefix=typePrefix(type);
+  // excludeId: when renaming after a type change, the item already carries
+  // the new type, so it must not count towards its own sequence number.
+  var n=S.items.filter(function(i){return i.type===type&&i.id!==excludeId;}).length+1;
+  var nid=prefix+'_'+n;
+  while(S.items.find(function(i){return i.id===nid&&i.id!==excludeId;})){n++;nid=prefix+'_'+n;}
+  return nid;
+}
+// Rename an item id and every reference to it: scales (items and
+// reverse_items), branching (item_id and depends_on), attention checks,
+// analysis-plan roles and variables, and the item's own private choice set
+// when it is named "<oldId>_choices" and no other item shares it.
+function renameItemRefs(oldId,newId){
+  var item=S.items.find(function(i){return i.id===oldId;});if(!item)return;
+  item.id=newId;
+  S.scales.forEach(function(s){
+    s.items=(s.items||[]).map(function(x){return x===oldId?newId:x;});
+    s.reverse_items=(s.reverse_items||[]).map(function(x){return x===oldId?newId:x;});
+  });
+  S.branching.forEach(function(b){
+    if(b.item_id===oldId)b.item_id=newId;
+    if(b.depends_on===oldId)b.depends_on=newId;
+  });
+  S.checks.forEach(function(c){if(c.item_id===oldId)c.item_id=newId;});
+  // Plans may reference the item directly or through an expanded sub-column
+  // id (item__sub for matrix rows, options, and rank positions), so both
+  // forms are renamed.
+  var ren=function(x){if(x===oldId)return newId;if(typeof x==='string'&&x.indexOf(oldId+'__')===0)return newId+x.slice(oldId.length);return x;};
+  (S.analysis_plan||[]).forEach(function(rq){
+    if(rq.roles)Object.keys(rq.roles).forEach(function(k){
+      if(Array.isArray(rq.roles[k]))rq.roles[k]=rq.roles[k].map(ren);
+      else rq.roles[k]=ren(rq.roles[k]);
+    });
+    if(Array.isArray(rq.variables))rq.variables=rq.variables.map(ren);
+  });
+  var privateCs=oldId+'_choices';
+  if(item.choice_set===privateCs&&!S.items.some(function(i){return i.id!==newId&&i.choice_set===privateCs;})){
+    var cs=S.choices.find(function(c){return c.id===privateCs;});
+    if(cs){cs.id=newId+'_choices';item.choice_set=cs.id;}
+  }
 }
 function updIdF(nid){
   if(!selId)return;var idx=S.items.findIndex(function(i){return i.id===selId;});if(idx<0)return;
   var err=document.getElementById('fi-id-err');
   if(!nid||!/^[a-zA-Z0-9_]+$/.test(nid)||S.items.find(function(i,j){return j!==idx&&i.id===nid;})){err&&err.classList.add('show');return;}
-  err&&err.classList.remove('show');snap();S.items[idx].id=nid;selId=nid;
+  err&&err.classList.remove('show');snap();
+  // Propagate the rename through scales, branching, checks, and plans
+  // (previously only the item itself was renamed, orphaning references).
+  renameItemRefs(selId,nid);selId=nid;
   document.getElementById('inspId').textContent=nid;renderItemList();
 }
 
@@ -2215,9 +2571,7 @@ function defaultLabel(type,n){
   return labels[type]||('Question '+n);
 }
 function qAdd(type){
-  var prefix={'section_break':'sec','text_block':'txt'}[type]||type.slice(0,3);
-  var n=S.items.filter(function(i){return i.type===type;}).length+1;
-  var nid=prefix+'_'+n;while(S.items.find(function(i){return i.id===nid;})){n++;nid=prefix+'_'+n;}
+  var nid=nextItemId(type),n=parseInt(nid.split('_').pop(),10);
   snap();
   var choice=null;
   if(['likert','matrix'].includes(type))choice=ensureChoiceSet('agree');
@@ -2229,7 +2583,7 @@ function qAdd(type){
       S.choices.push({id:choice,values:['option_1','option_2','option_3'],labels:['Option 1','Option 2','Option 3'],allow_other:false,randomise:false});
     }
   }
-  var item={id:nid,label:defaultLabel(type,n),type:type,required:false,reverse:false,choice_set:choice,scale_id:null,help:null,placeholder:null,matrix_items:null,slider_min:0,slider_max:100,slider_step:1,rating_max:5,rating_icon:'star',section_intro:null,page:null};
+  var item={id:nid,label:defaultLabel(type,n),type:type,required:false,reverse:false,choice_set:choice,scale_id:null,help:null,placeholder:null,matrix_items:null,slider_min:0,slider_max:100,slider_step:1,rating_max:5,rating_icon:'star',date_min:null,date_max:null,section_intro:null,page:null};
   if(type==='matrix')item.matrix_items=['Service quality','Sustainability','Overall experience'];
   if(type==='section_break')item.section_intro='Use this section to introduce the next group of questions.';
   if(type==='text_block')item.label='Add instructions or explanatory text here.';
@@ -2367,10 +2721,85 @@ var TCITS={};var TLBLS={};Object.keys(ANALYSIS_REGISTRY).forEach(function(k){TCI
 // Likert variables suggests Spearman, never a two-group test. A nominal
 // grouping variable with more than two categories suggests Kruskal-Wallis.
 var TEST_SUGGEST={'cat+cat':'chi_square','cat+cont':'mann_whitney','cont+cat':'mann_whitney','cont+cont':'correlation_pearson','lik+lik':'correlation_spearman','lik+cont':'correlation_spearman','cont+lik':'correlation_spearman','cat+lik':'mann_whitney','lik+cat':'mann_whitney','many':'regression_linear'};
-function groupLevels(id){var i=S.items.find(function(x){return x.id===id;});if(!i||!i.choice_set)return null;var cs=S.choices.find(function(c){return c.id===i.choice_set;});return cs?(cs.values||[]).length:null;}
-function varLevel(id){var sc=S.scales.find(function(s){return s.id===id;});if(sc)return{level:'scale',code:'SCL',cls:'scl',type:'scale score'};var i=S.items.find(function(x){return x.id===id;});if(!i)return{level:'model',code:'MOD',cls:'id',type:'model'};if(i.type==='likert')return{level:'likert',code:'LIK',cls:'lik',type:i.type};if(['single_choice','multiple_choice','ranking'].includes(i.type))return{level:i.type==='ranking'?'ordinal':'nominal',code:i.type==='ranking'?'ORD':'NOM',cls:i.type==='ranking'?'ord':'nom',type:i.type};if(['numeric','slider','rating'].includes(i.type))return{level:'continuous',code:'CON',cls:'con',type:i.type};if(['text','textarea','date'].includes(i.type))return{level:i.type==='date'?'identifier':'text',code:i.type==='date'?'ID':'TXT',cls:i.type==='date'?'id':'txt',type:i.type};return{level:'identifier',code:'ID',cls:'id',type:i.type};}
-function roleOptions(role,selected){var useModels=role.levels&&role.levels.includes('model');var opts=useModels?(S.models||[]).map(function(m){return{id:m.id,label:m.id+' ('+(m.type||'model')+')'};}):getAllVars().filter(function(v){return role.levels.includes('any')||role.levels.includes(v.level)||role.levels.includes(v.kind);});return opts.map(function(v){return'<option value="'+esc(v.id)+'"'+(selected.includes(v.id)?' selected':'')+'>'+esc(v.label)+'</option>';}).join('');}
-function getAllVars(){var items=S.items.filter(function(i){return!['section_break','text_block'].includes(i.type);}).map(function(i){var m=varLevel(i.id);return{id:i.id,label:i.id+' - '+(i.label||'').slice(0,42),level:m.level,kind:'item',meta:m,item:i};});var scales=S.scales.map(function(s){var m=varLevel(s.id);return{id:s.id,label:s.id+' - '+(s.label||'scale score'),level:m.level,kind:'scale',meta:m,scale:s};});return items.concat(scales);}
+function groupLevels(id){
+  var i=S.items.find(function(x){return x.id===id;});
+  // Sub-column ids (item__sub): a multiple-choice option column is binary
+  // (selected/not); matrix rows and rank positions take the parent choice
+  // set's number of levels.
+  if(!i&&id.indexOf('__')>-1){
+    var bi=S.items.find(function(x){return x.id===id.slice(0,id.indexOf('__'));});
+    if(bi){
+      if(bi.type==='multiple_choice')return 2;
+      if(bi.choice_set){var bcs=S.choices.find(function(c){return c.id===bi.choice_set;});return bcs?(bcs.values||[]).length:null;}
+    }
+    return null;
+  }
+  if(!i||!i.choice_set)return null;
+  var cs=S.choices.find(function(c){return c.id===i.choice_set;});
+  return cs?(cs.values||[]).length:null;
+}
+function varLevel(id){
+  var sc=S.scales.find(function(s){return s.id===id;});if(sc)return{level:'scale',code:'SCL',cls:'scl',type:'scale score'};
+  var i=S.items.find(function(x){return x.id===id;});
+  // Matrix, ranking, and multiple-choice items reach the data as one column
+  // per sub-item or option (item__sub, matching read_responses()), so a
+  // "base__suffix" id resolves to the base item and takes the sub-column's
+  // measurement level, not the parent's.
+  if(!i&&id.indexOf('__')>-1){
+    var base=id.slice(0,id.indexOf('__'));
+    var bi=S.items.find(function(x){return x.id===base;});
+    if(bi){
+      if(bi.type==='matrix')return{level:'likert',code:'LIK',cls:'lik',type:'matrix row'};
+      if(bi.type==='multiple_choice')return{level:'nominal',code:'NOM',cls:'nom',type:'option (0/1)'};
+      if(bi.type==='ranking')return{level:'ordinal',code:'ORD',cls:'ord',type:'rank position'};
+    }
+  }
+  if(!i)return{level:'model',code:'MOD',cls:'id',type:'model'};
+  if(i.type==='likert')return{level:'likert',code:'LIK',cls:'lik',type:i.type};
+  if(i.type==='single_choice')return{level:'nominal',code:'NOM',cls:'nom',type:i.type};
+  // multiple_choice, ranking, and matrix have no single response column of
+  // their own; their analysable variables are the expanded sub-columns
+  // built in getAllVars(). The parent id is kept out of role dropdowns.
+  if(['multiple_choice','ranking','matrix'].includes(i.type))return{level:'expanded',code:'SET',cls:'id',type:i.type};
+  if(['numeric','slider','rating'].includes(i.type))return{level:'continuous',code:'CON',cls:'con',type:i.type};
+  if(['text','textarea','date'].includes(i.type))return{level:i.type==='date'?'identifier':'text',code:i.type==='date'?'ID':'TXT',cls:i.type==='date'?'id':'txt',type:i.type};
+  return{level:'identifier',code:'ID',cls:'id',type:i.type};
+}
+function roleOptions(role,selected){var useModels=role.levels&&role.levels.includes('model');var opts=useModels?(S.models||[]).map(function(m){return{id:m.id,label:m.id+' ('+(m.type||'model')+')'};}):getAllVars().filter(function(v){return role.levels.includes('any')||role.levels.includes(v.level)||role.levels.includes(v.kind);});var multi=role.max>1;var html='';if(!multi&&!role.min){html+='<option value=""'+(selected.length?'':' selected')+'>(none)</option>';}html+=opts.map(function(v){return'<option value="'+esc(v.id)+'"'+(selected.includes(v.id)?' selected':'')+'>'+esc(v.label)+'</option>';}).join('');return html;}
+function getAllVars(){
+  // Matrix, ranking, and multiple-choice items expand to one variable per
+  // sub-item or option, mirroring the response columns read_responses()
+  // produces (item__sub / item__option). The parent id is not offered:
+  // no such column exists in collected data.
+  var choiceValuesFor=function(id){var cs=S.choices.find(function(c){return c.id===id;});return cs?cs.values.map(String):[];};
+  var choiceLabelsFor=function(id){var cs=S.choices.find(function(c){return c.id===id;});return cs?(cs.labels||cs.values).map(String):[];};
+  var items=[];
+  S.items.filter(function(i){return!['section_break','text_block'].includes(i.type);}).forEach(function(i){
+    if(i.type==='matrix'&&(i.matrix_items||[]).length){
+      i.matrix_items.forEach(function(row){
+        var sid=i.id+'__'+row;var m=varLevel(sid);
+        items.push({id:sid,label:sid+' - '+String(row).slice(0,42),level:m.level,kind:'item',meta:m,item:i});
+      });
+    }else if(i.type==='multiple_choice'&&i.choice_set){
+      var vals=choiceValuesFor(i.choice_set),labs=choiceLabelsFor(i.choice_set);
+      vals.forEach(function(v,vi){
+        var sid=i.id+'__'+v;var m=varLevel(sid);
+        items.push({id:sid,label:sid+' - '+(labs[vi]||v).slice(0,42),level:m.level,kind:'item',meta:m,item:i});
+      });
+    }else if(i.type==='ranking'&&i.choice_set){
+      var rvals=choiceValuesFor(i.choice_set),rlabs=choiceLabelsFor(i.choice_set);
+      rvals.forEach(function(v,vi){
+        var sid=i.id+'__'+v;var m=varLevel(sid);
+        items.push({id:sid,label:sid+' - rank of '+(rlabs[vi]||v).slice(0,34),level:m.level,kind:'item',meta:m,item:i});
+      });
+    }else{
+      var m0=varLevel(i.id);
+      items.push({id:i.id,label:i.id+' - '+(i.label||'').slice(0,42),level:m0.level,kind:'item',meta:m0,item:i});
+    }
+  });
+  var scales=S.scales.map(function(s){var m=varLevel(s.id);return{id:s.id,label:s.id+' - '+(s.label||'scale score'),level:m.level,kind:'scale',meta:m,scale:s};});
+  return items.concat(scales);
+}
 function getVarCat(id){var m=varLevel(id);if(m.level==='likert')return'lik';return['nominal','ordinal'].includes(m.level)?'cat':'cont';}
 function rolesFromLegacy(rq,method){if(rq&&rq.roles)return rq.roles;var v=(rq&&rq.variables)||[];if(!Array.isArray(v))v=[v];if(!method)return{};var r={},defs=(ANALYSIS_REGISTRY[method]||{}).roles||[];defs.forEach(function(role,idx){if(role.max===1)r[role.id]=v[idx]||'';else r[role.id]=v.slice(idx);});return r;}
 function openRQModal(id){
@@ -2383,7 +2812,7 @@ function openRQModal(id){
   document.getElementById('rqDelBtn').style.display=id?'inline-flex':'none';
   popRQVars(rolesFromLegacy(rq,method));onTestChg(false);
   document.getElementById('rqSuggest').style.display='none';
-  openModal('m-rq');
+  openModal('m-rq');startRQPlaceholders();
 }
 function popRQVars(roleValues){
   var vars=getAllVars();
@@ -2469,20 +2898,25 @@ function renderPreviewItem(item,cm,col){
   if(item.type==='text_block')return'<div class="pv-txtblk">'+esc(item.label).replace(/\n/g,'<br>')+'</div>';
   var lbl='<div class="pv-ql">'+esc(item.label)+(item.required?'<span class="pv-req-mk">*</span>':'')+'</div>'+(item.help?'<div class="pv-help-t">'+esc(item.help)+'</div>':'');
   var inp='';
-  if(['likert','single_choice'].includes(item.type))inp='<div class="pv-opts'+(item.type==='likert'?' inl':'')+'">'+((cs?cs.values:[]).map(function(v,i){return'<label class="pv-opt"><input type="radio" name="'+esc(item.id)+'" style="accent-color:'+esc(col)+'"> '+esc((cs.labels||[])[i]||v)+'</label>';})).join('')+'</div>';
-  else if(item.type==='multiple_choice')inp='<div class="pv-opts">'+((cs?cs.values:[]).map(function(v,i){return'<label class="pv-opt"><input type="checkbox" style="accent-color:'+esc(col)+'"> '+esc((cs.labels||[])[i]||v)+'</label>';})).join('')+'</div>';
-  else if(item.type==='numeric')inp='<input class="pv-inp" type="number" placeholder="Enter a number" style="max-width:200px">';
-  else if(item.type==='text')inp='<input class="pv-inp" type="text" placeholder="'+esc(item.placeholder||'')+'">';
-  else if(item.type==='textarea')inp='<textarea class="pv-inp" rows="3" placeholder="'+esc(item.placeholder||'')+'"></textarea>';
-  else if(item.type==='date')inp='<input class="pv-inp" type="date" style="max-width:200px">';
-  else if(item.type==='slider')inp='<div class="pv-slider-w"><input type="range" class="pv-slider" min="'+(item.slider_min||0)+'" max="'+(item.slider_max||100)+'" style="accent-color:'+esc(col)+'"><div class="pv-slider-r"><span>'+esc(item.slider_min||0)+'</span><span>'+esc(item.slider_max||100)+'</span></div></div>';
+  if(item.type==='likert')inp='<div class="pv-lik-row">'+((cs?cs.values:[]).map(function(v,i){return'<label class="pv-lik-opt"><input type="radio" name="'+esc(item.id)+'"><span class="pv-lik-num">'+esc(v)+'</span><span class="pv-lik-lbl">'+esc((cs.labels||[])[i]||v)+'</span></label>';})).join('')+'</div>';
+  else if(item.type==='single_choice')inp='<div class="pv-opts">'+((cs?cs.values:[]).map(function(v,i){return'<label class="pv-opt"><input type="radio" name="'+esc(item.id)+'"><span>'+esc((cs.labels||[])[i]||v)+'</span></label>';})).join('')+'</div>';
+  else if(item.type==='multiple_choice')inp='<div class="pv-opts">'+((cs?cs.values:[]).map(function(v,i){return'<label class="pv-opt"><input type="checkbox"><span>'+esc((cs.labels||[])[i]||v)+'</span></label>';})).join('')+'</div>';
+  else if(item.type==='numeric')inp='<input class="pv-inp" type="number" placeholder="Enter a number" aria-label="'+esc(item.label)+'" style="max-width:200px">';
+  else if(item.type==='text')inp='<input class="pv-inp" type="text" placeholder="'+esc(item.placeholder||'')+'" aria-label="'+esc(item.label)+'">';
+  else if(item.type==='textarea')inp='<textarea class="pv-inp" rows="3" placeholder="'+esc(item.placeholder||'')+'" aria-label="'+esc(item.label)+'"></textarea>';
+  else if(item.type==='date')inp='<input class="pv-inp" type="date" aria-label="'+esc(item.label)+'" style="max-width:200px"'+(item.date_min?' min="'+esc(item.date_min)+'"':'')+(item.date_max?' max="'+esc(item.date_max)+'"':'')+'>';
+  else if(item.type==='slider')inp='<div class="pv-slider-w"><input type="range" class="pv-slider" min="'+(item.slider_min||0)+'" max="'+(item.slider_max||100)+'" aria-label="'+esc(item.label)+'"><div class="pv-slider-r"><span>'+esc(item.slider_min||0)+'</span><span>'+esc(item.slider_max||100)+'</span></div></div>';
   else if(item.type==='rating')inp='<div class="pv-stars">'+Array.from({length:item.rating_max||5},function(){return item.rating_icon==='heart'?'&#10084;':'★';}).join('')+'</div>';
-  else if(item.type==='matrix'&&item.matrix_items&&cs)inp='<div style="overflow-x:auto"><table class="pv-matrix"><thead><tr><th></th>'+cs.labels.map(function(l){return'<th>'+esc(l)+'</th>';}).join('')+'</tr></thead><tbody>'+item.matrix_items.map(function(row){return'<tr><td class="rl">'+esc(row)+'</td>'+cs.values.map(function(v){return'<td><input type="radio" name="'+esc(item.id)+'_'+esc(row)+'" style="accent-color:'+esc(col)+'"></td>';}).join('')+'</tr>';}).join('')+'</tbody></table></div>';
-  else if(item.type==='ranking'&&cs)inp='<div class="pv-ranklist">'+cs.labels.map(function(l){return'<div class="pv-rankitem"><span style="color:var(--t3)">&#8942;</span>'+esc(l)+'</div>';}).join('')+'</div>';
+  else if(item.type==='matrix'&&item.matrix_items&&cs)inp='<div style="overflow-x:auto"><table class="pv-matrix"><thead><tr><th></th>'+cs.labels.map(function(l){return'<th>'+esc(l)+'</th>';}).join('')+'</tr></thead><tbody>'+item.matrix_items.map(function(row){return'<tr><td class="rl">'+esc(row)+'</td>'+cs.values.map(function(v){return'<td><input type="radio" name="'+esc(item.id)+'_'+esc(row)+'"></td>';}).join('')+'</tr>';}).join('')+'</tbody></table></div>';
+  else if(item.type==='ranking'&&cs)inp='<div class="pv-ranklist">'+cs.labels.map(function(l){return'<div class="pv-rankitem">'+esc(l)+'<span style="margin-left:auto;color:var(--t3)">&#8942;</span></div>';}).join('')+'</div>';
   return'<div class="pv-item">'+lbl+inp+'</div>';
 }
 function renderPreview(){
   var el=document.getElementById('pvFrame');var col=normHex((S.render&&S.render.theme)||'#2563eb');
+  // Theme B: all preview tints derive from the survey's theme colour via
+  // the --pvc custom property (see the .pv-frame CSS block), so the preview
+  // re-skins with the picker exactly like the exported survey does.
+  el.style.setProperty('--pvc',col);
   var cm={};S.choices.forEach(function(cs){cm[cs.id]=cs;});
   // Branded header on every preview screen (Welcome, Survey, Thank You),
   // with a stable logo box so the title does not shift with aspect ratio.
@@ -2490,20 +2924,24 @@ function renderPreview(){
   if(pvTab==='welcome'){
     var w=S.render&&S.render.welcome?S.render.welcome:{};
     if(!w.intro_text&&!w.consent_text){el.innerHTML='<div style="max-width:620px;margin:0 auto"><div style="background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.07);padding:40px;text-align:center;color:var(--t3)"><div style="font-size:32px;margin-bottom:12px">&#128196;</div><p style="font-size:13px">No welcome page configured. <a href="#" onclick="openSettings(\'welcome\');return false" style="color:'+esc(col)+'">Set up welcome page &#8594;</a></p></div></div>';return;}
-    el.innerHTML='<div style="max-width:620px;margin:0 auto"><div class="pv-card">'+hdr+'<div class="pv-title">'+esc(w.title||S.meta.title)+'</div>'+(w.intro_text?'<div class="pv-intro">'+esc(w.intro_text).replace(/\n/g,'<br>')+'</div>':'')+(w.consent_text?'<div class="pv-consent">'+esc(w.consent_text)+'</div>':'')+'<button type="button" style="width:100%;padding:11px;border-radius:10px;background:'+esc(col)+';color:#fff;font-size:14px;font-weight:600;border:none;cursor:default">'+esc(w.start_label||'Start Survey')+'</button></div></div>';return;
+    el.innerHTML='<div style="max-width:620px;margin:0 auto"><div class="pv-card">'+hdr+'<div class="pv-title">'+esc(w.title||S.meta.title)+'</div>'+(w.intro_text?'<div class="pv-intro">'+esc(w.intro_text).replace(/\n/g,'<br>')+'</div>':'')+(w.consent_text?'<div class="pv-consent">'+esc(w.consent_text)+'</div>':'')+'<div class="pv-submit" style="margin-top:16px"><button type="button" style="background:'+esc(col)+'">'+esc(w.start_label||'Start Survey')+'</button></div></div></div>';return;
   }
   if(pvTab==='thankyou'){var ty=S.render&&S.render.thankyou?S.render.thankyou:{};el.innerHTML='<div style="max-width:620px;margin:0 auto"><div class="pv-card">'+hdr+'<div class="pv-ty"><div class="pv-ty-ic">&#10003;</div><div class="pv-ty-t">Submitted successfully</div><div class="pv-ty-m">'+esc(ty.message||'Thank you for completing this survey.')+'</div></div></div></div>';return;}
   if(!S.items.length){el.innerHTML='<div style="max-width:620px;margin:0 auto"><div class="pv-card" style="text-align:center;padding:60px"><p style="color:var(--t3);font-size:13px">Add questions to preview the survey.</p></div></div>';return;}
   var mode=(S.render&&S.render.mode)||'standard';
-  var shown=S.items,nav='';
+  var shown=S.items,nav='',eyebrow='',prog='';
   if(mode==='conversational'){
     pvPage=Math.max(0,Math.min(pvPage,S.items.length-1));
     shown=[S.items[pvPage]];
+    // Per-question eyebrow and a slim theme-coloured progress strip, both
+    // conversational-mode-only, matching the static template's behaviour.
+    eyebrow='<div class="pv-eyebrow">Question '+(pvPage+1)+' of '+S.items.length+'</div>';
+    prog='<div class="pv-prog"><div class="pv-prog-in" style="width:'+Math.round(((pvPage+1)/S.items.length)*100)+'%"></div></div>';
     nav='<div class="pv-nav"><button type="button" onclick="prevPvPage()" '+(pvPage===0?'disabled':'')+'>Previous</button><span class="pv-count">Question '+(pvPage+1)+' of '+S.items.length+'</span><button type="button" onclick="nextPvPage()" '+(pvPage>=S.items.length-1?'disabled':'')+'>Next</button></div>';
   }
   var items=shown.map(function(item){return renderPreviewItem(item,cm,col);}).join('');
-  var submit=mode==='conversational'&&pvPage<S.items.length-1?'':'<div class="pv-submit"><button type="button" style="background:'+esc(col)+';width:100%;padding:11px;border-radius:10px;color:#fff;font-size:14px;font-weight:600;border:none;cursor:default">'+esc((S.render&&S.render.submit_label)||'Submit')+'</button></div>';
-  el.innerHTML='<div style="max-width:620px;margin:0 auto"><div class="pv-card">'+hdr+'<div class="pv-title">'+esc(S.meta.title)+'</div>'+(S.meta.description?'<div class="pv-desc">'+esc(S.meta.description)+'</div>':'')+items+nav+submit+'</div></div>';
+  var submit=mode==='conversational'&&pvPage<S.items.length-1?'':'<div class="pv-submit"><button type="button" style="background:'+esc(col)+'">'+esc((S.render&&S.render.submit_label)||'Submit')+'</button></div>';
+  el.innerHTML='<div style="max-width:620px;margin:0 auto">'+prog+'<div class="pv-card">'+hdr+(mode==='conversational'?eyebrow:'<div class="pv-title">'+esc(S.meta.title)+'</div>'+(S.meta.description?'<div class="pv-desc">'+esc(S.meta.description)+'</div>':''))+items+nav+submit+'</div></div>';
 }
 
 // -- Analyse ----------------------------------------------------------------
@@ -2527,6 +2965,52 @@ function renderModelBuilder(){
   from.innerHTML=opts;to.innerHTML=opts;
   list.innerHTML=models.length?models.map(function(m){var paths=(m.structural&&m.structural.paths)||[];return'<div class="model-row"><strong>'+esc(m.id)+'</strong> <span class="vbadge">'+esc(m.type||'model')+'</span><div>'+esc((m.measurement&&m.measurement.constructs||[]).length)+' construct(s), '+esc(paths.length)+' path(s)</div><div class="model-paths">'+(paths.length?paths.map(function(p){return'<span class="vchip">'+esc(p.from+' -> '+p.to)+'</span>';}).join(''):'<span class="rq-no-int">No paths yet.</span>')+'</div></div>';}).join(''):'<div class="rq-no-int">No saved models yet.</div>';
 }
+// Inline decision-rule editing in the Report outline. Writes to the same
+// plan-block fields the RQ modal edits (both names, matching saveRQ), so
+// the modal, the plan cards, and the outline stay one source of truth. No
+// re-render here: the textarea already shows the value, and re-rendering
+// mid-typing would drop focus.
+function updatePlanInterp(id,val){
+  var rq=S.analysis_plan.find(function(r){return r.id===id;});
+  if(!rq)return;
+  rq.decision_rule=val.trim();rq.interpretation=val.trim();
+  setDirty();
+}
+// Report outline tab: a skeleton of the eventual render_report() document —
+// study header, quality and descriptives stubs, then one section per plan
+// with an empty results table and a figure placeholder (the table+plot
+// pairing the R report emits), then models and references.
+function reportSkeletonHtml(plans){
+  var phRow='<tr><td><div class="rs-ph"></div></td><td><div class="rs-ph" style="width:45%"></div></td><td><div class="rs-ph" style="width:55%"></div></td></tr>';
+  var out='<div class="rs-doc">';
+  out+='<div class="rs-title">'+esc(S.meta.title||'Untitled Survey')+'</div>';
+  out+='<div class="rs-meta">Version '+esc(S.meta.version||'1.0.0')+(S.meta.authors?' · '+esc(S.meta.authors):'')+' · generated by <code>render_report()</code> in R</div>';
+  out+='<div class="rs-h2">1. Data quality</div><div class="rs-p">Completion, straight-lining, attention checks, and missingness summaries appear here once responses are collected.</div>';
+  out+='<div class="rs-h2">2. Descriptives and reliability</div><div class="rs-p">'+(S.scales.length?S.scales.length+' scale(s): scale descriptives, Cronbach alpha, and McDonald omega tables with their charts.':'No scales defined yet. Scale descriptives and reliability appear here once items are grouped into scales.')+'</div>';
+  out+='<div class="rs-h2">3. Analysis plan results</div>';
+  plans.forEach(function(rq,i){
+    var method=rq.method||rq.test;
+    out+='<div class="rs-h3">3.'+(i+1)+' '+esc(rq.research_question||('Research question '+(i+1)))+'</div>';
+    out+='<div class="rs-method">Method: '+esc(TLBLS[method]||method)+(rq.requires_data===false?' (syntax generation only — no result table)':'')+'</div>';
+    if(rq.requires_data!==false){
+      out+='<table class="rs-tbl"><thead><tr><th>Statistic</th><th>Value</th><th>Interpretation</th></tr></thead><tbody>'+phRow+phRow+'</tbody></table>';
+      out+='<div class="rs-fig"><span class="rs-fig-ic">&#128200;</span><span class="rs-fig-cap">Figure 3.'+(i+1)+' — '+esc(TLBLS[method]||method)+' chart, paired with the table above</span></div>';
+    }
+    // The editable field sits below the table and chart, matching where
+    // render_report() prints the paired "Planned decision rule" and
+    // "Interpretation" lines under each result, not up in the question header.
+    out+='<div class="rs-interp"><label class="rs-interp-lbl" for="rsInterp_'+i+'">Planned decision rule (editable)</label><textarea id="rsInterp_'+i+'" rows="2" placeholder="State how the result will answer the research question." oninput="updatePlanInterp(\''+rq.id+'\',this.value)">'+esc(rq.decision_rule||rq.interpretation||'')+'</textarea></div>';
+  });
+  out+='<div class="rs-h2">4. Measurement models</div>';
+  if(S.models&&S.models.length){S.models.forEach(function(m){out+='<div class="rs-p"><strong>'+esc(m.id||m.label||'Model')+'</strong> ('+esc(m.type||'model')+', '+((m.measurement&&m.measurement.constructs)?m.measurement.constructs.length:0)+' construct(s)): generated lavaan/seminr syntax is printed in this section.</div>';});}
+  else{out+='<div class="rs-p">No models saved yet. Use the Model Builder on the right to add a CFA or SEM model.</div>';}
+  var refs={};plans.forEach(function(rq){asArr(rq.reporting_references).concat(asArr(rq.citations)).forEach(function(k){if(CSHORT[k])refs[k]=CSHORT[k];});});
+  var refKeys=Object.keys(refs);
+  out+='<div class="rs-h2">5. References</div>';
+  out+=refKeys.length?'<div class="rs-refs">'+refKeys.map(function(k){return esc(refs[k]);}).join('<br>')+'</div>':'<div class="rs-p">Method citations are added automatically as plans are declared.</div>';
+  out+='</div>';
+  return out;
+}
 function renderAnalyse(){
   var vl=document.getElementById('anVars');if(!vl)return;
   renderModelBuilder();
@@ -2539,17 +3023,17 @@ function renderAnalyse(){
   var runPlans=allPlans.filter(function(r){return r.requires_data!==false;});
   var syntaxOnly=allPlans.filter(function(r){return r.requires_data===false;});
   var displayPlans=anTab==='run'?runPlans:allPlans;
-  if(!allPlans.length){rb.innerHTML='<div class="an-empty"><div class="an-empty-ic">&#128300;</div><div class="an-empty-t">No analysis plans yet</div><div class="an-empty-b">Click "+ Add plan" to define method, roles, assumptions, and planned outputs.</div></div>';return;}
-  var cardHtml=function(plans){return plans.map(function(rq,i){var method=rq.method||rq.test,reg=ANALYSIS_REGISTRY[method]||{},alpha=(rq.options&&rq.options.alpha)||rq.alpha,vars=asArr(rq.variables);if(!vars.length)vars=flattenRoles(rq.roles||{});var refs=asArr(rq.reporting_references);if(!refs.length)refs=asArr(rq.citations);var drg=(anTab==='plan')?' draggable="true" ondragstart="pStart(event,'+i+')" ondragover="pOver(event,'+i+')" ondrop="pDrop(event,'+i+')" ondragend="pEnd(event)" ondragleave="this.classList.remove(\'drag-t\',\'drag-b\')"':'';return'<div class="rq-card'+(anTab==='plan'?' rq-drag':'')+'"'+drg+' onclick="openRQModal(\''+rq.id+'\')"><div style="display:flex;align-items:flex-start;gap:8px"><span class="rq-num"'+(anTab==='plan'?' title="Drag to reorder"':'')+'>'+(i+1)+'</span><div style="flex:1"><div class="rq-q">'+esc(rq.research_question)+'</div><div class="rq-meta"><span class="tc">'+esc(TLBLS[method]||method)+'</span>'+(reg.showAlpha?'<span class="ac">significance='+esc(alpha||0.05)+'</span>':'')+(rq.status?'<span class="ac">'+esc(rq.status)+'</span>':'')+refs.map(function(k){return'<span class="cc">'+esc(CSHORT[k]||k)+'</span>';}).join('')+'</div>'+(vars.length?'<div style="margin-top:6px;display:flex;gap:3px;flex-wrap:wrap">'+vars.map(function(v){return'<span class="vchip">'+esc(v)+'</span>';}).join('')+'</div>':'')+(rq.decision_rule||rq.interpretation?'<div class="rq-interp">'+esc(rq.decision_rule||rq.interpretation)+'</div>':'<div class="rq-no-int">Decision rule pending.</div>')+'</div></div></div>';}).join('');};
+  if(!allPlans.length){rb.innerHTML='<div class="an-empty"><div class="an-empty-ic">&#128300;</div><div class="an-empty-t">No analysis plans yet</div><div class="an-empty-b">Declare each analysis before collecting data: method, roles, assumptions, and planned outputs.</div><div style="margin-top:14px"><button type="button" class="btn btn-p" onclick="openRQModal()">+ Add plan</button></div></div>';return;}
+  // Plan and Run preview both show draggable plan cards. Run preview is the
+  // execution queue: the same cards, minus syntax-only methods, reorderable
+  // in place (drag order writes back to S.analysis_plan by id).
+  var draggable=anTab==='plan'||anTab==='run';
+  var cardHtml=function(plans){return plans.map(function(rq,i){var method=rq.method||rq.test,reg=ANALYSIS_REGISTRY[method]||{},alpha=(rq.options&&rq.options.alpha)||rq.alpha,vars=asArr(rq.variables);if(!vars.length)vars=flattenRoles(rq.roles||{});var refs=asArr(rq.reporting_references);if(!refs.length)refs=asArr(rq.citations);var drg=draggable?' draggable="true" ondragstart="pStart(event,\''+rq.id+'\')" ondragover="pOver(event,\''+rq.id+'\')" ondrop="pDrop(event,\''+rq.id+'\')" ondragend="pEnd(event)" ondragleave="this.classList.remove(\'drag-t\',\'drag-b\')"':'';return'<div class="rq-card'+(draggable?' rq-drag':'')+'"'+drg+' onclick="openRQModal(\''+rq.id+'\')"><div style="display:flex;align-items:flex-start;gap:8px"><span class="rq-num"'+(draggable?' title="Drag to reorder"':'')+'>'+(i+1)+'</span><div style="flex:1"><div class="rq-q">'+esc(rq.research_question)+'</div><div class="rq-meta"><span class="tc">'+esc(TLBLS[method]||method)+'</span>'+(reg.showAlpha?'<span class="ac">significance='+esc(alpha||0.05)+'</span>':'')+(rq.status?'<span class="ac">'+esc(rq.status)+'</span>':'')+refs.map(function(k){return'<span class="cc">'+esc(CSHORT[k]||k)+'</span>';}).join('')+'</div>'+(vars.length?'<div style="margin-top:6px;display:flex;gap:3px;flex-wrap:wrap">'+vars.map(function(v){return'<span class="vchip">'+esc(v)+'</span>';}).join('')+'</div>':'')+(rq.decision_rule||rq.interpretation?'<div class="rq-interp">'+esc(rq.decision_rule||rq.interpretation)+'</div>':'<div class="rq-no-int">Decision rule pending.</div>')+'</div></div></div>';}).join('');};
   if(anTab==='run'){
     rb.innerHTML=cardHtml(runPlans);
     if(syntaxOnly.length)rb.innerHTML+='<div style="padding:8px 12px;font-size:11px;color:var(--t3);border-top:1px solid var(--bdr);margin-top:4px">'+syntaxOnly.length+' syntax-only method(s) excluded — these generate lavaan or seminr strings without requiring response data.</div>';
   }else if(anTab==='report'){
-    rb.innerHTML=cardHtml(allPlans);
-    var modelSection='<div style="padding:10px 0 4px;font-size:11px;font-weight:600;color:var(--t2);text-transform:uppercase;letter-spacing:.05em">Measurement models</div>';
-    if(S.models&&S.models.length){modelSection+=S.models.map(function(m){return'<div class="rq-card" style="cursor:default"><div style="font-size:12px;font-weight:600">'+esc(m.id||m.label||'Model')+'</div><div style="font-size:11px;color:var(--t3);margin-top:2px">'+esc(m.type||'')+' · '+((m.measurement&&m.measurement.constructs)?m.measurement.constructs.length:0)+' construct(s)</div></div>';}).join('');}
-    else{modelSection+='<div style="font-size:11px;color:var(--t3);padding:6px 0">No models saved yet. Use the Model Builder on the right to add a CFA or SEM model to the report.</div>';}
-    rb.innerHTML+=modelSection;
+    rb.innerHTML=reportSkeletonHtml(allPlans);
   }else{
     rb.innerHTML=cardHtml(allPlans);
   }

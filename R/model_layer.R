@@ -485,7 +485,12 @@ add_model <- function(instrument, model, validate = TRUE, replace = TRUE) {
 #' @param min_loading Minimum salient loading.
 #' @param cross_loading Maximum secondary loading before a warning is raised.
 #'
-#' @return An object of class `sframe_efa_solution`.
+#' @return An object of class `sframe_efa_solution`. Alongside the psych
+#'   objects it carries three tidy data frames ready for plotting and
+#'   reporting: `loadings_long` (item_id, factor, loading),
+#'   `communalities_table` (item_id, communality, uniqueness), and
+#'   `variance_table` (factor, ss_loadings, proportion_var,
+#'   cumulative_var).
 #' @export
 efa_solution <- function(
     data,
@@ -560,6 +565,38 @@ efa_solution <- function(
     check.names = FALSE
   )
 
+  # Tidy companions to the psych objects above, additive so nothing that
+  # reads the original keys changes: long loadings for the heatmap, one row
+  # per item for communalities, one row per factor for variance explained.
+  factor_names <- colnames(loading_matrix)
+  loadings_long <- data.frame(
+    item_id = rep(loadings$item_id, times = length(factor_names)),
+    factor = rep(factor_names, each = nrow(loadings)),
+    loading = as.numeric(loading_matrix),
+    stringsAsFactors = FALSE,
+    check.names = FALSE
+  )
+  communalities_table <- data.frame(
+    item_id = names(fit$communality),
+    communality = as.numeric(fit$communality),
+    uniqueness = as.numeric(fit$uniquenesses[names(fit$communality)]),
+    stringsAsFactors = FALSE,
+    check.names = FALSE
+  )
+  va <- fit$Vaccounted
+  variance_table <- data.frame(
+    factor = colnames(va),
+    ss_loadings = as.numeric(va["SS loadings", ]),
+    proportion_var = as.numeric(va["Proportion Var", ]),
+    cumulative_var = if ("Cumulative Var" %in% rownames(va)) {
+      as.numeric(va["Cumulative Var", ])
+    } else {
+      cumsum(as.numeric(va["Proportion Var", ]))
+    },
+    stringsAsFactors = FALSE,
+    check.names = FALSE
+  )
+
   out <- structure(
     list(
       method = extraction,
@@ -568,10 +605,13 @@ efa_solution <- function(
       n = nrow(item_data),
       n_items = length(cols),
       loadings = loadings,
+      loadings_long = loadings_long,
       communalities = fit$communality,
+      communalities_table = communalities_table,
       uniqueness = fit$uniquenesses,
       factor_correlations = fit$Phi,
       variance_explained = fit$Vaccounted,
+      variance_table = variance_table,
       item_flags = item_flags,
       warnings = item_flags$item_id[item_flags$low_loading | item_flags$cross_loading]
     ),

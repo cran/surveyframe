@@ -197,6 +197,16 @@ sframe_restore_item <- function(item) {
     NULL
   }
   item$rating_icon <- sframe_empty_to_null(item$rating_icon)
+  item$date_min <- if (!is.null(sframe_empty_to_null(item$date_min))) {
+    as.character(item$date_min)
+  } else {
+    NULL
+  }
+  item$date_max <- if (!is.null(sframe_empty_to_null(item$date_max))) {
+    as.character(item$date_max)
+  } else {
+    NULL
+  }
   item$section_intro <- sframe_empty_to_null(item$section_intro)
   item$page <- if (!is.null(sframe_empty_to_null(item$page))) {
     as.integer(item$page)

@@ -44,7 +44,7 @@
 #' @importFrom jsonlite toJSON fromJSON
 #' @importFrom rlang abort warn arg_match check_installed %||%
 #' @importFrom openssl sha256
-#' @importFrom stats cor sd var complete.cases
+#' @importFrom stats cor sd var complete.cases density
 #' @importFrom utils capture.output
 ## usethis namespace: end
 NULL

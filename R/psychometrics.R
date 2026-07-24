@@ -81,6 +81,7 @@ reliability_report <- function(
         # instead of flooding the console with psych internal warnings.
         result$omega_note <- "omega requires >= 3 items; skipped for this scale"
       } else {
+        omega_err <- NULL
         tryCatch({
           # suppressMessages/suppressWarnings silence psych's internal
           # message() and warning() diagnostics; capture.output() catches
@@ -93,12 +94,19 @@ reliability_report <- function(
           result$omega_h <- o$omega_h
           result$omega_t <- o$omega.tot
         }, error = function(e) {
+          omega_err <<- conditionMessage(e)
           sframe_warn_scoring(
             paste0("Omega could not be computed for scale '", scale$id,
                    "': ", conditionMessage(e)),
             scale_id = scale$id
           )
         })
+        # The failure reason travels on the result, so the report and the
+        # reliability plot can say why a scale has no omega bar.
+        if (!is.null(omega_err)) {
+          result$omega_note <- paste0("omega could not be computed: ",
+                                      omega_err)
+        }
       }
     }
 

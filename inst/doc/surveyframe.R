@@ -451,7 +451,7 @@ scale_summary <- data.frame(
 )
 kable(scale_summary, digits = 2, caption = "Scale score summary")
 
-## ----score-distributions, fig.width = 7, fig.height = 4, fig.align = "left"----
+## ----score-distributions, fig.width = 7, fig.height = 4, fig.align = "left", fig.alt = "Histograms of the scored scale distributions, one panel per scale"----
 op <- par(mfrow = c(3, 3), mar = c(4, 3, 2, 1))
 for (s in scale_cols) {
   v <- scored[[s]]; v <- v[is.finite(v)]
@@ -549,7 +549,7 @@ results_table(results)
 ## ----show-prompt--------------------------------------------------------------
 cat(results[[1]]$prompt)
 
-## ----run-plan-plots, eval=requireNamespace("ggplot2", quietly = TRUE), fig.width=7, fig.height=4.5----
+## ----run-plan-plots, eval=requireNamespace("ggplot2", quietly = TRUE), fig.width=7, fig.height=4.5, fig.alt="Chart attached to the first analysis-plan result by run_analysis_plan with plots enabled"----
 results_p <- run_analysis_plan(scored, study, plots = TRUE)
 first_plot <- Filter(function(r) !is.null(r$plot), results_p)[[1]]
 first_plot$plot

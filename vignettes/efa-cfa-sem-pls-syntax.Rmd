@@ -1,4 +1,5 @@
 ---
+lang: en-GB
 title: "EFA, CFA, CB-SEM, and PLS-SEM syntax generation"
 output: rmarkdown::html_vignette
 vignette: >
@@ -6,6 +7,23 @@ vignette: >
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
+
+```{=html}
+<style>
+/* WCAG 2.2 AA pass: darker link and syntax-token colours (at least
+   4.5:1 on the #f7f7f7 code background), wrapped code lines instead of a
+   keyboard-inaccessible scroll region, empty per-line anchors removed from
+   the accessibility tree, and 24px minimum TOC link targets. */
+a { color: #0e7c7a; }
+code span.at { color: #576419; }
+code span.dv, code span.fl, code span.bn { color: #276245; }
+code span.co { color: #396a80; }
+pre, pre code { white-space: pre-wrap; word-break: break-word; }
+div.sourceCode { overflow: visible; }
+pre.sourceCode a:empty { display: none; }
+#TOC a { display: inline-block; min-height: 24px; }
+</style>
+```
 
 ```{r setup, include = FALSE}
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>")

@@ -192,7 +192,9 @@ sframe_render_input <- function(item, choices_lookup) {
     textarea = textAreaInput(item$id, lbl,
       placeholder = item$placeholder %||% "", rows = 4),
 
-    date = dateInput(item$id, lbl, value = NULL),
+    date = dateInput(item$id, lbl, value = NULL,
+                     min = item$date_min %||% NULL,
+                     max = item$date_max %||% NULL),
 
     slider = tags$div(
       lbl,

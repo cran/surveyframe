@@ -4,28 +4,37 @@
 \alias{theme_surveyframe}
 \title{surveyframe brand theme for ggplot2}
 \usage{
-theme_surveyframe(base_size = 12, base_family = "")
+theme_surveyframe(
+  base_size = 12,
+  base_family = "",
+  palette = c("web", "print")
+)
 }
 \arguments{
 \item{base_size}{Numeric. Base font size in points. Defaults to 12.}
 
 \item{base_family}{Character. Base font family. Defaults to \code{""} (the
 device default).}
+
+\item{palette}{One of \code{"web"} (brand colours, for on-screen use) or
+\code{"print"} (black/grey/white only, for journal-ready figures). See
+\code{sframe_brand()} for the verified contrast ratios behind each.}
 }
 \value{
 A ggplot2 theme object.
 }
 \description{
-A light, publication-oriented ggplot2 theme matching the surveyframe
-report brand: dark ink typography, a teal accent, and quiet horizontal
-grid lines. Apply it to any ggplot object, including the plots returned
-by \code{\link[=run_analysis_plan]{run_analysis_plan()}} when \code{plots = TRUE}.
+A \code{theme_classic()}-based ggplot2 theme (visible axis lines, no floating
+panel), verified against WCAG 2.2 contrast minimums: 4.5:1 for text,
+3:1 for non-text graphical objects. Apply it to any ggplot object,
+including the plots returned by \code{\link[=run_analysis_plan]{run_analysis_plan()}} when
+\code{plots = TRUE}.
 }
 \examples{
 \dontshow{if (rlang::is_installed("ggplot2")) withAutoprint(\{ # examplesIf}
 library(ggplot2)
 ggplot(mtcars, aes(wt, mpg)) +
-  geom_point(colour = "#16B3B1") +
+  geom_point(colour = "#0E9694") +
   theme_surveyframe()
 \dontshow{\}) # examplesIf}
 }

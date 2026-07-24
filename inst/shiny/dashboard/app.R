@@ -215,7 +215,7 @@ server <- function(input, output, session) {
     }
     if (!is.null(date_filter_column) && !is.null(input$filter_date_range)) {
       d <- dashboard_parse_date(out[[date_filter_column]])
-      rng <- as.Date(input$filter_date_range)
+      rng <- dashboard_parse_date(input$filter_date_range)
       keep <- is.na(d) | (d >= rng[1] & d <= rng[2])
       out <- out[keep, , drop = FALSE]
     }
@@ -250,10 +250,12 @@ server <- function(input, output, session) {
     }
     col_data <- resp[[input$item_sel]]
     t <- item$type
+    cs <- choice_by_id(item$choice_set %||% "")
+    gg <- tryCatch(sframe_plot_item_chart(item, col_data, cs), error = function(e) NULL)
+    if (!is.null(gg)) { print(gg); return() }
     old_par <- par(mar = c(4,5,2,1), bg = "white")
     on.exit(par(old_par))
     if (t %in% c("likert","single_choice","multiple_choice")) {
-      cs <- choice_by_id(item$choice_set %||% "")
       if (!is.null(cs)) {
         freq <- table(factor(col_data, levels = as.character(cs$values)))
         names(freq) <- cs$labels
@@ -298,6 +300,8 @@ server <- function(input, output, session) {
     if (!length(scores)) {
       plot.new(); text(.5,.5,"No valid scale scores.",col="#94a3b8"); return()
     }
+    gg <- tryCatch(sframe_plot_scale_chart(scores, sc$label), error = function(e) NULL)
+    if (!is.null(gg)) { print(gg); return() }
     old_par <- par(mar = c(4,4,2,1), bg = "white")
     on.exit(par(old_par))
     hist(scores, col = THEME, border = "white",
@@ -310,12 +314,94 @@ server <- function(input, output, session) {
   }, bg = "white")
   outputOptions(output, "scale_chart", suspendWhenHidden = FALSE)
 
-  # Raw data table
+  # Scale score correlation heatmap. ggplot2 helper first, base-R image()
+  # fallback, matching the item/scale chart pattern.
+  output$scale_cor_chart <- renderPlot({
+    resp <- filtered_responses()
+    req(resp)
+    scs <- Filter(function(s) length(intersect(s$items, names(resp))) > 0, instr$scales)
+    if (length(scs) < 2) {
+      plot.new(); text(.5,.5,"Define at least two scales to see correlations.",col="#94a3b8"); return()
+    }
+    scored <- as.data.frame(lapply(scs, function(sc) {
+      nums <- lapply(resp[intersect(sc$items, names(resp))],
+                     function(x) suppressWarnings(as.numeric(x)))
+      rowMeans(do.call(cbind, nums), na.rm = TRUE)
+    }))
+    names(scored) <- vapply(scs, `[[`, character(1), "id")
+    gg <- tryCatch(sframe_plot_correlation_matrix(scored, names(scored)),
+                   error = function(e) NULL)
+    if (!is.null(gg)) { print(gg); return() }
+    cm <- tryCatch(stats::cor(scored, use = "pairwise.complete.obs"),
+                   error = function(e) NULL)
+    if (is.null(cm) || any(!is.finite(cm))) {
+      plot.new(); text(.5,.5,"Correlations could not be computed.",col="#94a3b8"); return()
+    }
+    k <- ncol(cm)
+    old_par <- par(mar = c(6,6,1,1), bg = "white")
+    on.exit(par(old_par))
+    image(1:k, 1:k, t(cm[k:1, , drop = FALSE]), zlim = c(-1, 1),
+          col = grDevices::hcl.colors(21, "Blue-Red 2", rev = TRUE),
+          axes = FALSE, xlab = "", ylab = "")
+    axis(1, at = 1:k, labels = colnames(cm), las = 2, cex.axis = .8)
+    axis(2, at = 1:k, labels = rev(rownames(cm)), las = 1, cex.axis = .8)
+    for (i in 1:k) for (j in 1:k) text(j, k - i + 1, sprintf("%.2f", cm[i, j]), cex = .7)
+  }, bg = "white")
+  outputOptions(output, "scale_cor_chart", suspendWhenHidden = FALSE)
+
+  # Quality tab charts: straight-lining flag rate and item missingness.
+  output$quality_chart <- renderPlot({
+    resp <- filtered_responses()
+    req(resp)
+    qr <- tryCatch(quality_report(resp, instr), error = function(e) NULL)
+    gg <- if (!is.null(qr)) tryCatch(sframe_plot_quality(qr), error = function(e) NULL)
+    if (!is.null(gg)) { print(gg); return() }
+    rates <- if (!is.null(qr)) {
+      stats::setNames(
+        vapply(qr$straightline, function(s) s$flag_rate %||% NA_real_, numeric(1)),
+        vapply(qr$straightline, function(s) s$scale_id %||% "", character(1))
+      )
+    } else numeric(0)
+    rates <- rates[!is.na(rates)]
+    if (!length(rates)) {
+      plot.new(); text(.5,.5,"Straight-lining needs at least one scale.",col="#94a3b8"); return()
+    }
+    old_par <- par(mar = c(6,4,1,1), bg = "white")
+    on.exit(par(old_par))
+    barplot(rates * 100, col = THEME, border = NA, las = 2,
+            ylab = "Flag rate (%)", cex.names = .8, cex.axis = .8)
+  }, bg = "white")
+  outputOptions(output, "quality_chart", suspendWhenHidden = FALSE)
+
+  output$missing_chart <- renderPlot({
+    resp <- filtered_responses()
+    req(resp)
+    mr <- tryCatch(missing_data_report(resp, instr), error = function(e) NULL)
+    gg <- if (!is.null(mr)) tryCatch(sframe_plot_missingness(mr), error = function(e) NULL)
+    if (!is.null(gg)) { print(gg); return() }
+    pct <- if (!is.null(mr)) {
+      stats::setNames(mr$item_missing$missing_pct, mr$item_missing$variable)
+    } else numeric(0)
+    pct <- pct[!is.na(pct) & pct > 0]
+    if (!length(pct)) {
+      plot.new(); text(.5,.5,"No missing responses.",col="#94a3b8"); return()
+    }
+    old_par <- par(mar = c(6,4,1,1), bg = "white")
+    on.exit(par(old_par))
+    barplot(sort(pct, decreasing = TRUE) * 100, col = THEME, border = NA, las = 2,
+            ylab = "Missing (%)", cex.names = .8, cex.axis = .8)
+  }, bg = "white")
+  outputOptions(output, "missing_chart", suspendWhenHidden = FALSE)
+
+  # Raw data table. No `width = "100%"` here: a wide response table (30+
+  # columns) forced to the card's width crushes every cell instead of
+  # scrolling, defeating the overflow-x:auto wrapper in db_data_ui(). Sized
+  # to its natural content width, it scrolls horizontally as intended.
   output$raw_table <- renderTable({
     resp <- filtered_responses()
     if (is.null(resp)) return(data.frame(Note = "No responses loaded."))
     head(resp, 200)
-  }, striped = TRUE, hover = TRUE, bordered = FALSE, width = "100%",
+  }, striped = TRUE, hover = TRUE, bordered = FALSE,
      na = "Not available")
 
   output$dl_csv <- downloadHandler(
@@ -463,6 +549,11 @@ db_scales_ui <- function(input, resp = responses) {
         plotOutput("scale_chart", height = "260px")
       }
     ),
+    if (length(instr$scales) >= 2 && !is.null(resp) && nrow(resp) > 0) {
+      div(class = "db-card",
+        div(class = "db-card-t", "Scale score correlations"),
+        plotOutput("scale_cor_chart", height = "320px"))
+    },
     div(class = "db-card",
       div(class = "db-card-t", "Scale definitions"),
       tags$table(class = "tbl",
@@ -486,8 +577,23 @@ db_scales_ui <- function(input, resp = responses) {
 
 db_quality_ui <- function(resp = responses) {
   n_current <- if (is.null(resp)) 0L else nrow(resp)
+  chart_cards <- if (n_current > 0) {
+    tagList(
+      div(class = "db-card",
+        div(class = "db-card-t", "Straight-lining flag rate"),
+        plotOutput("quality_chart", height = "260px")),
+      div(class = "db-card",
+        div(class = "db-card-t", "Missing responses by item"),
+        plotOutput("missing_chart", height = "260px"))
+    )
+  } else {
+    div(class = "db-card",
+      p(style = "color:#94a3b8;font-size:13px",
+        "Load response data to see quality and missingness charts."))
+  }
   if (!length(instr$checks)) {
-    return(div(class="db-card","No attention checks defined in this instrument."))
+    return(tagList(chart_cards,
+      div(class="db-card","No attention checks defined in this instrument.")))
   }
   rows <- lapply(instr$checks, function(ck) {
     n_pass <- if (!is.null(resp) && ck$item_id %in% names(resp)) {
@@ -515,15 +621,17 @@ db_quality_ui <- function(resp = responses) {
     )
   })
 
-  div(class = "db-card",
-    div(class = "db-card-t", "Attention check results"),
-    tags$table(class = "tbl",
-      tags$thead(tags$tr(
-        tags$th("Check ID"), tags$th("Type"), tags$th("Item"),
-        tags$th("Correct answer(s)"), tags$th("Fail action"),
-        tags$th("n pass"), tags$th("% pass")
-      )),
-      tags$tbody(rows)
+  tagList(chart_cards,
+    div(class = "db-card",
+      div(class = "db-card-t", "Attention check results"),
+      tags$table(class = "tbl",
+        tags$thead(tags$tr(
+          tags$th("Check ID"), tags$th("Type"), tags$th("Item"),
+          tags$th("Correct answer(s)"), tags$th("Fail action"),
+          tags$th("n pass"), tags$th("% pass")
+        )),
+        tags$tbody(rows)
+      )
     )
   )
 }
@@ -546,7 +654,8 @@ db_data_ui <- function(resp = responses) {
         tagList(
           p(style="font-size:11px;color:#94a3b8;margin-bottom:10px",
             paste0("Showing first 200 of ", n_current, " filtered rows.")),
-          div(style="overflow-x:auto", tableOutput("raw_table"))
+          div(style="overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%",
+              tableOutput("raw_table"))
         )
       }
     )

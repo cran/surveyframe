@@ -27,6 +27,10 @@
 #' @param slider_step Numeric or NULL. Step size for `"slider"` type.
 #' @param rating_max Integer or NULL. Maximum rating for `"rating"` type.
 #' @param rating_icon Character or NULL. Icon type: `"star"` or `"heart"`.
+#' @param date_min Character or Date or NULL. Earliest selectable date for
+#'   `"date"` type, as `"YYYY-MM-DD"`.
+#' @param date_max Character or Date or NULL. Latest selectable date for
+#'   `"date"` type, as `"YYYY-MM-DD"`.
 #' @param section_intro Character or NULL. Intro text for `"section_break"` type.
 #' @param page Integer or NULL. Page number for multi-page surveys.
 #'
@@ -62,10 +66,20 @@ sf_item <- function(
     slider_step   = NULL,
     rating_max    = NULL,
     rating_icon   = NULL,
+    date_min      = NULL,
+    date_max      = NULL,
     section_intro = NULL,
     page          = NULL
 ) {
   type <- rlang::arg_match(type)
+  date_min <- sframe_check_date_bound(date_min, "date_min")
+  date_max <- sframe_check_date_bound(date_max, "date_max")
+  if (!is.null(date_min) && !is.null(date_max) &&
+      as.Date(date_min, format = "%Y-%m-%d") >
+      as.Date(date_max, format = "%Y-%m-%d")) {
+    rlang::abort("`date_min` must not be later than `date_max`.",
+                 class = c("sframe_validation_error", "sframe_error"))
+  }
 
   structure(
     list(
@@ -84,9 +98,30 @@ sf_item <- function(
       slider_step = slider_step,
       rating_max = rating_max,
       rating_icon = rating_icon,
+      date_min = date_min,
+      date_max = date_max,
       section_intro = section_intro,
       page = page
     ),
     class = "sf_item"
   )
+}
+
+# Normalise a date bound to a "YYYY-MM-DD" string, or abort with a typed
+# validation error when the value cannot be read as a date.
+sframe_check_date_bound <- function(value, arg) {
+  if (is.null(value)) return(NULL)
+  # A bare as.Date(value) guesses the format and silently misparses an
+  # ambiguous or wrong-order string (e.g. "01/02/2024" becomes the year-1
+  # date "1-02-20" rather than an error), so the bound is only ever accepted
+  # if it matches "YYYY-MM-DD" exactly.
+  parsed <- tryCatch(as.Date(as.character(value), format = "%Y-%m-%d"),
+                     error = function(e) NA)
+  if (length(parsed) != 1 || is.na(parsed)) {
+    rlang::abort(
+      sprintf("`%s` must be a single date in YYYY-MM-DD form.", arg),
+      class = c("sframe_validation_error", "sframe_error")
+    )
+  }
+  as.character(parsed)
 }

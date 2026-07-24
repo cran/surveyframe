@@ -434,9 +434,13 @@ test_that("0.3.3: SurveyBuilder has one settings entry point and one Add-questio
   skip_if(!file.exists(builder_path), "builder HTML not found")
   html <- paste(readLines(builder_path, warn = FALSE, encoding = "UTF-8"), collapse = "\n")
 
-  # The top bar no longer duplicates the sidebar's settings entry point
+  # One settings entry point: the sidebar CTA (the v0.3.4 rework replaced
+  # the clickable-title gear and the Welcome/Logo/Thank You strip with a
+  # single primary button; the top bar carries no settings control).
   expect_false(grepl('class="btn btn-s btn-sm btn-gear"', html, fixed = TRUE))
-  expect_match(html, "sb-title-btn", fixed = TRUE)
+  expect_match(html, "sb-settings-cta", fixed = TRUE)
+  expect_false(grepl("sb-title-btn", html, fixed = TRUE))
+  expect_false(grepl("setup-strip", html, fixed = TRUE))
 
   # "+ Add question" opens the type picker instead of silently adding a
   # Likert item, and the empty canvas offers exactly two secondary actions

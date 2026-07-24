@@ -72,8 +72,10 @@ test_that("run_analysis_plan attaches brand plots when plots = TRUE", {
   expect_s3_class(by_id("RQC")$plot, "ggplot")
   expect_s3_class(by_id("RQX")$plot, "ggplot")
   expect_s3_class(by_id("RQR")$plot, "ggplot")
-  # t-test is outside the first plot family: no plot, no error
-  expect_null(by_id("RQT")$plot)
+  # Group-comparison boxplot added in the v0.3.4 breadth work
+  # (sframe_plot_group_comparison()); t-test was outside the original
+  # first plot family shipped in 0.3.3, no longer outside it now.
+  expect_s3_class(by_id("RQT")$plot, "ggplot")
   expect_null(by_id("RQT")$error)
 })
 
@@ -98,7 +100,10 @@ test_that("inferential runners gain a kable-ready $table", {
   reg_tab <- by_id("RQR")$table
   expect_s3_class(reg_tab, "data.frame")
   expect_true("(Intercept)" %in% reg_tab$Term)
-  expect_true("age" %in% reg_tab$Term)
+  # Term is humanised to the item's label ("age" -> its question text), so
+  # the analysis output reads without needing the underlying variable id.
+  expect_true("What is your age?" %in% reg_tab$Term)
+  expect_false("age" %in% reg_tab$Term)
 
   t_tab <- by_id("RQT")$table
   expect_s3_class(t_tab, "data.frame")

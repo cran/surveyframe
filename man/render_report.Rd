@@ -9,14 +9,16 @@ render_report(
   data = NULL,
   output_file = NULL,
   output_path = NULL,
-  format = c("html"),
+  format = c("html", "pdf"),
   include_quality = TRUE,
   include_reliability = TRUE,
   include_codebook = TRUE,
   include_missing = TRUE,
   include_descriptives = TRUE,
   include_analysis = TRUE,
-  include_models = TRUE
+  include_models = TRUE,
+  plot_palette = c("web", "print"),
+  interpretations = NULL
 )
 }
 \arguments{
@@ -31,7 +33,11 @@ temporary file is written and its path returned.}
 \item{output_path}{Character or NULL. Alias for \code{output_file}. If both are
 supplied, \code{output_file} takes precedence.}
 
-\item{format}{Character. Output format. Currently \code{"html"}.}
+\item{format}{Character. Output format: \code{"html"} (default) or \code{"pdf"}.
+PDF output renders the HTML report and prints it through
+\code{\link[pagedown:chrome_print]{pagedown::chrome_print()}}, which requires the pagedown package (in
+Suggests) and a local Chrome or Chromium installation. The HTML path
+is unchanged.}
 
 \item{include_quality}{Logical. Whether to include the data quality report.
 Requires \code{data}. Defaults to \code{TRUE}.}
@@ -53,6 +59,19 @@ when \code{data} are supplied and the instrument has an \code{analysis_plan}.}
 
 \item{include_models}{Logical. Whether to include saved model JSON and
 generated syntax blocks. Defaults to \code{TRUE}.}
+
+\item{plot_palette}{One of \code{"web"} (brand colours, for on-screen reading)
+or \code{"print"} (black, grey, and white, for a journal-ready or
+print-friendly report). Applied to every chart the report embeds.
+See \code{sframe_brand()}.}
+
+\item{interpretations}{Named list or NULL. Written interpretations keyed
+by analysis-plan block id, added after the results are known. When a
+block has an entry, its report section shows the pre-declared decision
+rule under a "Planned decision rule" label followed by the written
+text under an "Interpretation" label. Blocks without an entry render
+exactly as they do when this argument is NULL. Interpretations are
+report content only and are never written into the instrument.}
 }
 \value{
 The output file path, invisibly.

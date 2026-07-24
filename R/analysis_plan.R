@@ -225,6 +225,7 @@ sframe_run_crosstab <- function(data, vars, options = list()) {
   effect <- if (denom > 0) sqrt(unname(ct$statistic) / denom) else NA_real_
   effect_name <- if (r_dim == 2 && c_dim == 2) "phi" else "Cramer's V"
   effect_symbol <- if (identical(effect_name, "phi")) "\u03c6" else "V"
+  v_ci <- cramers_v_ci(tbl)
   weighted_table <- NULL
   if (!is.null(weights) && nzchar(weights) && weights %in% colnames(data)) {
     w <- suppressWarnings(as.numeric(data[[weights]][complete]))
@@ -246,16 +247,18 @@ sframe_run_crosstab <- function(data, vars, options = list()) {
     effect_name = effect_name,
     phi      = if (identical(effect_name, "phi")) unname(effect) else NA_real_,
     cramer_v = if (!identical(effect_name, "phi")) unname(effect) else NA_real_,
+    v_ci     = v_ci,
     effect_label = sframe_effect_label(effect, "r"),
     apa      = sprintf(
-      "\u03c7\u00b2(%d, N = %d) = %.2f, p %s, %s = %.2f",
+      "\u03c7\u00b2(%d, N = %d) = %.2f, p %s, %s = %.2f%s",
       ct$parameter, n, ct$statistic, sframe_p_string(ct$p.value),
-      effect_symbol, effect
+      effect_symbol, effect, sframe_ci_string(v_ci)
     ),
     prompt   = sprintf(
-      "The chi-square test %s a significant association between %s and %s (%s = %.2f, %s effect). Describe the pattern in the cross-tabulation.",
+      "The chi-square test %s a significant association between %s and %s (%s = %.2f%s, %s effect). Describe the pattern in the cross-tabulation.",
       if (ct$p.value < .05) "revealed" else "found no",
-      vars[1], vars[2], effect_name, effect, sframe_effect_label(effect, "r")
+      vars[1], vars[2], effect_name, effect, sframe_ci_string(v_ci),
+      sframe_effect_label(effect, "r")
     ),
     p_method = if (isTRUE(options$simulate_p_value) && any(ct$expected < 5)) "simulated" else "asymptotic",
     warnings = if (any(ct$expected < 5)) {
@@ -280,6 +283,7 @@ sframe_run_mann_whitney <- function(data, vars) {
   n <- length(g1) + length(g2)
   z <- stats::qnorm(wt$p.value / 2)
   r <- abs(z) / sqrt(n)
+  r_ci <- sframe_rank_r_ci(g1, g2)
   list(
     test     = "mann_whitney",
     vars     = vars,
@@ -288,18 +292,20 @@ sframe_run_mann_whitney <- function(data, vars) {
     median1  = stats::median(g1), median2 = stats::median(g2),
     U        = unname(wt$statistic),
     z        = z, p = wt$p.value, r = r,
+    r_ci     = r_ci,
     effect_label = sframe_effect_label(r, "r"),
     apa      = sprintf(
-      "U = %.0f, z = %.2f, p %s, r = %.2f",
-      wt$statistic, z, sframe_p_string(wt$p.value), r
+      "U = %.0f, z = %.2f, p %s, r = %.2f%s",
+      wt$statistic, z, sframe_p_string(wt$p.value), r,
+      sframe_ci_string(r_ci)
     ),
     prompt   = sprintf(
-      "The Mann-Whitney test %s a significant difference between %s (Mdn = %.2f) and %s (Mdn = %.2f), U = %.0f, p %s, r = %.2f (%s effect). Interpret the direction and practical significance.",
+      "The Mann-Whitney test %s a significant difference between %s (Mdn = %.2f) and %s (Mdn = %.2f), U = %.0f, p %s, r = %.2f%s (%s effect). Interpret the direction and practical significance.",
       if (wt$p.value < .05) "revealed" else "did not reveal",
       groups[1], stats::median(g1),
       groups[2], stats::median(g2),
       wt$statistic, sframe_p_string(wt$p.value),
-      r, sframe_effect_label(r, "r")
+      r, sframe_ci_string(r_ci), sframe_effect_label(r, "r")
     )
   )
 }
@@ -318,6 +324,7 @@ sframe_run_t_test <- function(data, vars) {
   tt <- tryCatch(stats::t.test(g1, g2), error = function(e) NULL)
   if (is.null(tt)) return(list(test = "t_test_ind", error = "Test failed."))
   d <- sframe_cohens_d(g1, g2)
+  d_ci <- cohens_d_ci(g1, g2)
   list(
     test     = "t_test_ind",
     vars     = vars,
@@ -328,18 +335,21 @@ sframe_run_t_test <- function(data, vars) {
     t        = unname(tt$statistic),
     df       = unname(tt$parameter),
     p        = tt$p.value, d = d,
+    d_ci     = d_ci,
     effect_label = sframe_effect_label(d, "d"),
     apa      = sprintf(
-      "t(%.2f) = %.2f, p %s, d = %.2f",
-      tt$parameter, tt$statistic, sframe_p_string(tt$p.value), d
+      "t(%.2f) = %.2f, p %s, d = %.2f%s",
+      tt$parameter, tt$statistic, sframe_p_string(tt$p.value), d,
+      sframe_ci_string(d_ci)
     ),
     prompt   = sprintf(
-      "The independent-samples t-test %s a significant difference between %s (M = %.2f, SD = %.2f) and %s (M = %.2f, SD = %.2f), t(%.2f) = %.2f, p %s, d = %.2f (%s effect). Discuss the direction and magnitude.",
+      "The independent-samples t-test %s a significant difference between %s (M = %.2f, SD = %.2f) and %s (M = %.2f, SD = %.2f), t(%.2f) = %.2f, p %s, d = %.2f%s (%s effect). Discuss the direction and magnitude.",
       if (tt$p.value < .05) "revealed" else "did not reveal",
       groups[1], mean(g1), stats::sd(g1),
       groups[2], mean(g2), stats::sd(g2),
       tt$parameter, tt$statistic,
-      sframe_p_string(tt$p.value), d, sframe_effect_label(d, "d")
+      sframe_p_string(tt$p.value), d, sframe_ci_string(d_ci),
+      sframe_effect_label(d, "d")
     )
   )
 }
@@ -384,6 +394,8 @@ sframe_run_anova_one <- function(data, vars) {
     )
   } else NULL
 
+  eta_ci <- eta_sq_ci(outcome[complete], group[complete])
+
   list(
     test = "anova_one",
     vars = vars,
@@ -394,19 +406,21 @@ sframe_run_anova_one <- function(data, vars) {
     df2 = n - k,
     p = p_val,
     eta2 = eta2,
+    eta_ci = eta_ci,
     group_means = as.list(group_means),
     tukey = tukey,
     effect_label = sframe_effect_label(eta2, "eta2"),
     apa = sprintf(
-      "F(%d, %d) = %.2f, p %s, \u03b7\u00b2 = %.3f",
-      k - 1, n - k, F_stat, sframe_p_string(p_val), eta2
+      "F(%d, %d) = %.2f, p %s, \u03b7\u00b2 = %.3f%s",
+      k - 1, n - k, F_stat, sframe_p_string(p_val), eta2,
+      sframe_ci_string(eta_ci)
     ),
     prompt = sprintf(
-      "The one-way ANOVA %s a significant effect of %s on %s, F(%d, %d) = %.2f, p %s, \u03b7\u00b2 = %.3f (%s effect). Group means: %s. %s",
+      "The one-way ANOVA %s a significant effect of %s on %s, F(%d, %d) = %.2f, p %s, \u03b7\u00b2 = %.3f%s (%s effect). Group means: %s. %s",
       if (!is.na(p_val) && p_val < .05) "revealed" else "did not reveal",
       vars[1], vars[2],
       k - 1, n - k, F_stat, sframe_p_string(p_val),
-      eta2, sframe_effect_label(eta2, "eta2"),
+      eta2, sframe_ci_string(eta_ci), sframe_effect_label(eta2, "eta2"),
       group_means_str,
       if (!is.null(tukey))
         "Tukey HSD post-hoc comparisons are included in the result object."
@@ -434,6 +448,10 @@ sframe_run_t_test_pair <- function(data, vars) {
 
   diff <- x - y
   dz <- mean(diff, na.rm = TRUE) / stats::sd(diff, na.rm = TRUE)
+  d_ci <- bootstrap_ci(diff, FUN = function(v) {
+    s <- stats::sd(v)
+    if (is.na(s) || s == 0) NA_real_ else mean(v) / s
+  })
 
   list(
     test = "t_test_pair",
@@ -447,19 +465,20 @@ sframe_run_t_test_pair <- function(data, vars) {
     df = unname(tt$parameter),
     p = tt$p.value,
     d_z = dz,
+    d_ci = d_ci,
     effect_label = sframe_effect_label(abs(dz), "d"),
     apa = sprintf(
-      "t(%d) = %.2f, p %s, d_z = %.2f",
+      "t(%d) = %.2f, p %s, d_z = %.2f%s",
       unname(tt$parameter), unname(tt$statistic),
-      sframe_p_string(tt$p.value), dz
+      sframe_p_string(tt$p.value), dz, sframe_ci_string(d_ci)
     ),
     prompt = sprintf(
-      "The paired-samples t-test %s a significant mean difference between %s (M = %.2f) and %s (M = %.2f), t(%d) = %.2f, p %s, d_z = %.2f (%s effect). Interpret the direction and practical significance of the change.",
+      "The paired-samples t-test %s a significant mean difference between %s (M = %.2f) and %s (M = %.2f), t(%d) = %.2f, p %s, d_z = %.2f%s (%s effect). Interpret the direction and practical significance of the change.",
       if (tt$p.value < .05) "revealed" else "did not reveal",
       vars[1], mean(x), vars[2], mean(y),
       unname(tt$parameter), unname(tt$statistic),
       sframe_p_string(tt$p.value),
-      dz, sframe_effect_label(abs(dz), "d")
+      dz, sframe_ci_string(d_ci), sframe_effect_label(abs(dz), "d")
     )
   )
 }
@@ -486,6 +505,7 @@ sframe_run_wilcoxon_pair <- function(data, vars) {
 
   z <- stats::qnorm(wt$p.value / 2)
   r <- abs(z) / sqrt(n)
+  r_ci <- sframe_signed_rank_r_ci(x - y)
 
   list(
     test = "wilcoxon_pair",
@@ -497,19 +517,21 @@ sframe_run_wilcoxon_pair <- function(data, vars) {
     z = z,
     p = wt$p.value,
     r = r,
+    r_ci = r_ci,
     effect_label = sframe_effect_label(r, "r"),
     apa = sprintf(
-      "V = %.0f, z = %.2f, p %s, r = %.2f",
-      wt$statistic, z, sframe_p_string(wt$p.value), r
+      "V = %.0f, z = %.2f, p %s, r = %.2f%s",
+      wt$statistic, z, sframe_p_string(wt$p.value), r,
+      sframe_ci_string(r_ci)
     ),
     prompt = sprintf(
-      "The Wilcoxon signed-rank test %s a significant difference between %s (Mdn = %.2f) and %s (Mdn = %.2f), V = %.0f, z = %.2f, p %s, r = %.2f (%s effect). Discuss the direction and practical significance.",
+      "The Wilcoxon signed-rank test %s a significant difference between %s (Mdn = %.2f) and %s (Mdn = %.2f), V = %.0f, z = %.2f, p %s, r = %.2f%s (%s effect). Discuss the direction and practical significance.",
       if (wt$p.value < .05) "revealed" else "did not reveal",
       vars[1], stats::median(x),
       vars[2], stats::median(y),
       wt$statistic, z,
       sframe_p_string(wt$p.value),
-      r, sframe_effect_label(r, "r")
+      r, sframe_ci_string(r_ci), sframe_effect_label(r, "r")
     )
   )
 }
@@ -528,6 +550,7 @@ sframe_run_kruskal <- function(data, vars) {
   n <- sum(complete)
   eta2 <- (kt$statistic - length(unique(group[complete])) + 1) / (n - length(unique(group[complete])))
   eta2 <- max(0, unname(eta2))
+  eta_ci <- sframe_kw_eta_sq_ci(outcome[complete], group[complete])
   list(
     test     = "kruskal_wallis",
     vars     = vars,
@@ -535,16 +558,19 @@ sframe_run_kruskal <- function(data, vars) {
     df       = unname(kt$parameter),
     p        = kt$p.value,
     eta2     = eta2,
+    eta_ci   = eta_ci,
     effect_label = sframe_effect_label(eta2, "eta2"),
     apa      = sprintf(
-      "H(%d) = %.2f, p %s, \u03b7\u00b2 = %.3f",
-      kt$parameter, kt$statistic, sframe_p_string(kt$p.value), eta2
+      "H(%d) = %.2f, p %s, \u03b7\u00b2 = %.3f%s",
+      kt$parameter, kt$statistic, sframe_p_string(kt$p.value), eta2,
+      sframe_ci_string(eta_ci)
     ),
     prompt   = sprintf(
-      "The Kruskal-Wallis test %s a significant difference across groups, H(%d) = %.2f, p %s, \u03b7\u00b2 = %.3f (%s effect). If significant, describe which groups differed and in what direction.",
+      "The Kruskal-Wallis test %s a significant difference across groups, H(%d) = %.2f, p %s, \u03b7\u00b2 = %.3f%s (%s effect). If significant, describe which groups differed and in what direction.",
       if (kt$p.value < .05) "revealed" else "did not reveal",
       kt$parameter, kt$statistic,
-      sframe_p_string(kt$p.value), eta2, sframe_effect_label(eta2, "eta2")
+      sframe_p_string(kt$p.value), eta2, sframe_ci_string(eta_ci),
+      sframe_effect_label(eta2, "eta2")
     )
   )
 }
@@ -561,6 +587,12 @@ sframe_run_correlation <- function(data, vars, method = "pearson") {
   if (is.null(ct)) return(list(test = paste0("correlation_", method), error = "Test failed."))
   r <- unname(ct$estimate)
   sym <- switch(method, pearson = "r", spearman = "r_s", kendall = "tau", "r")
+  # Fisher z is analytic for Pearson; the rank correlations bootstrap.
+  ci <- if (identical(method, "pearson")) {
+    sframe_fisher_z_ci(r, n)
+  } else {
+    sframe_cor_boot_ci(x[complete], y[complete], method)
+  }
   list(
     test     = paste0("correlation_", method),
     vars     = vars,
@@ -569,18 +601,19 @@ sframe_run_correlation <- function(data, vars, method = "pearson") {
     r        = r,
     df       = n - 2,
     p        = ct$p.value,
+    ci       = ci,
     effect_label = sframe_effect_label(abs(r), "r"),
     apa      = sprintf(
-      "%s(%d) = %.2f, p %s",
-      sym, n - 2, r, sframe_p_string(ct$p.value)
+      "%s(%d) = %.2f%s, p %s",
+      sym, n - 2, r, sframe_ci_string(ci), sframe_p_string(ct$p.value)
     ),
     prompt   = sprintf(
-      "There was a %s, %s %s correlation between %s and %s, %s(%d) = %.2f, p %s. Explain what this means for your research question.",
+      "There was a %s, %s %s correlation between %s and %s, %s(%d) = %.2f%s, p %s. Explain what this means for your research question.",
       if (r > 0) "positive" else "negative",
       sframe_effect_label(abs(r), "r"),
       if (ct$p.value < .05) "significant" else "non-significant",
       vars[1], vars[2],
-      sym, n - 2, r, sframe_p_string(ct$p.value)
+      sym, n - 2, r, sframe_ci_string(ci), sframe_p_string(ct$p.value)
     )
   )
 }
@@ -604,6 +637,17 @@ sframe_run_regression <- function(data, vars) {
   s <- summary(fit)
   f_stat <- s$fstatistic
   p_val  <- stats::pf(f_stat[1], f_stat[2], f_stat[3], lower.tail = FALSE)
+  # Plain data frame, not the lm object itself: keeps the result
+  # JSON-serialisable (jsonlite::toJSON on an lm object is unstable across
+  # sessions) while still carrying what sframe_plot_regression_diagnostics()
+  # needs for the four standard diagnostic panels.
+  diagnostics <- data.frame(
+    fitted    = unname(stats::fitted(fit)),
+    resid     = unname(stats::residuals(fit)),
+    std_resid = unname(stats::rstandard(fit)),
+    hat       = unname(stats::hatvalues(fit)),
+    cooksd    = unname(stats::cooks.distance(fit))
+  )
   list(
     test     = "regression_linear",
     vars     = vars,
@@ -615,6 +659,7 @@ sframe_run_regression <- function(data, vars) {
     df2      = unname(f_stat[3]),
     p        = p_val,
     coefficients = as.data.frame(s$coefficients),
+    diagnostics  = diagnostics,
     apa      = sprintf(
       "R\u00b2 = %.3f, F(%d, %d) = %.2f, p %s",
       s$r.squared, f_stat[2], f_stat[3], f_stat[1], sframe_p_string(p_val)
@@ -785,6 +830,11 @@ sframe_vars_for_method <- function(method, roles, block) {
 sframe_result_from_report <- function(report, test = report$method %||% "") {
   out <- unclass(report)
   out$test <- test
+  # Keep the original classed object too: sframe_plot_for_result() dispatches
+  # plot.sframe_quality_report()/plot.sframe_reliability_report()/etc. on
+  # this, since the unclassed, analysis-plan-field-merged `out` above is not
+  # safe to iterate as if every element were still a per-scale/report entry.
+  out$report_obj <- report
   out
 }
 
@@ -856,11 +906,185 @@ sframe_result_table <- function(result) {
       `Eta squared` = fmt(result$eta2, 3),
       check.names = FALSE, stringsAsFactors = FALSE
     ),
+    t_test_pair = data.frame(
+      Variable = result$vars,
+      n = result$n,
+      Mean = fmt(c(result$mean_x, result$mean_y)),
+      stringsAsFactors = FALSE
+    ),
+    wilcoxon_pair = data.frame(
+      Variable = result$vars,
+      n = result$n,
+      Median = fmt(c(result$median_x, result$median_y)),
+      stringsAsFactors = FALSE
+    ),
+    friedman = data.frame(
+      Statistic = "Friedman chi-square",
+      df = result$df, n = result$n,
+      Estimate = fmt(result$statistic),
+      p = sframe_p_string(result$p),
+      `Kendall's W` = fmt(result$statistic / (result$n * (length(result$vars) - 1)), 3),
+      check.names = FALSE, stringsAsFactors = FALSE
+    ),
+    partial_correlation = data.frame(
+      Statistic = "Partial r",
+      n = result$n,
+      Estimate = fmt(result$r),
+      p = sframe_p_string(result$p),
+      Controls = paste(result$controls, collapse = ", "),
+      stringsAsFactors = FALSE
+    ),
+    regression_logistic_binary = {
+      co <- result$coefficients
+      if (!is.data.frame(co)) return(NULL)
+      data.frame(
+        Term = rownames(co),
+        Estimate = fmt(co[["Estimate"]]),
+        `Odds ratio` = fmt(co[["odds_ratio"]]),
+        p = vapply(co[["Pr(>|z|)"]], sframe_p_string, character(1)),
+        check.names = FALSE, stringsAsFactors = FALSE, row.names = NULL
+      )
+    },
+    regression_logistic_ordinal = {
+      co <- result$coefficients
+      if (!is.data.frame(co)) return(NULL)
+      data.frame(
+        Term = rownames(co),
+        Estimate = fmt(co[["Value"]]),
+        `Odds ratio` = fmt(co[["odds_ratio"]]),
+        check.names = FALSE, stringsAsFactors = FALSE, row.names = NULL
+      )
+    },
+    moderation = {
+      co <- result$coefficients
+      if (!is.data.frame(co)) return(NULL)
+      data.frame(
+        Term = rownames(co),
+        Estimate = fmt(co[[1]]),
+        `Std. error` = fmt(co[[2]]),
+        t = fmt(co[[3]]),
+        p = vapply(co[[4]], sframe_p_string, character(1)),
+        check.names = FALSE, stringsAsFactors = FALSE, row.names = NULL
+      )
+    },
+    mediation = data.frame(
+      Effect = c("Direct (c')", "Indirect (a\u00D7b)", "Total (c)"),
+      Estimate = fmt(c(result$direct, result$indirect, result$total)),
+      `95% CI` = c("", sprintf("[%.3f, %.3f]", result$indirect_ci[[1]], result$indirect_ci[[2]]), ""),
+      check.names = FALSE, stringsAsFactors = FALSE
+    ),
+    quality = {
+      qr <- result$report_obj
+      if (is.null(qr)) NULL else sframe_quality_checks_table(qr)
+    },
+    reliability_alpha = {
+      rr <- result$report_obj
+      if (is.null(rr)) NULL else sframe_reliability_table(rr, c(alpha = "Alpha", alpha_std = "Alpha (std.)"))
+    },
+    reliability_omega = {
+      rr <- result$report_obj
+      if (is.null(rr)) NULL else sframe_reliability_table(rr, c(omega_h = "Omega (h)", omega_t = "Omega (t)"))
+    },
+    item_diagnostics = {
+      ir <- result$report_obj
+      if (is.null(ir)) NULL else sframe_item_diagnostics_table(ir)
+    },
+    efa_readiness = {
+      er <- result$report_obj
+      if (is.null(er)) NULL else data.frame(
+        Statistic = c("KMO (MSA)", "Bartlett chi-square", "Bartlett df",
+                      "Bartlett p", "Suggested factors"),
+        Value = c(
+          fmt(er$kmo$MSA), fmt(er$bartlett$chisq), er$bartlett$df,
+          sframe_p_string(er$bartlett$p.value), er$suggested_nfactors
+        ),
+        stringsAsFactors = FALSE
+      )
+    },
+    efa_solution = {
+      es <- result$report_obj
+      if (is.null(es) || !is.data.frame(es$loadings_long)) NULL else {
+        wide <- stats::reshape(es$loadings_long, direction = "wide",
+                               idvar = "item_id", timevar = "factor")
+        names(wide) <- sub("^loading\\.", "", names(wide))
+        num_cols <- vapply(wide, is.numeric, logical(1))
+        wide[num_cols] <- lapply(wide[num_cols], function(col) round(col, 3))
+        wide
+      }
+    },
     NULL
   )
 }
 
-sframe_run_one_block <- function(block, data, instrument, plots = FALSE) {
+# One row per scale, flattening reliability_report()'s per-scale summaries
+# into a kable-ready table. `columns` is a named vector mapping the report's
+# field name to the column heading to use, since reliability_alpha and
+# reliability_omega only ever populate one coefficient or the other.
+sframe_reliability_table <- function(rr, columns) {
+  rows <- lapply(rr, function(s) {
+    if (!is.list(s) || is.null(s$scale_id)) return(NULL)
+    row <- data.frame(
+      Scale = s$label %||% s$scale_id, `N items` = s$n_items, N = s$n,
+      check.names = FALSE, stringsAsFactors = FALSE
+    )
+    for (field in names(columns)) {
+      row[[columns[[field]]]] <- round(s[[field]] %||% NA_real_, 3)
+    }
+    row
+  })
+  rows <- Filter(Negate(is.null), rows)
+  if (!length(rows)) return(NULL)
+  do.call(rbind, rows)
+}
+
+# item_report() is keyed by scale id, each holding its own item-level
+# diagnostics data.frame; stack them into one table with a Scale column so
+# every item across every scale shows in one place.
+sframe_item_diagnostics_table <- function(ir) {
+  rows <- lapply(ir, function(s) {
+    if (!is.list(s) || !is.data.frame(s$diagnostics)) return(NULL)
+    d <- s$diagnostics
+    d$Scale <- s$label %||% s$scale_id
+    d
+  })
+  rows <- Filter(Negate(is.null), rows)
+  if (!length(rows)) return(NULL)
+  out <- do.call(rbind, rows)
+  out <- out[, c("Scale", setdiff(colnames(out), "Scale")), drop = FALSE]
+  rownames(out) <- NULL
+  out
+}
+
+# quality_report() covers several distinct checks (attention, straight-
+# lining, duplicates) in separate nested sections; flatten them into one
+# table, one row per check, so the "Do respondents meet quality
+# thresholds?" research question has a single table to point at.
+sframe_quality_checks_table <- function(qr) {
+  rows <- list()
+  for (a in qr$attention %||% list()) {
+    rows[[length(rows) + 1]] <- data.frame(
+      Check = a$check_id %||% "", Type = "Attention check",
+      Result = sprintf("%.1f%% pass (%d fail)", (a$pass_rate %||% NA_real_) * 100, a$n_fail %||% NA_integer_),
+      stringsAsFactors = FALSE
+    )
+  }
+  for (s in qr$straightline %||% list()) {
+    rows[[length(rows) + 1]] <- data.frame(
+      Check = s$scale_id %||% "", Type = "Straight-lining",
+      Result = sprintf("%.1f%% flagged", (s$flag_rate %||% NA_real_) * 100),
+      stringsAsFactors = FALSE
+    )
+  }
+  rows[[length(rows) + 1]] <- data.frame(
+    Check = "duplicates", Type = "Duplicate rows",
+    Result = sprintf("%d flagged", qr$duplicates$n_duplicates %||% 0L),
+    stringsAsFactors = FALSE
+  )
+  do.call(rbind, rows)
+}
+
+sframe_run_one_block <- function(block, data, instrument, plots = FALSE,
+                                 plot_palette = "web") {
   test <- sframe_analysis_method(block)
   roles <- sframe_analysis_roles(block)
   vars <- sframe_vars_for_method(test, roles, block)
@@ -949,8 +1173,21 @@ sframe_run_one_block <- function(block, data, instrument, plots = FALSE) {
   if (is.null(result$table)) {
     result$table <- tryCatch(sframe_result_table(result), error = function(e) NULL)
   }
+  # The runners above compute on the raw response codes (item ids, coded
+  # choice values), so the table they build carries those, not what a
+  # reader sees. Substitute labels here, once, for every test type, rather
+  # than teaching each runner about the instrument's labels.
+  result$table <- tryCatch(
+    sframe_humanize_table(result$table, sframe_label_lookup(instrument)),
+    error = function(e) result$table
+  )
   if (isTRUE(plots) && is.null(result$plot)) {
-    result$plot <- sframe_plot_for_result(result, data)
+    result$plot <- sframe_plot_for_result(result, data, palette = plot_palette)
+  }
+  if (isTRUE(plots) && identical(result$test, "regression_linear") &&
+      is.data.frame(result$diagnostics) && is.null(result$diagnostic_plots)) {
+    result$diagnostic_plots <-
+      sframe_plot_regression_diagnostics(result, palette = plot_palette)
   }
   result
 }
@@ -973,6 +1210,9 @@ sframe_run_one_block <- function(block, data, instrument, plots = FALSE) {
 #'   bar charts for frequency and chi-square blocks, scatter plots with a
 #'   regression overlay for correlation and linear-regression blocks.
 #'   Defaults to `FALSE`.
+#' @param plot_palette One of `"web"` (brand colours, for on-screen use) or
+#'   `"print"` (black, grey, and white, for journal-ready print figures).
+#'   Applied to every plot attached when `plots = TRUE`. See `sframe_brand()`.
 #'
 #' @return An object of class `sframe_analysis_results`, a list with one
 #'   element per analysis block. Each element contains the test result,
@@ -996,9 +1236,13 @@ sframe_run_one_block <- function(block, data, instrument, plots = FALSE) {
 #'   submitted_at = "submitted_at",
 #'   meta_cols = "started_at"
 #' )
+#' \donttest{
 #' results <- run_analysis_plan(responses, instr)
 #' print(results)
-run_analysis_plan <- function(data, instrument, scored = TRUE, plots = FALSE) {
+#' }
+run_analysis_plan <- function(data, instrument, scored = TRUE, plots = FALSE,
+                              plot_palette = c("web", "print")) {
+  plot_palette <- match.arg(plot_palette)
   sframe_check_instrument(instrument)
   stopifnot(is.data.frame(data))
   if (isTRUE(plots)) {
@@ -1026,7 +1270,9 @@ run_analysis_plan <- function(data, instrument, scored = TRUE, plots = FALSE) {
   }
 
   results <- lapply(plan, sframe_run_one_block, data = data,
+                    plot_palette = plot_palette,
                     instrument = instrument, plots = plots)
+  names(results) <- vapply(plan, function(b) b$id %||% "", character(1))
   structure(results, class = "sframe_analysis_results")
 }
 
@@ -1069,6 +1315,12 @@ sframe_md_em <- function(x) {
 #'   `"ama"`, or `"vancouver"`. Defaults to `"apa"`.
 #' @param title Character or NULL. Report title. Defaults to the instrument
 #'   title with " -- Results" appended.
+#' @param interpretations Named list or NULL. Written interpretations keyed
+#'   by analysis-plan block id, added after the results are known. A block
+#'   with an entry shows that text in its Interpretation section in place
+#'   of the pre-declared prompt fallback. Blocks without an entry render
+#'   exactly as they do when this argument is NULL. Interpretations are
+#'   report content only and are never written into the instrument.
 #'
 #' @return The output file path, invisibly.
 #' @export
@@ -1087,26 +1339,31 @@ sframe_md_em <- function(x) {
 #'   submitted_at = "submitted_at",
 #'   meta_cols = "started_at"
 #' )
+#' \donttest{
 #' results <- run_analysis_plan(responses, instr)
 #' out <- render_results(results, instr,
 #'                       output_file = tempfile(fileext = ".html"))
 #' file.exists(out)
+#' }
 render_results <- function(
     results         = NULL,
     instrument,
     output_file     = NULL,
     output_path     = NULL,
     citation_format = c("apa", "ama", "vancouver"),
-    title           = NULL
+    title           = NULL,
+    interpretations = NULL
 ) {
   sframe_check_instrument(instrument)
   citation_format <- rlang::arg_match(citation_format)
+  interpretations <- sframe_clean_interpretations(interpretations)
 
   dest <- output_file %||% output_path %||% tempfile(fileext = ".html")
 
   # If called with instrument only (no pre-computed results), delegate
   if (is.null(results)) {
-    return(render_report(instrument, output_file = dest))
+    return(render_report(instrument, output_file = dest,
+                         interpretations = interpretations))
   }
 
   stopifnot(inherits(results, "sframe_analysis_results"))
@@ -1129,7 +1386,7 @@ render_results <- function(
     rq <- htmltools_escape(r$research_question %||% paste("Research Question", i))
     apa_str <- r$apa %||% ""
     prompt  <- r$interpretation_prompt %||% r$prompt %||% ""
-    interp  <- r$interpretation %||% ""
+    interp  <- interpretations[[r$block_id %||% r$id %||% ""]] %||% r$interpretation %||% ""
     cits <- paste(
       vapply(unlist(r$citations), sframe_md_em, character(1)),
       collapse = "<br>"

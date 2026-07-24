@@ -10,7 +10,8 @@ render_results(
   output_file = NULL,
   output_path = NULL,
   citation_format = c("apa", "ama", "vancouver"),
-  title = NULL
+  title = NULL,
+  interpretations = NULL
 )
 }
 \arguments{
@@ -28,6 +29,13 @@ NULL, a temporary file is written and its path returned.}
 
 \item{title}{Character or NULL. Report title. Defaults to the instrument
 title with " -- Results" appended.}
+
+\item{interpretations}{Named list or NULL. Written interpretations keyed
+by analysis-plan block id, added after the results are known. A block
+with an entry shows that text in its Interpretation section in place
+of the pre-declared prompt fallback. Blocks without an entry render
+exactly as they do when this argument is NULL. Interpretations are
+report content only and are never written into the instrument.}
 }
 \value{
 The output file path, invisibly.
@@ -51,10 +59,12 @@ responses <- read_responses(
   submitted_at = "submitted_at",
   meta_cols = "started_at"
 )
+\donttest{
 results <- run_analysis_plan(responses, instr)
 out <- render_results(results, instr,
                       output_file = tempfile(fileext = ".html"))
 file.exists(out)
+}
 }
 \seealso{
 \code{\link[=run_analysis_plan]{run_analysis_plan()}}, \code{\link[=render_report]{render_report()}}

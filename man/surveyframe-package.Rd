@@ -48,6 +48,7 @@ Each file includes a SHA-256 integrity hash for reproducibility auditing.
 \seealso{
 Useful links:
 \itemize{
+  \item \url{https://mohammedalisharafuddin.github.io/surveyframe/}
   \item \url{https://github.com/MohammedAliSharafuddin/surveyframe}
   \item Report bugs at \url{https://github.com/MohammedAliSharafuddin/surveyframe/issues}
 }
