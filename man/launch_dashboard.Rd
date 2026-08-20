@@ -14,7 +14,7 @@ launch_dashboard(
 }
 \arguments{
 \item{instrument}{An \code{sframe} object. Required. Calling \code{launch_dashboard()}
-with no instrument errors with guidance; use \code{\link[=launch_dashboard_demo]{launch_dashboard_demo()}} for
+with no instrument errors with guidance. Use \code{\link[=launch_dashboard_demo]{launch_dashboard_demo()}} for
 the bundled demo or \code{\link[=launch_studio]{launch_studio()}} to upload interactively.}
 
 \item{responses}{A \code{data.frame} or \code{tibble} of survey responses, as

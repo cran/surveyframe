@@ -107,8 +107,8 @@ sframe_input_types_demo_data <- function() {
 #'
 #' Opens a temporary copy of the SurveyBuilder with the bundled input-types
 #' instrument already injected into the JavaScript state. The demo questions,
-#' scales, and analysis plan are visible immediately — no manual file-load
-#' step is required.
+#' scales, and analysis plan are visible immediately, with no manual
+#' file-load step required.
 #'
 #' @param open Logical. When `TRUE` (the default), the pre-populated builder
 #'   HTML is opened in the system's default web browser.

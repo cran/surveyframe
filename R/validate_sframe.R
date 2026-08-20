@@ -1,9 +1,33 @@
 # validate_sframe.R
 
+# The full roster of checks, in the order they run. Every one appears in the
+# returned diagnostic whether or not it found anything, so a user can tell a
+# check that passed from a check that never ran.
+sframe_validation_checks <- c(
+  "duplicate_item_ids",
+  "item_id_format",
+  "duplicate_choice_ids",
+  "duplicate_scale_ids",
+  "item_labels",
+  "item_choice_set_refs",
+  "item_scale_refs",
+  "reverse_without_scale",
+  "decision_item_shape",
+  "comparison_scale",
+  "scale_membership",
+  "branching_refs",
+  "check_refs",
+  "analysis_plan_models",
+  "analysis_plan_variables",
+  "decision_scale_compatibility",
+  "model_ids",
+  "model_specs"
+)
+
 #' Validate an instrument object
 #'
 #' Checks the internal consistency of an `sframe` instrument object and
-#' reports all detected problems. Validation is performed automatically by
+#' returns a diagnostic result. Validation is performed automatically by
 #' [write_sframe()] and optionally by [read_sframe()]. It can also be run
 #' independently at any point during instrument construction.
 #'
@@ -23,17 +47,27 @@
 #' - Analysis plan roles referencing missing variables or models
 #' - Model specifications referencing missing indicators or constructs
 #'
+#' @section Changed in 0.4.0:
+#' Earlier versions returned two different things depending on `strict`: the
+#' instrument itself, invisibly, when `strict = TRUE`, and a bare unclassed
+#' list when `strict = FALSE`. A validator should report a diagnostic, so
+#' both paths now return an [sframe_validation] object, and they return it
+#' visibly, so `validate_sframe(instrument)` typed at the console shows the
+#' result. Code that read `$valid` and `$problems` keeps working. Code that
+#' used the `strict = TRUE` return as an instrument should now wrap the call
+#' in [as_sframe()].
+#'
 #' @param instrument An `sframe` object created by [sf_instrument()].
 #' @param strict Logical. When `TRUE` (default), any detected problem raises
 #'   an error of class `sframe_validation_error`. When `FALSE`, problems are
-#'   returned as a character vector of messages without stopping.
+#'   reported in the returned diagnostic without stopping.
 #'
-#' @return When `strict = TRUE` and the instrument is valid, the instrument
-#'   is returned invisibly with `meta$validated` set to `TRUE`. When
-#'   `strict = FALSE`, a named list with elements `valid` (logical) and
-#'   `problems` (character vector) is returned.
+#' @return An [sframe_validation] object. When the instrument is valid, the
+#'   instrument carried inside it has `meta$validated` set to `TRUE` and can
+#'   be recovered with [as_sframe()].
 #' @export
-#' @seealso [sf_instrument()], [write_sframe()]
+#' @seealso [sframe_validation], [as_sframe()], [sf_problems()],
+#'   [sf_is_valid()], [sf_instrument()], [write_sframe()]
 #'
 #' @examples
 #' # Build a minimal valid instrument and validate it
@@ -45,37 +79,59 @@
 #' scale <- sf_scale("sat", "Satisfaction", items = "sat_1")
 #' instr <- sf_instrument("Demo Survey", components = list(cs, item, scale))
 #'
-#' # Non-strict: returns a list without stopping
-#' result <- validate_sframe(instr, strict = FALSE)
-#' result$valid
-#' result$problems
+#' # The result prints its own diagnostic
+#' validate_sframe(instr, strict = FALSE)
 #'
-#' # Strict: returns instrument invisibly when valid
-#' validated <- validate_sframe(instr, strict = TRUE)
-#' isTRUE(validated$meta$validated)
+#' # Explore it with dedicated methods rather than reaching in with `$`
+#' v <- validate_sframe(instr, strict = FALSE)
+#' sf_is_valid(v)
+#' sf_problems(v)
+#' summary(v)
+#'
+#' # Recover the validated instrument
+#' validated <- as_sframe(validate_sframe(instr, strict = TRUE))
+#' isTRUE(sf_meta(validated)$validated)
 validate_sframe <- function(instrument, strict = TRUE) {
   sframe_check_instrument(instrument)
 
-  problems <- character(0)
+  log <- sframe_new_problem_log()
+  add <- function(check, messages) sframe_log_problem(log, check, messages)
 
   item_ids    <- vapply(instrument$items,    function(x) x$id, character(1))
   choice_ids  <- vapply(instrument$choices,  function(x) x$id, character(1))
   scale_ids   <- vapply(instrument$scales,   function(x) x$id, character(1))
   model_ids   <- vapply(instrument$models %||% list(), function(x) x$id %||% "", character(1))
   valid_id <- function(x) grepl("^[A-Za-z][A-Za-z0-9_]*$", x)
-  known_vars <- unique(c(item_ids, scale_ids))
+  # Analysis-plan roles may name an expansion column (item__sub, item__option,
+  # item__a__vs__b, item__crit) rather than the base item id, exactly as the
+  # builder exports them and read_responses() already accepts them. Without
+  # these a real builder export fails validation for variables that do exist.
+  known_vars <- unique(c(item_ids, scale_ids,
+                         sframe_item_expansion_columns(instrument)))
+
+  # Comparison scale per decision item, keyed by item id. Used by the
+  # analysis-plan checks below to reject a method-scale mismatch before data
+  # collection rather than at analysis time.
+  item_scales <- list()
+  for (it in instrument$items) {
+    if (identical(it$type, "pairwise_comparison")) {
+      item_scales[[it$id]] <- as.character(it$comparison_scale %||% "saaty")[1]
+    } else if (identical(it$type, "criteria_weight")) {
+      item_scales[[it$id]] <- "criteria_weight"
+    }
+  }
 
   # Duplicate item IDs
   dupes <- item_ids[duplicated(item_ids)]
   if (length(dupes) > 0) {
-    problems <- c(problems,
+    add("duplicate_item_ids",
       paste0("Duplicate item IDs: ", paste(dupes, collapse = ", ")))
   }
 
   bad_item_ids <- item_ids[!valid_id(item_ids)]
   if (length(bad_item_ids) > 0) {
-    problems <- c(
-      problems,
+    add(
+      "item_id_format",
       paste0(
         "Invalid item ID(s): ",
         paste(unique(bad_item_ids), collapse = ", "),
@@ -86,16 +142,16 @@ validate_sframe <- function(instrument, strict = TRUE) {
 
   dup_choice_ids <- choice_ids[duplicated(choice_ids)]
   if (length(dup_choice_ids) > 0) {
-    problems <- c(
-      problems,
+    add(
+      "duplicate_choice_ids",
       paste0("Duplicate choice set IDs: ", paste(unique(dup_choice_ids), collapse = ", "))
     )
   }
 
   dup_scale_ids <- scale_ids[duplicated(scale_ids)]
   if (length(dup_scale_ids) > 0) {
-    problems <- c(
-      problems,
+    add(
+      "duplicate_scale_ids",
       paste0("Duplicate scale IDs: ", paste(unique(dup_scale_ids), collapse = ", "))
     )
   }
@@ -103,26 +159,64 @@ validate_sframe <- function(instrument, strict = TRUE) {
   for (item in instrument$items) {
     # Missing labels
     if (is.null(item$label) || nchar(trimws(item$label)) == 0) {
-      problems <- c(problems,
+      add("item_labels",
         paste0("Item '", item$id, "' has an empty label."))
     }
     # Orphan choice set references
     if (!is.null(item$choice_set) && !item$choice_set %in% choice_ids) {
-      problems <- c(problems,
+      add("item_choice_set_refs",
         paste0("Item '", item$id, "' references choice_set '",
                item$choice_set, "' which is missing from the instrument."))
     }
     # Orphan scale references
     if (!is.null(item$scale_id) && !item$scale_id %in% scale_ids) {
-      problems <- c(problems,
+      add("item_scale_refs",
         paste0("Item '", item$id, "' references scale_id '",
                item$scale_id, "' which is missing from the instrument."))
     }
     # Reverse coded without scale
     if (isTRUE(item$reverse) && is.null(item$scale_id)) {
-      problems <- c(problems,
+      add("reverse_without_scale",
         paste0("Item '", item$id,
                "' is reverse = TRUE but has no scale_id."))
+    }
+    # Decision item types (v0.5). These carry their response options in
+    # comparison_items rather than a choice set, so a choice_set here means
+    # the item was built from the wrong template.
+    if (item$type %in% c("pairwise_comparison", "criteria_weight")) {
+      n_comparison <- length(item$comparison_items %||% character(0))
+      if (n_comparison < 2) {
+        add("decision_item_shape",
+          paste0("Item '", item$id, "' of type '", item$type,
+                 "' needs at least 2 comparison_items."))
+      }
+      if (n_comparison > 10) {
+        add("decision_item_shape",
+          paste0("Item '", item$id, "' declares ", n_comparison,
+                 " comparison_items. The maximum is 10."))
+      }
+      if (anyDuplicated(item$comparison_items %||% character(0)) > 0) {
+        add("decision_item_shape",
+          paste0("Item '", item$id, "' has duplicated comparison_items."))
+      }
+      if (!is.null(item$choice_set)) {
+        add("decision_item_shape",
+          paste0("Item '", item$id, "' of type '", item$type,
+                 "' must not reference a choice_set."))
+      }
+    }
+    if (identical(item$type, "pairwise_comparison") &&
+        !(item$comparison_scale %||% "saaty") %in% c("saaty", "influence")) {
+      add("comparison_scale",
+        paste0("Item '", item$id, "' has comparison_scale '",
+               item$comparison_scale,
+               "'. It must be either 'saaty' or 'influence'."))
+    }
+    if (!item$type %in% c("pairwise_comparison", "criteria_weight") &&
+        length(item$comparison_items %||% character(0)) > 0) {
+      add("decision_item_shape",
+        paste0("Item '", item$id, "' of type '", item$type,
+               "' must not declare comparison_items."))
     }
   }
 
@@ -130,7 +224,7 @@ validate_sframe <- function(instrument, strict = TRUE) {
   for (scale in instrument$scales) {
     missing_items <- setdiff(scale$items, item_ids)
     if (length(missing_items) > 0) {
-      problems <- c(problems,
+      add("scale_membership",
         paste0("Scale '", scale$id, "' references unknown item(s): ",
                paste(missing_items, collapse = ", ")))
     }
@@ -139,11 +233,11 @@ validate_sframe <- function(instrument, strict = TRUE) {
   # Branching rule integrity
   for (rule in instrument$branching) {
     if (!rule$item_id %in% item_ids) {
-      problems <- c(problems,
+      add("branching_refs",
         paste0("Branch rule targets unknown item '", rule$item_id, "'."))
     }
     if (!rule$depends_on %in% item_ids) {
-      problems <- c(problems,
+      add("branching_refs",
         paste0("Branch rule depends_on unknown item '",
                rule$depends_on, "'."))
     }
@@ -154,7 +248,7 @@ validate_sframe <- function(instrument, strict = TRUE) {
                            function(x) x$item_id, character(1))
   missing_check_items <- setdiff(check_item_ids, item_ids)
   if (length(missing_check_items) > 0) {
-    problems <- c(problems,
+    add("check_refs",
       paste0("Check(s) reference unknown item(s): ",
              paste(missing_check_items, collapse = ", ")))
   }
@@ -188,8 +282,8 @@ validate_sframe <- function(instrument, strict = TRUE) {
     model_ref_values <- model_ref_values[nzchar(model_ref_values)]
     missing_models <- setdiff(unique(model_ref_values), model_ids)
     if (length(missing_models) > 0) {
-      problems <- c(
-        problems,
+      add(
+        "analysis_plan_models",
         paste0(
           "Analysis plan '", block_id, "' references missing model(s): ",
           paste(unique(missing_models), collapse = ", ")
@@ -199,28 +293,66 @@ validate_sframe <- function(instrument, strict = TRUE) {
     refs <- refs[nzchar(refs)]
     missing_refs <- setdiff(unique(refs), known_vars)
     if (length(missing_refs) > 0) {
-      problems <- c(
-        problems,
+      add(
+        "analysis_plan_variables",
         paste0(
           "Analysis plan '", block_id, "' references unknown variable(s): ",
           paste(missing_refs, collapse = ", ")
         )
       )
     }
+    # Decision-family scale compatibility, checked at design time rather than
+    # left to the runner. The 2 comparison scales are not interchangeable:
+    # AHP and ANP read reciprocal relative importance on the Saaty ratio
+    # scale, DEMATEL reads a directed 0-4 influence matrix, and a
+    # criteria-weight source must express importance rather than influence.
+    # Pairing them the wrong way round produces plausible numbers from
+    # meaningless input, so it belongs in the pre-collection contract.
+    method_id <- block_method[1]
+    roles <- if (is.list(block$roles)) block$roles else list()
+    if (nzchar(method_id) && length(item_scales) > 0) {
+      needed <- switch(
+        method_id,
+        ahp = "saaty", anp = "saaty", dematel = "influence", NULL
+      )
+      role_pairwise <- as.character(unlist(roles[["pairwise"]] %||% character(0)))
+      for (ref in role_pairwise[nzchar(role_pairwise)]) {
+        got <- item_scales[[ref]]
+        if (!is.null(needed) && !is.null(got) && !identical(got, needed)) {
+          add("decision_scale_compatibility", paste0(
+            "Analysis plan '", block_id, "' runs ", toupper(method_id),
+            " on item '", ref, "', which uses the '", got,
+            "' comparison scale. ", toupper(method_id), " needs '", needed,
+            "'."
+          ))
+        }
+      }
+      role_weights <- as.character(unlist(roles[["weights_item"]] %||% character(0)))
+      for (ref in role_weights[nzchar(role_weights)]) {
+        if (identical(item_scales[[ref]], "influence")) {
+          add("decision_scale_compatibility", paste0(
+            "Analysis plan '", block_id, "' takes criterion weights from item '",
+            ref, "', which uses the 'influence' comparison scale. Influence ",
+            "measures directed effect rather than relative importance, so it ",
+            "cannot supply weights."
+          ))
+        }
+      }
+    }
   }
 
   # Model layer integrity.
   dup_model_ids <- model_ids[nzchar(model_ids) & duplicated(model_ids)]
   if (length(dup_model_ids) > 0) {
-    problems <- c(
-      problems,
+    add(
+      "model_ids",
       paste0("Duplicate model IDs: ", paste(unique(dup_model_ids), collapse = ", "))
     )
   }
   bad_model_ids <- model_ids[nzchar(model_ids) & !valid_id(model_ids)]
   if (length(bad_model_ids) > 0) {
-    problems <- c(
-      problems,
+    add(
+      "model_ids",
       paste0("Invalid model ID(s): ", paste(unique(bad_model_ids), collapse = ", "))
     )
   }
@@ -230,8 +362,8 @@ validate_sframe <- function(instrument, strict = TRUE) {
       error = function(e) list(valid = FALSE, problems = conditionMessage(e))
     )
     if (!isTRUE(model_check$valid)) {
-      problems <- c(
-        problems,
+      add(
+        "model_specs",
         paste0(
           "Model '", model$id %||% "(unnamed)", "': ",
           model_check$problems
@@ -240,23 +372,30 @@ validate_sframe <- function(instrument, strict = TRUE) {
     }
   }
 
-  if (strict && length(problems) > 0) {
+  if (strict && length(log$problems) > 0) {
     sframe_abort_validation(
       paste0(
         "Instrument validation failed with ",
-        length(problems),
+        length(log$problems),
         " problem(s):\n",
-        paste0("  - ", problems, collapse = "\n")
+        paste0("  - ", log$problems, collapse = "\n")
       ),
       instrument_title = instrument$meta$title
     )
   }
 
-  if (!strict) {
-    return(list(valid = length(problems) == 0, problems = problems))
+  # The validated stamp travels on the instrument carried by the result, so
+  # as_sframe() hands back an instrument that records it passed.
+  if (length(log$problems) == 0) {
+    instrument$meta$validated <- TRUE
   }
 
-  # Mark as validated and return invisibly
-  instrument$meta$validated <- TRUE
-  invisible(instrument)
+  sframe_new_validation(
+    log,
+    roster  = sframe_validation_checks,
+    subject = "instrument",
+    title   = instrument$meta$title,
+    version = instrument$meta$version,
+    object  = instrument
+  )
 }

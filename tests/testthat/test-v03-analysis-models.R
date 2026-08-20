@@ -107,6 +107,35 @@ test_that("assumption_report includes Shapiro and expected-count warnings", {
   expect_true(is.list(ar$expected_counts))
 })
 
+test_that("assumption_report attaches a small-sample advisory below n = 30", {
+  set.seed(42)
+  small <- data.frame(x = rnorm(15), y = rnorm(15))
+  large <- data.frame(x = rnorm(50), y = rnorm(50))
+
+  ar_small <- assumption_report(small, variables = c("x", "y"))
+  expect_type(ar_small$advisory, "character")
+  expect_true(nzchar(ar_small$advisory))
+  expect_match(ar_small$advisory, "n = 15")
+
+  ar_large <- assumption_report(large, variables = c("x", "y"))
+  expect_null(ar_large$advisory)
+
+  expect_output(print(ar_small), "Note:")
+})
+
+test_that("sample_size_plan attaches a small-sample advisory below n = 30", {
+  ss_small <- sample_size_plan("proportion", margin_error = 0.25)
+  expect_lt(ss_small$estimated_n, 30)
+  expect_type(ss_small$advisory, "character")
+  expect_true(nzchar(ss_small$advisory))
+
+  ss_large <- sample_size_plan("correlation", r = 0.3)
+  expect_gte(ss_large$estimated_n, 30)
+  expect_null(ss_large$advisory)
+
+  expect_output(print(ss_small), "Note:")
+})
+
 test_that("posthoc_report returns pairwise Wilcoxon and chi-square residuals", {
   dat <- data.frame(
     y = c(1, 2, 2, 3, 4, 5, 5, 6),
@@ -404,6 +433,53 @@ test_that("ordinal and multinomial logistic runners fail gracefully or run when 
     )
   }
   expect_true(is.list(multi) || inherits(multi, "error"))
+})
+
+test_that("Firth logistic runner returns penalised odds ratios on a small sample", {
+  skip_if_not_installed("logistf")
+  set.seed(7)
+  dat <- data.frame(
+    y = rep(c(0L, 1L), each = 12),
+    x1 = c(rnorm(12, 0), rnorm(12, 1.2)),
+    x2 = rnorm(24)
+  )
+  res <- sframe_run_firth_logistic(dat, list(dependent = "y", predictors = c("x1", "x2")))
+  expect_null(res$error)
+  expect_identical(res$test, "firth_logistic")
+  expect_equal(res$n, 24)
+  expect_true(is.data.frame(res$coefficients))
+  expect_true(all(c("odds_ratio", "or_ci_low", "or_ci_high") %in%
+                    names(res$coefficients)))
+  expect_match(res$apa, "Firth logistic regression")
+
+  tbl <- sframe_result_table(res)
+  expect_true(is.data.frame(tbl))
+  expect_true("Odds ratio" %in% names(tbl))
+})
+
+test_that("Firth logistic runner degrades gracefully when logistf is absent", {
+  skip_if(requireNamespace("logistf", quietly = TRUE),
+          "logistf is installed, so the missing-package branch cannot run.")
+  dat <- data.frame(y = rep(c(0L, 1L), each = 5), x1 = rnorm(10))
+  res <- sframe_run_firth_logistic(dat, list(dependent = "y", predictors = "x1"))
+  expect_identical(res$test, "firth_logistic")
+  expect_match(res$error, "logistf", fixed = TRUE)
+})
+
+test_that("Firth logistic is wired into the analysis-plan registry", {
+  block <- list(id = "b_firth", method = "firth_logistic",
+                variables = c("x1", "y"))
+  expect_identical(
+    sframe_analysis_roles(block),
+    list(predictors = "x1", dependent = "y")
+  )
+  expect_identical(
+    sframe_vars_for_method("firth_logistic",
+                           list(dependent = "y", predictors = "x1"), block),
+    c("x1", "y")
+  )
+  cits <- sframe_citations_for_test("firth_logistic")
+  expect_true(any(grepl("Firth", unlist(cits), fixed = TRUE)))
 })
 
 test_that("0.3.3: free-text path labels become valid lavaan parameter names", {

@@ -12,20 +12,27 @@ collection, quality checking, scoring, psychometric diagnostics, and
 reproducible reporting. The package covers static HTML survey export,
 an embeddable Shiny survey module, an interactive response dashboard,
 a role-based analysis planner with pre-declared research questions, common
-survey statistics, and model syntax planning for EFA, CFA, CB-SEM, and
-PLS-SEM.
+survey statistics with small-sample alternatives (Hodges-Lehmann,
+pseudomedian, exact odds-ratio, and Firth logistic regression), multi-
+criteria decision analysis (AHP, ANP, DEMATEL, VIKOR, MOORA, SMART,
+WASPAS, PROMETHEE, ELECTRE, and TOPSIS), and model syntax planning for
+EFA, CFA, CB-SEM, and PLS-SEM.
 \subsection{Core workflow}{
 \enumerate{
 \item \strong{Design} an instrument with \code{\link[=launch_builder]{launch_builder()}} or \code{\link[=sf_instrument]{sf_instrument()}} and
 its component constructors: \code{\link[=sf_item]{sf_item()}}, \code{\link[=sf_choices]{sf_choices()}}, \code{\link[=sf_scale]{sf_scale()}},
 \code{\link[=sf_branch]{sf_branch()}}, \code{\link[=sf_check]{sf_check()}}.
 \item \strong{Validate and save} with \code{\link[=validate_sframe]{validate_sframe()}} and \code{\link[=write_sframe]{write_sframe()}}.
+\code{validate_sframe()} returns an \code{sframe_validation} diagnostic rather
+than the instrument itself. Recover a validated instrument with
+\code{\link[=as_sframe]{as_sframe()}}.
 \item \strong{Deploy} a Shiny survey with \code{\link[=render_survey]{render_survey()}}.
 \item \strong{Load responses} with \code{\link[=read_responses]{read_responses()}} or \code{\link[=read_sheet_responses]{read_sheet_responses()}}.
 \item \strong{Check quality} with \code{\link[=quality_report]{quality_report()}}.
 \item \strong{Score and analyse} with \code{\link[=score_scales]{score_scales()}}, \code{\link[=descriptives_report]{descriptives_report()}},
 \code{\link[=missing_data_report]{missing_data_report()}}, \code{\link[=reliability_report]{reliability_report()}}, \code{\link[=item_report]{item_report()}},
-\code{\link[=efa_report]{efa_report()}}, \code{\link[=cfa_syntax]{cfa_syntax()}}, and \code{\link[=run_analysis_plan]{run_analysis_plan()}}.
+\code{\link[=efa_report]{efa_report()}}, \code{\link[=cfa_syntax]{cfa_syntax()}}, and \code{\link[=run_analysis_plan]{run_analysis_plan()}}, which also
+runs any decision-analysis blocks in the plan.
 \item \strong{Report} with \code{\link[=codebook_report]{codebook_report()}}, \code{\link[=render_report]{render_report()}}, and
 \code{\link[=render_results]{render_results()}}.
 }
@@ -36,7 +43,9 @@ its component constructors: \code{\link[=sf_item]{sf_item()}}, \code{\link[=sf_c
 Every function in the package operates on an \code{sframe} object. The object
 is the single source of truth for item definitions, scale structure,
 reverse-coding keys, branching rules, check specifications, analysis plans,
-and optional model specifications.
+and optional model specifications. Accessors such as \code{\link[=sf_meta]{sf_meta()}},
+\code{\link[=sf_items]{sf_items()}}, \code{\link[=sf_scales]{sf_scales()}}, \code{\link[=sf_plan]{sf_plan()}}, and \code{\link[=sf_models]{sf_models()}} read its parts
+without reaching into the object directly.
 }
 
 \subsection{File format}{

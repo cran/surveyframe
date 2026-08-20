@@ -118,8 +118,8 @@ input,textarea,select{font-family:inherit;font-size:13px}
 .fab-mini:hover,.fab-mini.active{background:rgba(255,255,255,.12);color:#fff;
   border-color:rgba(255,255,255,.2)}
 .fab-menu{display:none;background:var(--sh);border-radius:6px;overflow:hidden;
-  border:1px solid rgba(255,255,255,.08);max-height:260px;overflow-y:auto;
-  margin-bottom:6px}
+  border:1px solid rgba(255,255,255,.08);max-height:min(460px,58vh);
+  overflow-y:auto;margin-bottom:6px}
 .fab-menu.open{display:block}
 .fab-menu::-webkit-scrollbar{width:3px}
 .fab-menu::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15);border-radius:3px}
@@ -272,7 +272,7 @@ input,textarea,select{font-family:inherit;font-size:13px}
 .crow-dh{color:var(--t3);cursor:grab;font-size:10px}
 .crow input{flex:1;border:none;padding:3px 4px;font-size:11px;
   color:var(--t1);background:transparent}
-.crow input:focus{outline:none}
+.crow input:focus{outline:2px solid var(--cp);outline-offset:-2px;border-radius:3px}
 .crow-rm{color:var(--t3);font-size:13px;border-radius:3px;padding:1px 3px;
   transition:all var(--d1)}
 .crow-rm:hover{color:var(--cd);background:var(--cd-l)}
@@ -417,6 +417,27 @@ textarea.pv-inp{border:1px solid var(--cb);border-radius:6px;padding:9px 11px;
   font-size:13px;font-family:inherit}
 textarea.pv-inp:focus{border-color:var(--pvc);
   box-shadow:0 0 0 3px color-mix(in srgb,var(--pvc) 13%,transparent)}
+/* Decision-family preview: pairwise strips and constant-sum weights. */
+.pv-pwc{display:flex;flex-direction:column;gap:10px;margin-top:8px}
+.pv-pwc-row{border:1px solid var(--cb);border-radius:6px;padding:8px 10px}
+.pv-pwc-head{display:flex;align-items:center;gap:8px;font-size:11px;
+  color:var(--t2);margin-bottom:6px;flex-wrap:wrap}
+.pv-pwc-side{font-weight:600;color:var(--t1)}
+.pv-pwc-vs{color:var(--t3);text-transform:uppercase;font-size:10px}
+.pv-pwc-q{color:var(--t1)}
+.pv-pwc-more{font-size:11px;color:var(--t3)}
+/* Placeholder cue: an amber chip on the inspector label and a matching note
+   in the preview, so sample labels cannot be mistaken for real ones. */
+.fsample{display:inline-block;margin-left:6px;padding:1px 6px;border-radius:9px;
+  background:#fef3c7;color:#92400e;font-size:9px;font-weight:700;
+  text-transform:uppercase;letter-spacing:.04em;vertical-align:middle}
+.pv-sample{margin-top:6px;padding:6px 9px;border-radius:5px;
+  background:#fef3c7;color:#92400e;font-size:11px;font-weight:500}
+.pv-cw{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.pv-cw-row{display:flex;align-items:center;gap:10px}
+.pv-cw-lbl{flex:1;font-size:12px;color:var(--t1)}
+.pv-cw-inp{max-width:90px}
+.pv-cw-tot{font-size:11px;color:var(--t2);margin-top:2px}
 .pv-matrix{border-collapse:collapse;width:100%;font-size:11px;margin-top:8px}
 .pv-matrix th{background:var(--cg);padding:6px 10px;text-align:center;
   border:1px solid var(--cb);font-weight:600}
@@ -539,6 +560,7 @@ textarea.pv-inp:focus{border-color:var(--pvc);
 .rs-h3{font-size:12px;font-weight:600;margin:14px 0 4px;color:var(--t1)}
 .rs-p{font-size:11px;color:var(--t3);line-height:1.5;margin-bottom:8px}
 .rs-method{font-size:11px;color:var(--t2);margin-bottom:8px}
+.rs-tbl-cap{font-size:10px;font-style:italic;margin-bottom:4px}
 .rs-tbl{width:100%;border-collapse:collapse;margin-bottom:8px}
 .rs-tbl th{font-size:10px;text-transform:uppercase;letter-spacing:.04em;
   color:var(--t3);border-top:1.5px solid var(--t2);border-bottom:1px solid var(--cb);
@@ -627,8 +649,8 @@ kbd{display:inline-block;padding:1px 5px;border:1px solid var(--cb);
   </div>
   <div class="tb-r">
     <div class="tb-hist">
-      <button type="button" id="undoBtn" title="Undo (Ctrl+Z)" onclick="undo()" disabled>&#8630;</button>
-      <button type="button" id="redoBtn" title="Redo (Ctrl+Y)" onclick="redo()" disabled>&#8631;</button>
+      <button type="button" id="undoBtn" title="Undo (Ctrl+Z)" aria-label="Undo" onclick="undo()" disabled>&#8630;</button>
+      <button type="button" id="redoBtn" title="Redo (Ctrl+Y)" aria-label="Redo" onclick="redo()" disabled>&#8631;</button>
     </div>
     <span class="save-st" id="saveSt">No changes</span>
     <span class="tb-sep" aria-hidden="true"></span>
@@ -680,6 +702,16 @@ kbd{display:inline-block;padding:1px 5px;border:1px solid var(--cb);
         <button type="button" class="fi" onclick="qAdd('rating');closeFabMenu()"><span class="fi-ic">★</span>Rating</button>
         <button type="button" class="fi" onclick="qAdd('date');closeFabMenu()"><span class="fi-ic">&#128197;</span>Date</button>
         <button type="button" class="fi" onclick="qAdd('text_block');closeFabMenu()"><span class="fi-ic">&#128221;</span>Text block</button>
+      </div>
+      <!-- Decision-family question types (v0.5 MCDM work, shipping as CRAN
+           0.4.0). Three entries for two item types: pairwise_comparison
+           carries both the AHP/ANP Saaty scale and the DEMATEL influence
+           scale, chosen by comparison_scale, so each gets its own entry
+           rather than making the researcher find a hidden switch. -->
+      <div class="fg"><div class="fg-lbl">Decision (MCDM)</div>
+        <button type="button" class="fi" onclick="qAdd('pairwise_comparison','saaty');closeFabMenu()"><span class="fi-ic">&#8646;</span>Pairwise comparison (AHP, ANP)</button>
+        <button type="button" class="fi" onclick="qAdd('pairwise_comparison','influence');closeFabMenu()"><span class="fi-ic">&#8594;</span>Influence matrix (DEMATEL)</button>
+        <button type="button" class="fi" onclick="qAdd('criteria_weight');closeFabMenu()"><span class="fi-ic">%</span>Criteria weights</button>
       </div>
     </div>
     <div class="fab-menu" id="cfgMenu" aria-label="Configuration">
@@ -969,11 +1001,18 @@ kbd{display:inline-block;padding:1px 5px;border:1px solid var(--cb);
           <optgroup label="Difference"><option value="mann_whitney">Mann-Whitney U</option><option value="t_test_ind">Independent t-test</option><option value="t_test_pair">Paired t-test</option><option value="wilcoxon_pair">Wilcoxon signed-rank</option><option value="kruskal_wallis">Kruskal-Wallis</option><option value="anova_one">One-way ANOVA</option><option value="anova_two">Two-way ANOVA</option><option value="ancova">ANCOVA</option><option value="repeated_anova">Repeated-measures ANOVA</option><option value="friedman">Friedman</option></optgroup>
           <optgroup label="Categorical"><option value="chi_square">Chi-square</option><option value="fisher_exact">Fisher's exact</option><option value="mcnemar">McNemar</option><option value="cochran_q">Cochran's Q</option></optgroup>
           <optgroup label="Association"><option value="correlation_pearson">Pearson correlation</option><option value="correlation_spearman">Spearman correlation</option><option value="correlation_kendall">Kendall tau</option><option value="partial_correlation">Partial correlation</option></optgroup>
-          <optgroup label="Regression"><option value="regression_linear">Linear regression</option><option value="regression_logistic_binary">Binary logistic</option><option value="regression_logistic_ordinal">Ordinal logistic</option><option value="regression_logistic_multinomial">Multinomial logistic</option><option value="mediation">Mediation</option><option value="moderation">Moderation</option></optgroup>
+          <optgroup label="Regression"><option value="regression_linear">Linear regression</option><option value="regression_logistic_binary">Binary logistic</option><option value="regression_logistic_ordinal">Ordinal logistic</option><option value="regression_logistic_multinomial">Multinomial logistic</option><option value="firth_logistic">Firth penalised logistic</option><option value="mediation">Mediation</option><option value="moderation">Moderation</option></optgroup>
           <optgroup label="Measurement and models"><option value="reliability_alpha">Cronbach alpha</option><option value="reliability_omega">McDonald omega</option><option value="item_diagnostics">Item diagnostics</option><option value="efa_readiness">EFA readiness</option><option value="efa_solution">EFA solution</option><option value="cfa_lavaan_syntax">CFA lavaan syntax</option><option value="sem_lavaan_syntax">CB-SEM lavaan syntax</option><option value="seminr_syntax">PLS-SEM seminr syntax</option></optgroup>
+          <optgroup label="Decision"><option value="topsis">TOPSIS</option><option value="vikor">VIKOR</option><option value="moora">MOORA</option><option value="smart">SMART</option><option value="waspas">WASPAS</option><option value="promethee">PROMETHEE II</option><option value="electre">ELECTRE I</option><option value="ahp">AHP</option><option value="anp">ANP</option><option value="dematel">DEMATEL</option></optgroup>
+          <optgroup label="Text"><option value="term_freq">Term frequency</option><option value="co_occurrence">Co-occurrence</option><option value="ngram_freq">N-gram frequency</option><option value="term_context">Keyword in context</option><option value="co_occurrence_network">Co-occurrence network</option><option value="tidy_sentiment">Sentiment</option><option value="quanteda_dfm">Document-feature matrix</option><option value="topic_model_lda">Topic model (LDA)</option><option value="stm_topics">Topic model (STM)</option></optgroup>
         </select></div>
       </div>
       <div class="field" id="rq-alpha-field"><label class="fl" for="rq-alpha">Significance level</label><div class="fc"><select id="rq-alpha"><option value="0.05">0.05</option><option value="0.01">0.01</option><option value="0.10">0.10</option></select></div></div>
+      <div class="field" id="rq-term-field" style="display:none"><label class="fl" for="rq-term">Keyword <span class="fr">*</span></label><div class="fc"><input type="text" id="rq-term" placeholder="Enter the keyword to search for"></div></div>
+      <div class="field" id="rq-wordcloud-field" style="display:none"><label class="fl" for="rq-wordcloud">Word cloud</label><div class="fc"><label style="display:flex;align-items:center;gap:6px;font-weight:400"><input type="checkbox" id="rq-wordcloud"> Render as a word cloud instead of a bar chart</label></div></div>
+      <div class="field" id="rq-seed-field" style="display:none"><label class="fl" for="rq-seed">Random seed</label><div class="fc"><input type="number" id="rq-seed" step="1" placeholder="42"></div></div>
+      <div class="field" id="rq-topn-field" style="display:none"><label class="fl" for="rq-topn">Top N terms</label><div class="fc"><input type="number" id="rq-topn" step="1" min="1" placeholder="20"></div></div>
+      <div class="field" id="rq-k-field" style="display:none"><label class="fl" for="rq-k">Number of topics (k)</label><div class="fc"><input type="number" id="rq-k" step="1" min="2" placeholder="4"></div></div>
     </div>
     <div class="field" id="rqCitDiv"></div>
     <div id="rqPreview" class="preview-card"></div>
@@ -1196,6 +1235,52 @@ textarea.inp-std:focus{border-color:var(--cp);box-shadow:0 0 0 3px color-mix(in 
   align-items:center;justify-content:center;cursor:pointer}
 .rank-mv:hover{border-color:var(--cp);color:var(--cp);background:var(--tint)}
 
+/* Pairwise comparison (AHP/ANP Saaty scale, DEMATEL influence scale) */
+.pw-wrap{display:flex;flex-direction:column;gap:14px;margin-top:8px}
+.pw-grouped{gap:28px}
+.pw-group{display:flex;flex-direction:column;gap:14px}
+.pw-group-hdr{display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+  padding-bottom:6px;border-bottom:2px solid var(--cp);position:sticky;top:0;
+  background:var(--cg);z-index:1}
+.pw-group-title{font-size:15px;font-weight:700;color:var(--t1)}
+.pw-group-tag{font-size:11.5px;font-weight:600;color:var(--t2);letter-spacing:.02em;
+  text-transform:uppercase;white-space:nowrap}
+.pw-row{background:var(--cf);border:1px solid var(--cb);border-radius:8px;
+  padding:14px 16px;box-shadow:0 1px 0 rgba(18,33,43,.03)}
+.pw-heads{display:flex;justify-content:space-between;font-size:13px;
+  font-weight:600;color:var(--t1);margin-bottom:10px}
+.pw-strip{display:flex;gap:4px;overflow-x:auto;padding-bottom:2px}
+.pw-opt{flex:1;min-width:30px;display:flex;flex-direction:column;align-items:center;
+  gap:3px;padding:6px 2px;border-radius:6px;border:1.5px solid var(--cb);
+  cursor:pointer;transition:all .12s;background:var(--cf)}
+.pw-opt:hover{border-color:var(--cp);background:var(--tint)}
+.pw-opt:has(input:checked){background:var(--cp);border-color:var(--cp)}
+.pw-opt:has(input:focus-visible){outline:3px solid var(--deep);outline-offset:2px}
+.pw-opt input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.pw-num{font-size:11px;font-weight:700;color:var(--t2)}
+.pw-opt:has(input:checked) .pw-num{color:#fff}
+.pw-opt.pw-equal{border-color:var(--t3)}
+.pw-influence{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px}
+.pw-influence .pw-opt{flex:0 0 auto;min-width:64px}
+.pw-influence .pw-lbl{font-size:10px;color:var(--t2);text-align:center}
+.pw-influence .pw-opt:has(input:checked) .pw-lbl{color:color-mix(in srgb,#ffffff 82%,var(--cp))}
+/* Mobile-only dropdown, hidden on desktop where the button strip has room.
+   min-height 44px meets the WCAG 2.2 touch-target size the rest of the
+   survey already holds itself to (see the matrix reflow's own note). */
+.pw-select{display:none;width:100%;min-height:44px;padding:8px 12px;
+  font-size:15px;color:var(--t1);background:var(--cf);border:1.5px solid var(--cb);
+  border-radius:6px;font-family:inherit}
+.pw-select:focus-visible{outline:3px solid var(--deep);outline-offset:1px;border-color:var(--cp)}
+
+/* Constant-sum criteria weights */
+.cw-wrap{display:flex;flex-direction:column;gap:10px;margin-top:8px}
+.cw-row{display:flex;align-items:center;gap:12px}
+.cw-lbl{flex:1;font-size:14.5px;color:var(--t1)}
+.cw-input{width:76px;flex-shrink:0}
+.cw-total{margin-top:6px;font-size:13px;font-weight:600;color:var(--t2)}
+.cw-total.cw-ok{color:#166534}
+.cw-total.cw-bad{color:#991b1b}
+
 /* Error banner */
 .err-banner{background:#fef2f2;border:1.5px solid #fecaca;border-radius:8px;
   padding:12px 16px;margin-bottom:18px;font-size:13px;color:#991b1b;display:none}
@@ -1237,6 +1322,17 @@ textarea.inp-std:focus{border-color:var(--cp);box-shadow:0 0 0 3px color-mix(in 
   .matrix-tbl td.rl{font-weight:600;background:var(--tint);border-bottom:1.5px solid var(--tint-bd)}
   .matrix-tbl td:not(.rl)::before{content:attr(data-col);color:var(--t2);font-size:14px;flex:1}
   .matrix-tbl td:not(.rl) input{margin:0;flex-shrink:0;width:22px;height:22px}
+
+  /* Below 600px the button strip (17 wide for Saaty, 5 for influence)
+     cannot fit without horizontal scrolling, which section 1b's design
+     rules rule out for a matrix-shaped control same as the desktop
+     button strip is rejected as an n x n grid: it invites a swipe-past
+     answer instead of a deliberate one. Swap it for the <select> of the
+     same verbal anchors instead of shrinking it further. */
+  .pw-heads{flex-direction:column;gap:2px}
+  .pw-strip,.pw-influence{display:none}
+  .pw-select{display:block}
+  .cw-row{flex-wrap:wrap}
 }
 </style>
 </head>
@@ -1404,6 +1500,8 @@ function renderItem(item){
   if(t==='slider')        return wrapItem(item,renderSlider(item));
   if(t==='rating')        return wrapItem(item,renderRating(item));
   if(t==='ranking')       return wrapItem(item,renderRanking(item,cs));
+  if(t==='pairwise_comparison') return wrapItem(item,renderPairwise(item));
+  if(t==='criteria_weight')    return wrapItem(item,renderCriteriaWeight(item));
   return wrapItem(item,'<p style="color:var(--t3);font-size:12px">Unsupported item type: '+esc(t)+'</p>');
 }
 
@@ -1470,6 +1568,131 @@ function renderMatrix(item,cs){
       +'</tr>';
   }).join('');
   return'<div class="matrix-wrap"><table class="matrix-tbl"><thead>'+hdr+'</thead><tbody>'+body+'</tbody></table></div>';
+}
+// Saaty bipolar strip: 17 points, 9..2 (first side preferred) | 1 (equal) |
+// 2..9 (second side preferred). Left-to-right visual order matches the
+// signed-integer export column (R/read_responses.R, item__a__vs__b):
+// positive = first side, negative = second side, 1 = equal. Reciprocals are
+// never stored; they are reconstructed at assembly (sframe_assemble_pairwise()).
+var SAATY_STEPS=[9,8,7,6,5,4,3,2,1,-2,-3,-4,-5,-6,-7,-8,-9];
+// DEMATEL unipolar strip: 0 (no influence) to 4 (very high influence).
+var INFLUENCE_STEPS=[0,1,2,3,4];
+var INFLUENCE_LABELS=['None','Low','Medium','High','Very high'];
+function renderPairwiseRow(rowKey,leftLbl,rightLbl,steps,saved,influence){
+  var names=steps.map(function(v,i){
+    return influence?(INFLUENCE_LABELS[i]||String(v)):(v===1?'Equal':(v>0?(v+' ('+leftLbl+')'):((-v)+' ('+rightLbl+')')));
+  });
+  var opts=steps.map(function(v,i){
+    var checked=String(saved)===String(v);
+    var isEqual=!influence&&v===1;
+    return'<label class="pw-opt'+(isEqual?' pw-equal':'')+'"><input type="radio" name="'+esc(rowKey)+'" value="'+v+'"'
+      +(checked?' checked':'')
+      +' aria-label="'+esc(leftLbl)+' vs '+esc(rightLbl)+': '+esc(names[i])+'"'
+      +' onchange="setResp(\''+esc(rowKey)+'\','+v+')">'
+      +(influence?'<span class="pw-lbl">'+esc(INFLUENCE_LABELS[i])+'</span>':'<span class="pw-num">'+esc(Math.abs(v))+'</span>')
+      +'</label>';
+  }).join('');
+  // Mobile (<600px) swaps the button strip for this <select> of the same
+  // verbal anchors: a 17-wide (or 5-wide) button row cannot fit a phone
+  // screen without horizontal scrolling, which section 1b's design rules
+  // treat as unacceptable for a matrix-shaped control. The select is the
+  // only input actually submitted below that width; the CSS hides one or
+  // the other, it never shows both.
+  var selectOpts='<option value=""'+(saved==null||saved===''?' selected':'')+' disabled>Choose an answer&hellip;</option>'
+    +steps.map(function(v,i){
+      return'<option value="'+v+'"'+(String(saved)===String(v)?' selected':'')+'>'+esc(names[i])+'</option>';
+    }).join('');
+  var select='<select class="pw-select" aria-label="'+esc(leftLbl)+' vs '+esc(rightLbl)+'"'
+    +' onchange="setResp(\''+esc(rowKey)+'\',this.value)">'+selectOpts+'</select>';
+  return'<div class="pw-row"><div class="pw-heads"><span>'+esc(leftLbl)+'</span><span>'+esc(rightLbl)+'</span></div>'
+    +'<div class="'+(influence?'pw-influence':'pw-strip')+'" role="radiogroup" aria-label="'+esc(leftLbl)+' vs '+esc(rightLbl)+'">'
+    +opts+'</div>'+select+'</div>';
+}
+// Groups rows under a header per anchor criterion whenever there is more
+// than one group to show (3 items or more; below that a single "Comparing:
+// X" header would add noise without adding wayfinding, so 2 items stays
+// flat). This never becomes an n x n grid: each group is still one pair,
+// one strip, one judgement at a time, the exact property a grid would give
+// up (see the section 1b design note this mirrors: a grid invites
+// eyeballed, patterned answers instead of deliberate per-pair judgement,
+// which is what AHP's own consistency ratio exists to catch).
+function renderPairwise(item){
+  var items=item.comparison_items||[];
+  var scale=item.comparison_scale||'saaty';
+  var groups=[];
+  if(scale==='influence'){
+    for(var i=0;i<items.length;i++){
+      var rows=[];
+      for(var j=0;j<items.length;j++){
+        if(i===j)continue;
+        var a=items[i],b=items[j];
+        var rowKey=item.id+'__'+a+'__to__'+b;
+        rows.push(renderPairwiseRow(rowKey,'Does '+a+' influence '+b+'?','',INFLUENCE_STEPS,responses[rowKey],true));
+      }
+      groups.push({anchor:items[i],rows:rows});
+    }
+  }else{
+    for(var i=0;i<items.length-1;i++){
+      var rows=[];
+      for(var j=i+1;j<items.length;j++){
+        var a=items[i],b=items[j];
+        var rowKey=item.id+'__'+a+'__vs__'+b;
+        rows.push(renderPairwiseRow(rowKey,a,b,SAATY_STEPS,responses[rowKey],false));
+      }
+      groups.push({anchor:items[i],rows:rows});
+    }
+  }
+  if(groups.length<=1)return'<div class="pw-wrap">'+groups.map(function(g){return g.rows.join('');}).join('')+'</div>';
+  var out=groups.map(function(g,gi){
+    return'<div class="pw-group">'
+      +'<div class="pw-group-hdr"><span class="pw-group-title">Comparing: '+esc(g.anchor)+'</span>'
+      +'<span class="pw-group-tag">Group '+(gi+1)+' of '+groups.length+'</span></div>'
+      +g.rows.join('')
+      +'</div>';
+  }).join('');
+  return'<div class="pw-wrap pw-grouped">'+out+'</div>';
+}
+function renderCriteriaWeight(item){
+  var items=item.comparison_items||[];
+  var rows=items.map(function(crit){
+    var rowKey=item.id+'__'+crit;
+    var saved=responses[rowKey]!=null?responses[rowKey]:'';
+    return'<div class="cw-row"><span class="cw-lbl">'+esc(crit)+'</span>'
+      +'<input type="number" inputmode="numeric" class="inp-std cw-input" min="0" max="100" value="'+esc(saved)+'"'
+      +' aria-label="Points for '+esc(crit)+'"'
+      +' oninput="clampCwInput(this,\''+esc(item.id)+'\');setResp(\''+esc(rowKey)+'\',this.value);updateCwTotal(\''+esc(item.id)+'\')"></div>';
+  }).join('');
+  return'<div class="cw-wrap" id="cw_'+esc(item.id)+'">'+rows
+    +'<div class="cw-total" id="cwtotal_'+esc(item.id)+'">Total: 0 / 100</div></div>';
+}
+// Clamps a single criteria-weight input to an integer 0-100, and also caps it
+// so it cannot push the running total past 100: the HTML `max` attribute
+// only affects the spinner arrows, not typed or pasted input, so without
+// this a respondent can type any value into every field regardless of what
+// the other fields already hold.
+function clampCwInput(input,itemId){
+  var raw=input.value.replace(/[^0-9]/g,'');
+  var val=raw===''?0:parseInt(raw,10);
+  if(val>100)val=100;
+  var wrap=document.getElementById('cw_'+itemId);
+  var others=0;
+  if(wrap){
+    wrap.querySelectorAll('input[type="number"]').forEach(function(inp){
+      if(inp!==input)others+=parseInt(inp.value,10)||0;
+    });
+  }
+  if(others+val>100)val=Math.max(0,100-others);
+  input.value=raw===''?'':String(val);
+}
+function updateCwTotal(itemId){
+  var wrap=document.getElementById('cw_'+itemId);if(!wrap)return;
+  var inputs=wrap.querySelectorAll('input[type="number"]');
+  var total=0;inputs.forEach(function(inp){total+=parseInt(inp.value,10)||0;});
+  var el=document.getElementById('cwtotal_'+itemId);
+  if(el){
+    el.textContent='Total: '+total+' / 100';
+    el.className='cw-total '+(total===100?'cw-ok':'cw-bad');
+  }
 }
 function renderNumeric(item){
   var saved=responses[item.id]||'';
@@ -1647,6 +1870,31 @@ function validatePage(items){
       ok=false;
     }
   });
+  // A criteria_weight total that isn't exactly 100 blocks page advance even
+  // if some points have been entered, matching the matrix/date pattern of
+  // checking a per-type invariant independent of the plain `required` flag.
+  // clampCwInput() already stops any single field or the running total from
+  // exceeding 100, so the only remaining failure mode here is an incomplete
+  // allocation (total < 100).
+  items.forEach(function(item){
+    if(item.type!=='criteria_weight'||!isVisible(item.id))return;
+    var crits=item.comparison_items||[];
+    var total=0,anyEntered=false;
+    crits.forEach(function(crit){
+      var v=responses[item.id+'__'+crit];
+      if(v!==undefined&&v!==null&&String(v)!=='')anyEntered=true;
+      total+=parseInt(v,10)||0;
+    });
+    if((item.required||anyEntered)&&total!==100){
+      var err=document.getElementById('err_'+item.id);
+      if(err){err.textContent='The points must add up to exactly 100 (currently '+total+').';err.classList.add('show');}
+      if(ok){
+        var el=document.getElementById('item_'+item.id);
+        if(el)el.scrollIntoView({behavior:'smooth',block:'center'});
+      }
+      ok=false;
+    }
+  });
   items.forEach(function(item){
     if(!item.required||!isVisible(item.id))return;
     var t=item.type;
@@ -1659,6 +1907,26 @@ function validatePage(items){
     } else if(t==='multiple_choice'){
       var v=responses[item.id];
       if(!v||v==='')missing=true;
+    } else if(t==='criteria_weight'){
+      (item.comparison_items||[]).forEach(function(crit){
+        var key=item.id+'__'+crit;
+        if(responses[key]===undefined||responses[key]===null||String(responses[key])==='')missing=true;
+      });
+    } else if(t==='pairwise_comparison'){
+      var comp=item.comparison_items||[];
+      var scale=item.comparison_scale||'saaty';
+      if(scale==='influence'){
+        for(var i=0;i<comp.length;i++)for(var j=0;j<comp.length;j++){
+          if(i===j)continue;
+          var key=item.id+'__'+comp[i]+'__to__'+comp[j];
+          if(responses[key]===undefined||responses[key]===null||String(responses[key])==='')missing=true;
+        }
+      }else{
+        for(var i=0;i<comp.length;i++)for(var j=i+1;j<comp.length;j++){
+          var key=item.id+'__'+comp[i]+'__vs__'+comp[j];
+          if(responses[key]===undefined||responses[key]===null||String(responses[key])==='')missing=true;
+        }
+      }
     } else {
       var v2=responses[item.id];
       if(v2===null||v2===undefined||String(v2).trim()==='')missing=true;
@@ -1739,6 +2007,30 @@ function doSubmit(){
       var sel=(responses[item.id]||'').split(',').filter(Boolean);
       (csM.values||[]).forEach(function(v){
         row[item.id+'__'+String(v)]=sel.includes(String(v))?'1':'0';
+      });
+    } else if(item.type==='pairwise_comparison'){
+      // Column conventions match R/read_responses.R's expansion whitelist:
+      // item__a__vs__b (signed Saaty degree) for unordered pairs, or
+      // item__a__to__b (0-4) for DEMATEL's ordered/directed pairs.
+      var comp=item.comparison_items||[];
+      var scale=item.comparison_scale||'saaty';
+      if(scale==='influence'){
+        for(var pi=0;pi<comp.length;pi++)for(var pj=0;pj<comp.length;pj++){
+          if(pi===pj)continue;
+          var infKey=item.id+'__'+comp[pi]+'__to__'+comp[pj];
+          row[infKey]=responses[infKey]!=null?responses[infKey]:'';
+        }
+      }else{
+        for(var pi=0;pi<comp.length;pi++)for(var pj=pi+1;pj<comp.length;pj++){
+          var saatyKey=item.id+'__'+comp[pi]+'__vs__'+comp[pj];
+          row[saatyKey]=responses[saatyKey]!=null?responses[saatyKey]:'';
+        }
+      }
+    } else if(item.type==='criteria_weight'){
+      // One item__criterion column, 0-100, matching read_responses.R.
+      (item.comparison_items||[]).forEach(function(crit){
+        var cwKey=item.id+'__'+crit;
+        row[cwKey]=responses[cwKey]!=null?responses[cwKey]:'';
       });
     } else {
       row[item.id]=responses[item.id]!=null?responses[item.id]:'';
@@ -2263,7 +2555,26 @@ function exportSheetsCollector(){
 }
 
 // -- Item list --------------------------------------------------------------
-var TL={likert:'Likert',single_choice:'Single',multiple_choice:'Multi',numeric:'Number',text:'Text',textarea:'Long text',date:'Date',matrix:'Matrix',slider:'Slider',ranking:'Ranking',rating:'Rating',section_break:'Section',text_block:'Block'};
+// Placeholder detection. New questions ship with sample labels so they render
+// at once, but nothing in the UI said so, and a sample label shipped to
+// respondents is a real methodological error. The check is stateless: it
+// compares the current labels against the exact defaults qAdd() writes, so
+// nothing extra is stored in the .sframe and the cue disappears the moment a
+// label is edited.
+var SAMPLE_LISTS={
+  matrix:['Service quality','Sustainability','Overall experience'],
+  pairwise_comparison:['Service quality','Price','Delivery time'],
+  criteria_weight:['Service quality','Price','Delivery time']
+};
+var SAMPLE_TAG=' <span class="fsample">sample</span>';
+var SAMPLE_HINT='These labels are placeholders so the question renders. Replace them with your own before collecting data. ';
+function isSampleList(item){
+  var want=SAMPLE_LISTS[item&&item.type];if(!want)return false;
+  var have=(item.type==='matrix'?item.matrix_items:item.comparison_items)||[];
+  if(have.length!==want.length)return false;
+  return have.every(function(v,i){return String(v)===want[i];});
+}
+var TL={likert:'Likert',single_choice:'Single',multiple_choice:'Multi',numeric:'Number',text:'Text',textarea:'Long text',date:'Date',matrix:'Matrix',slider:'Slider',ranking:'Ranking',rating:'Rating',section_break:'Section',text_block:'Block',pairwise_comparison:'Pairwise',criteria_weight:'Weights'};
 var TB={likert:'b-li',single_choice:'b-si',multiple_choice:'b-mu',numeric:'b-nu',text:'b-te',textarea:'b-te',date:'b-nu',matrix:'b-ma',slider:'b-sl',ranking:'b-ra',rating:'b-ra',section_break:'b-se',text_block:'b-se'};
 function renderItemList(){
   var el=document.getElementById('itemList'),q=(gv('itemSearch')||'').toLowerCase();
@@ -2283,7 +2594,7 @@ function renderItemList(){
     if(sc)bgs.push('<span class="badge b-sc">'+esc(sc.id)+'</span>');
     if(item.reverse)bgs.push('<span class="badge b-rv">rev</span>');
     if(ck)bgs.push('<span class="badge b-ck">attn</span>');
-    return pd+'<div class="ic'+(selId===item.id?' sel':'')+'" role="listitem" draggable="true" data-idx="'+ri+'" data-id="'+esc(item.id)+'" onclick="selItem(\''+item.id+'\')" ondragstart="dStart(event,'+ri+')" ondragover="dOver(event,'+ri+',event)" ondrop="dDrop(event,'+ri+')" ondragleave="this.classList.remove(\'drag-t\',\'drag-b\')"><div class="ic-h" title="Drag to reorder">&#8942;</div><div class="ic-body"><div class="'+lc+'">'+esc(item.label||'(no label)')+'</div><div class="ic-meta">'+bgs.join('')+'</div></div><div class="ic-acts"><button type="button" class="ib" title="Duplicate" onclick="event.stopPropagation();dupItem(\''+item.id+'\')">&#10697;</button><button type="button" class="ib del" title="Delete" onclick="event.stopPropagation();delItem(\''+item.id+'\')">&#128465;</button></div></div>';
+    return pd+'<div class="ic'+(selId===item.id?' sel':'')+'" role="listitem" draggable="true" data-idx="'+ri+'" data-id="'+esc(item.id)+'" onclick="selItem(\''+item.id+'\')" ondragstart="dStart(event,'+ri+')" ondragover="dOver(event,'+ri+',event)" ondrop="dDrop(event,'+ri+')" ondragleave="this.classList.remove(\'drag-t\',\'drag-b\')"><div class="ic-h" title="Drag to reorder">&#8942;</div><div class="ic-body"><div class="'+lc+'">'+esc(item.label||'(no label)')+'</div><div class="ic-meta">'+bgs.join('')+'</div></div><div class="ic-acts"><button type="button" class="ib" title="Duplicate" aria-label="Duplicate question" onclick="event.stopPropagation();dupItem(\''+item.id+'\')">&#10697;</button><button type="button" class="ib del" title="Delete" aria-label="Delete question" onclick="event.stopPropagation();delItem(\''+item.id+'\')">&#128465;</button></div></div>';
   }).join('');
 }
 function selItem(id){selId=id;renderItemList();openInsp(id);}
@@ -2409,7 +2720,7 @@ function renderInspBody(item){
   var csO=[['','select'],...S.choices.map(function(c){return[c.id,c.id+' ('+c.values.length+' opts)'];}),
     ...Object.keys(PRESET_CHOICE_SETS).filter(function(k){return !S.choices.find(function(c){return c.id===k;});}).map(function(k){return['preset:'+k,'Preset: '+PRESET_CHOICE_SETS[k].label];})];
   var scO=[['','none'],...S.scales.map(function(s){return[s.id,s.id+': '+s.label];})];
-  var tO=[['likert','Likert'],['single_choice','Single choice'],['multiple_choice','Multiple choice'],['numeric','Numeric'],['text','Short text'],['textarea','Long text'],['date','Date'],['matrix','Matrix'],['slider','Slider'],['ranking','Ranking'],['rating','Rating']];
+  var tO=[['likert','Likert'],['single_choice','Single choice'],['multiple_choice','Multiple choice'],['numeric','Numeric'],['text','Short text'],['textarea','Long text'],['date','Date'],['matrix','Matrix'],['slider','Slider'],['ranking','Ranking'],['rating','Rating'],['pairwise_comparison','Pairwise comparison'],['criteria_weight','Criteria weights']];
   function fld(lbl,ctrl,hint,req){var m=ctrl.match(/id="([^"]+)"/);var forA=m?' for="'+m[1]+'"':'';return'<div class="field"><label class="fl"'+forA+'>'+lbl+(req?'<span class="fr">*</span>':'')+'</label><div class="fc">'+ctrl+'</div>'+(hint?'<span class="fhint">'+hint+'</span>':'')+'</div>';}
   function inp(fid,val,ph,type){type=type||'text';return'<input type="'+type+'" id="'+fid+'" value="'+esc(val)+'" placeholder="'+(ph||'')+'" onblur="updF(\''+fid+'\')">';}
   function ta(fid,val,ph,rows){rows=rows||3;return'<textarea id="'+fid+'" rows="'+rows+'" placeholder="'+(ph||'')+'" onblur="updF(\''+fid+'\')">'+esc(val)+'</textarea>';}
@@ -2425,7 +2736,18 @@ function renderInspBody(item){
     (NCS.includes(item.type)?fld('Choice set',sel('fi-cs',csO,item.choice_set||'')):'') +
     (NCS.includes(item.type)?fld('Choice labels','<textarea id="fi-choice-lines" rows="5" placeholder="One option per line, or value = Label" onblur="saveItemChoices()">'+esc(itemChoiceLines(item))+'</textarea>','For single choice, these are the respondent-facing category labels.')+
       '<div class="fc tpl-chips" role="group" aria-label="Quick-fill choice templates"><button type="button" onclick="applyCsTemplate(\'agree5\')">5-pt agree</button><button type="button" onclick="applyCsTemplate(\'agree7\')">7-pt agree</button><button type="button" onclick="applyCsTemplate(\'yesno\')">Yes / No</button><button type="button" onclick="applyCsTemplate(\'freq\')">Frequency</button><button type="button" onclick="applyCsTemplate(\'importance\')">Importance</button></div>':'') +
-    (item.type==='matrix'?fld('Matrix row labels',ta('fi-mrows',(item.matrix_items||[]).join('\n'),'One label per line'),'One per line.'):'') +
+    (item.type==='matrix'?fld('Matrix row labels'+(isSampleList(item)?SAMPLE_TAG:''),ta('fi-mrows',(item.matrix_items||[]).join('\n'),'One label per line'),(isSampleList(item)?SAMPLE_HINT:'')+'One per line.'):'') +
+    (['pairwise_comparison','criteria_weight'].includes(item.type)?
+      fld((item.type==='criteria_weight'?'Criteria':'Items to compare')+(isSampleList(item)?SAMPLE_TAG:''),
+          ta('fi-cmpitems',(item.comparison_items||[]).join('\n'),'One label per line'),
+          (isSampleList(item)?SAMPLE_HINT:'')+
+          (item.type==='criteria_weight'
+            ? 'One per line. Respondents divide 100 points across these.'
+            : 'One per line. n items produce n(n-1)/2 Saaty pairs or n(n-1) influence pairs, so 7 items is the practical ceiling and 10 is the hard limit.'))
+      :'') +
+    (item.type==='pairwise_comparison'?fld('Comparison scale',
+      sel('fi-cmpscale',[['saaty','Saaty 1-9 ratio (AHP, ANP)'],['influence','Influence 0-4 directed (DEMATEL)']],item.comparison_scale||'saaty'),
+      'Saaty compares each pair once. Influence asks both directions separately.'):'') +
     (item.type==='slider'?'<div class="frow">'+fld('Min',inp('fi-smin',item.slider_min||0,'','number'))+fld('Max',inp('fi-smax',item.slider_max||100,'','number'))+fld('Step',inp('fi-sstep',item.slider_step||1,'','number'))+'</div>':'') +
     (item.type==='rating'?'<div class="frow">'+fld('Max stars',inp('fi-rmax',item.rating_max||5,'','number'))+fld('Icon',sel('fi-ricon',[['star','Star ★'],['heart','Heart ♥']],item.rating_icon||'star'))+'</div>':'') +
     (item.type==='date'?'<div class="frow">'+fld('Earliest date',inp('fi-dmin',item.date_min||'','','date'))+fld('Latest date',inp('fi-dmax',item.date_max||'','','date'))+'</div>':'') +
@@ -2440,13 +2762,21 @@ function renderInspBody(item){
   );
   document.getElementById('inspBody').innerHTML=identity+config+options;
 }
-var FMAP={'fi-lbl':'label','fi-intro':'section_intro','fi-type':'type','fi-cs':'choice_set','fi-scale':'scale_id','fi-help':'help','fi-ph':'placeholder','fi-req':'required','fi-rev':'reverse','fi-smin':'slider_min','fi-smax':'slider_max','fi-sstep':'slider_step','fi-rmax':'rating_max','fi-ricon':'rating_icon','fi-dmin':'date_min','fi-dmax':'date_max','fi-page':'page','fi-mrows':'matrix_items'};
+var FMAP={'fi-lbl':'label','fi-intro':'section_intro','fi-type':'type','fi-cs':'choice_set','fi-scale':'scale_id','fi-help':'help','fi-ph':'placeholder','fi-req':'required','fi-rev':'reverse','fi-smin':'slider_min','fi-smax':'slider_max','fi-sstep':'slider_step','fi-rmax':'rating_max','fi-ricon':'rating_icon','fi-dmin':'date_min','fi-dmax':'date_max','fi-page':'page','fi-mrows':'matrix_items','fi-cmpitems':'comparison_items','fi-cmpscale':'comparison_scale'};
 function updF(id){
   if(!selId)return;var idx=S.items.findIndex(function(i){return i.id===selId;});if(idx<0)return;
   var el=document.getElementById(id);if(!el)return;
   var v=el.type==='checkbox'?el.checked:(el.value||''),f=FMAP[id];if(!f)return;
   snap();
   if(f==='matrix_items')v=v.split('\n').map(function(s){return s.trim();}).filter(Boolean);
+  else if(f==='comparison_items'){
+    v=v.split('\n').map(function(s){return s.trim();}).filter(Boolean);
+    // Mirrors sframe_warn_design() and the R-side validator: the Saaty RI
+    // table stops at 10, and respondent burden degrades well before that.
+    var lim=S.items[idx].comparison_scale==='influence'?6:7;
+    if(v.length>10){toast('More than 10 items to compare is rejected by validate_sframe(); the Saaty consistency table only covers 10.','err');}
+    else if(v.length>lim){toast(v.length+' items means '+(S.items[idx].comparison_scale==='influence'?v.length*(v.length-1):v.length*(v.length-1)/2)+' comparison rows, which is a lot to ask of a respondent.','inf');}
+  }
   else if(['slider_min','slider_max','slider_step','rating_max'].includes(f))v=parseFloat(v)||0;
   else if(f==='page')v=v?parseInt(v):null;
   else if(f==='date_min'||f==='date_max'){
@@ -2487,7 +2817,7 @@ function updF(id){
   renderItemList();
 }
 // Auto-id helpers shared by qAdd() and the type-change rename above.
-function typePrefix(type){return {'section_break':'sec','text_block':'txt'}[type]||type.slice(0,3);}
+function typePrefix(type){return {'section_break':'sec','text_block':'txt','pairwise_comparison':'pair','criteria_weight':'crit'}[type]||type.slice(0,3);}
 function nextItemId(type,excludeId){
   var prefix=typePrefix(type);
   // excludeId: when renaming after a type change, the item already carries
@@ -2566,11 +2896,16 @@ function defaultLabel(type,n){
     rating:'Rate this item',
     date:'Select a date',
     section_break:'New section',
-    text_block:'Instruction text'
+    text_block:'Instruction text',
+    pairwise_comparison:'Compare the importance of each pair of criteria',
+    criteria_weight:'Divide 100 points across the criteria'
   };
   return labels[type]||('Question '+n);
 }
-function qAdd(type){
+// variant: only meaningful for pairwise_comparison, where it selects
+// comparison_scale ("saaty" for AHP/ANP ratios, "influence" for DEMATEL's
+// directed 0-4 matrix). Every other caller passes one argument, as before.
+function qAdd(type,variant){
   var nid=nextItemId(type),n=parseInt(nid.split('_').pop(),10);
   snap();
   var choice=null;
@@ -2583,8 +2918,21 @@ function qAdd(type){
       S.choices.push({id:choice,values:['option_1','option_2','option_3'],labels:['Option 1','Option 2','Option 3'],allow_other:false,randomise:false});
     }
   }
-  var item={id:nid,label:defaultLabel(type,n),type:type,required:false,reverse:false,choice_set:choice,scale_id:null,help:null,placeholder:null,matrix_items:null,slider_min:0,slider_max:100,slider_step:1,rating_max:5,rating_icon:'star',date_min:null,date_max:null,section_intro:null,page:null};
+  var item={id:nid,label:defaultLabel(type,n),type:type,required:false,reverse:false,choice_set:choice,scale_id:null,help:null,placeholder:null,matrix_items:null,comparison_items:null,comparison_scale:null,slider_min:0,slider_max:100,slider_step:1,rating_max:5,rating_icon:'star',date_min:null,date_max:null,section_intro:null,page:null};
   if(type==='matrix')item.matrix_items=['Service quality','Sustainability','Overall experience'];
+  if(type==='pairwise_comparison'||type==='criteria_weight'){
+    // A decision item is unusable without the things being compared, and
+    // both R-side validators require comparison_items, so ship a working
+    // 3-criterion default rather than an item that fails validation on
+    // export. 3 criteria give 3 Saaty pairs or 6 influence pairs, which is
+    // small enough to preview comfortably.
+    item.comparison_items=['Service quality','Price','Delivery time'];
+    item.required=true;
+    if(type==='pairwise_comparison'){
+      item.comparison_scale=variant==='influence'?'influence':'saaty';
+      if(item.comparison_scale==='influence')item.label='How strongly does each factor influence the others?';
+    }
+  }
   if(type==='section_break')item.section_intro='Use this section to introduce the next group of questions.';
   if(type==='text_block')item.label='Add instructions or explanatory text here.';
   S.items.push(item);
@@ -2675,7 +3023,7 @@ function saveCheck(){
 }
 
 // Analyse registry and role-based plan editor
-var CSHORT={field_2018:'Field (2018)',cohen_1988:'Cohen (1988)',mann_1947:'Mann & Whitney (1947)',kruskal_1952:'Kruskal & Wallis (1952)',spearman_1904:'Spearman (1904)',kendall_1938:'Kendall (1938)',cronbach_1951:'Cronbach (1951)',hosmer_2013:'Hosmer et al. (2013)',mackinnon_2008:'MacKinnon (2008)',aiken_1991:'Aiken & West (1991)'};
+var CSHORT={field_2018:'Field (2018)',cohen_1988:'Cohen (1988)',mann_1947:'Mann & Whitney (1947)',kruskal_1952:'Kruskal & Wallis (1952)',spearman_1904:'Spearman (1904)',kendall_1938:'Kendall (1938)',cronbach_1951:'Cronbach (1951)',hosmer_2013:'Hosmer et al. (2013)',mackinnon_2008:'MacKinnon (2008)',aiken_1991:'Aiken & West (1991)',firth_1993:'Firth (1993)',heinze_2002:'Heinze & Schemper (2002)',blondel_2008:'Blondel et al. (2008)',fruchterman_1991:'Fruchterman & Reingold (1991)'};
 var ANALYSIS_REGISTRY={
 frequency:{family:'descriptive',label:'Frequency table',roles:[{id:'variable',label:'Variable',min:1,max:1,levels:['nominal','ordinal','likert']}],showAlpha:false,showHypotheses:false,showEffectSize:false,assumptions:[],output:'Counts, percentages, valid percentages, missing values.',refs:[]},
 descriptives:{family:'descriptive',label:'Descriptives',roles:[{id:'variables',label:'Variables',min:1,max:99,levels:['continuous','scale','ordinal','likert']},{id:'split_by',label:'Split by (optional)',min:0,max:1,levels:['nominal','ordinal']}],showAlpha:false,showHypotheses:false,showEffectSize:false,assumptions:[],output:'N, valid N, missing N, mean, SD, median, IQR, range, skewness, kurtosis, SE, CI.',refs:[]},
@@ -2705,6 +3053,7 @@ regression_linear:{family:'regression',label:'Linear regression',roles:[{id:'dep
 regression_logistic_binary:{family:'regression',label:'Binary logistic',roles:[{id:'dependent',label:'Binary outcome',min:1,max:1,levels:['nominal']},{id:'predictors',label:'Predictors',min:1,max:99,levels:['nominal','ordinal','continuous','scale']}],showAlpha:true,showHypotheses:true,showEffectSize:true,assumptions:['Sparse cells','Separation warning'],output:'Odds ratios, pseudo R-squared, classification table.',refs:['hosmer_2013']},
 regression_logistic_ordinal:{family:'regression',label:'Ordinal logistic',roles:[{id:'dependent',label:'Ordinal outcome',min:1,max:1,levels:['ordinal','likert']},{id:'predictors',label:'Predictors',min:1,max:99,levels:['nominal','ordinal','continuous','scale']}],showAlpha:true,showHypotheses:true,showEffectSize:true,assumptions:['Ordered outcome'],output:'MASS::polr model plan, odds ratios, fit table.',refs:['hosmer_2013']},
 regression_logistic_multinomial:{family:'regression',label:'Multinomial logistic',roles:[{id:'dependent',label:'Nominal outcome',min:1,max:1,levels:['nominal']},{id:'predictors',label:'Predictors',min:1,max:99,levels:['nominal','ordinal','continuous','scale']}],showAlpha:true,showHypotheses:true,showEffectSize:true,assumptions:['Reference category'],output:'nnet::multinom plan, odds ratios, classification table.',refs:['hosmer_2013']},
+firth_logistic:{family:'regression',label:'Firth penalised logistic',roles:[{id:'dependent',label:'Binary outcome',min:1,max:1,levels:['nominal']},{id:'predictors',label:'Predictors',min:1,max:99,levels:['nominal','ordinal','continuous','scale']}],showAlpha:true,showHypotheses:true,showEffectSize:true,assumptions:['Small sample','Separation warning'],output:'Penalised odds ratios with profile-likelihood confidence intervals. Requires the logistf package.',refs:['firth_1993','heinze_2002']},
 mediation:{family:'regression',label:'Mediation',roles:[{id:'predictor',label:'Predictor',min:1,max:1,levels:['continuous','scale','nominal']},{id:'mediator',label:'Mediator',min:1,max:1,levels:['continuous','scale']},{id:'outcome',label:'Outcome',min:1,max:1,levels:['continuous','scale']}],showAlpha:true,showHypotheses:true,showEffectSize:true,assumptions:['Regression assumptions','Bootstrap CI'],output:'Direct, indirect, total effects, bootstrap CI.',refs:['mackinnon_2008']},
 moderation:{family:'regression',label:'Moderation',roles:[{id:'predictor',label:'Predictor',min:1,max:1,levels:['continuous','scale']},{id:'moderator',label:'Moderator',min:1,max:1,levels:['continuous','scale']},{id:'outcome',label:'Outcome',min:1,max:1,levels:['continuous','scale']}],showAlpha:true,showHypotheses:true,showEffectSize:true,assumptions:['Interaction model'],output:'Interaction coefficient and conditional effects.',refs:['aiken_1991']},
 reliability_alpha:{family:'measurement',label:'Reliability alpha',roles:[{id:'items',label:'Scale items',min:2,max:99,levels:['ordinal','likert','continuous']}],showAlpha:false,showHypotheses:false,showEffectSize:false,assumptions:[],output:'Alpha, item-total, alpha if deleted.',refs:['cronbach_1951']},
@@ -2712,9 +3061,28 @@ reliability_omega:{family:'measurement',label:'Reliability omega',roles:[{id:'it
 item_diagnostics:{family:'measurement',label:'Item diagnostics',roles:[{id:'items',label:'Items',min:1,max:99,levels:['ordinal','likert','continuous']}],showAlpha:false,showHypotheses:false,showEffectSize:false,assumptions:[],output:'Item distributions, item-total correlations, and floor or ceiling checks.',refs:['field_2018']},
 efa_readiness:{family:'measurement',label:'EFA readiness',roles:[{id:'items',label:'Items',min:3,max:99,levels:['ordinal','likert','continuous']}],showAlpha:false,showHypotheses:false,showEffectSize:false,assumptions:['KMO','Bartlett test'],output:'KMO, Bartlett, parallel-analysis planning.',refs:['field_2018']},
 efa_solution:{family:'measurement',label:'EFA solution',roles:[{id:'items',label:'Items',min:3,max:99,levels:['ordinal','likert','continuous']}],showAlpha:false,showHypotheses:false,showEffectSize:false,assumptions:['Factor retention','Cross-loadings'],output:'Loadings, communalities, uniqueness, cross-loading flags.',refs:['field_2018']},
-cfa_lavaan_syntax:{family:'model',label:'CFA lavaan syntax',roles:[{id:'model',label:'Saved model',min:0,max:1,levels:['model']}],showAlpha:false,showHypotheses:false,showEffectSize:false,assumptions:['Construct indicators'],output:'lavaan measurement model syntax.',refs:['field_2018']},
-sem_lavaan_syntax:{family:'model',label:'CB-SEM lavaan syntax',roles:[{id:'model',label:'Saved model',min:1,max:1,levels:['model']}],showAlpha:true,showHypotheses:true,showEffectSize:true,assumptions:['Measurement and structural paths'],output:'lavaan measurement, structural, indirect, and total-effect syntax.',refs:['field_2018']},
-seminr_syntax:{family:'model',label:'PLS-SEM seminr syntax',roles:[{id:'model',label:'Saved model',min:1,max:1,levels:['model']}],showAlpha:true,showHypotheses:true,showEffectSize:true,assumptions:['Construct modes and bootstrapping'],output:'seminr measurement, structural, bootstrap, reliability, AVE, and HTMT syntax.',refs:['field_2018']}
+cfa_lavaan_syntax:{family:'model',label:'CFA lavaan syntax',roles:[{id:'model',label:'Saved model',min:0,max:1,levels:['model'],modelTypes:['cfa','cb_sem']}],showAlpha:false,showHypotheses:false,showEffectSize:false,assumptions:['Construct indicators'],output:'lavaan measurement model syntax.',refs:['field_2018']},
+sem_lavaan_syntax:{family:'model',label:'CB-SEM lavaan syntax',roles:[{id:'model',label:'Saved model',min:1,max:1,levels:['model'],modelTypes:['cfa','cb_sem']}],showAlpha:true,showHypotheses:true,showEffectSize:true,assumptions:['Measurement and structural paths'],output:'lavaan measurement, structural, indirect, and total-effect syntax.',refs:['field_2018']},
+seminr_syntax:{family:'model',label:'PLS-SEM seminr syntax',roles:[{id:'model',label:'Saved model',min:1,max:1,levels:['model'],modelTypes:['pls_sem']}],showAlpha:true,showHypotheses:true,showEffectSize:true,assumptions:['Construct modes and bootstrapping'],output:'seminr measurement, structural, bootstrap, reliability, AVE, and HTMT syntax.',refs:['field_2018']},
+topsis:{family:'decision',label:'TOPSIS',roles:[{id:'performance_items',label:'Performance matrix items (one per criterion)',min:1,max:99,levels:['matrix']},{id:'weights_item',label:'Weights item',min:1,max:1,levels:['pairwise_saaty','criteria_weight']}],showAlpha:false,showHypotheses:false,showEffectSize:false,assumptions:['Weights sum to 1 (renormalised if not)','Criteria labelled benefit or cost'],output:'Ranking table (alternative, score, rank) by closeness to the ideal solution.',refs:['hwang_1981']},
+vikor:{family:'decision',label:'VIKOR',roles:[{id:'performance_items',label:'Performance matrix items (one per criterion)',min:1,max:99,levels:['matrix']},{id:'weights_item',label:'Weights item',min:1,max:1,levels:['pairwise_saaty','criteria_weight']}],showAlpha:false,showHypotheses:false,showEffectSize:false,assumptions:['Weights sum to 1 (renormalised if not)','Criteria labelled benefit or cost'],output:'Compromise ranking (S, R, Q) with acceptable-advantage and acceptable-stability checks.',refs:[]},
+moora:{family:'decision',label:'MOORA',roles:[{id:'performance_items',label:'Performance matrix items (one per criterion)',min:1,max:99,levels:['matrix']},{id:'weights_item',label:'Weights item',min:1,max:1,levels:['pairwise_saaty','criteria_weight']}],showAlpha:false,showHypotheses:false,showEffectSize:false,assumptions:['Weights sum to 1 (renormalised if not)','Criteria labelled benefit or cost'],output:'Ranking table (alternative, score, rank) by the ratio system.',refs:[]},
+smart:{family:'decision',label:'SMART',roles:[{id:'performance_items',label:'Performance matrix items (one per criterion)',min:1,max:99,levels:['matrix']},{id:'weights_item',label:'Weights item',min:1,max:1,levels:['pairwise_saaty','criteria_weight']}],showAlpha:false,showHypotheses:false,showEffectSize:false,assumptions:['Weights sum to 1 (renormalised if not)','Criteria labelled benefit or cost'],output:'Ranking table (alternative, score, rank) by normalised weighted value.',refs:[]},
+waspas:{family:'decision',label:'WASPAS',roles:[{id:'performance_items',label:'Performance matrix items (one per criterion)',min:1,max:99,levels:['matrix']},{id:'weights_item',label:'Weights item',min:1,max:1,levels:['pairwise_saaty','criteria_weight']}],showAlpha:false,showHypotheses:false,showEffectSize:false,assumptions:['Weights sum to 1 (renormalised if not)','Criteria labelled benefit or cost'],output:'Ranking table (alternative, score, rank) by the WSM/WPM blend.',refs:[]},
+promethee:{family:'decision',label:'PROMETHEE II',roles:[{id:'performance_items',label:'Performance matrix items (one per criterion)',min:1,max:99,levels:['matrix']},{id:'weights_item',label:'Weights item',min:1,max:1,levels:['pairwise_saaty','criteria_weight']}],showAlpha:false,showHypotheses:false,showEffectSize:false,assumptions:['Weights sum to 1 (renormalised if not)','Criteria labelled benefit or cost'],output:'Ranking table (alternative, score, rank) by net preference flow.',refs:[]},
+electre:{family:'decision',label:'ELECTRE I',roles:[{id:'performance_items',label:'Performance matrix items (one per criterion)',min:1,max:99,levels:['matrix']},{id:'weights_item',label:'Weights item',min:1,max:1,levels:['pairwise_saaty','criteria_weight']}],showAlpha:false,showHypotheses:false,showEffectSize:false,assumptions:['Weights sum to 1 (renormalised if not)','Criteria labelled benefit or cost'],output:'Outranking relation and best-effort ranking (ELECTRE I does not always produce a total order).',refs:[]},
+ahp:{family:'decision',label:'AHP',roles:[{id:'pairwise',label:'Pairwise comparison item',min:1,max:1,levels:['pairwise_saaty']}],showAlpha:false,showHypotheses:false,showEffectSize:false,assumptions:['Reciprocal pairwise matrix','Consistency ratio below 0.10 recommended'],output:'Criterion weights and consistency ratio.',refs:['saaty_1980']},
+anp:{family:'decision',label:'ANP',roles:[{id:'pairwise',label:'Pairwise comparison item',min:1,max:1,levels:['pairwise_saaty']}],showAlpha:false,showHypotheses:false,showEffectSize:false,assumptions:['Reciprocal pairwise matrix','Supermatrix must converge'],output:'Limiting priority weights from the supermatrix.',refs:[]},
+dematel:{family:'decision',label:'DEMATEL',roles:[{id:'pairwise',label:'Influence comparison item',min:1,max:1,levels:['pairwise_influence']}],showAlpha:false,showHypotheses:false,showEffectSize:false,assumptions:['Directed 0-4 influence matrix'],output:'Cause-effect table (prominence, relation, role) and influence map.',refs:[]},
+term_freq:{family:'text',label:'Term frequency',roles:[{id:'item',label:'Text item',min:1,max:1,levels:['text']},{id:'group',label:'Group by (optional)',min:0,max:1,levels:['nominal','ordinal']}],showAlpha:false,showHypotheses:false,showEffectSize:false,showWordcloud:true,assumptions:['At least 10 usable responses'],output:'Top terms by frequency, optionally split by a group variable, and a bar chart or word cloud.',refs:[]},
+co_occurrence:{family:'text',label:'Co-occurrence',roles:[{id:'item',label:'Text item',min:1,max:1,levels:['text']}],showAlpha:false,showHypotheses:false,showEffectSize:false,showTopN:true,assumptions:['At least 10 usable responses','At least 1 co-occurring term pair'],output:'Pairwise within-response co-occurrence counts on the top terms, and a heatmap.',refs:[]},
+ngram_freq:{family:'text',label:'N-gram frequency',roles:[{id:'item',label:'Text item',min:1,max:1,levels:['text']}],showAlpha:false,showHypotheses:false,showEffectSize:false,showTopN:true,assumptions:['At least 10 usable responses'],output:'Top bigrams or trigrams by frequency, and a bar chart.',refs:[]},
+term_context:{family:'text',label:'Keyword in context',roles:[{id:'item',label:'Text item',min:1,max:1,levels:['text']}],showAlpha:false,showHypotheses:false,showEffectSize:false,showTerm:true,assumptions:['At least 10 usable responses'],output:'A keyword-in-context concordance table (before/match/after) for a chosen term.',refs:[]},
+co_occurrence_network:{family:'text',label:'Co-occurrence network',roles:[{id:'item',label:'Text item',min:1,max:1,levels:['text']}],showAlpha:false,showHypotheses:false,showEffectSize:false,showSeed:true,showTopN:true,assumptions:['At least 10 usable responses','At least 5 distinct terms with 1 co-occurrence edge','Requires the optional igraph package'],output:'A Louvain-clustered, force-directed term co-occurrence network (node table plus edge list).',refs:['blondel_2008','fruchterman_1991']},
+tidy_sentiment:{family:'text',label:'Sentiment',roles:[{id:'item',label:'Text item',min:1,max:1,levels:['text']},{id:'group',label:'Group by (optional)',min:0,max:1,levels:['nominal','ordinal']}],showAlpha:false,showHypotheses:false,showEffectSize:false,showWordcloud:true,assumptions:['At least 10 usable responses','Requires the optional tidytext package'],output:'Positive/negative sentiment counts and proportion positive (bing lexicon), optionally split by a group variable, and a diverging bar chart or a positive/negative comparison cloud.',refs:[]},
+quanteda_dfm:{family:'text',label:'Document-feature matrix',roles:[{id:'item',label:'Text item',min:1,max:1,levels:['text']}],showAlpha:false,showHypotheses:false,showEffectSize:false,showTopN:true,assumptions:['At least 10 usable responses','Requires the optional quanteda package'],output:'Document-feature matrix summary: feature count, sparsity, and top features.',refs:[]},
+topic_model_lda:{family:'text',label:'Topic model (LDA)',roles:[{id:'item',label:'Text item',min:1,max:1,levels:['text']}],showAlpha:false,showHypotheses:false,showEffectSize:false,showK:true,showSeed:true,assumptions:['At least 10 usable responses','Enough documents to support k topics','Requires the optional tidytext and topicmodels packages'],output:'Top terms per topic (LDA) as a ranked table, and a faceted bar chart.',refs:[]},
+stm_topics:{family:'text',label:'Topic model (STM)',roles:[{id:'item',label:'Text item',min:1,max:1,levels:['text']}],showAlpha:false,showHypotheses:false,showEffectSize:false,showK:true,showSeed:true,assumptions:['At least 10 usable responses','Enough documents to support k topics','Requires the optional stm and tidytext packages'],output:'Top terms per topic (structural topic model) as a ranked table, and a faceted bar chart.',refs:[]}
 };
 var TCITS={};var TLBLS={};Object.keys(ANALYSIS_REGISTRY).forEach(function(k){TCITS[k]=ANALYSIS_REGISTRY[k].refs||[];TLBLS[k]=ANALYSIS_REGISTRY[k].label;});
 // Likert items are ordinal scores: pairing them with continuous or other
@@ -2760,12 +3128,39 @@ function varLevel(id){
   // multiple_choice, ranking, and matrix have no single response column of
   // their own; their analysable variables are the expanded sub-columns
   // built in getAllVars(). The parent id is kept out of role dropdowns.
-  if(['multiple_choice','ranking','matrix'].includes(i.type))return{level:'expanded',code:'SET',cls:'id',type:i.type};
+  // A matrix item is how the rated performance matrix is collected (one
+  // matrix item per criterion, rows = alternatives), and the 7 ranking
+  // methods read it through performance_items, which declares
+  // levels:['matrix']. Grouped under 'expanded' it matched no role at all,
+  // so that dropdown was empty and the rated-matrix path could not be built
+  // here. No role accepts 'expanded', so splitting matrix out costs nothing.
+  if(i.type==='matrix')return{level:'matrix',code:'MTX',cls:'id',type:i.type};
+  if(['multiple_choice','ranking'].includes(i.type))return{level:'expanded',code:'SET',cls:'id',type:i.type};
+  // Decision-family items are the one case where a role wants the parent id
+  // rather than the expanded sub-columns: sframe_assemble_pairwise() and
+  // sframe_collected_weights() take the item id and read every pair or
+  // criterion column themselves. The level strings match the `levels`
+  // vectors the decision entries in ANALYSIS_REGISTRY declare, so
+  // roleOptions() offers these items for the pairwise and weights_item
+  // roles of all 10 MCDM methods.
+  // The 2 comparison scales get their own levels, because they are not
+  // interchangeable: AHP and ANP read reciprocal Saaty importance, DEMATEL
+  // reads a directed 0-4 influence matrix. Offering either item to the other
+  // method would let the builder produce a plan that returns plausible
+  // numbers from meaningless input. R enforces the same rule in
+  // validate_sframe() and in the runners.
+  if(i.type==='pairwise_comparison')return{level:(i.comparison_scale==='influence'?'pairwise_influence':'pairwise_saaty'),code:'PWC',cls:'ord',type:(i.comparison_scale==='influence'?'influence matrix':'pairwise comparison')};
+  if(i.type==='criteria_weight')return{level:'criteria_weight',code:'WGT',cls:'con',type:'criteria weights'};
   if(['numeric','slider','rating'].includes(i.type))return{level:'continuous',code:'CON',cls:'con',type:i.type};
   if(['text','textarea','date'].includes(i.type))return{level:i.type==='date'?'identifier':'text',code:i.type==='date'?'ID':'TXT',cls:i.type==='date'?'id':'txt',type:i.type};
   return{level:'identifier',code:'ID',cls:'id',type:i.type};
 }
-function roleOptions(role,selected){var useModels=role.levels&&role.levels.includes('model');var opts=useModels?(S.models||[]).map(function(m){return{id:m.id,label:m.id+' ('+(m.type||'model')+')'};}):getAllVars().filter(function(v){return role.levels.includes('any')||role.levels.includes(v.level)||role.levels.includes(v.kind);});var multi=role.max>1;var html='';if(!multi&&!role.min){html+='<option value=""'+(selected.length?'':' selected')+'>(none)</option>';}html+=opts.map(function(v){return'<option value="'+esc(v.id)+'"'+(selected.includes(v.id)?' selected':'')+'>'+esc(v.label)+'</option>';}).join('');return html;}
+// A model role only offers models of an estimation family the generator can
+// actually produce. Without this a CB-SEM model could be wired to the
+// PLS-SEM generator (or the reverse), which emits a runnable script that
+// estimates a different model from the one declared. R refuses the same
+// pairing in sframe_check_model_type().
+function roleOptions(role,selected){var useModels=role.levels&&role.levels.includes('model');var opts=useModels?(S.models||[]).filter(function(m){return !role.modelTypes||role.modelTypes.indexOf(m.type||'')>=0;}).map(function(m){return{id:m.id,label:m.id+' ('+(m.type||'model')+')'};}):getAllVars().filter(function(v){return role.levels.includes('any')||role.levels.includes(v.level)||role.levels.includes(v.kind);});var multi=role.max>1;var html='';if(!multi&&!role.min){html+='<option value=""'+(selected.length?'':' selected')+'>(none)</option>';}html+=opts.map(function(v){return'<option value="'+esc(v.id)+'"'+(selected.includes(v.id)?' selected':'')+'>'+esc(v.label)+'</option>';}).join('');return html;}
 function getAllVars(){
   // Matrix, ranking, and multiple-choice items expand to one variable per
   // sub-item or option, mirroring the response columns read_responses()
@@ -2800,7 +3195,7 @@ function getAllVars(){
   var scales=S.scales.map(function(s){var m=varLevel(s.id);return{id:s.id,label:s.id+' - '+(s.label||'scale score'),level:m.level,kind:'scale',meta:m,scale:s};});
   return items.concat(scales);
 }
-function getVarCat(id){var m=varLevel(id);if(m.level==='likert')return'lik';return['nominal','ordinal'].includes(m.level)?'cat':'cont';}
+function getVarCat(id){var m=varLevel(id);if(m.level==='likert')return'lik';if(m.level==='text')return'text';return['nominal','ordinal'].includes(m.level)?'cat':'cont';}
 function rolesFromLegacy(rq,method){if(rq&&rq.roles)return rq.roles;var v=(rq&&rq.variables)||[];if(!Array.isArray(v))v=[v];if(!method)return{};var r={},defs=(ANALYSIS_REGISTRY[method]||{}).roles||[];defs.forEach(function(role,idx){if(role.max===1)r[role.id]=v[idx]||'';else r[role.id]=v.slice(idx);});return r;}
 function openRQModal(id){
   editRqId=id||null;var rq=id?S.analysis_plan.find(function(r){return r.id===id;}):null;
@@ -2809,9 +3204,18 @@ function openRQModal(id){
   sv('rq-q',rq?rq.research_question||'':'');sv('rq-interp',rq?rq.decision_rule||rq.interpretation||'':'');
   document.getElementById('rq-test').value=method;
   document.getElementById('rq-alpha').value=rq?String((rq.options&&rq.options.alpha)||rq.alpha||0.05):'0.05';
+  document.getElementById('rq-term').value=rq&&rq.options&&rq.options.term?String(rq.options.term):'';
+  document.getElementById('rq-wordcloud').checked=!!(rq&&rq.options&&rq.options.wordcloud);
+  document.getElementById('rq-seed').value=rq&&rq.options&&rq.options.seed!=null?String(rq.options.seed):'';
+  document.getElementById('rq-topn').value=rq&&rq.options&&rq.options.top_n!=null?String(rq.options.top_n):'';
+  document.getElementById('rq-k').value=rq&&rq.options&&rq.options.k!=null?String(rq.options.k):'';
   document.getElementById('rqDelBtn').style.display=id?'inline-flex':'none';
   popRQVars(rolesFromLegacy(rq,method));onTestChg(false);
-  document.getElementById('rqSuggest').style.display='none';
+  // A fresh plan gets the same text-family nudge suggestTest() shows once a
+  // role is picked, but evaluated immediately on open so it doesn't depend
+  // on the user finding a role to select first (see hasTextItems() in
+  // suggestTest()). Editing an existing plan always hides it, unchanged.
+  if(id){document.getElementById('rqSuggest').style.display='none';}else{suggestTest();}
   openModal('m-rq');startRQPlaceholders();
 }
 function popRQVars(roleValues){
@@ -2821,7 +3225,7 @@ function popRQVars(roleValues){
 }
 function renderRoleFields(roleValues){
   var method=document.getElementById('rq-test').value,reg=ANALYSIS_REGISTRY[method]||ANALYSIS_REGISTRY.mann_whitney;
-  document.getElementById('rqRoleFields').innerHTML=(reg.roles||[]).map(function(role){var selected=roleValues[role.id]||[];if(!Array.isArray(selected))selected=selected?[selected]:[];var multi=role.max>1;return'<div class="role-card"><label class="fl" for="role_'+esc(role.id)+'">'+esc(role.label)+(role.min>0?' <span class="fr">*</span>':'')+'</label><select id="role_'+esc(role.id)+'" data-role-id="'+esc(role.id)+'" '+(multi?'multiple size="4"':'')+' onchange="validatePlanRoles()">'+roleOptions(role,selected)+'</select></div>';}).join('');
+  document.getElementById('rqRoleFields').innerHTML=(reg.roles||[]).map(function(role){var selected=roleValues[role.id]||[];if(!Array.isArray(selected))selected=selected?[selected]:[];var multi=role.max>1;return'<div class="role-card"><label class="fl" for="role_'+esc(role.id)+'">'+esc(role.label)+(role.min>0?' <span class="fr">*</span>':'')+'</label><select id="role_'+esc(role.id)+'" data-role-id="'+esc(role.id)+'" '+(multi?'multiple size="4"':'')+' onchange="validatePlanRoles();suggestTest()">'+roleOptions(role,selected)+'</select></div>';}).join('');
   validatePlanRoles();
 }
 function collectRoles(){var roles={};document.querySelectorAll('[data-role-id]').forEach(function(sel){var id=sel.getAttribute('data-role-id');var vals=Array.from(sel.selectedOptions||[]).map(function(o){return o.value;}).filter(Boolean);roles[id]=sel.multiple?vals:(vals[0]||'');});return roles;}
@@ -2859,13 +3263,69 @@ function onTestChg(renderRoles){
   if(renderRoles!==false)renderRoleFields({});
   var t=document.getElementById('rq-test').value,reg=ANALYSIS_REGISTRY[t]||{},cits=reg.refs||[];
   var af=document.getElementById('rq-alpha-field');if(af)af.style.display=reg.showAlpha?'block':'none';
+  var tf=document.getElementById('rq-term-field');if(tf)tf.style.display=reg.showTerm?'block':'none';
+  var wf=document.getElementById('rq-wordcloud-field');if(wf)wf.style.display=reg.showWordcloud?'block':'none';
+  var sf=document.getElementById('rq-seed-field');if(sf)sf.style.display=reg.showSeed?'block':'none';
+  var nf=document.getElementById('rq-topn-field');if(nf)nf.style.display=reg.showTopN?'block':'none';
+  var kf=document.getElementById('rq-k-field');if(kf)kf.style.display=reg.showK?'block':'none';
   document.getElementById('rqCitDiv').innerHTML=cits.length?'<label class="fl">Reporting references</label><div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:4px">'+cits.map(function(k){return'<span class="cc">'+esc(CSHORT[k]||k)+'</span>';}).join('')+'</div>':'';
   validatePlanRoles();
 }
+var TEXT_METHOD_IDS=['term_freq','ngram_freq','term_context','co_occurrence','co_occurrence_network','tidy_sentiment','quanteda_dfm','topic_model_lda','stm_topics'];
+function hasTextItems(){return S.items.some(function(i){return i.type==='text'||i.type==='textarea';});}
 function suggestTest(){
-  var sel=flattenRoles(collectRoles()),box=document.getElementById('rqSuggest'),msg=document.getElementById('rqSuggestMsg');
+  var sel=flattenRoles(collectRoles()),box=document.getElementById('rqSuggest'),msg=document.getElementById('rqSuggestMsg'),curMethod=document.getElementById('rq-test').value;
+  if(sel.length===0){
+    // No role picked yet, so the variables-first suggestion logic below
+    // can never fire for text data: role selects filter their options by
+    // level, and no non-text method declares levels:['text'], so a text
+    // item is not even a selectable option before a text method is
+    // already chosen. Surface the same nudge here instead, driven off
+    // whether the survey has any text/textarea items at all rather than
+    // off a role selection -- this is what actually makes the text
+    // family reachable from a fresh, still-empty modal. Guarded the same
+    // way as the general suggestion below: only on a brand-new plan
+    // still on the modal's placeholder default, so it never overrides a
+    // plan the user (or a saved plan being edited) already chose.
+    if(!editRqId&&curMethod==='mann_whitney'&&hasTextItems()){
+      document.getElementById('rq-test').value='term_freq';onTestChg();
+      msg.textContent='This survey has open-ended text items. '+((ANALYSIS_REGISTRY.term_freq||{}).label)+' is suggested as a starting point; pick a different text method above if you meant another one.';
+      box.style.display='flex';
+      return;
+    }
+    box.style.display='none';return;
+  }
+  var cats=sel.map(getVarCat);
+  // A single selected text/textarea item has no pairwise partner to look
+  // up in TEST_SUGGEST below (every other suggestion path needs >=2
+  // variables), but it is the single most common case for the whole
+  // text-analysis family, so it gets its own path rather than falling
+  // through to "no suggestion" the way every other 1-variable selection
+  // correctly still does. A text item combined with anything else also
+  // bypasses the pairwise table below (its 2-category combinations were
+  // never meant to include 'text'), suggesting term_freq regardless of
+  // what else is selected.
+  if(cats.indexOf('text')>-1){
+    // Never override an ALREADY-chosen text method just because its own
+    // role got filled in: every text method's primary role is a single
+    // text item, and this function is wired to fire on every role
+    // select's onchange, so without this guard picking the item for
+    // term_context (say) would immediately bounce the method back to
+    // term_freq on every edit, making every other text method
+    // unreachable through the role picker.
+    if(TEXT_METHOD_IDS.indexOf(curMethod)>-1){box.style.display='none';return;}
+    document.getElementById('rq-test').value='term_freq';onTestChg();
+    msg.textContent=(ANALYSIS_REGISTRY.term_freq||{}).label+' is suggested from the selected variable type.';box.style.display='flex';
+    return;
+  }
   if(sel.length<2){box.style.display='none';return;}
-  var cats=sel.map(getVarCat),sug=sel.length===2?(TEST_SUGGEST[cats[0]+'+'+cats[1]]||'correlation_pearson'):'regression_linear';
+  // Only auto-apply a suggestion while still on the modal's initial
+  // placeholder method ('mann_whitney', set by openRQModal() for a new
+  // plan): once a user has deliberately picked something else, refiring
+  // this on every role edit would otherwise fight that choice the same
+  // way the text case above would.
+  if(curMethod!=='mann_whitney'){box.style.display='none';return;}
+  var sug=sel.length===2?(TEST_SUGGEST[cats[0]+'+'+cats[1]]||'correlation_pearson'):'regression_linear';
   if(sug==='mann_whitney'){
     var gid=sel[cats[0]==='cat'?0:1],n=groupLevels(gid);
     if(n!==null&&n>2)sug='kruskal_wallis';
@@ -2876,7 +3336,13 @@ function suggestTest(){
 function saveRQ(){
   var q=gv('rq-q').trim();if(!q){toast('Research question text required','err');return;}
   var t=document.getElementById('rq-test').value,reg=ANALYSIS_REGISTRY[t]||{},roles=collectRoles(),vars=flattenRoles(roles);
+  if(reg.showTerm&&!gv('rq-term').trim()){toast('Keyword is required for this method','err');return;}
   var opts={};if(reg.showAlpha)opts.alpha=parseFloat(gv('rq-alpha'))||0.05;
+  if(reg.showTerm)opts.term=gv('rq-term').trim();
+  if(reg.showWordcloud)opts.wordcloud=document.getElementById('rq-wordcloud').checked;
+  if(reg.showSeed&&gv('rq-seed').trim())opts.seed=parseInt(gv('rq-seed'),10);
+  if(reg.showTopN&&gv('rq-topn').trim())opts.top_n=parseInt(gv('rq-topn'),10);
+  if(reg.showK&&gv('rq-k').trim())opts.k=parseInt(gv('rq-k'),10);
   var rq={id:editRqId||uid(),research_question:q,family:reg.family||'',method:t,test:t,roles:roles,variables:vars,options:opts,hypotheses:reg.showHypotheses?{null:'No effect or association is present.',alternative:'An effect or association is present.'}:null,decision_rule:gv('rq-interp').trim(),interpretation:gv('rq-interp').trim(),reporting_references:reg.refs||[],citations:reg.refs||[],status:'valid_plan',requires_data:!['cfa_lavaan_syntax','sem_lavaan_syntax','seminr_syntax'].includes(t),result:null};
   snap();
   if(editRqId){var i=S.analysis_plan.findIndex(function(r){return r.id===editRqId;});if(i>=0)S.analysis_plan[i]=rq;}
@@ -2909,7 +3375,51 @@ function renderPreviewItem(item,cm,col){
   else if(item.type==='rating')inp='<div class="pv-stars">'+Array.from({length:item.rating_max||5},function(){return item.rating_icon==='heart'?'&#10084;':'★';}).join('')+'</div>';
   else if(item.type==='matrix'&&item.matrix_items&&cs)inp='<div style="overflow-x:auto"><table class="pv-matrix"><thead><tr><th></th>'+cs.labels.map(function(l){return'<th>'+esc(l)+'</th>';}).join('')+'</tr></thead><tbody>'+item.matrix_items.map(function(row){return'<tr><td class="rl">'+esc(row)+'</td>'+cs.values.map(function(v){return'<td><input type="radio" name="'+esc(item.id)+'_'+esc(row)+'"></td>';}).join('')+'</tr>';}).join('')+'</tbody></table></div>';
   else if(item.type==='ranking'&&cs)inp='<div class="pv-ranklist">'+cs.labels.map(function(l){return'<div class="pv-rankitem">'+esc(l)+'<span style="margin-left:auto;color:var(--t3)">&#8942;</span></div>';}).join('')+'</div>';
-  return'<div class="pv-item">'+lbl+inp+'</div>';
+  // Decision-family items. The preview mirrors the exported survey's
+  // renderPairwise()/renderCriteriaWeight() layout: one row per pair with a
+  // bipolar 17-point Saaty strip or a unipolar 0-4 influence strip, and
+  // constant-sum point boxes with a running total. Only the first 3 rows are
+  // drawn, with a count of the rest, since 4 criteria already means 6 Saaty
+  // pairs or 12 influence pairs and the preview pane is not the place to
+  // scroll all of them.
+  else if(item.type==='pairwise_comparison'){
+    var crits=item.comparison_items||[];
+    var influence=item.comparison_scale==='influence';
+    var pairs=[];
+    for(var pi=0;pi<crits.length;pi++){
+      for(var pj=0;pj<crits.length;pj++){
+        if(pi===pj)continue;
+        if(!influence&&pj<pi)continue;
+        pairs.push([crits[pi],crits[pj]]);
+      }
+    }
+    var strip=influence?[0,1,2,3,4]:[9,8,7,6,5,4,3,2,1,2,3,4,5,6,7,8,9];
+    var shown=pairs.slice(0,3);
+    inp='<div class="pv-pwc">'+shown.map(function(p,ri){
+      var head=influence?('<span class="pv-pwc-q">How strongly does <b>'+esc(p[0])+'</b> influence <b>'+esc(p[1])+'</b>?</span>')
+                        :('<span class="pv-pwc-side">'+esc(p[0])+'</span><span class="pv-pwc-vs">vs</span><span class="pv-pwc-side">'+esc(p[1])+'</span>');
+      return'<div class="pv-pwc-row"><div class="pv-pwc-head">'+head+'</div><div class="pv-lik-row">'+
+        strip.map(function(v){return'<label class="pv-lik-opt"><input type="radio" name="'+esc(item.id)+'_p'+ri+'"><span class="pv-lik-num">'+v+'</span></label>';}).join('')+
+        '</div></div>';
+    }).join('')+
+      (pairs.length>shown.length?'<div class="pv-pwc-more">'+(pairs.length-shown.length)+' more pair'+(pairs.length-shown.length===1?'':'s')+' in the exported survey, '+pairs.length+' in total</div>':'')+
+      (crits.length<2?'<div class="pv-pwc-more">Add at least 2 items to compare in the inspector.</div>':'')+
+    '</div>';
+  }
+  else if(item.type==='criteria_weight'){
+    var cw=item.comparison_items||[];
+    inp='<div class="pv-cw">'+cw.map(function(c){
+      return'<div class="pv-cw-row"><span class="pv-cw-lbl">'+esc(c)+'</span><input class="pv-inp pv-cw-inp" type="number" min="0" max="100" placeholder="0" aria-label="'+esc(c)+'"></div>';
+    }).join('')+
+      '<div class="pv-cw-tot">Total: <b>0</b> of 100</div>'+
+      (cw.length<2?'<div class="pv-pwc-more">Add at least 2 criteria in the inspector.</div>':'')+
+    '</div>';
+  }
+  // Preview-only cue, never exported: the sample labels are still in place.
+  var sampleNote=(typeof isSampleList==='function'&&isSampleList(item))
+    ?'<div class="pv-sample">Sample labels. Edit "'+(item.type==='matrix'?'Matrix row labels':(item.type==='criteria_weight'?'Criteria':'Items to compare'))+'" in the inspector before collecting data.</div>'
+    :'';
+  return'<div class="pv-item">'+lbl+inp+sampleNote+'</div>';
 }
 function renderPreview(){
   var el=document.getElementById('pvFrame');var col=normHex((S.render&&S.render.theme)||'#2563eb');
@@ -2976,7 +3486,7 @@ function updatePlanInterp(id,val){
   rq.decision_rule=val.trim();rq.interpretation=val.trim();
   setDirty();
 }
-// Report outline tab: a skeleton of the eventual render_report() document —
+// Report outline tab: a skeleton of the eventual render_report() document:
 // study header, quality and descriptives stubs, then one section per plan
 // with an empty results table and a figure placeholder (the table+plot
 // pairing the R report emits), then models and references.
@@ -2991,10 +3501,11 @@ function reportSkeletonHtml(plans){
   plans.forEach(function(rq,i){
     var method=rq.method||rq.test;
     out+='<div class="rs-h3">3.'+(i+1)+' '+esc(rq.research_question||('Research question '+(i+1)))+'</div>';
-    out+='<div class="rs-method">Method: '+esc(TLBLS[method]||method)+(rq.requires_data===false?' (syntax generation only — no result table)':'')+'</div>';
+    out+='<div class="rs-method">Method: '+esc(TLBLS[method]||method)+(rq.requires_data===false?' (syntax generation only, no result table)':'')+'</div>';
     if(rq.requires_data!==false){
+      out+='<div class="rs-tbl-cap">Table 3.'+(i+1)+': '+esc(TLBLS[method]||method)+' results</div>';
       out+='<table class="rs-tbl"><thead><tr><th>Statistic</th><th>Value</th><th>Interpretation</th></tr></thead><tbody>'+phRow+phRow+'</tbody></table>';
-      out+='<div class="rs-fig"><span class="rs-fig-ic">&#128200;</span><span class="rs-fig-cap">Figure 3.'+(i+1)+' — '+esc(TLBLS[method]||method)+' chart, paired with the table above</span></div>';
+      out+='<div class="rs-fig"><span class="rs-fig-ic">&#128200;</span><span class="rs-fig-cap">Figure 3.'+(i+1)+': '+esc(TLBLS[method]||method)+' chart, paired with the table above</span></div>';
     }
     // The editable field sits below the table and chart, matching where
     // render_report() prints the paired "Planned decision rule" and
@@ -3031,7 +3542,7 @@ function renderAnalyse(){
   var cardHtml=function(plans){return plans.map(function(rq,i){var method=rq.method||rq.test,reg=ANALYSIS_REGISTRY[method]||{},alpha=(rq.options&&rq.options.alpha)||rq.alpha,vars=asArr(rq.variables);if(!vars.length)vars=flattenRoles(rq.roles||{});var refs=asArr(rq.reporting_references);if(!refs.length)refs=asArr(rq.citations);var drg=draggable?' draggable="true" ondragstart="pStart(event,\''+rq.id+'\')" ondragover="pOver(event,\''+rq.id+'\')" ondrop="pDrop(event,\''+rq.id+'\')" ondragend="pEnd(event)" ondragleave="this.classList.remove(\'drag-t\',\'drag-b\')"':'';return'<div class="rq-card'+(draggable?' rq-drag':'')+'"'+drg+' onclick="openRQModal(\''+rq.id+'\')"><div style="display:flex;align-items:flex-start;gap:8px"><span class="rq-num"'+(draggable?' title="Drag to reorder"':'')+'>'+(i+1)+'</span><div style="flex:1"><div class="rq-q">'+esc(rq.research_question)+'</div><div class="rq-meta"><span class="tc">'+esc(TLBLS[method]||method)+'</span>'+(reg.showAlpha?'<span class="ac">significance='+esc(alpha||0.05)+'</span>':'')+(rq.status?'<span class="ac">'+esc(rq.status)+'</span>':'')+refs.map(function(k){return'<span class="cc">'+esc(CSHORT[k]||k)+'</span>';}).join('')+'</div>'+(vars.length?'<div style="margin-top:6px;display:flex;gap:3px;flex-wrap:wrap">'+vars.map(function(v){return'<span class="vchip">'+esc(v)+'</span>';}).join('')+'</div>':'')+(rq.decision_rule||rq.interpretation?'<div class="rq-interp">'+esc(rq.decision_rule||rq.interpretation)+'</div>':'<div class="rq-no-int">Decision rule pending.</div>')+'</div></div></div>';}).join('');};
   if(anTab==='run'){
     rb.innerHTML=cardHtml(runPlans);
-    if(syntaxOnly.length)rb.innerHTML+='<div style="padding:8px 12px;font-size:11px;color:var(--t3);border-top:1px solid var(--bdr);margin-top:4px">'+syntaxOnly.length+' syntax-only method(s) excluded — these generate lavaan or seminr strings without requiring response data.</div>';
+    if(syntaxOnly.length)rb.innerHTML+='<div style="padding:8px 12px;font-size:11px;color:var(--t3);border-top:1px solid var(--bdr);margin-top:4px">'+syntaxOnly.length+' syntax-only method(s) excluded. These generate lavaan or seminr strings without requiring response data.</div>';
   }else if(anTab==='report'){
     rb.innerHTML=reportSkeletonHtml(allPlans);
   }else{

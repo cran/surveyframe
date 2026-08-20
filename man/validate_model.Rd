@@ -13,13 +13,25 @@ validate_model(model, instrument = NULL, strict = TRUE)
 must match instrument item IDs.}
 
 \item{strict}{Logical. When \code{TRUE}, invalid models raise an error. When
-\code{FALSE}, a list with \code{valid} and \code{problems} is returned.}
+\code{FALSE}, problems are reported in the returned diagnostic without
+stopping.}
 }
 \value{
-The model invisibly when valid and \code{strict = TRUE}, otherwise a
-validation result list.
+An \link{sframe_validation} object. The model is carried inside it and
+can be recovered with \code{\link[=sf_object]{sf_object()}}.
 }
 \description{
 Checks model IDs, construct IDs, indicators, structural path endpoints,
 duplicate paths, indirect paths, and engine/type compatibility.
+}
+\section{Changed in 0.4.0}{
+
+Earlier versions returned the model invisibly when \code{strict = TRUE} and a
+bare unclassed list when \code{strict = FALSE}. Both paths now return an
+\link{sframe_validation} object, visibly, so the diagnostic is readable at the
+console. Code that read \verb{$valid} and \verb{$problems} keeps working.
+}
+
+\seealso{
+\link{sframe_validation}, \code{\link[=sf_problems]{sf_problems()}}, \code{\link[=sf_is_valid]{sf_is_valid()}}
 }

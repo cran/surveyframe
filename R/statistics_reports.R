@@ -99,8 +99,34 @@ sframe_analysis_roles <- function(block) {
     regression_logistic_binary = list(predictors = utils::head(vars, -1), dependent = utils::tail(vars, 1)),
     regression_logistic_ordinal = list(predictors = utils::head(vars, -1), dependent = utils::tail(vars, 1)),
     regression_logistic_multinomial = list(predictors = utils::head(vars, -1), dependent = utils::tail(vars, 1)),
+    firth_logistic = list(predictors = utils::head(vars, -1), dependent = utils::tail(vars, 1)),
     moderation = list(predictor = vars[1], moderator = vars[2], outcome = vars[3]),
     mediation = list(predictor = vars[1], mediator = vars[2], outcome = vars[3]),
+    # Decision family. A block declared with plain `variables` names the
+    # matrix items that carry the rated performance matrix; weights then have
+    # to come from options, since nothing in a bare variable list says which
+    # item holds them.
+    topsis = list(performance_items = vars),
+    vikor = list(performance_items = vars),
+    moora = list(performance_items = vars),
+    smart = list(performance_items = vars),
+    waspas = list(performance_items = vars),
+    promethee = list(performance_items = vars),
+    electre = list(performance_items = vars),
+    ahp = list(pairwise = vars[1]),
+    anp = list(pairwise = vars[1]),
+    dematel = list(pairwise = vars[1]),
+    # Text family (todo_0.5.md). `group` (section 1a) is optional so a bare
+    # 2-element variable list still resolves without one.
+    term_freq = list(item = vars[1], group = vars[2]),
+    co_occurrence = list(item = vars[1]),
+    topic_model_lda = list(item = vars[1]),
+    stm_topics = list(item = vars[1]),
+    ngram_freq = list(item = vars[1]),
+    term_context = list(item = vars[1]),
+    co_occurrence_network = list(item = vars[1]),
+    tidy_sentiment = list(item = vars[1], group = vars[2]),
+    quanteda_dfm = list(item = vars[1]),
     list(variables = vars)
   )
 }
@@ -116,7 +142,7 @@ sframe_inferential_methods <- c(
   "friedman", "correlation_pearson", "correlation_spearman",
   "correlation_kendall", "partial_correlation", "regression_linear",
   "regression_logistic_binary", "regression_logistic_ordinal",
-  "regression_logistic_multinomial", "moderation", "mediation",
+  "regression_logistic_multinomial", "firth_logistic", "moderation", "mediation",
   "sem_lavaan_syntax"
 )
 
@@ -353,7 +379,7 @@ missing_data_report <- function(data, instrument = NULL, variables = NULL) {
 #' @param variables Character vector of numeric variables to screen. When
 #'   `NULL`, all numeric columns are used.
 #' @param method Outlier rule. `"zscore"` flags absolute z scores above
-#'   `z_cut`; `"iqr"` flags values outside Tukey fences; `"mahalanobis"`
+#'   `z_cut`, `"iqr"` flags values outside Tukey fences, and `"mahalanobis"`
 #'   flags rows above the chi-square cutoff for the selected variables.
 #' @param z_cut Numeric cutoff for `"zscore"`. Defaults to `3`.
 #' @param iqr_multiplier Numeric multiplier for `"iqr"` fences. Defaults to
@@ -473,6 +499,33 @@ outlier_report <- function(
     ),
     class = "sframe_outlier_report"
   )
+}
+
+#' Small-sample advisory text
+#'
+#' Builds a short advisory note when a sample falls below the conventional
+#' n = 30 threshold at which asymptotic approximations become unreliable.
+#'
+#' @param n Integer. The sample size.
+#' @param test Character. A short description of the analysis the advisory
+#'   applies to, inserted into the message.
+#'
+#' @return A single character string, or NULL when `n` is 30 or more.
+#' @keywords internal
+sframe_small_sample_advisory <- function(n, test) {
+  if (length(n) != 1 || is.na(n)) return(NULL)
+  if (n < 30) {
+    sprintf(
+      paste0(
+        "Small sample detected (n = %d). For %s, consider non-parametric ",
+        "alternatives. Asymptotic p-values may be unreliable. ",
+        "Bootstrap or exact confidence intervals are provided where available."
+      ),
+      as.integer(n), test
+    )
+  } else {
+    NULL
+  }
 }
 
 #' Assumption-check report
@@ -606,6 +659,15 @@ assumption_report <- function(
     )
   }
 
+  advisory_n <- if (!is.null(regression)) {
+    regression$n
+  } else if (nrow(normality) > 0) {
+    max(normality$n, na.rm = TRUE)
+  } else {
+    nrow(data)
+  }
+  advisory <- sframe_small_sample_advisory(advisory_n, "these assumption checks")
+
   structure(
     list(
       method = "assumptions",
@@ -613,11 +675,34 @@ assumption_report <- function(
       homogeneity = homogeneity,
       regression = regression,
       expected_counts = expected_counts,
+      advisory = advisory,
       apa = "Assumption checks were computed.",
       prompt = "Report assumption checks before interpreting inferential models, especially sparse cells, non-normal residuals, and high VIF values."
     ),
     class = "sframe_assumption_report"
   )
+}
+
+#' @exportS3Method print sframe_assumption_report
+print.sframe_assumption_report <- function(x, ...) {
+  cat("Assumption Report\n")
+  if (nrow(x$normality) > 0) {
+    cat("\nNormality:\n")
+    print(x$normality, row.names = FALSE)
+  }
+  if (nrow(x$homogeneity) > 0) {
+    cat("\nHomogeneity of variance:\n")
+    print(x$homogeneity, row.names = FALSE)
+  }
+  if (!is.null(x$regression)) {
+    cat(sprintf("\nRegression residuals: n = %d, Shapiro-Wilk p = %.3f\n",
+                x$regression$n, x$regression$residual_shapiro_p))
+  }
+  if (isTRUE(x$expected_counts$sparse_warning)) {
+    cat("\nWarning: sparse expected cell counts detected.\n")
+  }
+  if (!is.null(x$advisory)) cat(sprintf("\nNote: %s\n", x$advisory))
+  invisible(x)
 }
 
 #' Post-hoc and pairwise comparison report
@@ -782,8 +867,17 @@ sframe_run_fisher <- function(data, roles, options = list()) {
   err <- sframe_require_columns(data, vars[1:2], "Fisher's exact test")
   if (!is.null(err)) return(list(test = "fisher_exact", error = err))
   tbl <- table(data[[vars[1]]], data[[vars[2]]])
-  ft <- tryCatch(stats::fisher.test(tbl, simulate.p.value = isTRUE(options$simulate_p_value)),
-                 error = function(e) NULL)
+  # conf.int = TRUE errors when combined with simulate.p.value = TRUE in base
+  # R, so the exact odds-ratio CI is only requested when simulation is off.
+  # ft$conf.int is NULL for tables larger than 2x2 regardless of want_ci,
+  # since Fisher's exact CI is only defined for a 2x2 table; this degrades
+  # gracefully to odds_ratio_conf_int = NULL with no extra handling needed.
+  want_ci <- !isTRUE(options$simulate_p_value)
+  ft <- tryCatch(
+    stats::fisher.test(tbl, simulate.p.value = isTRUE(options$simulate_p_value),
+                        conf.int = want_ci),
+    error = function(e) NULL
+  )
   if (is.null(ft)) return(list(test = "fisher_exact", error = "Fisher's exact test failed."))
   effect <- if (all(dim(tbl) == c(2, 2))) sframe_phi(tbl) else sframe_cramers_v(tbl)
   effect_name <- if (all(dim(tbl) == c(2, 2))) "phi" else "Cramer's V"
@@ -794,6 +888,7 @@ sframe_run_fisher <- function(data, roles, options = list()) {
     table = as.data.frame.matrix(tbl),
     p = ft$p.value,
     odds_ratio = unname(ft$estimate %||% NA_real_),
+    odds_ratio_conf_int = if (want_ci) as.numeric(ft$conf.int) else NULL,
     effect = effect,
     effect_name = effect_name,
     apa = sprintf("Fisher's exact test, p %s, %s = %.2f",
@@ -869,7 +964,12 @@ sframe_run_repeated_anova <- function(data, roles) {
   err <- sframe_require_columns(data, vars, "Repeated-measures ANOVA")
   if (!is.null(err)) return(list(test = "repeated_anova", error = err))
   mat <- as.data.frame(lapply(data[, vars, drop = FALSE], sframe_num))
-  mat$.subject <- seq_len(nrow(mat))
+  # .subject must be a factor. Left as an integer, aov() treats it as a
+  # continuous covariate, the Error(.subject / condition) stratification
+  # collapses to a single residual df, and the condition effect is tested
+  # against the wrong error term (F came out around 1.45 where
+  # jmv::anovaRM() gives 86.93 on the same data).
+  mat$.subject <- factor(seq_len(nrow(mat)))
   long <- stats::reshape(
     mat,
     varying = vars,
@@ -883,15 +983,24 @@ sframe_run_repeated_anova <- function(data, roles) {
                   error = function(e) NULL)
   if (is.null(fit)) return(list(test = "repeated_anova", error = "Repeated-measures ANOVA failed."))
   fit_summary <- utils::capture.output(summary(fit))
-  # The within-subject F test for `condition` sits in the "Error: Within"
-  # stratum of an Error()-stratified aov fit; the between-subject stratum
-  # above it has no F/p (a single term, .subject, with no residual to test
-  # against). Pull the numbers out programmatically instead of asking the
-  # reader to parse fit_summary's printed text.
+  # With .subject a factor, the within-subject F for `condition` sits in the
+  # "Error: .subject:condition" stratum and there is no "Error: Within"
+  # stratum at all, so looking the effect up by a fixed stratum name silently
+  # finds nothing. Search the strata for the `condition` row that actually
+  # carries an F instead, which holds whichever way aov() splits the design.
   smry <- summary(fit)
-  within <- smry[["Error: Within"]][[1]]
-  cond_row <- which(trimws(rownames(within)) == "condition")
-  stat_row <- if (length(cond_row)) within[cond_row, , drop = FALSE] else NULL
+  stat_row <- NULL
+  within   <- NULL
+  for (stratum in smry) {
+    tab <- stratum[[1]]
+    if (is.null(tab) || !"F value" %in% colnames(tab)) next
+    cond_row <- which(trimws(rownames(tab)) == "condition")
+    if (length(cond_row) && !is.na(tab[cond_row, "F value"])) {
+      within   <- tab
+      stat_row <- tab[cond_row, , drop = FALSE]
+      break
+    }
+  }
   if (is.null(stat_row)) {
     return(list(
       test = "repeated_anova", vars = vars, n = length(unique(long$.subject)),
@@ -1139,6 +1248,91 @@ sframe_run_ordinal_logistic <- function(data, roles, options = list()) {
   )
 }
 
+# Firth-penalised binary logistic regression. Penalised maximum likelihood
+# removes the small-sample bias of ordinary logistic regression and returns
+# finite estimates under complete or quasi-complete separation, both of which
+# are common in the small samples surveyframe targets from v0.4 onwards.
+sframe_run_firth_logistic <- function(data, roles, options = list()) {
+  outcome <- sframe_role_values(roles, c("dependent", "outcome"))[1]
+  predictors <- sframe_role_values(roles, c("predictors", "covariates"))
+  vars <- c(outcome, predictors)
+  err <- sframe_require_columns(data, vars, "Firth logistic regression")
+  if (!is.null(err)) return(list(test = "firth_logistic", error = err))
+  if (length(predictors) == 0) {
+    return(list(test = "firth_logistic",
+                error = "Firth logistic regression requires at least one predictor."))
+  }
+  if (!requireNamespace("logistf", quietly = TRUE)) {
+    return(list(
+      test = "firth_logistic",
+      error = "Package 'logistf' needed. Install with: install.packages('logistf')"
+    ))
+  }
+
+  df <- data[, vars, drop = FALSE]
+  outcome_fac <- droplevels(as.factor(df[[outcome]]))
+  if (nlevels(outcome_fac) != 2L) {
+    return(list(test = "firth_logistic",
+                error = paste0("'", outcome,
+                               "' must have exactly two non-missing levels.")))
+  }
+  df[[outcome]] <- as.integer(outcome_fac) - 1L
+  for (p in predictors) df[[p]] <- sframe_num(df[[p]])
+  df <- df[stats::complete.cases(df), , drop = FALSE]
+  if (nrow(df) < 3) {
+    return(list(test = "firth_logistic",
+                error = "Fewer than 3 complete observations available."))
+  }
+
+  conf_level <- options$conf.level %||% 0.95
+  form <- stats::as.formula(
+    paste(outcome, "~", paste(predictors, collapse = " + "))
+  )
+  fit <- tryCatch(
+    logistf::logistf(form, data = df, alpha = 1 - conf_level),
+    error = function(e) NULL
+  )
+  if (is.null(fit)) {
+    return(list(test = "firth_logistic", error = "Firth regression failed."))
+  }
+
+  est <- as.numeric(fit$coefficients)
+  terms <- names(fit$coefficients)
+  coefficients <- data.frame(
+    Estimate = est,
+    ci_low = as.numeric(fit$ci.lower),
+    ci_high = as.numeric(fit$ci.upper),
+    p = as.numeric(fit$prob),
+    odds_ratio = exp(est),
+    or_ci_low = exp(as.numeric(fit$ci.lower)),
+    or_ci_high = exp(as.numeric(fit$ci.upper)),
+    row.names = terms,
+    stringsAsFactors = FALSE
+  )
+  # logistf returns the log-likelihood of the full and the null model in
+  # $loglik. Take the absolute difference so the statistic is unaffected by
+  # the order the two elements are stored in.
+  loglik <- as.numeric(fit$loglik)
+  lr <- if (length(loglik) >= 2) abs(loglik[2] - loglik[1]) else NA_real_
+
+  list(
+    test = "firth_logistic",
+    vars = vars,
+    n = nrow(df),
+    conf_level = conf_level,
+    coefficients = coefficients,
+    conf_int = cbind(lower = as.numeric(fit$ci.lower),
+                     upper = as.numeric(fit$ci.upper)),
+    p_values = stats::setNames(as.numeric(fit$prob), terms),
+    likelihood_ratio = lr,
+    apa = sprintf(
+      "Firth logistic regression (n = %d), likelihood ratio = %.2f",
+      nrow(df), lr
+    ),
+    prompt = "Report penalised odds ratios with their profile-likelihood confidence intervals, and state that Firth penalisation was used because of the small sample or separation."
+  )
+}
+
 sframe_run_multinomial_logistic <- function(data, roles, options = list()) {
   outcome <- sframe_role_values(roles, c("dependent", "outcome"))[1]
   predictors <- sframe_role_values(roles, c("predictors", "covariates"))
@@ -1287,7 +1481,7 @@ sframe_run_mediation <- function(data, roles, options = list()) {
 #'   correlations. Constructs with a single item have no monotrait
 #'   correlations, so their HTMT entries are `NA`. Without this argument,
 #'   `htmt` falls back to the absolute inter-construct correlation matrix
-#'   from `construct_scores` (the pre-0.3.4 behaviour); the `htmt_method`
+#'   from `construct_scores` (the pre-0.3.4 behaviour). The `htmt_method`
 #'   element records which was computed.
 #'
 #' @return An object of class `sframe_validity_report`.
@@ -1493,6 +1687,10 @@ sample_size_plan <- function(
     sem = "SEM sample-size planning is design-dependent; use at least 200 cases or 10-20 cases per free parameter as a preliminary warning only.",
     character(0)
   )
+  advisory <- sframe_small_sample_advisory(
+    estimate,
+    sprintf("a planned %s analysis", gsub("_", " ", type, fixed = TRUE))
+  )
   structure(
     list(
       type = type,
@@ -1500,8 +1698,21 @@ sample_size_plan <- function(
       alpha = alpha,
       power = power,
       warnings = warnings,
+      advisory = advisory,
       prompt = "Document assumptions, expected effect size, attrition allowance, and the final sample-size decision."
     ),
     class = "sframe_sample_size_plan"
   )
+}
+
+#' @exportS3Method print sframe_sample_size_plan
+print.sframe_sample_size_plan <- function(x, ...) {
+  cat("Sample-Size Plan\n")
+  cat(sprintf("  Target:      %s\n", x$type))
+  cat(sprintf("  Estimated n: %s\n",
+              if (is.na(x$estimated_n)) "not available" else format(x$estimated_n)))
+  cat(sprintf("  Alpha:       %.3f   Power: %.2f\n", x$alpha, x$power))
+  for (w in x$warnings) cat(sprintf("\nWarning: %s\n", w))
+  if (!is.null(x$advisory)) cat(sprintf("\nNote: %s\n", x$advisory))
+  invisible(x)
 }

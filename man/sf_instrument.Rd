@@ -92,7 +92,7 @@ instr <- sf_instrument(
   analysis_plan = plan
 )
 print(instr)
-length(instr$analysis_plan)
+length(sf_plan(instr))
 }
 \seealso{
 \code{\link[=sf_item]{sf_item()}}, \code{\link[=sf_choices]{sf_choices()}}, \code{\link[=sf_scale]{sf_scale()}}, \code{\link[=sf_branch]{sf_branch()}},

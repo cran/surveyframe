@@ -116,6 +116,7 @@ test_that("render_report format = 'pdf' is guarded and additive", {
 })
 
 test_that("the HTML fallback carries the brand variables, print styles, and table semantics", {
+  skip_on_cran()
   demo <- sframe_demo_data()
   old <- options(surveyframe.use_quarto = FALSE)
   on.exit(options(old), add = TRUE)
@@ -133,6 +134,7 @@ test_that("the HTML fallback carries the brand variables, print styles, and tabl
 })
 
 test_that("the codebook carries the analysis plan and model summaries", {
+  skip_on_cran()
   demo <- sframe_demo_data()
   cb <- codebook_report(demo$instrument)
   expect_named(cb$plan_table,

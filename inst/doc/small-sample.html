@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+
+<html lang="en-GB" xml:lang="en-GB">
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+
+
+<title>Small-sample inference</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+<style type="text/css">
+code {
+white-space: pre;
+}
+.sourceCode {
+overflow: visible;
+}
+</style>
+<style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Small-sample inference</h1>
+
+
+<div id="TOC">
+<ul>
+<li><a href="#when-is-a-sample-small" id="toc-when-is-a-sample-small">When is a sample “small”?</a></li>
+<li><a href="#planning-a-small-sample-study" id="toc-planning-a-small-sample-study">Planning a small-sample
+study</a></li>
+<li><a href="#reading-the-advisory" id="toc-reading-the-advisory">Reading the advisory</a></li>
+<li><a href="#mann-whitney-with-the-hodges-lehmann-estimate" id="toc-mann-whitney-with-the-hodges-lehmann-estimate">Mann-Whitney with
+the Hodges-Lehmann estimate</a></li>
+<li><a href="#paired-wilcoxon-with-the-pseudomedian-ci" id="toc-paired-wilcoxon-with-the-pseudomedian-ci">Paired Wilcoxon with
+the pseudomedian CI</a></li>
+<li><a href="#fishers-exact-test-with-the-exact-odds-ratio-ci" id="toc-fishers-exact-test-with-the-exact-odds-ratio-ci">Fisher’s exact
+test with the exact odds-ratio CI</a></li>
+<li><a href="#bootstrap-confidence-interval-on-a-median" id="toc-bootstrap-confidence-interval-on-a-median">Bootstrap confidence
+interval on a median</a></li>
+<li><a href="#firth-logistic-regression-for-a-rare-or-small-binary-outcome" id="toc-firth-logistic-regression-for-a-rare-or-small-binary-outcome">Firth
+logistic regression for a rare or small binary outcome</a></li>
+<li><a href="#cohens-d-with-a-bootstrap-interval" id="toc-cohens-d-with-a-bootstrap-interval">Cohen’s d with a bootstrap
+interval</a></li>
+<li><a href="#citation" id="toc-citation">Citation</a></li>
+</ul>
+</div>
+
+<style>
+body { color: #1a1a2e; }
+h1, h2, h3 { color: #1a1a2e; }
+a { color: #0e7c7a; }
+table { border-collapse: collapse; margin: 1em 0; }
+table caption { caption-side: top; font-style: italic; color: #444; padding-bottom: .3em; }
+th { border-top: 2px solid #1a1a2e; border-bottom: 1px solid #1a1a2e; padding: 6px 12px; }
+td { padding: 5px 12px; border: none; }
+tbody tr:last-child td { border-bottom: 2px solid #1a1a2e; }
+
+code span.at { color: #576419; }
+code span.dv, code span.fl, code span.bn { color: #276245; }
+code span.co { color: #396a80; }
+pre, pre code { white-space: pre-wrap; word-break: break-word; }
+div.sourceCode { overflow: visible; }
+pre.sourceCode a:empty { display: none; }
+#TOC a { display: inline-block; min-height: 24px; }
+</style>
+<div id="when-is-a-sample-small" class="section level2">
+<h2>When is a sample “small”?</h2>
+<p>Survey research often works with far fewer than the 30-or-more cases
+that justify asymptotic approximations: pilot studies, specialised
+populations, classroom studies, and early-stage organisational
+diagnostics routinely land at n = 10 to 25. Below that conventional
+threshold, p-values from tests that assume large-sample normality can be
+unreliable, and point estimates carry wide, often asymmetric uncertainty
+that a single p-value does not convey.</p>
+<p>surveyframe’s small-sample tools do three things: flag when a sample
+has crossed below the n = 30 threshold, prefer exact or
+distribution-free alternatives to the asymptotic default where one
+exists, and pair every affected estimate with a confidence interval
+rather than a point value alone. Together they surface the cases where
+design judgement matters most, leaving that judgement itself to the
+researcher.</p>
+</div>
+<div id="planning-a-small-sample-study" class="section level2">
+<h2>Planning a small-sample study</h2>
+<p><code>sample_size_plan()</code> estimates a required sample size for
+a design and attaches the same small-sample advisory used elsewhere in
+the package when the estimate itself falls below 30.</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">sample_size_plan</span>(<span class="at">type =</span> <span class="st">&quot;t_test&quot;</span>, <span class="at">groups =</span> <span class="dv">2</span>)</span>
+<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a><span class="co">#&gt; Sample-Size Plan</span></span>
+<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a><span class="co">#&gt;   Target:      t_test</span></span>
+<span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a><span class="co">#&gt;   Estimated n: 128</span></span>
+<span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a><span class="co">#&gt;   Alpha:       0.050   Power: 0.80</span></span></code></pre></div>
+<p>A worked instrument in this vignette targets n = 20 complete
+responses, well below that planning estimate. The instrument below has a
+two-level grouping question, a numeric outcome, and a binary outcome for
+the logistic example later in this vignette.</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a>group_cs     <span class="ot">&lt;-</span> <span class="fu">sf_choices</span>(<span class="at">id =</span> <span class="st">&quot;grp_cs&quot;</span>, <span class="at">values =</span> <span class="fu">c</span>(<span class="st">&quot;control&quot;</span>, <span class="st">&quot;treatment&quot;</span>),</span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a>                            <span class="at">labels =</span> <span class="fu">c</span>(<span class="st">&quot;Control&quot;</span>, <span class="st">&quot;Treatment&quot;</span>))</span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a>converted_cs <span class="ot">&lt;-</span> <span class="fu">sf_choices</span>(<span class="at">id =</span> <span class="st">&quot;conv_cs&quot;</span>, <span class="at">values =</span> <span class="fu">c</span>(<span class="st">&quot;no&quot;</span>, <span class="st">&quot;yes&quot;</span>),</span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a>                            <span class="at">labels =</span> <span class="fu">c</span>(<span class="st">&quot;No&quot;</span>, <span class="st">&quot;Yes&quot;</span>))</span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a>items <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a>  <span class="fu">sf_item</span>(<span class="at">id =</span> <span class="st">&quot;group&quot;</span>, <span class="at">label =</span> <span class="st">&quot;Study arm&quot;</span>, <span class="at">type =</span> <span class="st">&quot;single_choice&quot;</span>, <span class="at">choice_set =</span> <span class="st">&quot;grp_cs&quot;</span>),</span>
+<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a>  <span class="fu">sf_item</span>(<span class="at">id =</span> <span class="st">&quot;outcome&quot;</span>, <span class="at">label =</span> <span class="st">&quot;Outcome score&quot;</span>, <span class="at">type =</span> <span class="st">&quot;numeric&quot;</span>),</span>
+<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a>  <span class="fu">sf_item</span>(<span class="at">id =</span> <span class="st">&quot;converted&quot;</span>, <span class="at">label =</span> <span class="st">&quot;Converted (yes/no)&quot;</span>, <span class="at">type =</span> <span class="st">&quot;single_choice&quot;</span>,</span>
+<span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a>          <span class="at">choice_set =</span> <span class="st">&quot;conv_cs&quot;</span>)</span>
+<span id="cb2-11"><a href="#cb2-11" tabindex="-1"></a>)</span>
+<span id="cb2-12"><a href="#cb2-12" tabindex="-1"></a></span>
+<span id="cb2-13"><a href="#cb2-13" tabindex="-1"></a>study <span class="ot">&lt;-</span> <span class="fu">sf_instrument</span>(</span>
+<span id="cb2-14"><a href="#cb2-14" tabindex="-1"></a>  <span class="at">title      =</span> <span class="st">&quot;Small-sample pilot&quot;</span>,</span>
+<span id="cb2-15"><a href="#cb2-15" tabindex="-1"></a>  <span class="at">version    =</span> <span class="st">&quot;0.1.0&quot;</span>,</span>
+<span id="cb2-16"><a href="#cb2-16" tabindex="-1"></a>  <span class="at">authors    =</span> <span class="st">&quot;surveyframe&quot;</span>,</span>
+<span id="cb2-17"><a href="#cb2-17" tabindex="-1"></a>  <span class="at">components =</span> <span class="fu">c</span>(<span class="fu">list</span>(group_cs, converted_cs), items)</span>
+<span id="cb2-18"><a href="#cb2-18" tabindex="-1"></a>)</span>
+<span id="cb2-19"><a href="#cb2-19" tabindex="-1"></a></span>
+<span id="cb2-20"><a href="#cb2-20" tabindex="-1"></a>study</span>
+<span id="cb2-21"><a href="#cb2-21" tabindex="-1"></a><span class="co">#&gt; &lt;sframe&gt;</span></span>
+<span id="cb2-22"><a href="#cb2-22" tabindex="-1"></a><span class="co">#&gt;   Title:      Small-sample pilot</span></span>
+<span id="cb2-23"><a href="#cb2-23" tabindex="-1"></a><span class="co">#&gt;   Version:    0.1.0</span></span>
+<span id="cb2-24"><a href="#cb2-24" tabindex="-1"></a><span class="co">#&gt;   Items:      3</span></span>
+<span id="cb2-25"><a href="#cb2-25" tabindex="-1"></a><span class="co">#&gt;   Scales:     0</span></span>
+<span id="cb2-26"><a href="#cb2-26" tabindex="-1"></a><span class="co">#&gt;   Analysis:   0 block(s)</span></span>
+<span id="cb2-27"><a href="#cb2-27" tabindex="-1"></a><span class="co">#&gt;   Status:     not validated</span></span></code></pre></div>
+</div>
+<div id="reading-the-advisory" class="section level2">
+<h2>Reading the advisory</h2>
+<p><code>assumption_report()</code> and <code>sample_size_plan()</code>
+both attach an <code>advisory</code> element once a relevant n drops
+below 30. It prints automatically and is also available as a field for
+programmatic checks.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a>n20 <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">score =</span> <span class="fu">rnorm</span>(<span class="dv">20</span>, <span class="at">mean =</span> <span class="dv">50</span>, <span class="at">sd =</span> <span class="dv">10</span>))</span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a>n50 <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">score =</span> <span class="fu">rnorm</span>(<span class="dv">50</span>, <span class="at">mean =</span> <span class="dv">50</span>, <span class="at">sd =</span> <span class="dv">10</span>))</span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a>ar_small <span class="ot">&lt;-</span> <span class="fu">assumption_report</span>(n20, <span class="at">variables =</span> <span class="st">&quot;score&quot;</span>)</span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a>ar_small<span class="sc">$</span>advisory</span>
+<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a><span class="co">#&gt; [1] &quot;Small sample detected (n = 20). For these assumption checks, consider non-parametric alternatives. Asymptotic p-values may be unreliable. Bootstrap or exact confidence intervals are provided where available.&quot;</span></span>
+<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a></span>
+<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a>ar_large <span class="ot">&lt;-</span> <span class="fu">assumption_report</span>(n50, <span class="at">variables =</span> <span class="st">&quot;score&quot;</span>)</span>
+<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a><span class="fu">is.null</span>(ar_large<span class="sc">$</span>advisory)</span>
+<span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a><span class="co">#&gt; [1] TRUE</span></span></code></pre></div>
+</div>
+<div id="mann-whitney-with-the-hodges-lehmann-estimate" class="section level2">
+<h2>Mann-Whitney with the Hodges-Lehmann estimate</h2>
+<p>The Mann-Whitney runner now reports the Hodges-Lehmann shift estimate
+alongside the rank-biserial effect size, with a confidence interval on
+the shift rather than a point estimate alone.</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a>pilot <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>  <span class="at">group   =</span> <span class="fu">rep</span>(<span class="fu">c</span>(<span class="st">&quot;control&quot;</span>, <span class="st">&quot;treatment&quot;</span>), <span class="at">each =</span> <span class="dv">10</span>),</span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>  <span class="at">outcome =</span> <span class="fu">c</span>(<span class="fu">rnorm</span>(<span class="dv">10</span>, <span class="dv">48</span>, <span class="dv">8</span>), <span class="fu">rnorm</span>(<span class="dv">10</span>, <span class="dv">55</span>, <span class="dv">8</span>)),</span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a>  <span class="at">converted =</span> <span class="fu">sample</span>(<span class="fu">c</span>(<span class="st">&quot;no&quot;</span>, <span class="st">&quot;yes&quot;</span>), <span class="dv">20</span>, <span class="at">replace =</span> <span class="cn">TRUE</span>, <span class="at">prob =</span> <span class="fu">c</span>(<span class="fl">0.6</span>, <span class="fl">0.4</span>)),</span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a>  <span class="at">covariate =</span> <span class="fu">rnorm</span>(<span class="dv">20</span>, <span class="dv">0</span>, <span class="dv">1</span>)</span>
+<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a>)</span>
+<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a></span>
+<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a><span class="fu">sf_plan</span>(study) <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">id =</span> <span class="st">&quot;RQ1&quot;</span>,</span>
+<span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a>       <span class="at">research_question =</span> <span class="st">&quot;Does the treatment arm score higher than control?&quot;</span>,</span>
+<span id="cb4-11"><a href="#cb4-11" tabindex="-1"></a>       <span class="at">family =</span> <span class="st">&quot;group_comparison&quot;</span>, <span class="at">method =</span> <span class="st">&quot;mann_whitney&quot;</span>,</span>
+<span id="cb4-12"><a href="#cb4-12" tabindex="-1"></a>       <span class="at">roles =</span> <span class="fu">list</span>(<span class="at">group =</span> <span class="st">&quot;group&quot;</span>, <span class="at">outcome =</span> <span class="st">&quot;outcome&quot;</span>),</span>
+<span id="cb4-13"><a href="#cb4-13" tabindex="-1"></a>       <span class="at">options =</span> <span class="fu">list</span>(<span class="at">alpha =</span> <span class="fl">0.05</span>))</span>
+<span id="cb4-14"><a href="#cb4-14" tabindex="-1"></a>)</span>
+<span id="cb4-15"><a href="#cb4-15" tabindex="-1"></a></span>
+<span id="cb4-16"><a href="#cb4-16" tabindex="-1"></a>mw_results <span class="ot">&lt;-</span> <span class="fu">run_analysis_plan</span>(pilot, study)</span>
+<span id="cb4-17"><a href="#cb4-17" tabindex="-1"></a><span class="fu">results_table</span>(mw_results)</span></code></pre></div>
+<table>
+<colgroup>
+<col width="2%" />
+<col width="31%" />
+<col width="4%" />
+<col width="61%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">RQ</th>
+<th align="left">Research question</th>
+<th align="left">Method</th>
+<th align="right">Result (APA)</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">RQ1</td>
+<td align="left">Does the treatment arm score higher than control?</td>
+<td align="left"></td>
+<td align="right">U = 34, z = -1.17, p = 0.241, r = 0.26 [0.02, 0.65],
+Hodges-Lehmann shift = -3.99 [-14.38, 5.36]</td>
+</tr>
+</tbody>
+</table>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a>mw_results[[<span class="dv">1</span>]]<span class="sc">$</span>hl_shift</span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a><span class="co">#&gt; [1] -3.987846</span></span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a>mw_results[[<span class="dv">1</span>]]<span class="sc">$</span>hl_conf_int</span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a><span class="co">#&gt; [1] -14.375194   5.363826</span></span></code></pre></div>
+</div>
+<div id="paired-wilcoxon-with-the-pseudomedian-ci" class="section level2">
+<h2>Paired Wilcoxon with the pseudomedian CI</h2>
+<p>The paired runner reports a Hodges-Lehmann pseudomedian for the
+within-pair shift, again with an interval rather than a point value.</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a>before <span class="ot">&lt;-</span> <span class="fu">rnorm</span>(<span class="dv">8</span>, <span class="dv">50</span>, <span class="dv">6</span>)</span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a>after  <span class="ot">&lt;-</span> before <span class="sc">+</span> <span class="fu">rnorm</span>(<span class="dv">8</span>, <span class="dv">4</span>, <span class="dv">5</span>)</span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a></span>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a><span class="fu">sf_plan</span>(study) <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">id =</span> <span class="st">&quot;RQ2&quot;</span>,</span>
+<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a>       <span class="at">research_question =</span> <span class="st">&quot;Did scores change from before to after?&quot;</span>,</span>
+<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a>       <span class="at">family =</span> <span class="st">&quot;group_comparison&quot;</span>, <span class="at">method =</span> <span class="st">&quot;wilcoxon_pair&quot;</span>,</span>
+<span id="cb6-8"><a href="#cb6-8" tabindex="-1"></a>       <span class="at">roles =</span> <span class="fu">list</span>(<span class="at">before =</span> <span class="st">&quot;before&quot;</span>, <span class="at">after =</span> <span class="st">&quot;after&quot;</span>),</span>
+<span id="cb6-9"><a href="#cb6-9" tabindex="-1"></a>       <span class="at">options =</span> <span class="fu">list</span>(<span class="at">alpha =</span> <span class="fl">0.05</span>))</span>
+<span id="cb6-10"><a href="#cb6-10" tabindex="-1"></a>)</span>
+<span id="cb6-11"><a href="#cb6-11" tabindex="-1"></a></span>
+<span id="cb6-12"><a href="#cb6-12" tabindex="-1"></a>wp_results <span class="ot">&lt;-</span> <span class="fu">run_analysis_plan</span>(<span class="fu">data.frame</span>(<span class="at">before =</span> before, <span class="at">after =</span> after), study)</span>
+<span id="cb6-13"><a href="#cb6-13" tabindex="-1"></a><span class="fu">results_table</span>(wp_results)</span></code></pre></div>
+<table>
+<colgroup>
+<col width="2%" />
+<col width="28%" />
+<col width="5%" />
+<col width="63%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">RQ</th>
+<th align="left">Research question</th>
+<th align="left">Method</th>
+<th align="right">Result (APA)</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">RQ2</td>
+<td align="left">Did scores change from before to after?</td>
+<td align="left"></td>
+<td align="right">V = 0, z = -2.45, p = 0.014, r = 0.87 [0.89, 0.90],
+pseudomedian = -6.62 [-9.04, -4.38]</td>
+</tr>
+</tbody>
+</table>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a>wp_results[[<span class="dv">1</span>]]<span class="sc">$</span>pseudomedian</span>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a><span class="co">#&gt; [1] -6.617024</span></span>
+<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a>wp_results[[<span class="dv">1</span>]]<span class="sc">$</span>pseudomedian_conf_int</span>
+<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a><span class="co">#&gt; [1] -9.043759 -4.377587</span></span></code></pre></div>
+</div>
+<div id="fishers-exact-test-with-the-exact-odds-ratio-ci" class="section level2">
+<h2>Fisher’s exact test with the exact odds-ratio CI</h2>
+<p>For a 2x2 table, <code>fisher_exact</code> now attaches an exact
+odds-ratio confidence interval alongside the test’s p-value. The
+interval is only defined for a 2x2 table, and is dropped (not
+approximated) when <code>simulate_p_value</code> is requested, since
+base R’s <code>fisher.test()</code> cannot return both together.</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a><span class="fu">sf_plan</span>(study) <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">id =</span> <span class="st">&quot;RQ3&quot;</span>,</span>
+<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a>       <span class="at">research_question =</span> <span class="st">&quot;Is conversion associated with study arm?&quot;</span>,</span>
+<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a>       <span class="at">family =</span> <span class="st">&quot;association&quot;</span>, <span class="at">method =</span> <span class="st">&quot;fisher_exact&quot;</span>,</span>
+<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a>       <span class="at">roles =</span> <span class="fu">list</span>(<span class="at">row =</span> <span class="st">&quot;group&quot;</span>, <span class="at">column =</span> <span class="st">&quot;converted&quot;</span>),</span>
+<span id="cb8-6"><a href="#cb8-6" tabindex="-1"></a>       <span class="at">options =</span> <span class="fu">list</span>(<span class="at">alpha =</span> <span class="fl">0.05</span>))</span>
+<span id="cb8-7"><a href="#cb8-7" tabindex="-1"></a>)</span>
+<span id="cb8-8"><a href="#cb8-8" tabindex="-1"></a></span>
+<span id="cb8-9"><a href="#cb8-9" tabindex="-1"></a>fe_results <span class="ot">&lt;-</span> <span class="fu">run_analysis_plan</span>(pilot, study)</span>
+<span id="cb8-10"><a href="#cb8-10" tabindex="-1"></a><span class="fu">results_table</span>(fe_results)</span></code></pre></div>
+<table>
+<colgroup>
+<col width="4%" />
+<col width="43%" />
+<col width="7%" />
+<col width="45%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">RQ</th>
+<th align="left">Research question</th>
+<th align="left">Method</th>
+<th align="right">Result (APA)</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">RQ3</td>
+<td align="left">Is conversion associated with study arm?</td>
+<td align="left"></td>
+<td align="right">Fisher’s exact test, p = 1.000, phi = 0.12</td>
+</tr>
+</tbody>
+</table>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a>fe_results[[<span class="dv">1</span>]]<span class="sc">$</span>odds_ratio</span>
+<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a><span class="co">#&gt; [1] 0.599308</span></span>
+<span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a>fe_results[[<span class="dv">1</span>]]<span class="sc">$</span>odds_ratio_conf_int</span>
+<span id="cb9-4"><a href="#cb9-4" tabindex="-1"></a><span class="co">#&gt; [1] 0.0390558 6.9366524</span></span></code></pre></div>
+</div>
+<div id="bootstrap-confidence-interval-on-a-median" class="section level2">
+<h2>Bootstrap confidence interval on a median</h2>
+<p><code>bootstrap_ci()</code> computes a bootstrap interval for an
+arbitrary statistic, useful when no exact interval exists for the
+estimator you need. It is already exported and used elsewhere in the
+package, applied here to the median of the pilot outcome scores.</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a><span class="fu">bootstrap_ci</span>(pilot<span class="sc">$</span>outcome, <span class="at">FUN =</span> stats<span class="sc">::</span>median, <span class="at">R =</span> <span class="dv">999</span>)</span>
+<span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a><span class="co">#&gt; estimate    lower    upper </span></span>
+<span id="cb10-3"><a href="#cb10-3" tabindex="-1"></a><span class="co">#&gt; 52.82878 46.89976 57.67398</span></span></code></pre></div>
+</div>
+<div id="firth-logistic-regression-for-a-rare-or-small-binary-outcome" class="section level2">
+<h2>Firth logistic regression for a rare or small binary outcome</h2>
+<p>Ordinary logistic regression can fail to converge or produce severely
+biased estimates with small samples or separated data. Firth’s
+penalised-likelihood correction (Firth, 1993) addresses both.
+surveyframe’s <code>firth_logistic</code> runner needs the optional
+<code>logistf</code> package.</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" tabindex="-1"></a><span class="fu">sf_plan</span>(study) <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb11-2"><a href="#cb11-2" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">id =</span> <span class="st">&quot;RQ4&quot;</span>,</span>
+<span id="cb11-3"><a href="#cb11-3" tabindex="-1"></a>       <span class="at">research_question =</span> <span class="st">&quot;Does the covariate predict conversion?&quot;</span>,</span>
+<span id="cb11-4"><a href="#cb11-4" tabindex="-1"></a>       <span class="at">family =</span> <span class="st">&quot;regression&quot;</span>, <span class="at">method =</span> <span class="st">&quot;firth_logistic&quot;</span>,</span>
+<span id="cb11-5"><a href="#cb11-5" tabindex="-1"></a>       <span class="at">roles =</span> <span class="fu">list</span>(<span class="at">dependent =</span> <span class="st">&quot;converted&quot;</span>, <span class="at">predictors =</span> <span class="st">&quot;covariate&quot;</span>),</span>
+<span id="cb11-6"><a href="#cb11-6" tabindex="-1"></a>       <span class="at">options =</span> <span class="fu">list</span>(<span class="at">conf.level =</span> <span class="fl">0.95</span>))</span>
+<span id="cb11-7"><a href="#cb11-7" tabindex="-1"></a>)</span>
+<span id="cb11-8"><a href="#cb11-8" tabindex="-1"></a></span>
+<span id="cb11-9"><a href="#cb11-9" tabindex="-1"></a>firth_results <span class="ot">&lt;-</span> <span class="fu">run_analysis_plan</span>(pilot, study)</span>
+<span id="cb11-10"><a href="#cb11-10" tabindex="-1"></a><span class="fu">results_table</span>(firth_results)</span></code></pre></div>
+<table>
+<colgroup>
+<col width="3%" />
+<col width="35%" />
+<col width="6%" />
+<col width="54%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">RQ</th>
+<th align="left">Research question</th>
+<th align="left">Method</th>
+<th align="right">Result (APA)</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">RQ4</td>
+<td align="left">Does the covariate predict conversion?</td>
+<td align="left"></td>
+<td align="right">Firth logistic regression (n = 20), likelihood ratio =
+0.05</td>
+</tr>
+</tbody>
+</table>
+<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" tabindex="-1"></a>firth_results[[<span class="dv">1</span>]]<span class="sc">$</span>coefficients</span>
+<span id="cb12-2"><a href="#cb12-2" tabindex="-1"></a><span class="co">#&gt;               Estimate     ci_low     ci_high         p odds_ratio or_ci_low</span></span>
+<span id="cb12-3"><a href="#cb12-3" tabindex="-1"></a><span class="co">#&gt; (Intercept) -0.9722906 -1.9991045 -0.07984311 0.0321831  0.3782157 0.1354565</span></span>
+<span id="cb12-4"><a href="#cb12-4" tabindex="-1"></a><span class="co">#&gt; covariate    0.1336834 -0.7614982  0.99469674 0.7555259  1.1430308 0.4669663</span></span>
+<span id="cb12-5"><a href="#cb12-5" tabindex="-1"></a><span class="co">#&gt;             or_ci_high</span></span>
+<span id="cb12-6"><a href="#cb12-6" tabindex="-1"></a><span class="co">#&gt; (Intercept)  0.9232612</span></span>
+<span id="cb12-7"><a href="#cb12-7" tabindex="-1"></a><span class="co">#&gt; covariate    2.7039042</span></span></code></pre></div>
+</div>
+<div id="cohens-d-with-a-bootstrap-interval" class="section level2">
+<h2>Cohen’s d with a bootstrap interval</h2>
+<p><code>cohens_d_ci()</code> pairs Cohen’s d with a bootstrap interval,
+which is informative precisely where it matters most: interval width
+grows visibly as n falls, making the extra uncertainty at small n
+explicit rather than implicit in a single point estimate.</p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" tabindex="-1"></a><span class="fu">cohens_d_ci</span>(pilot<span class="sc">$</span>outcome[pilot<span class="sc">$</span>group <span class="sc">==</span> <span class="st">&quot;treatment&quot;</span>],</span>
+<span id="cb13-2"><a href="#cb13-2" tabindex="-1"></a>            pilot<span class="sc">$</span>outcome[pilot<span class="sc">$</span>group <span class="sc">==</span> <span class="st">&quot;control&quot;</span>], <span class="at">R =</span> <span class="dv">999</span>)</span>
+<span id="cb13-3"><a href="#cb13-3" tabindex="-1"></a><span class="co">#&gt;   estimate      lower      upper </span></span>
+<span id="cb13-4"><a href="#cb13-4" tabindex="-1"></a><span class="co">#&gt; 0.54201883 0.03383121 1.48685928</span></span></code></pre></div>
+</div>
+<div id="citation" class="section level2">
+<h2>Citation</h2>
+<div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" tabindex="-1"></a><span class="fu">citation</span>(<span class="st">&quot;surveyframe&quot;</span>)</span></code></pre></div>
+<p>The small-sample methods demonstrated in this vignette are described
+in full, with guidance on when to prefer each one, in:</p>
+<blockquote>
+<p>Sharafuddin, M. A., Jaleel, A. A., and Madhavan, M. (2026).
+<em>Quantitative Analysis with Small Samples: A Practical Guide for
+Students and Early-Career Researchers</em> (Version 0.1.0) [Book].
+Zenodo. <a href="https://doi.org/10.5281/zenodo.20221929" class="uri">https://doi.org/10.5281/zenodo.20221929</a></p>
+</blockquote>
+<p>A companion preprint validating these method choices by simulation is
+in preparation and will be added here once posted.</p>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

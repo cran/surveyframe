@@ -1,0 +1,89 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/MohammedAliSharafuddin/surveyframe/inst/schema/sframe_schema.json",
+  "title": "surveyframe .sframe file",
+  "description": "Schema for the .sframe instrument format written by write_sframe() and read by read_sframe(). Documented so a reviewer or a second tool can read and validate a .sframe file without installing the R package -- the file is plain UTF-8 JSON, not an R-specific or binary format. Every field here corresponds to a key produced by sframe_serialization_payload() in R/read_write_sframe.R and R/amendments.R.",
+  "type": "object",
+  "required": ["hash", "version", "meta", "items", "choices", "scales"],
+  "properties": {
+    "hash": {
+      "type": "object",
+      "description": "File-level integrity hash. Confirms the file on disk is byte-identical to what write_sframe() produced. Not a proof of methodological validity -- see the `amendments` field below for the disclosed-revision mechanism, and the package's analysis-plan binding (run_analysis_plan()) for the package's separate anti-HARKing safeguard.",
+      "required": ["algo", "value"],
+      "properties": {
+        "algo": { "const": "sha256" },
+        "value": {
+          "type": "string",
+          "description": "SHA-256 digest (64 lowercase hex characters) computed over the canonical JSON serialisation of every other top-level field, with this field itself set to an empty string during hashing."
+        }
+      }
+    },
+    "version": {
+      "type": ["string", "null"],
+      "description": "The instrument's own semantic version string (sf_instrument()'s `version` argument), not the surveyframe package version."
+    },
+    "meta": {
+      "type": "object",
+      "description": "Instrument metadata: title, description, authors, languages, and validation status.",
+      "required": ["title"]
+    },
+    "items": { "type": "array", "description": "Question items (sf_item())." },
+    "choices": { "type": "array", "description": "Response option sets (sf_choices())." },
+    "scales": { "type": "array", "description": "Scale definitions (sf_scale())." },
+    "branching": { "type": "array", "description": "Branching rules (sf_branch())." },
+    "checks": { "type": "array", "description": "Data quality checks (sf_check())." },
+    "analysis_plan": {
+      "type": "array",
+      "description": "Pre-declared analysis-plan blocks, bound to the instrument at design time and executed in one pass by run_analysis_plan(). This binding, not the hash, is the package's defence against HARKing and p-hacking; the hash only proves file identity."
+    },
+    "models": { "type": "array", "description": "Measurement/structural model specifications (sf_model())." },
+    "render": { "type": "object", "description": "Optional rendering hints for render_survey()." },
+    "designs": {
+      "type": "array",
+      "description": "Optional conjoint designs. Present only when the instrument declares at least one, so instruments that don't use this feature hash identically to files written before it existed."
+    },
+    "amendments": {
+      "type": "array",
+      "description": "Optional disclosed-revision log, appended to by amend_sframe(). Present only when the instrument has at least one recorded amendment, for the same backward-compatibility reason as `designs`. Each entry documents one legitimate, disclosed change -- it is not itself a proof of the change's scientific merit, only a structured record of what changed, why, and whether a second reviewer signed off.",
+      "items": {
+        "type": "object",
+        "required": ["timestamp", "reason_code", "reason_text", "tier", "signoff", "previous_hash", "new_hash"],
+        "properties": {
+          "timestamp": { "type": "string", "description": "UTC, ISO 8601 (e.g. 2026-08-18T18:45:02Z)." },
+          "reason_code": {
+            "type": "string",
+            "enum": ["data_correction", "bot_removal", "model_respecification", "instrument_revision", "other"]
+          },
+          "reason_text": { "type": "string", "description": "Free-text explanation. Always required and non-empty." },
+          "tier": {
+            "type": "string",
+            "enum": ["pipeline", "design"],
+            "description": "\"pipeline\": routine data/collection hygiene (data_correction, bot_removal), low friction. \"design\": a change to the analysis plan or a model, which the design-time plan binding exists to guard against -- requires deviation_report."
+          },
+          "author": { "type": ["string", "null"] },
+          "deviation_report": {
+            "type": ["string", "null"],
+            "description": "Required (non-null, non-empty) when tier is \"design\": what changed in the research question, method, or model, and why. Not required for \"pipeline\" amendments."
+          },
+          "signoff": {
+            "type": "string",
+            "description": "A second reviewer's name/identifier, or the literal string \"none\" -- never blank, so an unreviewed design change is visible to an auditor rather than indistinguishable from a signed-off one."
+          },
+          "previous_hash": {
+            "type": "string",
+            "description": "SHA-256 content hash (64 hex chars) of the instrument's substantive fields (items/choices/scales/branching/checks/analysis_plan/models/designs, excluding `hash` and `amendments` themselves) immediately before this amendment. Distinct from the file-level `hash` field above -- see amend_sframe()'s documentation."
+          },
+          "new_hash": {
+            "type": "string",
+            "description": "The same content hash, computed immediately after this amendment."
+          },
+          "changed_fields": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Which top-level payload keys differed between previous_hash and new_hash's states, e.g. [\"items\"] or [\"items\", \"analysis_plan\"]. Not a full content diff -- narrows where to look, same design intent as the file-level hash mismatch message."
+          }
+        }
+      }
+    }
+  }
+}

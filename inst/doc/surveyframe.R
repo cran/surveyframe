@@ -277,9 +277,13 @@ study <- sf_instrument(
 study
 
 ## ----validate-----------------------------------------------------------------
+validate_sframe(study, strict = FALSE)
+
+## ----validate-explore---------------------------------------------------------
 v <- validate_sframe(study, strict = FALSE)
-v$valid
-length(v$problems)
+sf_is_valid(v)
+sf_problems(v)
+head(summary(v), 5)
 
 ## ----write--------------------------------------------------------------------
 # Save the instrument. Keep this file alongside your analysis script.
@@ -288,7 +292,34 @@ sframe_path <- write_sframe(study, file.path(tempdir(), "tourism_services_v1.sfr
 
 # Reload the instrument from disk at any time with:
 study2 <- read_sframe(sframe_path)
-identical(study$meta$title, study2$meta$title)
+identical(sf_meta(study)$title, sf_meta(study2)$title)
+
+## ----schema-path--------------------------------------------------------------
+schema_path <- system.file("schema", "sframe_schema.json", package = "surveyframe")
+jsonlite::fromJSON(schema_path, simplifyVector = FALSE)$required
+
+## ----amend--------------------------------------------------------------------
+# Suppose a pilot round surfaces an ambiguous item and it needs rewording.
+dmre_1_revised <- sf_item(
+  "dmre_1", paste(dmre_stem, "relevant to my personal travel interests."),
+  type = "likert", required = TRUE, choice_set = "likert5", scale_id = "DMRE"
+)
+
+study_revised <- study
+study_revised$items[[which(vapply(study$items, `[[`, character(1), "id")
+                            == "dmre_1")]] <- dmre_1_revised
+
+study_amended <- amend_sframe(
+  study, study_revised,
+  reason_code = "instrument_revision",
+  reason_text = "Clarified item wording after pilot feedback.",
+  deviation_report = "Wording only; the construct measured is unchanged."
+)
+
+amendment_log(study_amended)
+
+## ----git-link-----------------------------------------------------------------
+link_git_commit(study_amended, repo_path = tempdir())
 
 ## ----endpoint, eval = FALSE---------------------------------------------------
 # # Replace with your deployed Apps Script URL after the setup steps below.
@@ -419,22 +450,25 @@ cat("Columns:    ", ncol(responses), "\n")
 
 ## ----quality------------------------------------------------------------------
 qr <- quality_report(responses, study, respondent_id = "respondent_id")
+# as.data.frame() gives the summary row, so no reaching into the object.
+qr_summary <- as.data.frame(qr)
 quality_summary <- data.frame(
   Metric = c("Respondents", "Items", "Flagged for review", "Flag rate"),
-  Value  = c(qr$summary$n_respondents, qr$summary$n_items, qr$summary$n_flagged,
-             sprintf("%.1f%%", 100 * qr$summary$flag_rate)),
+  Value  = c(qr_summary$n_respondents, qr_summary$n_items, qr_summary$n_flagged,
+             sprintf("%.1f%%", 100 * qr_summary$flag_rate)),
   stringsAsFactors = FALSE
 )
 kable(quality_summary, align = c("l", "r"), caption = "Quality screening summary")
 
 ## ----missing------------------------------------------------------------------
 mr <- missing_data_report(responses, study)
-# mr holds $item_missing, $respondent_missing, $patterns, $mcar, and $apa.
-kable(mr$item_missing, digits = 2,
+# as.data.frame() returns the item-level table, which is what the report is
+# mainly about.
+kable(as.data.frame(mr), digits = 2,
       col.names = c("Variable", "Missing (n)", "Missing (%)", "Valid (n)"),
       caption = "Item-level missingness")
-# $apa provides a plain-language summary suitable for a methods section.
-cat(mr$apa, "\n")
+# sf_apa() gives a plain-language summary suitable for a methods section.
+cat(sf_apa(mr), "\n")
 
 ## ----score--------------------------------------------------------------------
 scored <- score_scales(responses, study)
@@ -462,12 +496,15 @@ par(op)
 ## ----reliability--------------------------------------------------------------
 if (requireNamespace("psych", quietly = TRUE)) {
   rr <- reliability_report(scored, study, omega = FALSE)
-  rel_df <- do.call(rbind, lapply(rr, function(s) data.frame(
-    Scale   = paste0(s$label, " (", s$scale_id, ")"),
-    Items   = s$n_items,
-    N       = s$n,
-    Alpha   = if (!is.null(s$alpha)) sprintf("%.2f", s$alpha) else "n/a",
-    stringsAsFactors = FALSE)))
+  # One row per scale, with NA where a statistic could not be computed.
+  rr_df <- as.data.frame(rr)
+  rel_df <- data.frame(
+    Scale = paste0(rr_df$label, " (", rr_df$scale_id, ")"),
+    Items = rr_df$n_items,
+    N     = rr_df$n,
+    Alpha = ifelse(is.na(rr_df$alpha), "n/a", sprintf("%.2f", rr_df$alpha)),
+    stringsAsFactors = FALSE
+  )
   kable(rel_df, row.names = FALSE, align = c("l", "c", "c", "r"),
         caption = "Scale reliability")
 }
@@ -485,10 +522,10 @@ if (requireNamespace("psych", quietly = TRUE)) {
 #   TS   = c(ts_1 = 0.84, ts_2 = 0.80)
 # )
 # vr <- validity_report(loadings_list)
-# print(vr$reliability)
+# print(as.data.frame(vr))
 
 ## ----plan---------------------------------------------------------------------
-study$analysis_plan <- list(
+sf_plan(study) <- list(
   list(
     id               = "RQ1",
     research_question = "Are digital marketing perceptions associated with tourist satisfaction?",
@@ -532,7 +569,7 @@ study$analysis_plan <- list(
   )
 )
 
-length(study$analysis_plan)
+length(sf_plan(study))
 
 ## ----assumptions--------------------------------------------------------------
 if (requireNamespace("psych", quietly = TRUE)) {

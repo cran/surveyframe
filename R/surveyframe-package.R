@@ -7,8 +7,11 @@
 #' reproducible reporting. The package covers static HTML survey export,
 #' an embeddable Shiny survey module, an interactive response dashboard,
 #' a role-based analysis planner with pre-declared research questions, common
-#' survey statistics, and model syntax planning for EFA, CFA, CB-SEM, and
-#' PLS-SEM.
+#' survey statistics with small-sample alternatives (Hodges-Lehmann,
+#' pseudomedian, exact odds-ratio, and Firth logistic regression), multi-
+#' criteria decision analysis (AHP, ANP, DEMATEL, VIKOR, MOORA, SMART,
+#' WASPAS, PROMETHEE, ELECTRE, and TOPSIS), and model syntax planning for
+#' EFA, CFA, CB-SEM, and PLS-SEM.
 #'
 #' ## Core workflow
 #'
@@ -16,12 +19,16 @@
 #'    its component constructors: [sf_item()], [sf_choices()], [sf_scale()],
 #'    [sf_branch()], [sf_check()].
 #' 2. **Validate and save** with [validate_sframe()] and [write_sframe()].
+#'    `validate_sframe()` returns an `sframe_validation` diagnostic rather
+#'    than the instrument itself. Recover a validated instrument with
+#'    [as_sframe()].
 #' 3. **Deploy** a Shiny survey with [render_survey()].
 #' 4. **Load responses** with [read_responses()] or [read_sheet_responses()].
 #' 5. **Check quality** with [quality_report()].
 #' 6. **Score and analyse** with [score_scales()], [descriptives_report()],
 #'    [missing_data_report()], [reliability_report()], [item_report()],
-#'    [efa_report()], [cfa_syntax()], and [run_analysis_plan()].
+#'    [efa_report()], [cfa_syntax()], and [run_analysis_plan()], which also
+#'    runs any decision-analysis blocks in the plan.
 #' 7. **Report** with [codebook_report()], [render_report()], and
 #'    [render_results()].
 #'
@@ -30,7 +37,9 @@
 #' Every function in the package operates on an `sframe` object. The object
 #' is the single source of truth for item definitions, scale structure,
 #' reverse-coding keys, branching rules, check specifications, analysis plans,
-#' and optional model specifications.
+#' and optional model specifications. Accessors such as [sf_meta()],
+#' [sf_items()], [sf_scales()], [sf_plan()], and [sf_models()] read its parts
+#' without reaching into the object directly.
 #'
 #' ## File format
 #'

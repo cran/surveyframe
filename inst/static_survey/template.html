@@ -187,6 +187,52 @@ textarea.inp-std:focus{border-color:var(--cp);box-shadow:0 0 0 3px color-mix(in 
   align-items:center;justify-content:center;cursor:pointer}
 .rank-mv:hover{border-color:var(--cp);color:var(--cp);background:var(--tint)}
 
+/* Pairwise comparison (AHP/ANP Saaty scale, DEMATEL influence scale) */
+.pw-wrap{display:flex;flex-direction:column;gap:14px;margin-top:8px}
+.pw-grouped{gap:28px}
+.pw-group{display:flex;flex-direction:column;gap:14px}
+.pw-group-hdr{display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+  padding-bottom:6px;border-bottom:2px solid var(--cp);position:sticky;top:0;
+  background:var(--cg);z-index:1}
+.pw-group-title{font-size:15px;font-weight:700;color:var(--t1)}
+.pw-group-tag{font-size:11.5px;font-weight:600;color:var(--t2);letter-spacing:.02em;
+  text-transform:uppercase;white-space:nowrap}
+.pw-row{background:var(--cf);border:1px solid var(--cb);border-radius:8px;
+  padding:14px 16px;box-shadow:0 1px 0 rgba(18,33,43,.03)}
+.pw-heads{display:flex;justify-content:space-between;font-size:13px;
+  font-weight:600;color:var(--t1);margin-bottom:10px}
+.pw-strip{display:flex;gap:4px;overflow-x:auto;padding-bottom:2px}
+.pw-opt{flex:1;min-width:30px;display:flex;flex-direction:column;align-items:center;
+  gap:3px;padding:6px 2px;border-radius:6px;border:1.5px solid var(--cb);
+  cursor:pointer;transition:all .12s;background:var(--cf)}
+.pw-opt:hover{border-color:var(--cp);background:var(--tint)}
+.pw-opt:has(input:checked){background:var(--cp);border-color:var(--cp)}
+.pw-opt:has(input:focus-visible){outline:3px solid var(--deep);outline-offset:2px}
+.pw-opt input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.pw-num{font-size:11px;font-weight:700;color:var(--t2)}
+.pw-opt:has(input:checked) .pw-num{color:#fff}
+.pw-opt.pw-equal{border-color:var(--t3)}
+.pw-influence{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px}
+.pw-influence .pw-opt{flex:0 0 auto;min-width:64px}
+.pw-influence .pw-lbl{font-size:10px;color:var(--t2);text-align:center}
+.pw-influence .pw-opt:has(input:checked) .pw-lbl{color:color-mix(in srgb,#ffffff 82%,var(--cp))}
+/* Mobile-only dropdown, hidden on desktop where the button strip has room.
+   min-height 44px meets the WCAG 2.2 touch-target size the rest of the
+   survey already holds itself to (see the matrix reflow's own note). */
+.pw-select{display:none;width:100%;min-height:44px;padding:8px 12px;
+  font-size:15px;color:var(--t1);background:var(--cf);border:1.5px solid var(--cb);
+  border-radius:6px;font-family:inherit}
+.pw-select:focus-visible{outline:3px solid var(--deep);outline-offset:1px;border-color:var(--cp)}
+
+/* Constant-sum criteria weights */
+.cw-wrap{display:flex;flex-direction:column;gap:10px;margin-top:8px}
+.cw-row{display:flex;align-items:center;gap:12px}
+.cw-lbl{flex:1;font-size:14.5px;color:var(--t1)}
+.cw-input{width:76px;flex-shrink:0}
+.cw-total{margin-top:6px;font-size:13px;font-weight:600;color:var(--t2)}
+.cw-total.cw-ok{color:#166534}
+.cw-total.cw-bad{color:#991b1b}
+
 /* Error banner */
 .err-banner{background:#fef2f2;border:1.5px solid #fecaca;border-radius:8px;
   padding:12px 16px;margin-bottom:18px;font-size:13px;color:#991b1b;display:none}
@@ -228,6 +274,17 @@ textarea.inp-std:focus{border-color:var(--cp);box-shadow:0 0 0 3px color-mix(in 
   .matrix-tbl td.rl{font-weight:600;background:var(--tint);border-bottom:1.5px solid var(--tint-bd)}
   .matrix-tbl td:not(.rl)::before{content:attr(data-col);color:var(--t2);font-size:14px;flex:1}
   .matrix-tbl td:not(.rl) input{margin:0;flex-shrink:0;width:22px;height:22px}
+
+  /* Below 600px the button strip (17 wide for Saaty, 5 for influence)
+     cannot fit without horizontal scrolling, which section 1b's design
+     rules rule out for a matrix-shaped control same as the desktop
+     button strip is rejected as an n x n grid: it invites a swipe-past
+     answer instead of a deliberate one. Swap it for the <select> of the
+     same verbal anchors instead of shrinking it further. */
+  .pw-heads{flex-direction:column;gap:2px}
+  .pw-strip,.pw-influence{display:none}
+  .pw-select{display:block}
+  .cw-row{flex-wrap:wrap}
 }
 </style>
 </head>
@@ -395,6 +452,8 @@ function renderItem(item){
   if(t==='slider')        return wrapItem(item,renderSlider(item));
   if(t==='rating')        return wrapItem(item,renderRating(item));
   if(t==='ranking')       return wrapItem(item,renderRanking(item,cs));
+  if(t==='pairwise_comparison') return wrapItem(item,renderPairwise(item));
+  if(t==='criteria_weight')    return wrapItem(item,renderCriteriaWeight(item));
   return wrapItem(item,'<p style="color:var(--t3);font-size:12px">Unsupported item type: '+esc(t)+'</p>');
 }
 
@@ -461,6 +520,131 @@ function renderMatrix(item,cs){
       +'</tr>';
   }).join('');
   return'<div class="matrix-wrap"><table class="matrix-tbl"><thead>'+hdr+'</thead><tbody>'+body+'</tbody></table></div>';
+}
+// Saaty bipolar strip: 17 points, 9..2 (first side preferred) | 1 (equal) |
+// 2..9 (second side preferred). Left-to-right visual order matches the
+// signed-integer export column (R/read_responses.R, item__a__vs__b):
+// positive = first side, negative = second side, 1 = equal. Reciprocals are
+// never stored; they are reconstructed at assembly (sframe_assemble_pairwise()).
+var SAATY_STEPS=[9,8,7,6,5,4,3,2,1,-2,-3,-4,-5,-6,-7,-8,-9];
+// DEMATEL unipolar strip: 0 (no influence) to 4 (very high influence).
+var INFLUENCE_STEPS=[0,1,2,3,4];
+var INFLUENCE_LABELS=['None','Low','Medium','High','Very high'];
+function renderPairwiseRow(rowKey,leftLbl,rightLbl,steps,saved,influence){
+  var names=steps.map(function(v,i){
+    return influence?(INFLUENCE_LABELS[i]||String(v)):(v===1?'Equal':(v>0?(v+' ('+leftLbl+')'):((-v)+' ('+rightLbl+')')));
+  });
+  var opts=steps.map(function(v,i){
+    var checked=String(saved)===String(v);
+    var isEqual=!influence&&v===1;
+    return'<label class="pw-opt'+(isEqual?' pw-equal':'')+'"><input type="radio" name="'+esc(rowKey)+'" value="'+v+'"'
+      +(checked?' checked':'')
+      +' aria-label="'+esc(leftLbl)+' vs '+esc(rightLbl)+': '+esc(names[i])+'"'
+      +' onchange="setResp(\''+esc(rowKey)+'\','+v+')">'
+      +(influence?'<span class="pw-lbl">'+esc(INFLUENCE_LABELS[i])+'</span>':'<span class="pw-num">'+esc(Math.abs(v))+'</span>')
+      +'</label>';
+  }).join('');
+  // Mobile (<600px) swaps the button strip for this <select> of the same
+  // verbal anchors: a 17-wide (or 5-wide) button row cannot fit a phone
+  // screen without horizontal scrolling, which section 1b's design rules
+  // treat as unacceptable for a matrix-shaped control. The select is the
+  // only input actually submitted below that width; the CSS hides one or
+  // the other, it never shows both.
+  var selectOpts='<option value=""'+(saved==null||saved===''?' selected':'')+' disabled>Choose an answer&hellip;</option>'
+    +steps.map(function(v,i){
+      return'<option value="'+v+'"'+(String(saved)===String(v)?' selected':'')+'>'+esc(names[i])+'</option>';
+    }).join('');
+  var select='<select class="pw-select" aria-label="'+esc(leftLbl)+' vs '+esc(rightLbl)+'"'
+    +' onchange="setResp(\''+esc(rowKey)+'\',this.value)">'+selectOpts+'</select>';
+  return'<div class="pw-row"><div class="pw-heads"><span>'+esc(leftLbl)+'</span><span>'+esc(rightLbl)+'</span></div>'
+    +'<div class="'+(influence?'pw-influence':'pw-strip')+'" role="radiogroup" aria-label="'+esc(leftLbl)+' vs '+esc(rightLbl)+'">'
+    +opts+'</div>'+select+'</div>';
+}
+// Groups rows under a header per anchor criterion whenever there is more
+// than one group to show (3 items or more; below that a single "Comparing:
+// X" header would add noise without adding wayfinding, so 2 items stays
+// flat). This never becomes an n x n grid: each group is still one pair,
+// one strip, one judgement at a time, the exact property a grid would give
+// up (see the section 1b design note this mirrors: a grid invites
+// eyeballed, patterned answers instead of deliberate per-pair judgement,
+// which is what AHP's own consistency ratio exists to catch).
+function renderPairwise(item){
+  var items=item.comparison_items||[];
+  var scale=item.comparison_scale||'saaty';
+  var groups=[];
+  if(scale==='influence'){
+    for(var i=0;i<items.length;i++){
+      var rows=[];
+      for(var j=0;j<items.length;j++){
+        if(i===j)continue;
+        var a=items[i],b=items[j];
+        var rowKey=item.id+'__'+a+'__to__'+b;
+        rows.push(renderPairwiseRow(rowKey,'Does '+a+' influence '+b+'?','',INFLUENCE_STEPS,responses[rowKey],true));
+      }
+      groups.push({anchor:items[i],rows:rows});
+    }
+  }else{
+    for(var i=0;i<items.length-1;i++){
+      var rows=[];
+      for(var j=i+1;j<items.length;j++){
+        var a=items[i],b=items[j];
+        var rowKey=item.id+'__'+a+'__vs__'+b;
+        rows.push(renderPairwiseRow(rowKey,a,b,SAATY_STEPS,responses[rowKey],false));
+      }
+      groups.push({anchor:items[i],rows:rows});
+    }
+  }
+  if(groups.length<=1)return'<div class="pw-wrap">'+groups.map(function(g){return g.rows.join('');}).join('')+'</div>';
+  var out=groups.map(function(g,gi){
+    return'<div class="pw-group">'
+      +'<div class="pw-group-hdr"><span class="pw-group-title">Comparing: '+esc(g.anchor)+'</span>'
+      +'<span class="pw-group-tag">Group '+(gi+1)+' of '+groups.length+'</span></div>'
+      +g.rows.join('')
+      +'</div>';
+  }).join('');
+  return'<div class="pw-wrap pw-grouped">'+out+'</div>';
+}
+function renderCriteriaWeight(item){
+  var items=item.comparison_items||[];
+  var rows=items.map(function(crit){
+    var rowKey=item.id+'__'+crit;
+    var saved=responses[rowKey]!=null?responses[rowKey]:'';
+    return'<div class="cw-row"><span class="cw-lbl">'+esc(crit)+'</span>'
+      +'<input type="number" inputmode="numeric" class="inp-std cw-input" min="0" max="100" value="'+esc(saved)+'"'
+      +' aria-label="Points for '+esc(crit)+'"'
+      +' oninput="clampCwInput(this,\''+esc(item.id)+'\');setResp(\''+esc(rowKey)+'\',this.value);updateCwTotal(\''+esc(item.id)+'\')"></div>';
+  }).join('');
+  return'<div class="cw-wrap" id="cw_'+esc(item.id)+'">'+rows
+    +'<div class="cw-total" id="cwtotal_'+esc(item.id)+'">Total: 0 / 100</div></div>';
+}
+// Clamps a single criteria-weight input to an integer 0-100, and also caps it
+// so it cannot push the running total past 100: the HTML `max` attribute
+// only affects the spinner arrows, not typed or pasted input, so without
+// this a respondent can type any value into every field regardless of what
+// the other fields already hold.
+function clampCwInput(input,itemId){
+  var raw=input.value.replace(/[^0-9]/g,'');
+  var val=raw===''?0:parseInt(raw,10);
+  if(val>100)val=100;
+  var wrap=document.getElementById('cw_'+itemId);
+  var others=0;
+  if(wrap){
+    wrap.querySelectorAll('input[type="number"]').forEach(function(inp){
+      if(inp!==input)others+=parseInt(inp.value,10)||0;
+    });
+  }
+  if(others+val>100)val=Math.max(0,100-others);
+  input.value=raw===''?'':String(val);
+}
+function updateCwTotal(itemId){
+  var wrap=document.getElementById('cw_'+itemId);if(!wrap)return;
+  var inputs=wrap.querySelectorAll('input[type="number"]');
+  var total=0;inputs.forEach(function(inp){total+=parseInt(inp.value,10)||0;});
+  var el=document.getElementById('cwtotal_'+itemId);
+  if(el){
+    el.textContent='Total: '+total+' / 100';
+    el.className='cw-total '+(total===100?'cw-ok':'cw-bad');
+  }
 }
 function renderNumeric(item){
   var saved=responses[item.id]||'';
@@ -638,6 +822,31 @@ function validatePage(items){
       ok=false;
     }
   });
+  // A criteria_weight total that isn't exactly 100 blocks page advance even
+  // if some points have been entered, matching the matrix/date pattern of
+  // checking a per-type invariant independent of the plain `required` flag.
+  // clampCwInput() already stops any single field or the running total from
+  // exceeding 100, so the only remaining failure mode here is an incomplete
+  // allocation (total < 100).
+  items.forEach(function(item){
+    if(item.type!=='criteria_weight'||!isVisible(item.id))return;
+    var crits=item.comparison_items||[];
+    var total=0,anyEntered=false;
+    crits.forEach(function(crit){
+      var v=responses[item.id+'__'+crit];
+      if(v!==undefined&&v!==null&&String(v)!=='')anyEntered=true;
+      total+=parseInt(v,10)||0;
+    });
+    if((item.required||anyEntered)&&total!==100){
+      var err=document.getElementById('err_'+item.id);
+      if(err){err.textContent='The points must add up to exactly 100 (currently '+total+').';err.classList.add('show');}
+      if(ok){
+        var el=document.getElementById('item_'+item.id);
+        if(el)el.scrollIntoView({behavior:'smooth',block:'center'});
+      }
+      ok=false;
+    }
+  });
   items.forEach(function(item){
     if(!item.required||!isVisible(item.id))return;
     var t=item.type;
@@ -650,6 +859,26 @@ function validatePage(items){
     } else if(t==='multiple_choice'){
       var v=responses[item.id];
       if(!v||v==='')missing=true;
+    } else if(t==='criteria_weight'){
+      (item.comparison_items||[]).forEach(function(crit){
+        var key=item.id+'__'+crit;
+        if(responses[key]===undefined||responses[key]===null||String(responses[key])==='')missing=true;
+      });
+    } else if(t==='pairwise_comparison'){
+      var comp=item.comparison_items||[];
+      var scale=item.comparison_scale||'saaty';
+      if(scale==='influence'){
+        for(var i=0;i<comp.length;i++)for(var j=0;j<comp.length;j++){
+          if(i===j)continue;
+          var key=item.id+'__'+comp[i]+'__to__'+comp[j];
+          if(responses[key]===undefined||responses[key]===null||String(responses[key])==='')missing=true;
+        }
+      }else{
+        for(var i=0;i<comp.length;i++)for(var j=i+1;j<comp.length;j++){
+          var key=item.id+'__'+comp[i]+'__vs__'+comp[j];
+          if(responses[key]===undefined||responses[key]===null||String(responses[key])==='')missing=true;
+        }
+      }
     } else {
       var v2=responses[item.id];
       if(v2===null||v2===undefined||String(v2).trim()==='')missing=true;
@@ -730,6 +959,30 @@ function doSubmit(){
       var sel=(responses[item.id]||'').split(',').filter(Boolean);
       (csM.values||[]).forEach(function(v){
         row[item.id+'__'+String(v)]=sel.includes(String(v))?'1':'0';
+      });
+    } else if(item.type==='pairwise_comparison'){
+      // Column conventions match R/read_responses.R's expansion whitelist:
+      // item__a__vs__b (signed Saaty degree) for unordered pairs, or
+      // item__a__to__b (0-4) for DEMATEL's ordered/directed pairs.
+      var comp=item.comparison_items||[];
+      var scale=item.comparison_scale||'saaty';
+      if(scale==='influence'){
+        for(var pi=0;pi<comp.length;pi++)for(var pj=0;pj<comp.length;pj++){
+          if(pi===pj)continue;
+          var infKey=item.id+'__'+comp[pi]+'__to__'+comp[pj];
+          row[infKey]=responses[infKey]!=null?responses[infKey]:'';
+        }
+      }else{
+        for(var pi=0;pi<comp.length;pi++)for(var pj=pi+1;pj<comp.length;pj++){
+          var saatyKey=item.id+'__'+comp[pi]+'__vs__'+comp[pj];
+          row[saatyKey]=responses[saatyKey]!=null?responses[saatyKey]:'';
+        }
+      }
+    } else if(item.type==='criteria_weight'){
+      // One item__criterion column, 0-100, matching read_responses.R.
+      (item.comparison_items||[]).forEach(function(crit){
+        var cwKey=item.id+'__'+crit;
+        row[cwKey]=responses[cwKey]!=null?responses[cwKey]:'';
       });
     } else {
       row[item.id]=responses[item.id]!=null?responses[item.id]:'';

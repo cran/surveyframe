@@ -103,13 +103,16 @@ ts_model <- sf_model(
 instr <- add_model(instr, ts_model)
 
 ## ----validate-----------------------------------------------------------------
+validate_sframe(instr, strict = FALSE)
+
+## ----validate-explore---------------------------------------------------------
 validation <- validate_sframe(instr, strict = FALSE)
-validation$valid
-validation$problems
+sf_is_valid(validation)
+sf_problems(validation)
 
 ## ----strict-------------------------------------------------------------------
-instr <- validate_sframe(instr)
-instr$meta$validated
+instr <- as_sframe(validate_sframe(instr))
+sf_meta(instr)$validated
 
 ## ----roundtrip----------------------------------------------------------------
 path <- tempfile(fileext = ".sframe")
@@ -117,8 +120,8 @@ write_sframe(instr, path, overwrite = TRUE)
 
 loaded <- read_sframe(path)
 inherits(loaded, "sframe")
-loaded$meta$title
-length(loaded$analysis_plan)
+sf_meta(loaded)$title
+length(sf_plan(loaded))
 length(loaded$models)
 
 ## ----gui, eval = FALSE--------------------------------------------------------

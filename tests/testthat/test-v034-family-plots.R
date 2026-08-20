@@ -5,6 +5,7 @@
 # (sframe_demo_data()) so results reflect a realistic multi-scale instrument.
 
 test_that("regression diagnostics: run_analysis_plan attaches four ggplot panels", {
+  skip_on_cran()
   skip_if_not_installed("ggplot2")
   demo <- sframe_demo_data()
   res <- run_analysis_plan(demo$responses, demo$instrument, plots = TRUE)
@@ -17,11 +18,13 @@ test_that("regression diagnostics: run_analysis_plan attaches four ggplot panels
 })
 
 test_that("sframe_plot_regression_diagnostics returns NULL without a diagnostics data frame", {
+  skip_on_cran()
   skip_if_not_installed("ggplot2")
   expect_null(sframe_plot_regression_diagnostics(list(test = "regression_linear")))
 })
 
 test_that("plot.sframe_reliability_report builds a ggplot with alpha and omega bars", {
+  skip_on_cran()
   skip_if_not_installed("ggplot2")
   demo <- sframe_demo_data()
   scored <- score_scales(demo$responses, demo$instrument)
@@ -31,6 +34,7 @@ test_that("plot.sframe_reliability_report builds a ggplot with alpha and omega b
 })
 
 test_that("plot.sframe_efa_report builds a scree plot with the suggested-factor marker", {
+  skip_on_cran()
   skip_if_not_installed("ggplot2")
   demo <- sframe_demo_data()
   scored <- score_scales(demo$responses, demo$instrument)
@@ -40,6 +44,7 @@ test_that("plot.sframe_efa_report builds a scree plot with the suggested-factor 
 })
 
 test_that("plot.sframe_efa_solution builds a loadings heatmap", {
+  skip_on_cran()
   skip_if_not_installed("ggplot2")
   demo <- sframe_demo_data()
   scored <- score_scales(demo$responses, demo$instrument)
@@ -49,6 +54,7 @@ test_that("plot.sframe_efa_solution builds a loadings heatmap", {
 })
 
 test_that("plot.sframe_quality_report builds a straight-lining flag-rate bar chart", {
+  skip_on_cran()
   skip_if_not_installed("ggplot2")
   demo <- sframe_demo_data()
   qr <- quality_report(demo$responses, demo$instrument)
@@ -57,6 +63,7 @@ test_that("plot.sframe_quality_report builds a straight-lining flag-rate bar cha
 })
 
 test_that("report-level results (quality, reliability, EFA) gain a plot via run_analysis_plan", {
+  skip_on_cran()
   skip_if_not_installed("ggplot2")
   demo <- sframe_demo_data()
   res <- run_analysis_plan(demo$responses, demo$instrument, plots = TRUE)
@@ -70,6 +77,7 @@ test_that("report-level results (quality, reliability, EFA) gain a plot via run_
 })
 
 test_that("sframe_plot_correlation_matrix builds a heatmap from real response data", {
+  skip_on_cran()
   skip_if_not_installed("ggplot2")
   demo <- sframe_demo_data()
   num_items <- unique(unlist(lapply(demo$instrument$scales, function(s) s$items)))
@@ -79,12 +87,14 @@ test_that("sframe_plot_correlation_matrix builds a heatmap from real response da
 })
 
 test_that("sframe_plot_correlation_matrix returns NULL on a runner error", {
+  skip_on_cran()
   skip_if_not_installed("ggplot2")
   gg <- sframe_plot_correlation_matrix(data.frame(a = 1), c("a", "missing_col"))
   expect_null(gg)
 })
 
 test_that("sframe_draw_mosaic renders a crosstab result without error", {
+  skip_on_cran()
   demo <- sframe_demo_data()
   res <- run_analysis_plan(demo$responses, demo$instrument, plots = FALSE)
   ct <- Filter(function(r) identical(r$test, "crosstab"), res)
@@ -98,10 +108,12 @@ test_that("sframe_draw_mosaic renders a crosstab result without error", {
 })
 
 test_that("sframe_draw_mosaic no-ops gracefully on an errored result", {
+  skip_on_cran()
   expect_null(sframe_draw_mosaic(list(error = "no data")))
 })
 
 test_that("sframe_plot_item_chart covers choice, numeric, and unsupported item types", {
+  skip_on_cran()
   skip_if_not_installed("ggplot2")
   likert_item <- list(type = "likert", label = "Satisfaction")
   cs <- list(values = 1:5, labels = c("SD", "D", "N", "A", "SA"))
@@ -119,6 +131,7 @@ test_that("sframe_plot_item_chart covers choice, numeric, and unsupported item t
 })
 
 test_that("sframe_plot_scale_chart draws a histogram with a mean line and handles empty input", {
+  skip_on_cran()
   skip_if_not_installed("ggplot2")
   gg <- sframe_plot_scale_chart(rnorm(50, 3, 1), "Satisfaction")
   expect_s3_class(gg, "ggplot")
@@ -126,6 +139,7 @@ test_that("sframe_plot_scale_chart draws a histogram with a mean line and handle
 })
 
 test_that("plot.sframe_descriptives_report builds a distribution-shape violin plot", {
+  skip_on_cran()
   skip_if_not_installed("ggplot2")
   demo <- sframe_demo_data()
   dr <- descriptives_report(demo$responses)
@@ -135,6 +149,7 @@ test_that("plot.sframe_descriptives_report builds a distribution-shape violin pl
 })
 
 test_that("sframe_plot_descriptives requires data and errors clearly without it", {
+  skip_on_cran()
   skip_if_not_installed("ggplot2")
   demo <- sframe_demo_data()
   dr <- descriptives_report(demo$responses)
@@ -142,6 +157,7 @@ test_that("sframe_plot_descriptives requires data and errors clearly without it"
 })
 
 test_that("sframe_plot_descriptives facets by group when split_by is used", {
+  skip_on_cran()
   skip_if_not_installed("ggplot2")
   demo <- sframe_demo_data()
   skip_if_not("visit_type" %in% names(demo$responses), "demo data has no visit_type column")
@@ -152,12 +168,14 @@ test_that("sframe_plot_descriptives facets by group when split_by is used", {
 })
 
 test_that("sframe_plot_descriptives returns NULL on an empty table", {
+  skip_on_cran()
   skip_if_not_installed("ggplot2")
   empty <- structure(list(table = data.frame()), class = "sframe_descriptives_report")
   expect_null(sframe_plot_descriptives(empty, data = data.frame()))
 })
 
 test_that("sframe_plot_likert_matrix draws a grouped diverging chart for a matrix item", {
+  skip_on_cran()
   skip_if_not_installed("ggplot2")
   cs <- sf_choices("ag5", 1:5, c("Strongly disagree", "Disagree", "Neutral", "Agree", "Strongly agree"))
   item <- sf_item("mx1", "Rate these", type = "matrix", choice_set = "ag5",
@@ -174,6 +192,7 @@ test_that("sframe_plot_likert_matrix draws a grouped diverging chart for a matri
 })
 
 test_that("sframe_likert_scale_groups finds scales whose items share a choice set", {
+  skip_on_cran()
   cs <- sf_choices("ag5", 1:5, c("Strongly disagree", "Disagree", "Neutral", "Agree", "Strongly agree"))
   i1 <- sf_item("a_1", "Item A1", type = "likert", choice_set = "ag5", scale_id = "sa")
   i2 <- sf_item("a_2", "Item A2", type = "likert", choice_set = "ag5", scale_id = "sa")
@@ -190,6 +209,7 @@ test_that("sframe_likert_scale_groups finds scales whose items share a choice se
 })
 
 test_that("sframe_likert_scale_groups excludes a scale whose items use different choice sets", {
+  skip_on_cran()
   ag5 <- sf_choices("ag5", 1:5, c("Strongly disagree", "Disagree", "Neutral", "Agree", "Strongly agree"))
   yn <- sf_choices("yn", c("yes", "no"), c("Yes", "No"))
   i1 <- sf_item("a_1", "Item A1", type = "likert", choice_set = "ag5", scale_id = "sa")
@@ -200,6 +220,7 @@ test_that("sframe_likert_scale_groups excludes a scale whose items use different
 })
 
 test_that("sframe_plot_likert_scale draws a grouped diverging chart for a scale", {
+  skip_on_cran()
   skip_if_not_installed("ggplot2")
   cs <- sf_choices("ag5", 1:5, c("Strongly disagree", "Disagree", "Neutral", "Agree", "Strongly agree"))
   i1 <- sf_item("a_1", "Item A1", type = "likert", choice_set = "ag5", scale_id = "sa")
@@ -212,6 +233,7 @@ test_that("sframe_plot_likert_scale draws a grouped diverging chart for a scale"
 })
 
 test_that("render_report groups a scale's Likert items into one chart, not one per item", {
+  skip_on_cran()
   skip_if_not_installed("ggplot2")
   cs <- sf_choices("ag5", 1:5, c("Strongly disagree", "Disagree", "Neutral", "Agree", "Strongly agree"))
   i1 <- sf_item("a_1", "First scale item.", type = "likert", choice_set = "ag5", scale_id = "sa")
@@ -244,6 +266,7 @@ test_that("render_report groups a scale's Likert items into one chart, not one p
 })
 
 test_that("descriptives results gain a plot via run_analysis_plan", {
+  skip_on_cran()
   skip_if_not_installed("ggplot2")
   demo <- sframe_demo_data()
   res <- run_analysis_plan(demo$responses, demo$instrument, plots = TRUE)
@@ -253,6 +276,7 @@ test_that("descriptives results gain a plot via run_analysis_plan", {
 })
 
 test_that("group-comparison tests (t/Mann-Whitney/Kruskal-Wallis/ANOVA) gain a boxplot", {
+  skip_on_cran()
   skip_if_not_installed("ggplot2")
   demo <- sframe_demo_data()
   res <- run_analysis_plan(demo$responses, demo$instrument, plots = TRUE)
@@ -264,6 +288,7 @@ test_that("group-comparison tests (t/Mann-Whitney/Kruskal-Wallis/ANOVA) gain a b
 })
 
 test_that("sframe_plot_group_comparison returns NULL for missing columns or a single group", {
+  skip_on_cran()
   skip_if_not_installed("ggplot2")
   expect_null(sframe_plot_group_comparison(list(vars = c("a", "b")), data.frame(z = 1)))
   one_group <- data.frame(g = rep("x", 10), y = rnorm(10))
@@ -271,6 +296,7 @@ test_that("sframe_plot_group_comparison returns NULL for missing columns or a si
 })
 
 test_that("paired tests (t_test_pair, wilcoxon_pair) gain a slope plot", {
+  skip_on_cran()
   skip_if_not_installed("ggplot2")
   demo <- sframe_demo_data()
   res <- run_analysis_plan(demo$responses, demo$instrument, plots = TRUE)
@@ -282,12 +308,14 @@ test_that("paired tests (t_test_pair, wilcoxon_pair) gain a slope plot", {
 })
 
 test_that("sframe_plot_paired_comparison returns NULL with fewer than two complete pairs", {
+  skip_on_cran()
   skip_if_not_installed("ggplot2")
   df <- data.frame(x = c(1, NA), y = c(NA, 2))
   expect_null(sframe_plot_paired_comparison(list(vars = c("x", "y")), df))
 })
 
 test_that("sframe_plot_variable_distribution returns three ggplot panels", {
+  skip_on_cran()
   skip_if_not_installed("ggplot2")
   demo <- sframe_demo_data()
   vd <- sframe_plot_variable_distribution(demo$responses, "dm_1")
@@ -296,12 +324,14 @@ test_that("sframe_plot_variable_distribution returns three ggplot panels", {
 })
 
 test_that("sframe_plot_variable_distribution returns NULL for a missing or degenerate column", {
+  skip_on_cran()
   skip_if_not_installed("ggplot2")
   expect_null(sframe_plot_variable_distribution(data.frame(a = 1), "missing"))
   expect_null(sframe_plot_variable_distribution(data.frame(a = c(1, NA)), "a"))
 })
 
 test_that("plot_palette threads from run_analysis_plan to attached plots", {
+  skip_on_cran()
   skip_if_not_installed("ggplot2")
   demo <- sframe_demo_data()
   res_p <- run_analysis_plan(demo$responses, demo$instrument,
@@ -322,6 +352,7 @@ test_that("plot_palette threads from run_analysis_plan to attached plots", {
 })
 
 test_that("render_report accepts plot_palette and renders with the print theme", {
+  skip_on_cran()
   skip_if_not_installed("ggplot2")
   demo <- sframe_demo_data()
   out <- tempfile(fileext = ".html")
@@ -334,6 +365,7 @@ test_that("render_report accepts plot_palette and renders with the print theme",
 })
 
 test_that("render_report embeds regression diagnostic panels beside the main chart", {
+  skip_on_cran()
   skip_if_not_installed("ggplot2")
   demo <- sframe_demo_data()
   old_opt <- options(surveyframe.use_quarto = FALSE)
@@ -347,6 +379,7 @@ test_that("render_report embeds regression diagnostic panels beside the main cha
 })
 
 test_that("plot.sframe_validity_report builds CR and AVE bars by construct", {
+  skip_on_cran()
   skip_if_not_installed("ggplot2")
   vr <- validity_report(list(
     SAT = c(sat_1 = 0.82, sat_2 = 0.78, sat_3 = 0.74),
@@ -362,6 +395,7 @@ test_that("plot.sframe_validity_report builds CR and AVE bars by construct", {
 })
 
 test_that("plot.sframe_analysis_results draws attached charts and selects by which", {
+  skip_on_cran()
   skip_if_not_installed("ggplot2")
   demo <- sframe_demo_data()
   results <- run_analysis_plan(demo$responses, demo$instrument, plots = TRUE)
@@ -395,12 +429,14 @@ test_that("plot.sframe_analysis_results draws attached charts and selects by whi
 })
 
 test_that("plot.sframe_analysis_results aborts when no charts were requested", {
+  skip_on_cran()
   demo <- sframe_demo_data()
   results <- run_analysis_plan(demo$responses, demo$instrument)
   expect_error(plot(results), class = "sframe_error")
 })
 
 test_that("plot.sframe_missing_data_report builds a missingness bar chart", {
+  skip_on_cran()
   skip_if_not_installed("ggplot2")
   demo <- sframe_demo_data()
   resp <- demo$responses
@@ -420,6 +456,7 @@ test_that("plot.sframe_missing_data_report builds a missingness bar chart", {
 })
 
 test_that("every block in the demo analysis plan gets a table, a plot, or generated syntax", {
+  skip_on_cran()
   skip_if_not_installed("ggplot2")
   demo <- sframe_demo_data()
   res <- run_analysis_plan(demo$responses, demo$instrument, plots = TRUE)
@@ -432,6 +469,7 @@ test_that("every block in the demo analysis plan gets a table, a plot, or genera
 })
 
 test_that("repeated_anova computes a real F/p table instead of only fit_summary text", {
+  skip_on_cran()
   demo <- sframe_demo_data()
   res <- run_analysis_plan(demo$responses, demo$instrument)
   ra <- Filter(function(r) identical(r$test, "repeated_anova"), res)
@@ -443,6 +481,7 @@ test_that("repeated_anova computes a real F/p table instead of only fit_summary 
 })
 
 test_that("friedman, partial_correlation, and mediation tables are populated", {
+  skip_on_cran()
   demo <- sframe_demo_data()
   # partial_correlation and mediation reference scale-score variables, which
   # only exist when scoring runs (the default); scored = FALSE was fine for
@@ -466,6 +505,7 @@ test_that("friedman, partial_correlation, and mediation tables are populated", {
 })
 
 test_that("moderation, logistic, and repeated-measures plots draw", {
+  skip_on_cran()
   skip_if_not_installed("ggplot2")
   demo <- sframe_demo_data()
   res <- run_analysis_plan(demo$responses, demo$instrument, plots = TRUE)
@@ -481,6 +521,7 @@ test_that("moderation, logistic, and repeated-measures plots draw", {
 })
 
 test_that("syntax-only blocks (CFA/SEM/PLS-SEM) carry generated syntax text", {
+  skip_on_cran()
   demo <- sframe_demo_data()
   res <- run_analysis_plan(demo$responses, demo$instrument, scored = FALSE)
   for (t in c("cfa_lavaan_syntax", "sem_lavaan_syntax", "seminr_syntax")) {

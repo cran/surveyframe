@@ -70,7 +70,7 @@
 #'   analysis_plan = plan
 #' )
 #' print(instr)
-#' length(instr$analysis_plan)
+#' length(sf_plan(instr))
 sf_instrument <- function(
     title,
     version     = "0.1.0",
@@ -88,9 +88,11 @@ sf_instrument <- function(
   scales    <- Filter(function(x) inherits(x, "sf_scale"),   components)
   branching <- Filter(function(x) inherits(x, "sf_branch"),  components)
   checks    <- Filter(function(x) inherits(x, "sf_check"),   components)
+  designs   <- Filter(function(x) inherits(x, "sf_conjoint_design"), components)
 
   # Keep the component list limited to known surveyframe classes.
-  known_classes <- c("sf_item", "sf_choices", "sf_scale", "sf_branch", "sf_check")
+  known_classes <- c("sf_item", "sf_choices", "sf_scale", "sf_branch",
+                     "sf_check", "sf_conjoint_design")
   unknown <- Filter(
     function(x) !any(vapply(known_classes, function(cls) inherits(x, cls), logical(1))),
     components
@@ -122,6 +124,7 @@ sf_instrument <- function(
       scales    = scales,
       branching = branching,
       checks    = checks,
+      designs   = designs,
       analysis_plan = analysis_plan %||% list(),
       models    = models %||% list(),
       render    = render %||% list()

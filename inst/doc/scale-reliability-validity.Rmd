@@ -61,14 +61,16 @@ instr     <- demo$instrument
 responses <- demo$responses
 
 rr <- reliability_report(responses, instr, omega = TRUE)
-rel_df <- do.call(rbind, lapply(rr, function(s) data.frame(
-  Scale   = paste0(s$label, " (", s$scale_id, ")"),
-  Items   = s$n_items,
-  N       = s$n,
-  Alpha   = if (!is.null(s$alpha))   sprintf("%.2f", s$alpha)   else "n/a",
-  Omega_h = if (!is.null(s$omega_h)) sprintf("%.2f", s$omega_h) else "n/a",
-  Omega_t = if (!is.null(s$omega_t)) sprintf("%.2f", s$omega_t) else "n/a",
-  stringsAsFactors = FALSE)))
+# as.data.frame() gives one row per scale, so no reaching into the object.
+rr_df <- as.data.frame(rr)
+rel_df <- data.frame(
+  Scale   = paste0(rr_df$label, " (", rr_df$scale_id, ")"),
+  Items   = rr_df$n_items,
+  N       = rr_df$n,
+  Alpha   = ifelse(is.na(rr_df$alpha),   "n/a", sprintf("%.2f", rr_df$alpha)),
+  Omega_h = ifelse(is.na(rr_df$omega_h), "n/a", sprintf("%.2f", rr_df$omega_h)),
+  Omega_t = ifelse(is.na(rr_df$omega_t), "n/a", sprintf("%.2f", rr_df$omega_t)),
+  stringsAsFactors = FALSE)
 kable(rel_df, row.names = FALSE,
       col.names = c("Scale", "Items", "N", "Alpha", "Omega h", "Omega total"),
       align = c("l", "c", "c", "r", "r", "r"),
@@ -121,7 +123,7 @@ published_loadings <- list(
 )
 
 validity <- validity_report(published_loadings)
-kable(validity$reliability, digits = 2,
+kable(as.data.frame(validity), digits = 2,
       caption = "Composite reliability and average variance extracted")
 ```
 

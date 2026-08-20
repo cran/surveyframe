@@ -22,8 +22,8 @@ sf_scale(
 reports and codebooks.}
 
 \item{items}{Character vector. The \code{id} values of items that belong to this
-scale. Order controls presentation in reports; scoring uses the same item
-IDs regardless of order.}
+scale. Order controls presentation in reports, while scoring uses the
+same item IDs regardless of order.}
 
 \item{method}{Character. Scoring method. Either \code{"mean"} (default) or
 \code{"sum"}.}

@@ -25,7 +25,7 @@
 #' [launch_dashboard_demo()].
 #'
 #' @param instrument An `sframe` object. Required. Calling `launch_dashboard()`
-#'   with no instrument errors with guidance; use [launch_dashboard_demo()] for
+#'   with no instrument errors with guidance. Use [launch_dashboard_demo()] for
 #'   the bundled demo or [launch_studio()] to upload interactively.
 #' @param responses A `data.frame` or `tibble` of survey responses, as
 #'   produced by [read_responses()] or [read_sheet_responses()]. When NULL the

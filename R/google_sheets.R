@@ -44,26 +44,19 @@ export_google_sheet <- function(instrument, sheet_url, output_dir = ".") {
     function(i) !identical(i$type %in% c("section_break", "text_block"), TRUE),
     instrument$items
   )
-  choice_values <- function(instrument, id) {
-    for (cs in instrument$choices) {
-      if (identical(cs$id, id)) return(as.character(cs$values))
-    }
-    character(0)
-  }
+  # 0.4.0: this was the 4th place deriving the same expansion columns, after
+  # read_responses() and validate_sframe(), and those 2 had already drifted
+  # apart once, which is what made a real builder export fail validation.
+  # The logic lives once in sframe_item_expansion_columns()
+  # (R/decision_data.R) and every caller reads it from there, so the sheet
+  # cannot fall behind what the reader accepts. That also brings the decision
+  # item types along: item__a__vs__b, item__a__to__b, and item__crit.
+  #
+  # The fallback to the bare item id is kept. An expandable item with no
+  # usable choice set still needs one column rather than none.
   item_headers <- unlist(lapply(response_items, function(i) {
-    if (identical(i$type, "matrix") && length(i$matrix_items) > 0L) {
-      paste0(i$id, "__", i$matrix_items)
-    } else if (identical(i$type, "ranking") && !is.null(i$choice_set)) {
-      # 0.3.3: ranking posts one rank column per option
-      vals <- choice_values(instrument, i$choice_set)
-      if (length(vals) > 0L) paste0(i$id, "__", vals) else i$id
-    } else if (identical(i$type, "multiple_choice") && !is.null(i$choice_set)) {
-      # 0.3.3: multi-select posts one 0/1 column per option
-      vals <- choice_values(instrument, i$choice_set)
-      if (length(vals) > 0L) paste0(i$id, "__", vals) else i$id
-    } else {
-      i$id
-    }
+    cols <- sframe_item_expansion_columns(instrument, list(i))
+    if (length(cols) > 0L) cols else i$id
   }), use.names = FALSE)
   col_headers <- c("respondent_id", "started_at", "submitted_at", item_headers)
   headers_js <- jsonlite::toJSON(col_headers, auto_unbox = TRUE)

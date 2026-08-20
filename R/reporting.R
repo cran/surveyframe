@@ -1,5 +1,20 @@
 # codebook_report.R
 
+# Remove the scratch directories Chrome leaves in tempdir() after a
+# chrome_print() call. `before` is the listing taken immediately before the
+# call, so only entries created during it are considered, and of those only
+# the ones matching Chrome's own naming are removed.
+sframe_clean_chrome_detritus <- function(before) {
+  after <- list.files(tempdir(), all.files = TRUE, no.. = TRUE)
+  new   <- setdiff(after, before)
+  chrome <- grep("^(com\\.google\\.Chrome\\.|scoped_dir|\\.com\\.google\\.Chrome\\.)",
+                 new, value = TRUE)
+  if (length(chrome)) {
+    unlink(file.path(tempdir(), chrome), recursive = TRUE, force = TRUE)
+  }
+  invisible(chrome)
+}
+
 #' Generate a survey codebook from an instrument object
 #'
 #' Produces a structured codebook listing all items, their types, choice sets,
@@ -29,8 +44,8 @@
 #'
 #' cb <- codebook_report(instr)
 #' print(cb)
-#' nrow(cb$items_table)
-#' nrow(cb$scales_table)
+#' nrow(sf_items(cb))
+#' nrow(sf_scales(cb))
 codebook_report <- function(instrument, format = c("html", "md")) {
   sframe_check_instrument(instrument)
   format <- rlang::arg_match(format)
@@ -47,107 +62,19 @@ codebook_report <- function(instrument, format = c("html", "md")) {
     item_ids
   )
 
-  items_table <- data.frame(
-    id         = vapply(instrument$items, function(i) i$id,          character(1)),
-    label      = vapply(instrument$items, function(i) i$label,       character(1)),
-    type       = vapply(instrument$items, function(i) i$type,        character(1)),
-    choice_set = vapply(instrument$items, function(i) i$choice_set %||% "", character(1)),
-    scale_id   = vapply(instrument$items, function(i) i$scale_id %||% "", character(1)),
-    reverse    = vapply(instrument$items, function(i) isTRUE(i$reverse), logical(1)),
-    required   = vapply(instrument$items, function(i) isTRUE(i$required), logical(1)),
-    stringsAsFactors = FALSE,
-    check.names = FALSE
-  )
+  # The 5 tables come from the shared builders in as_data_frame.R, so the
+  # codebook and as.data.frame() on the instrument cannot drift apart.
+  items_table <- sframe_items_table(instrument)
 
-  choices_table <- if (length(instrument$choices) > 0) {
-    rows <- lapply(instrument$choices, function(cs) {
-      data.frame(
-        choice_set_id = cs$id,
-        value         = as.character(cs$values),
-        label         = cs$labels,
-        stringsAsFactors = FALSE,
-        check.names = FALSE
-      )
-    })
-    do.call(rbind, rows)
-  } else {
-    data.frame(
-      choice_set_id = character(0),
-      value = character(0),
-      label = character(0),
-      stringsAsFactors = FALSE,
-      check.names = FALSE
-    )
-  }
+  choices_table <- sframe_choices_table(instrument)
 
-  scales_table <- if (length(instrument$scales) > 0) {
-    data.frame(
-      id     = vapply(instrument$scales, function(s) s$id,    character(1)),
-      label  = vapply(instrument$scales, function(s) s$label, character(1)),
-      method = vapply(instrument$scales, function(s) s$method, character(1)),
-      n_items = vapply(instrument$scales, function(s) length(s$items), integer(1)),
-      items  = vapply(instrument$scales, function(s) paste(s$items, collapse = ", "), character(1)),
-      stringsAsFactors = FALSE,
-      check.names = FALSE
-    )
-  } else {
-    data.frame(
-      id = character(0),
-      label = character(0),
-      method = character(0),
-      n_items = integer(0),
-      items = character(0),
-      stringsAsFactors = FALSE,
-      check.names = FALSE
-    )
-  }
+  scales_table <- sframe_scales_table(instrument)
 
   # The pre-declared analysis plan and the measurement models belong in the
   # codebook, so one document fully records the instrument a study used.
-  plan_table <- if (length(instrument$analysis_plan %||% list()) > 0) {
-    data.frame(
-      id = vapply(instrument$analysis_plan, function(b) b$id %||% "", character(1)),
-      research_question = vapply(instrument$analysis_plan,
-        function(b) b$research_question %||% "", character(1)),
-      method = vapply(instrument$analysis_plan, sframe_analysis_method, character(1)),
-      variables = vapply(instrument$analysis_plan,
-        function(b) paste(sframe_analysis_vars(b), collapse = ", "), character(1)),
-      decision_rule = vapply(instrument$analysis_plan,
-        function(b) b$decision_rule %||% b$interpretation %||% "", character(1)),
-      stringsAsFactors = FALSE,
-      check.names = FALSE
-    )
-  } else {
-    data.frame(
-      id = character(0), research_question = character(0),
-      method = character(0), variables = character(0),
-      decision_rule = character(0),
-      stringsAsFactors = FALSE, check.names = FALSE
-    )
-  }
+  plan_table <- sframe_plan_table(instrument)
 
-  models_table <- if (length(instrument$models %||% list()) > 0) {
-    data.frame(
-      id = vapply(instrument$models, function(m) m$id %||% "", character(1)),
-      label = vapply(instrument$models, function(m) m$label %||% "", character(1)),
-      type = vapply(instrument$models, function(m) m$type %||% "", character(1)),
-      engine = vapply(instrument$models, function(m) m$engine %||% "", character(1)),
-      n_constructs = vapply(instrument$models, function(m) {
-        length(sframe_model_constructs(m))
-      }, integer(1)),
-      n_paths = vapply(instrument$models, function(m) {
-        length(m$structural$paths %||% list())
-      }, integer(1)),
-      stringsAsFactors = FALSE,
-      check.names = FALSE
-    )
-  } else {
-    data.frame(
-      id = character(0), label = character(0), type = character(0),
-      engine = character(0), n_constructs = integer(0), n_paths = integer(0),
-      stringsAsFactors = FALSE, check.names = FALSE
-    )
-  }
+  models_table <- sframe_models_table(instrument)
 
   structure(
     list(
@@ -168,11 +95,11 @@ codebook_report <- function(instrument, format = c("html", "md")) {
 #' Replaces `items_table`'s `choice_set` id with the choice set's actual
 #' response options ("1 = Strongly disagree; 2 = Disagree; ...") and its
 #' `scale_id` with the scale's label, so each row of the printed codebook is
-#' self-contained. [codebook_report()] itself keeps the raw ids (for joining
-#' `items_table` to `choices_table`/`scales_table` programmatically); this
-#' is for the rendered document, where a reader should not need to
-#' cross-reference a separate table just to see what "1" means on a scale
-#' shared by many items.
+#' self-contained. [codebook_report()] itself keeps the raw ids, for joining
+#' `items_table` to `choices_table`/`scales_table` programmatically. This
+#' enrichment is for the rendered document, where a reader should not need
+#' to cross-reference a separate table just to see what "1" means on a
+#' scale shared by many items.
 #'
 #' @param cb An `sframe_codebook` object from [codebook_report()].
 #' @return A data.frame, `cb$items_table` with `choice_set` and `scale_id`
@@ -276,6 +203,7 @@ print.sframe_codebook <- function(x, ...) {
 #'   submitted_at = "submitted_at",
 #'   meta_cols = "started_at"
 #' )
+#' \donttest{
 #' old <- options(surveyframe.use_quarto = FALSE)
 #' out <- tryCatch(
 #'   render_report(
@@ -288,6 +216,7 @@ print.sframe_codebook <- function(x, ...) {
 #'   finally = options(old)
 #' )
 #' file.exists(out)
+#' }
 render_report <- function(
     instrument,
     data              = NULL,
@@ -337,6 +266,13 @@ render_report <- function(
       plot_palette = plot_palette,
       interpretations = interpretations
     )
+    # Chrome writes its own scratch directories into tempdir() and does not
+    # remove them, which R CMD check reports as detritus in the temp
+    # directory. Only entries that appear during this call and match Chrome's
+    # own naming are removed, so nothing else in tempdir() is touched.
+    before <- list.files(tempdir(), all.files = TRUE, no.. = TRUE)
+    on.exit(sframe_clean_chrome_detritus(before), add = TRUE)
+
     printed <- tryCatch(
       pagedown::chrome_print(input = html_tmp, output = dest),
       error = function(e) {
@@ -845,6 +781,15 @@ sframe_clean_interpretations <- function(interpretations) {
       syntax_html <- if (!is.null(result$syntax)) {
         sprintf("<pre><code>%s</code></pre>", htmltools_escape(result$syntax))
       } else ""
+      # extract_quotes() attaches $quotes (topic, rank, respondent, quote) to
+      # a topic-model result: a second, separate table alongside the main
+      # $table rather than a substitute for it, so it renders through the
+      # same generic table builder under its own heading (todo_0.5.md's
+      # ground-truth note: mirror the $syntax pattern, don't build a new
+      # render_text_section()).
+      quotes_html <- if (is.data.frame(result$quotes) && nrow(result$quotes) > 0) {
+        .render_report_table(result$quotes, "Representative quotes")
+      } else ""
       paste(
         c(
           "<div class=\"rq-block\">",
@@ -855,6 +800,7 @@ sframe_clean_interpretations <- function(interpretations) {
           table_html,
           plot_html,
           syntax_html,
+          quotes_html,
           if (nzchar(extra)) extra,
           "</div>"
         ),

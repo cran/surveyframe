@@ -7,6 +7,20 @@
 # an instrument argument.  Replaces bare stopifnot(inherits(...)) calls
 # so new users see an actionable message instead of a raw condition string.
 sframe_check_instrument <- function(instrument, arg = "instrument") {
+  # Since 0.4.0 validate_sframe() returns a diagnostic rather than the
+  # instrument. Catching that here turns the one plausible migration mistake
+  # into a directed error instead of a confusing one further down.
+  if (inherits(instrument, "sframe_validation")) {
+    rlang::abort(
+      paste0(
+        "The `", arg, "` argument was given the result of `validate_sframe()`, ",
+        "which is a validation diagnostic rather than an instrument. ",
+        "Wrap the call in `as_sframe()` to get the instrument back, ",
+        "or pass the instrument directly."
+      ),
+      class = "sframe_error"
+    )
+  }
   if (!inherits(instrument, "sframe")) {
     rlang::abort(
       paste0(
@@ -33,6 +47,30 @@ sframe_require_MASS <- function(reason) {
 
 sframe_require_nnet <- function(reason) {
   rlang::check_installed("nnet", reason = reason)
+}
+
+sframe_require_tidytext <- function(reason) {
+  rlang::check_installed("tidytext", reason = reason)
+}
+
+sframe_require_topicmodels <- function(reason) {
+  rlang::check_installed("topicmodels", reason = reason)
+}
+
+sframe_require_stm <- function(reason) {
+  rlang::check_installed("stm", reason = reason)
+}
+
+sframe_require_quanteda <- function(reason) {
+  rlang::check_installed("quanteda", reason = reason)
+}
+
+sframe_require_igraph <- function(reason) {
+  rlang::check_installed("igraph", reason = reason)
+}
+
+sframe_require_logistf <- function(reason) {
+  rlang::check_installed("logistf", reason = reason)
 }
 
 #' Abort with a validation error
@@ -109,6 +147,25 @@ sframe_warn_missing <- function(message, item_id = NULL, rate = NULL, ...) {
     class   = c("sframe_missing_data_warning", "sframe_warning"),
     item_id = item_id,
     rate    = rate,
+    ...
+  )
+}
+
+#' Warn about an instrument design issue
+#'
+#' Advisory only. Used where a declaration is legal but likely to cost the
+#' researcher data quality, such as a pairwise comparison item large enough to
+#' fatigue respondents.
+#'
+#' @param message Character. The warning message.
+#' @param item_id Character or NULL. The item ID affected.
+#' @param ... Additional named fields passed to `rlang::warn()`.
+#' @keywords internal
+sframe_warn_design <- function(message, item_id = NULL, ...) {
+  rlang::warn(
+    message = message,
+    class   = c("sframe_design_warning", "sframe_warning"),
+    item_id = item_id,
     ...
   )
 }

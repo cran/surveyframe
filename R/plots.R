@@ -180,6 +180,345 @@ sframe_plot_frequency <- function(result, palette = c("web", "print")) {
     theme_surveyframe(palette = palette) + sframe_theme_angled_x()
 }
 
+# Word-cloud layout via the actual algorithm the wordcloud/ggwordcloud
+# packages use (Jonathan Feinberg's Wordle placement, as described at
+# cran.r-project.org/web/packages/ggwordcloud/vignettes/ggwordcloud.html
+# and r-graph-gallery.com/wordcloud.html): words are placed largest first,
+# each one walking an outward spiral from the centre until it finds a
+# position whose bounding box does not overlap any word already placed.
+# The previous version was a bare golden-angle spiral with NO collision
+# check at all, so a large word could and did overlap its neighbours
+# whenever positions happened to land close together (visible in the
+# 0.5 vignette/demo's word clouds: "comfortable" overlapping "respond").
+#
+# Still no new dependency (todo_0.5.md: "do not add a wordcloud/
+# ggwordcloud package for this"): text is measured with base
+# `grDevices::pdf(NULL)` (a null device, writes no file, the standard R
+# trick for off-screen `strwidth()`/`strheight()`) plus base graphics
+# string-metric functions, not the wordcloud/ggwordcloud packages
+# themselves.
+#
+# `sizes` must be the same values the caller will later map to the
+# `geom_text()` `size` aesthetic (via `scale_size_identity()`, so the
+# rendered size matches exactly what was measured here).
+#
+# Measured via `grid::textGrob()`/`grid::grobWidth()`/`grobHeight()`, not
+# base graphics `strwidth()`/`strheight()` (the first version's approach):
+# ggplot2 draws `geom_text()` through the grid graphics system, so
+# measuring through grid tracks the actual rendered glyph size far more
+# closely than base graphics' `pdf(NULL)` + `strwidth()`/`strheight()`
+# trick did — that mismatch was exactly why the first fix needed a huge
+# (85%) padding buffer to avoid overlap, which produced the "still looks
+# scattered" complaint: most of the visible whitespace was safety margin
+# against a measurement the algorithm didn't actually trust. `padding`
+# drops to a normal ~15% now that the measurement is accurate enough to
+# trust, giving the tight packing a real word cloud has.
+#
+# `centers` (optional, one `x`/`y` row per word) lets the SAME
+# spiral-and-collide engine build a grouped cloud (see
+# `sframe_plot_sentiment()`'s comparison cloud): each word spirals
+# outward from its own group's anchor point rather than a shared origin,
+# while collision detection stays global, so the two groups never
+# overlap each other at the boundary. Defaults to every word sharing the
+# origin, the single-cloud case `sframe_plot_term_frequency()` uses.
+#
+# `aspect` scales the spiral's x-growth relative to its (fixed) y-growth:
+# `aspect = 1` is a circular spiral (`sframe_plot_term_frequency()`'s
+# cloud); `aspect < 1` grows taller and narrower than it does wide, which
+# is what keeps 2 side-by-side clusters (`sframe_plot_sentiment()`'s
+# left/right comparison cloud) from spreading into each other
+# horizontally as readily as a wide ellipse would.
+#
+# `shape = "circle"` additionally caps the spiral radius at a disc sized
+# to roughly hold the words' total rendered area (accounting for a
+# packing-inefficiency factor, since rectangular bounding boxes and a
+# spiral search never tile perfectly), and wraps the search back toward
+# the centre instead of growing past that radius once a word's natural
+# spiral would exceed it — so a smaller word placed later fills a real
+# interior gap near the centre rather than spilling out past a ragged
+# organic edge. `shape = "organic"` (default) is uncapped, the original
+# freeform behaviour.
+#
+# Still no new dependency (todo_0.5.md: "do not add a wordcloud/
+# ggwordcloud package for this"): `grid` and `grDevices::pdf(NULL)` (a
+# null device, writes no file) are both base R, not the wordcloud/
+# ggwordcloud packages themselves.
+.sframe_wordcloud_layout <- function(words, sizes, centers = NULL, padding = 0.15,
+                                     aspect = 1.5, shape = c("organic", "circle")) {
+  shape <- match.arg(shape)
+  n <- length(words)
+  if (n == 0) {
+    return(data.frame(term = character(0), x = numeric(0), y = numeric(0)))
+  }
+  if (is.null(centers)) centers <- data.frame(x = rep(0, n), y = rep(0, n))
+
+  # Largest word first: it anchors its cluster, and each later (smaller)
+  # word has an easier time finding a gap than the reverse order would.
+  ord <- order(-sizes)
+  words <- words[ord]
+  sizes <- sizes[ord]
+  centers <- centers[ord, , drop = FALSE]
+
+  grDevices::pdf(NULL)
+  on.exit(grDevices::dev.off(), add = TRUE)
+  # The `size` aesthetic ggplot2's geom_text() takes is in mm; converting
+  # to points (the unit grid::gpar(fontsize=) wants) with the same
+  # mm-to-pt factor ggplot2 itself uses internally (72.27/25.4) is what
+  # makes this measurement track the real render, not just a
+  # self-consistent but arbitrarily-scaled estimate.
+  pt_size <- sizes * (72.27 / 25.4)
+  dims <- lapply(seq_along(words), function(i) {
+    g <- grid::textGrob(words[i], gp = grid::gpar(fontsize = pt_size[i], fontface = "bold"))
+    c(w = as.numeric(grid::convertWidth(grid::grobWidth(g), "inches")),
+      h = as.numeric(grid::convertHeight(grid::grobHeight(g), "inches")))
+  })
+  half_w <- vapply(dims, `[[`, numeric(1), "w") / 2 * (1 + padding)
+  half_h <- vapply(dims, `[[`, numeric(1), "h") / 2 * (1 + padding)
+
+  # Packing-efficiency factor: an Archimedean spiral search over
+  # rectangular bounding boxes fills roughly half a disc's true area in
+  # practice, not all of it, so the target radius is inflated to
+  # compensate rather than coming out too cramped.
+  max_r <- if (shape == "circle") sqrt(sum(4 * half_w * half_h) / pi / 0.5) else Inf
+
+  placed_x <- placed_y <- placed_hw <- placed_hh <- numeric(0)
+  overlaps <- function(x, y, hw, hh) {
+    if (!length(placed_x)) return(FALSE)
+    any(abs(x - placed_x) < (hw + placed_hw) & abs(y - placed_y) < (hh + placed_hh))
+  }
+
+  x <- y <- numeric(n)
+  for (i in seq_len(n)) {
+    theta <- 0
+    r <- 0
+    attempts <- 0L
+    repeat {
+      cand_x <- centers$x[i] + r * cos(theta) * aspect
+      cand_y <- centers$y[i] + r * sin(theta)
+      if (!overlaps(cand_x, cand_y, half_w[i], half_h[i])) break
+      theta <- theta + 0.1
+      r <- r + 0.012
+      if (r > max_r) {
+        # Wrap back toward the centre rather than growing past the
+        # target disc: jump to a substantially different angle so the
+        # retry does not just re-walk the same failed trajectory.
+        r <- 0.02
+        theta <- theta + pi / 3
+      }
+      attempts <- attempts + 1L
+      if (attempts > 4000L) break  # pathological fallback; not hit in practice
+    }
+    x[i] <- cand_x
+    y[i] <- cand_y
+    placed_x  <- c(placed_x,  cand_x)
+    placed_y  <- c(placed_y,  cand_y)
+    placed_hw <- c(placed_hw, half_w[i])
+    placed_hh <- c(placed_hh, half_h[i])
+  }
+
+  # half_w/half_h ride along so a caller can compute the plot's actual
+  # extent (x +/- half_w, y +/- half_h), not just the anchor points: a
+  # coord_fixed() built from the anchor points alone clips every word's
+  # far edge, which is exactly what happened before this was added (long
+  # words at the outer edge of the sentiment comparison cloud were cut
+  # off mid-word).
+  data.frame(term = words, x = x, y = y, half_w = half_w, half_h = half_h,
+             stringsAsFactors = FALSE)
+}
+
+#' Term-frequency plot: horizontal bar or word cloud
+#'
+#' Top terms from a `term_freq` result as a horizontal bar chart, or a word
+#' cloud when `result$options$wordcloud` is `TRUE` (opt-in, default
+#' `FALSE`). Facets by group when the result carries a `group` role
+#' (todo_0.5.md section 1a).
+#'
+#' @param result A `term_freq` result list from [run_analysis_plan()].
+#' @param palette One of `"web"` or `"print"`. See `sframe_brand()`.
+#' @return A ggplot2 object, or `NULL` when the result carries no table.
+#' @export
+#' @seealso [run_analysis_plan()], [term_frequency()]
+sframe_plot_term_frequency <- function(result, palette = c("web", "print")) {
+  rlang::check_installed("ggplot2", reason = "to plot term frequency.")
+  palette <- match.arg(palette)
+  tbl <- result$table
+  if (!is.data.frame(tbl) || nrow(tbl) == 0 || !"term" %in% names(tbl)) return(NULL)
+  brand <- sframe_brand(palette)
+  grouped <- "group" %in% names(tbl)
+  wordcloud <- isTRUE(result$options$wordcloud)
+
+  if (wordcloud) {
+    # The word cloud shows the overall top terms; a per-group cloud is not
+    # a legible shape, so the grouped table is collapsed back to overall
+    # frequency first when needed. Capped at 40 (not 60): the collision-
+    # avoiding layout below trades word count for legibility on purpose,
+    # and 40 already matches what other captions in this package call
+    # "the top terms" for a word cloud.
+    plot_tbl <- if (grouped) {
+      stats::aggregate(n ~ term, data = tbl, FUN = sum)
+    } else {
+      tbl
+    }
+    plot_tbl <- plot_tbl[order(-plot_tbl$n), , drop = FALSE]
+    plot_tbl <- utils::head(plot_tbl, 40)
+    # Area-proportional sizing (size ~ sqrt(n), per the ggwordcloud
+    # vignette's "true proportionality" recommendation: printed AREA
+    # should track the value, not printed height) rescaled to a legible
+    # point range, then held fixed via scale_size_identity() so the size
+    # actually rendered is exactly the size .sframe_wordcloud_layout()
+    # measured collisions against.
+    rescale01 <- function(v) {
+      rng <- range(v)
+      if (diff(rng) == 0) return(rep(0.5, length(v)))
+      (v - rng[1]) / diff(rng)
+    }
+    plot_tbl$size <- 5 + rescale01(sqrt(plot_tbl$n)) * 13
+    # aspect = 1 (equal x/y growth) plus shape = "circle" (radius-capped,
+    # wrapped fill) is the circular word cloud shape.
+    layout <- .sframe_wordcloud_layout(plot_tbl$term, plot_tbl$size,
+                                       aspect = 1, shape = "circle")
+    plot_tbl <- merge(plot_tbl, layout, by = "term")
+    # Tight coordinate limits from the actual placed extents (each word's
+    # anchor point +/- its OWN measured half-width/half-height, not just
+    # the anchor points themselves), rather than letting ggplot2's default
+    # expansion add a wide empty band, or clipping a word whose far edge
+    # extends past its anchor point.
+    xlim <- range(c(plot_tbl$x - plot_tbl$half_w, plot_tbl$x + plot_tbl$half_w))
+    ylim <- range(c(plot_tbl$y - plot_tbl$half_h, plot_tbl$y + plot_tbl$half_h))
+    return(
+      ggplot2::ggplot(plot_tbl, ggplot2::aes(x = .data$x, y = .data$y,
+                                             label = .data$term, size = .data$size,
+                                             alpha = .data$n)) +
+        # Colour is a fixed hue (brand$teal); ALPHA is what varies
+        # dark-to-light with frequency, so the more frequent (already
+        # bigger) a term is, the darker it also reads, and a term is
+        # never lightened past a WCAG-conscious floor (0.5, not down to
+        # near-invisible) even at the bottom of the frequency range.
+        ggplot2::geom_text(colour = brand$teal, fontface = "bold") +
+        ggplot2::scale_size_identity() +
+        ggplot2::scale_alpha_continuous(range = c(0.5, 1), guide = "none") +
+        ggplot2::coord_fixed(xlim = xlim, ylim = ylim, expand = TRUE) +
+        ggplot2::labs(title = paste("Term cloud for", result$variable %||% "")) +
+        ggplot2::theme_void() +
+        ggplot2::theme(plot.title = ggplot2::element_text(face = "bold", hjust = 0.5))
+    )
+  }
+
+  .sframe_plot_term_bar(tbl, title = paste("Top terms for", result$variable %||% ""),
+                        palette = palette, brand = brand, grouped = grouped)
+}
+
+# Shared horizontal-bar builder behind sframe_plot_term_frequency() (the
+# non-word-cloud path) and sframe_plot_ngram_frequency(): top-20-per-group
+# term bars, term/n-gram terms ordered by frequency, with optional group
+# faceting. `tbl` needs `term` and `n` columns and, when `grouped` is `TRUE`,
+# a `group` column.
+.sframe_plot_term_bar <- function(tbl, title, palette, brand, grouped = FALSE) {
+  bar_tbl <- if (grouped) tbl else within(tbl, group <- "all")
+  bar_tbl <- do.call(rbind, lapply(split(bar_tbl, bar_tbl$group), function(d) {
+    utils::head(d[order(-d$n), , drop = FALSE], 20)
+  }))
+  # A single global factor level list (one position per distinct term,
+  # largest anywhere in the combined table wins) is wrong for a faceted
+  # chart with `scales = "free_y"`: the same term can appear in more than
+  # one group at a different frequency, but a shared factor only has ONE
+  # position for it, so a facet's own bars come out sorted by whichever
+  # group happened to set that position, not that facet's own values --
+  # confirmed by rendering a real 2-group case (a term with n=18 in one
+  # facet was not visually near the top of that facet at all). The
+  # standard fix (the same one `tidytext::reorder_within()` automates):
+  # make the factor level itself carry the group, sort per group, then
+  # strip the group suffix back off only for the printed label.
+  bar_tbl$term_facet <- paste(bar_tbl$term, bar_tbl$group, sep = "\r")
+  bar_tbl <- bar_tbl[order(bar_tbl$group, bar_tbl$n), ]
+  # Ascending factor levels (smallest first, largest last): after
+  # coord_flip(), ggplot2 draws the LAST level at the top, so this is
+  # what puts the largest bar at the top of the chart, matching the
+  # standard word-frequency convention (e.g. the LADAL tutorial's
+  # frequency plots). The previous rev() here put the smallest bar on
+  # top instead -- confirmed by rendering, not just read.
+  bar_tbl$term_facet <- factor(bar_tbl$term_facet, levels = unique(bar_tbl$term_facet))
+  p <- ggplot2::ggplot(bar_tbl, ggplot2::aes(x = .data$term_facet, y = .data$n)) +
+    ggplot2::geom_col(fill = brand$fill, colour = brand$ink, linewidth = 0.3, width = 0.72) +
+    ggplot2::coord_flip() +
+    ggplot2::scale_x_discrete(labels = function(x) sub("\r.*$", "", x)) +
+    ggplot2::labs(title = title, x = NULL, y = "Frequency") +
+    theme_surveyframe(palette = palette)
+  if (grouped) p <- p + ggplot2::facet_wrap(~ group, scales = "free_y")
+  p
+}
+
+#' N-gram-frequency plot: horizontal bar
+#'
+#' Top 20 n-grams from an `ngram_freq` result as a horizontal bar chart.
+#' Shares its bar-building logic with [sframe_plot_term_frequency()]'s bar
+#' path via the internal `.sframe_plot_term_bar()` helper; unlike that
+#' function, there is no word-cloud mode and no group faceting for this id.
+#'
+#' @param result An `ngram_freq` result list from [run_analysis_plan()].
+#' @param palette One of `"web"` or `"print"`. See `sframe_brand()`.
+#' @return A ggplot2 object, or `NULL` when the result carries no table.
+#' @export
+#' @seealso [run_analysis_plan()], [ngram_frequency()]
+sframe_plot_ngram_frequency <- function(result, palette = c("web", "print")) {
+  rlang::check_installed("ggplot2", reason = "to plot n-gram frequency.")
+  palette <- match.arg(palette)
+  tbl <- result$table
+  if (!is.data.frame(tbl) || nrow(tbl) == 0 || !"term" %in% names(tbl)) return(NULL)
+  brand <- sframe_brand(palette)
+  .sframe_plot_term_bar(tbl, title = paste("Top n-grams for", result$variable %||% ""),
+                        palette = palette, brand = brand, grouped = FALSE)
+}
+
+#' Term co-occurrence heatmap
+#'
+#' Tile heatmap of pairwise within-response term co-occurrence counts for a
+#' `co_occurrence` result. The result's edge list (`term_a`, `term_b`, `n`)
+#' is pivoted into a full symmetric term-by-term grid before plotting, so
+#' each pair's tile appears twice, once on either side of the diagonal, the
+#' way the other tile heatmaps in this file (`sframe_plot_correlation_matrix()`,
+#' `sframe_plot_efa_loadings()`) read as a full grid rather than a triangle.
+#'
+#' @param result A `co_occurrence` result list from [run_analysis_plan()].
+#' @param palette One of `"web"` or `"print"`. See `sframe_brand()`.
+#' @return A ggplot2 object, or `NULL` when the result carries no table.
+#' @export
+#' @seealso [run_analysis_plan()], [term_frequency()]
+sframe_plot_cooccurrence <- function(result, palette = c("web", "print")) {
+  rlang::check_installed("ggplot2", reason = "to plot term co-occurrence.")
+  palette <- match.arg(palette)
+  tbl <- result$table
+  if (!is.data.frame(tbl) || nrow(tbl) == 0 ||
+      !all(c("term_a", "term_b", "n") %in% names(tbl))) {
+    return(NULL)
+  }
+  brand <- sframe_brand(palette)
+  terms <- sort(unique(c(tbl$term_a, tbl$term_b)))
+  # Mirror every pair into both triangles so the grid reads symmetrically;
+  # the diagonal (a term against itself) carries no co-occurrence, so it is
+  # left at 0 rather than showing a term's own frequency.
+  long <- rbind(
+    data.frame(term_a = tbl$term_a, term_b = tbl$term_b, n = tbl$n),
+    data.frame(term_a = tbl$term_b, term_b = tbl$term_a, n = tbl$n)
+  )
+  long$term_a <- factor(long$term_a, levels = terms)
+  long$term_b <- factor(long$term_b, levels = rev(terms))
+  # sframe_heatmap_label_colour() expects a magnitude on roughly a 0-1 (or
+  # -1 to 1) scale; n is an unbounded count, so normalise against the
+  # largest count in the table before asking it which tiles need white text.
+  long$label_colour <- sframe_heatmap_label_colour(long$n / max(tbl$n), brand$ink)
+  fill_high <- if (palette == "web") brand$teal else brand$muted
+  ggplot2::ggplot(long, ggplot2::aes(x = .data$term_a, y = .data$term_b)) +
+    ggplot2::geom_tile(ggplot2::aes(fill = .data$n), colour = brand$ink, linewidth = 0.3) +
+    ggplot2::geom_text(ggplot2::aes(label = .data$n, colour = .data$label_colour), size = 3) +
+    ggplot2::scale_colour_identity() +
+    ggplot2::scale_fill_gradient(low = "white", high = fill_high,
+                                 limits = c(0, max(tbl$n))) +
+    ggplot2::labs(title = paste("Term co-occurrence for", result$variable %||% ""),
+                  x = NULL, y = NULL, fill = "n") +
+    theme_surveyframe(palette = palette) + sframe_theme_angled_x()
+}
+
 sframe_plot_crosstab <- function(result, palette = c("web", "print")) {
   palette <- match.arg(palette)
   tbl <- result$table
@@ -277,7 +616,7 @@ sframe_plot_regression <- function(result, data, palette = c("web", "print")) {
 #' `counts` is a named numeric vector in scale order (names are the response
 #' labels, e.g. "Strongly disagree" .. "Strongly agree"), not sorted
 #' alphabetically or by frequency. The middle category of an odd-length
-#' scale is treated as neutral and split evenly across the zero line; an
+#' scale is treated as neutral and split evenly across the zero line. An
 #' even-length scale has no neutral category. This is the standard
 #' survey-report convention (Pew Research, SurveyMonkey) for visualising an
 #' ordered agree/disagree scale, and reads in one glance which way opinion
@@ -296,7 +635,7 @@ sframe_plot_regression <- function(result, data, palette = c("web", "print")) {
 #' @param counts Named numeric vector of response counts, in scale order.
 #' @param theme_color Character. Hex colour for the "agree" pole.
 #' @param palette One of `"web"` or `"print"`. See `sframe_brand()`.
-#' @return Invisibly `NULL`; called for its plotting side effect on the
+#' @return Invisibly `NULL`, called for its plotting side effect on the
 #'   current graphics device.
 #' @export
 #' @keywords internal
@@ -557,7 +896,7 @@ sframe_plot_likert_matrix <- function(item, data, choice_set, palette = c("web",
 #' several charts instead of showing them the way a Likert matrix or a
 #' typical multi-item satisfaction grid is reported: one grouped chart, one
 #' diverging bar per item, sharing an x scale and a legend. Applies only
-#' when every item in the scale shares the same choice set; scales that mix
+#' when every item in the scale shares the same choice set. Scales that mix
 #' response scales fall back to one chart per item.
 #'
 #' @param items A list of `"likert"` sframe items belonging to one scale, in
@@ -658,7 +997,18 @@ sframe_plot_for_result <- function(result, data, palette = c("web", "print")) {
     friedman            = function() sframe_plot_repeated_measures(result, data, palette),
     partial_correlation = function() sframe_plot_partial_correlation(result, data, palette),
     regression_logistic_binary  = ,
+    firth_logistic              = ,
     regression_logistic_ordinal = function() sframe_plot_logistic_coefficients(result, palette),
+    topsis              = ,
+    ahp                 = ,
+    anp                 = ,
+    vikor               = ,
+    moora               = ,
+    smart               = ,
+    waspas              = ,
+    promethee           = ,
+    electre             = function() sframe_plot_decision_ranking(result, palette),
+    dematel             = function() sframe_plot_dematel_influence(result, palette),
     moderation          = function() sframe_plot_moderation(result, data, palette),
     mediation           = function() sframe_plot_mediation(result, palette),
     missing_data        = function() {
@@ -680,10 +1030,113 @@ sframe_plot_for_result <- function(result, data, palette = c("web", "print")) {
       graphics::plot(result$report_obj, data = data, palette = palette)
     },
     item_diagnostics    = function() sframe_plot_item_diagnostics(result, palette),
+    term_freq           = function() sframe_plot_term_frequency(result, palette),
+    co_occurrence       = function() sframe_plot_cooccurrence(result, palette),
+    topic_model_lda     = ,
+    stm_topics          = function() sframe_plot_topics(result, palette),
+    ngram_freq          = function() sframe_plot_ngram_frequency(result, palette),
+    co_occurrence_network = function() sframe_plot_cooccurrence_network(result, palette),
+    tidy_sentiment      = function() sframe_plot_sentiment(result, palette),
     NULL
   )
   if (is.null(builder)) return(NULL)
   tryCatch(builder(), error = function(e) NULL)
+}
+
+#' Ranked-score bar chart for a decision-family result
+#'
+#' The shared chart for every MCDM ranking method: one horizontal bar per
+#' alternative, ordered best first, with the leading alternative picked out.
+#' It is generic over the method rather than tied to one, so AHP criterion
+#' weights and any ranking method's scores all draw through it. The score
+#' column is whatever the method reports as its headline quantity (a
+#' closeness coefficient, a net flow, a priority weight), so the axis is
+#' labelled from the result rather than hard-coded.
+#'
+#' @param result A decision-family result list from [run_analysis_plan()],
+#'   carrying either `scores` and `alternatives` or a ranking `table`.
+#' @param palette One of `"web"` or `"print"`. See `sframe_brand()`.
+#' @return A ggplot2 object, or `NULL` when the result carries no ranking.
+#' @export
+#' @seealso [run_analysis_plan()]
+sframe_plot_decision_ranking <- function(result, palette = c("web", "print")) {
+  rlang::check_installed("ggplot2", reason = "to plot a decision ranking.")
+  palette <- match.arg(palette)
+  brand <- sframe_brand(palette)
+
+  unit <- "Alternative"
+  if (!is.null(result$scores) && !is.null(result$alternatives) &&
+      length(result$scores) == length(result$alternatives)) {
+    df <- data.frame(
+      label = as.character(result$alternatives),
+      score = as.numeric(result$scores),
+      stringsAsFactors = FALSE
+    )
+  } else {
+    tbl <- result$table
+    if (!is.data.frame(tbl) || nrow(tbl) == 0 || ncol(tbl) < 2) return(NULL)
+    unit <- names(tbl)[1]
+    df <- data.frame(
+      label = as.character(tbl[[1]]),
+      score = suppressWarnings(as.numeric(tbl[[2]])),
+      stringsAsFactors = FALSE
+    )
+  }
+  df <- df[!is.na(df$score), , drop = FALSE]
+  if (nrow(df) == 0) return(NULL)
+
+  df <- df[order(df$score, decreasing = TRUE), , drop = FALSE]
+  # Ordering carries the ranking, so the bars stay one colour: a second
+  # encoding for "best" would add a colour-only distinction for no gain.
+  df$label <- factor(df$label, levels = rev(df$label))
+  score_label <- result$score_label %||% "Score"
+  method_label <- toupper(result$test %||% "decision")
+
+  ggplot2::ggplot(df, ggplot2::aes(x = .data$label, y = .data$score)) +
+    ggplot2::geom_col(fill = brand$fill, colour = brand$ink,
+                      linewidth = 0.3, width = 0.72) +
+    ggplot2::coord_flip() +
+    ggplot2::labs(
+      title = paste(method_label, "ranking"),
+      x = unit, y = score_label
+    ) +
+    theme_surveyframe(palette = palette)
+}
+
+# Weight-sensitivity plot. One bar per criterion and direction, showing the
+# Spearman correlation between the base ranking and the ranking after that
+# weight is nudged. A short bar marks a criterion the result leans on. The
+# dashed reference at rho = 1 is where the ranking did not move at all, so
+# the visible gap from that line is the whole message.
+sframe_plot_sensitivity <- function(result, palette = c("web", "print")) {
+  rlang::check_installed("ggplot2", reason = "to plot a sensitivity analysis.")
+  palette <- match.arg(palette)
+  brand <- sframe_brand(palette)
+
+  tbl <- result$table
+  if (!is.data.frame(tbl) || nrow(tbl) == 0) return(NULL)
+  df <- tbl[!is.na(tbl$rho), , drop = FALSE]
+  if (nrow(df) == 0) return(NULL)
+
+  df$label <- paste0(df$criterion, " (", df$direction, ")")
+  df <- df[order(df$rho, df$label), , drop = FALSE]
+  df$label <- factor(df$label, levels = rev(unique(df$label)))
+
+  ggplot2::ggplot(df, ggplot2::aes(x = .data$label, y = .data$rho)) +
+    ggplot2::geom_col(fill = brand$fill, colour = brand$ink,
+                      linewidth = 0.3, width = 0.72) +
+    ggplot2::geom_hline(yintercept = 1, colour = brand$ink,
+                        linetype = "dashed", linewidth = 0.4) +
+    ggplot2::coord_flip() +
+    ggplot2::labs(
+      title = sprintf("%s ranking stability under a %.0f%% weight change",
+                      toupper(result$method %||% "decision"),
+                      (result$delta %||% 0.05) * 100),
+      subtitle = paste0("Spearman correlation with the base ranking. The ",
+                        "dashed line is an unchanged ranking."),
+      x = "Criterion perturbed", y = "Rank correlation"
+    ) +
+    theme_surveyframe(palette = palette)
 }
 
 # ---------------------------------------------------------------------------
@@ -794,8 +1247,8 @@ sframe_plot_efa_scree <- function(x, palette = c("web", "print")) {
 #'
 #' @param x An `sframe_efa_solution` object from [efa_solution()].
 #' @param palette One of `"web"` (diverging red/teal gradient) or `"print"`
-#'   (white-to-black gradient by magnitude; sign is conveyed by the printed
-#'   label, not colour, so it stays legible in monochrome). See
+#'   (white-to-black gradient by magnitude, with sign conveyed by the
+#'   printed label rather than colour, so it stays legible in monochrome). See
 #'   `sframe_brand()`.
 #' @return A ggplot2 object.
 #' @export
@@ -891,14 +1344,14 @@ sframe_plot_reliability <- function(x, palette = c("web", "print")) {
 #' existing base-graphics precedent in this file
 #' ([sframe_draw_likert_diverging()]) so it renders without ggplot2. An
 #' alternative view of the same crosstab data
-#' `sframe_plot_crosstab()` renders as a grouped bar; use whichever reads
+#' `sframe_plot_crosstab()` renders as a grouped bar. Use whichever reads
 #' better for the table's shape (mosaic scales better to unbalanced group
 #' sizes).
 #'
 #' @param result A `crosstab`/`chi_square` result list with a contingency
 #'   `table`.
 #' @param palette One of `"web"` or `"print"`. See `sframe_brand()`.
-#' @return Invisibly `NULL`; called for its plotting side effect on the
+#' @return Invisibly `NULL`, called for its plotting side effect on the
 #'   current graphics device.
 #' @export
 #' @seealso `sframe_plot_crosstab()`
@@ -1004,6 +1457,11 @@ scales_percent_fallback <- function(x) sprintf("%.0f%%", x * 100)
 #' @export
 plot.sframe_quality_report <- function(x, ..., palette = c("web", "print")) {
   sframe_plot_quality(x, palette = match.arg(palette))
+}
+
+#' @export
+plot.sframe_sensitivity <- function(x, ..., palette = c("web", "print")) {
+  sframe_plot_sensitivity(x, palette = match.arg(palette))
 }
 
 #' @export
@@ -1248,7 +1706,7 @@ sframe_plot_scale_chart <- function(scores, label, palette = c("web", "print")) 
 #' multimodality, tails) instead of reading it off a bar height. Each
 #' variable is standardised (z-scored) before plotting so variables on
 #' different original scales (a 5-point Likert item next to a 0-100 slider)
-#' share one comparable y-axis; standardising is a linear transform and does
+#' share one comparable y-axis. Standardising is a linear transform and does
 #' not change skewness. Each violin's subtitle-free panel keeps the
 #' variable's skewness value in its axis label. Grouped `descriptives_report()`
 #' output (one row per variable per `split_by` group) is faceted by group.
@@ -1339,7 +1797,7 @@ plot.sframe_descriptives_report <- function(x, data, ..., palette = c("web", "pr
 #' `mann_whitney`, `kruskal_wallis`, and `anova_one`. One function instead of
 #' four, since the underlying comparison (an outcome split by a grouping
 #' factor) and the data shape needed to plot it are identical across all
-#' four tests; only the inferential statistic differs.
+#' four tests, and only the inferential statistic differs.
 #'
 #' @param result A result list from one of the four runners above, with
 #'   `vars = c(group_column, outcome_column)`.
@@ -1728,3 +2186,346 @@ sframe_plot_variable_distribution <- function(data, variable, palette = c("web",
 
   list(histogram = histogram, boxplot = boxplot, qq = qq)
 }
+
+#' Topic-model top-terms plot: faceted bars, one facet per topic
+#'
+#' Serves both [sframe_run_topic_model_lda()] and [sframe_run_stm_topics()]
+#' results with no dispatch on `result$test`: both runners emit a `$table`
+#' with the same `topic`/`term`/`beta` columns (LDA's beta from
+#' `tidytext::tidy()`, STM's from its fitted word-topic distribution), so
+#' this function reads that shared shape directly.
+#'
+#' @param result A `topic_model_lda` or `stm_topics` result list from
+#'   [run_analysis_plan()].
+#' @param palette One of `"web"` or `"print"`. See `sframe_brand()`.
+#' @return A ggplot2 object, or `NULL` when the result carries no usable
+#'   table.
+#' @export
+#' @seealso [sframe_run_topic_model_lda()], [sframe_run_stm_topics()]
+sframe_plot_topics <- function(result, palette = c("web", "print")) {
+  rlang::check_installed("ggplot2", reason = "to plot topic terms.")
+  palette <- match.arg(palette)
+  tbl <- result$table
+  if (!is.data.frame(tbl) || nrow(tbl) == 0 ||
+      !all(c("topic", "term", "beta") %in% names(tbl))) {
+    return(NULL)
+  }
+  brand <- sframe_brand(palette)
+
+  plot_tbl <- do.call(rbind, lapply(split(tbl, tbl$topic), function(d) {
+    utils::head(d[order(-d$beta), , drop = FALSE], 10)
+  }))
+  plot_tbl$topic <- factor(paste("Topic", plot_tbl$topic),
+                            levels = paste("Topic", sort(unique(plot_tbl$topic))))
+  # Same fix as .sframe_plot_term_bar()'s: a single global factor level
+  # per term is wrong once the same word appears in more than one topic
+  # (a common case) at a different beta, since a shared factor only has
+  # one position for it, so a topic facet's own bars would not actually
+  # sort by that facet's own beta values. Carry the topic in the factor
+  # level itself, sort per topic, then strip the topic suffix back off
+  # only for the printed label (the same pattern
+  # `tidytext::reorder_within()` automates, done by hand here since
+  # tidytext is Suggests-only and this chart also serves the base-R LDA
+  # path). Ascending within each topic, largest last: coord_flip() draws
+  # the last level at the top.
+  plot_tbl$term_facet <- paste(plot_tbl$term, plot_tbl$topic, sep = "\r")
+  plot_tbl <- plot_tbl[order(plot_tbl$topic, plot_tbl$beta), ]
+  plot_tbl$term_facet <- factor(plot_tbl$term_facet, levels = unique(plot_tbl$term_facet))
+
+  p <- ggplot2::ggplot(plot_tbl, ggplot2::aes(x = .data$term_facet, y = .data$beta)) +
+    ggplot2::geom_col(fill = brand$fill, colour = brand$ink, linewidth = 0.3, width = 0.72) +
+    ggplot2::coord_flip() +
+    ggplot2::scale_x_discrete(labels = function(x) sub("\r.*$", "", x)) +
+    ggplot2::facet_wrap(~ topic, scales = "free_y") +
+    ggplot2::labs(title = paste("Top terms per topic for", result$variable %||% ""),
+                  x = NULL, y = "Term probability") +
+    theme_surveyframe(palette = palette)
+  p
+}
+
+
+# Fixed 8-slot categorical palette for cluster identity in the co-occurrence
+# network plot, plus a 9th "Other" grey bucket for a 9th-or-later cluster.
+# Deliberately NOT sframe_series_colours()/sframe_series_fill_colours():
+# those interpolate a colour ramp past their fixed 5-colour set, which is
+# exactly the "hue-cycling" the dataviz skill says not to do for a
+# categorical channel. Per the dataviz skill's colour-formula guidance,
+# more series than the fixed hue count should fold into an explicit "Other"
+# bucket rather than generate a new, unvalidated hue.
+#
+# The `web` 8 hues are the dataviz skill's own documented default
+# categorical palette (references/palette.md, light-mode column), already
+# validated there: all 8 pass the *adjacent*-pair CVD/contrast gates used
+# for bar/stack/line charts. This network plot draws points, an *all-pairs*
+# form (any two nodes can sit side by side), where the same reference
+# documents that no ordering of the full eight clears the all-pairs floor
+# past the first three slots; a true all-pairs-safe cap would be 3, not 8.
+# The brief for this method id fixes the boundary at 8 explicitly, so that
+# is what is implemented and tested here; the shortfall past slot 3 is
+# mitigated, not eliminated, by three secondary encodings already in the
+# plot (point size = term frequency, edges = topology, and the legend/table
+# = text) rather than colour alone carrying cluster identity. Flagged for
+# the lead rather than silently narrowed to 3.
+.sframe_cluster_palette <- function(n_clusters, palette = c("web", "print")) {
+  palette <- match.arg(palette)
+  hues <- if (palette == "web") {
+    c("#2a78d6", "#eb6834", "#1baf7a", "#eda100",
+      "#e87ba4", "#008300", "#4a3aa7", "#e34948")
+  } else {
+    # Print: an 8-step black-to-light grey ramp, consistent with
+    # sframe_brand("print")'s existing achromatic convention for series.
+    c("#141414", "#333333", "#4d4d4d", "#666666",
+      "#808080", "#999999", "#b3b3b3", "#cccccc")
+  }
+  other <- if (palette == "web") "#8a8a86" else "#a6a6a6"
+  n_clusters <- max(1L, as.integer(n_clusters))
+  if (n_clusters <= length(hues)) {
+    out <- hues[seq_len(n_clusters)]
+    names(out) <- as.character(seq_len(n_clusters))
+    return(out)
+  }
+  out <- c(hues, other)
+  names(out) <- c(as.character(seq_along(hues)), "Other")
+  out
+}
+
+#' Term co-occurrence network plot
+#'
+#' Plots a `co_occurrence_network` result's node table (`term`, `frequency`,
+#' `cluster`, `x`, `y`) as a network diagram: edges (from `result$edges`) as
+#' line segments underneath, nodes as points sized by term frequency and
+#' coloured by Louvain cluster, with term labels on the larger points only.
+#' Labelling every point on a dense network risks overlap chaos, so only
+#' the top 15 nodes by frequency are labelled; the full term list stays
+#' available in `result$table`.
+#'
+#' Clusters beyond the first 8 (ranked largest first) are folded into a
+#' single "Other" bucket rather than cycling or interpolating a new hue,
+#' per the dataviz skill's categorical-colour guidance; see
+#' `.sframe_cluster_palette()`.
+#'
+#' @param result A `co_occurrence_network` result list from
+#'   [run_analysis_plan()], carrying `table` and `edges`.
+#' @param palette One of `"web"` or `"print"`. See `sframe_brand()`.
+#' @return A ggplot2 object, or `NULL` when the result carries no table.
+#' @export
+#' @seealso [run_analysis_plan()]
+sframe_plot_cooccurrence_network <- function(result, palette = c("web", "print")) {
+  rlang::check_installed("ggplot2", reason = "to plot the co-occurrence network.")
+  palette <- match.arg(palette)
+  tbl <- result$table
+  if (!is.data.frame(tbl) || nrow(tbl) == 0 || !all(c("term", "x", "y", "cluster") %in% names(tbl))) {
+    return(NULL)
+  }
+  brand <- sframe_brand(palette)
+  edges <- result$edges
+  has_edges <- is.data.frame(edges) && nrow(edges) > 0 &&
+    all(c("term_a", "term_b") %in% names(edges))
+
+  # Rank clusters largest-first (by member count) and fold anything past
+  # rank 8 into "Other", so the palette above is never asked for more than
+  # 8 real hues.
+  sizes <- sort(table(tbl$cluster), decreasing = TRUE)
+  rank_of <- stats::setNames(seq_along(sizes), names(sizes))
+  n_clusters <- length(sizes)
+  tbl$cluster_rank <- as.integer(rank_of[as.character(tbl$cluster)])
+  tbl$cluster_label <- if (n_clusters > 8) {
+    ifelse(tbl$cluster_rank <= 8, as.character(tbl$cluster_rank), "Other")
+  } else {
+    as.character(tbl$cluster_rank)
+  }
+  pal <- .sframe_cluster_palette(n_clusters, palette)
+  level_order <- if (n_clusters > 8) c(as.character(1:8), "Other") else as.character(seq_len(n_clusters))
+  level_order <- level_order[level_order %in% unique(tbl$cluster_label)]
+  tbl$cluster_label <- factor(tbl$cluster_label, levels = level_order)
+
+  p <- ggplot2::ggplot()
+
+  if (has_edges) {
+    edge_xy <- merge(edges, tbl[c("term", "x", "y")], by.x = "term_a", by.y = "term")
+    edge_xy <- merge(edge_xy, tbl[c("term", "x", "y")], by.x = "term_b", by.y = "term",
+                      suffixes = c("_a", "_b"))
+    p <- p + ggplot2::geom_segment(
+      data = edge_xy,
+      ggplot2::aes(x = .data$x_a, y = .data$y_a, xend = .data$x_b, yend = .data$y_b),
+      colour = brand$grid, linewidth = 0.4, alpha = 0.7
+    )
+  }
+
+  p <- p +
+    ggplot2::geom_point(
+      data = tbl,
+      ggplot2::aes(x = .data$x, y = .data$y, size = .data$frequency,
+                   colour = .data$cluster_label)
+    ) +
+    ggplot2::scale_size(range = c(2, 10), guide = "none") +
+    ggplot2::scale_colour_manual(values = pal, name = "Cluster", drop = TRUE)
+
+  # Label only the top 15 nodes by frequency: a legible plot without labels
+  # on every node beats an unreadable one with them, and the full term list
+  # is already in result$table for anyone who wants it.
+  label_tbl <- utils::head(tbl[order(-tbl$frequency), , drop = FALSE], 15)
+  p <- p + ggplot2::geom_text(
+    data = label_tbl,
+    ggplot2::aes(x = .data$x, y = .data$y, label = .data$term),
+    colour = brand$ink, size = 3, vjust = -1, fontface = "bold"
+  )
+
+  p +
+    ggplot2::labs(title = paste("Term co-occurrence network for", result$variable %||% ""),
+                  x = NULL, y = NULL) +
+    theme_surveyframe(palette = palette) +
+    ggplot2::theme(
+      axis.text = ggplot2::element_blank(),
+      axis.ticks = ggplot2::element_blank(),
+      panel.grid = ggplot2::element_blank()
+    )
+}
+
+
+# Comparison-cloud layout: negative words spiral outward from an anchor
+# above the origin, positive words from an anchor below it, using the
+# SAME spiral-and-collide engine sframe_plot_term_frequency()'s word
+# cloud does (.sframe_wordcloud_layout()'s `centers` argument exists for
+# exactly this), so the two groups never overlap each other or
+# themselves. This is the base-R/ggplot2 equivalent of the classic
+# tidytext comparison cloud (bookdown.org/jdholster1/idsr/text-analysis.html
+# section 8.4: count(word, sentiment) %>% acast() %>% comparison.cloud()),
+# without adding the wordcloud/reshape2 dependency that reference code
+# uses — consistent with todo_0.5.md's "no wordcloud/ggwordcloud package"
+# rule for the plain term-frequency cloud.
+.sframe_sentiment_cloud_layout <- function(word_sentiment, max_per_side = 25) {
+  neg <- utils::head(word_sentiment[word_sentiment$sentiment == "negative", , drop = FALSE], max_per_side)
+  pos <- utils::head(word_sentiment[word_sentiment$sentiment == "positive", , drop = FALSE], max_per_side)
+  both <- rbind(neg, pos)
+  if (nrow(both) == 0) return(NULL)
+  # Sized off the COMBINED range, not per group, so a count of 20 looks
+  # the same size whichever side it lands on.
+  rng <- range(both$n)
+  size01 <- if (diff(rng) == 0) rep(0.5, nrow(both)) else (sqrt(both$n) - sqrt(rng[1])) / (sqrt(rng[2]) - sqrt(rng[1]))
+  both$size <- 5 + size01 * 13
+  # Negative left, positive right: reads the same direction as the
+  # diverging bar chart (negative extends left of zero, positive right).
+  # aspect < 1 grows each cluster taller/narrower than a circular or
+  # wide-elliptical spiral would, which is what keeps the 2 clusters from
+  # spreading into each other horizontally between the anchors.
+  anchor_offset <- 1.4
+  centers <- data.frame(x = ifelse(both$sentiment == "negative", -anchor_offset, anchor_offset), y = 0)
+  layout <- .sframe_wordcloud_layout(both$word, both$size, centers = centers, aspect = 0.65)
+  merge(both, layout, by.x = "word", by.y = "term")
+}
+
+#' Sentiment plot: diverging bar, or a positive/negative comparison cloud
+#'
+#' A ggplot2 diverging bar for a `tidy_sentiment` result by default:
+#' positive counts extend one direction, negative counts the other, so bar
+#' position (not colour alone) carries the primary polarity signal, the
+#' same convention [sframe_draw_likert_diverging()] uses for Likert
+#' agreement (dark ramp toward the pole) rebuilt here in ggplot2 rather
+#' than called directly, since that helper is base-graphics and
+#' Likert-scale-specific. Facets by group when `result$table` carries a
+#' `group` column, mirroring [sframe_plot_term_frequency()]'s grouped
+#' branch.
+#'
+#' When `result$options$wordcloud` is `TRUE` (opt-in, default `FALSE`,
+#' matching [sframe_plot_term_frequency()]'s own word-cloud toggle),
+#' draws a comparison cloud instead: negative-sentiment words above the
+#' centre line, positive-sentiment words below it, each word sized by how
+#' often it occurred, using the internal `tidy_sentiment` runner's
+#' `$word_sentiment` word-by-sentiment counts. Answers a different
+#' question from the diverging bar: not "how many responses leaned
+#' positive," but "which *words* drove that."
+#'
+#' @param result A `tidy_sentiment` result list from [run_analysis_plan()].
+#' @param palette One of `"web"` or `"print"`. See `sframe_brand()`.
+#' @return A ggplot2 object, or `NULL` when the result carries no table.
+#' @export
+#' @seealso [run_analysis_plan()], [sframe_draw_likert_diverging()]
+sframe_plot_sentiment <- function(result, palette = c("web", "print")) {
+  rlang::check_installed("ggplot2", reason = "to plot sentiment.")
+  palette <- match.arg(palette)
+  tbl <- result$table
+  if (!is.data.frame(tbl) || nrow(tbl) == 0 || !"sentiment" %in% names(tbl)) return(NULL)
+  brand <- sframe_brand(palette)
+  grouped <- "group" %in% names(tbl)
+
+  if (isTRUE(result$options$wordcloud)) {
+    ws <- result$word_sentiment
+    if (!is.data.frame(ws) || nrow(ws) == 0) return(NULL)
+    cloud_tbl <- .sframe_sentiment_cloud_layout(ws)
+    if (is.null(cloud_tbl)) return(NULL)
+    fill_map <- stats::setNames(c(brand$accent, brand$teal), c("negative", "positive"))
+    # Tight coordinate limits from the actual placed extents (each word's
+    # anchor point +/- its own measured half-width/half-height), the same
+    # fix sframe_plot_term_frequency()'s single cloud needed: without it,
+    # a long word at the outer edge (e.g. "comfortable") clips mid-word
+    # rather than sitting fully inside the panel.
+    x_data_range <- range(c(cloud_tbl$x - cloud_tbl$half_w, cloud_tbl$x + cloud_tbl$half_w))
+    ylim <- range(c(cloud_tbl$y - cloud_tbl$half_h, cloud_tbl$y + cloud_tbl$half_h))
+    # The 2 group labels sit past the outermost word on each side, at a
+    # fixed offset from the data's own extent, the same "anchor beyond the
+    # content" placement the tidytext/wordcloud comparison.cloud() example
+    # uses its own boxed labels for.
+    label_pad <- diff(x_data_range) * 0.08
+    xlim <- x_data_range + c(-1, 1) * label_pad
+    # Negative words are anchored at -offset (left), positive at +offset
+    # (right) -- the same .sframe_sentiment_cloud_layout() call above --
+    # matching the diverging bar's own left-negative/right-positive
+    # convention, so the left label is always "negative" and the right
+    # always "positive" regardless of the data's actual extent.
+    labels_df <- data.frame(
+      x = xlim, y = 0, label = c("negative", "positive"),
+      stringsAsFactors = FALSE
+    )
+    return(
+      ggplot2::ggplot(cloud_tbl, ggplot2::aes(x = .data$x, y = .data$y,
+                                              label = .data$word, size = .data$size,
+                                              colour = .data$sentiment, alpha = .data$n)) +
+        # Colour is the categorical negative/positive hue; ALPHA is what
+        # varies dark-to-light with frequency within each side (the same
+        # mechanism the term cloud uses), floored at 0.5 so even the
+        # least-frequent word on a side stays legible rather than fading
+        # toward invisible.
+        ggplot2::geom_text(fontface = "bold") +
+        ggplot2::geom_label(data = labels_df,
+                            ggplot2::aes(x = .data$x, y = .data$y, label = .data$label),
+                            inherit.aes = FALSE,
+                            fill = brand$grid, colour = brand$ink, fontface = "bold",
+                            label.size = 0, size = 3.6) +
+        ggplot2::scale_size_identity() +
+        ggplot2::scale_colour_manual(values = fill_map, guide = "none") +
+        ggplot2::scale_alpha_continuous(range = c(0.5, 1), guide = "none") +
+        ggplot2::coord_fixed(xlim = xlim, ylim = ylim, expand = TRUE) +
+        ggplot2::labs(title = paste("Sentiment terms for", result$variable %||% "")) +
+        ggplot2::theme_void() +
+        ggplot2::theme(plot.title = ggplot2::element_text(face = "bold", hjust = 0.5))
+    )
+  }
+
+  bar_tbl <- tbl[tbl$sentiment %in% c("positive", "negative"), , drop = FALSE]
+  bar_tbl <- bar_tbl[!is.na(bar_tbl$n), , drop = FALSE]
+  if (nrow(bar_tbl) == 0) return(NULL)
+  # Diverging signed count: negative sentiment plotted on the negative side
+  # of zero, positive sentiment on the positive side, so the bar's position
+  # relative to the zero line is the primary signal (matching the Likert
+  # diverging convention), with the dark/light pole colouring as a
+  # secondary cue.
+  bar_tbl$signed_n <- ifelse(bar_tbl$sentiment == "negative", -bar_tbl$n, bar_tbl$n)
+  bar_tbl$sentiment <- factor(bar_tbl$sentiment, levels = c("negative", "positive"))
+  fill_map <- stats::setNames(c(brand$accent, brand$teal), c("negative", "positive"))
+
+  p <- ggplot2::ggplot(bar_tbl, ggplot2::aes(x = if (grouped) .data$group else "", y = .data$signed_n,
+                                             fill = .data$sentiment)) +
+    ggplot2::geom_col(colour = brand$ink, linewidth = 0.3, width = 0.6) +
+    ggplot2::geom_hline(yintercept = 0, colour = brand$ink, linewidth = 0.5) +
+    ggplot2::coord_flip() +
+    ggplot2::scale_fill_manual(values = fill_map, name = NULL) +
+    ggplot2::labs(
+      title = paste("Sentiment for", result$variable %||% ""),
+      x = NULL, y = "Response count (negative | positive)"
+    ) +
+    theme_surveyframe(palette = palette)
+  if (grouped) p <- p + ggplot2::facet_wrap(~ group, scales = "free_y")
+  p
+}
+

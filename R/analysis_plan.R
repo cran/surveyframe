@@ -65,7 +65,84 @@
     key  = "hosmer_2013",
     apa  = "Hosmer, D. W., Lemeshow, S., & Sturdivant, R. X. (2013). *Applied logistic regression* (3rd ed.). Wiley.",
     use  = c("regression_logistic_binary", "regression_logistic_ordinal",
-             "regression_logistic_multinomial")
+             "regression_logistic_multinomial", "firth_logistic")
+  ),
+  firth_1993 = list(
+    key  = "firth_1993",
+    apa  = "Firth, D. (1993). Bias reduction of maximum likelihood estimates. *Biometrika*, *80*(1), 27-38.",
+    use  = "firth_logistic"
+  ),
+  heinze_2002 = list(
+    key  = "heinze_2002",
+    apa  = "Heinze, G., & Schemper, M. (2002). A solution to the problem of separation in logistic regression. *Statistics in Medicine*, *21*(16), 2409-2419.",
+    use  = "firth_logistic"
+  ),
+  hwang_1981 = list(
+    key  = "hwang_1981",
+    apa  = "Hwang, C.-L., & Yoon, K. (1981). *Multiple attribute decision making: Methods and applications*. Springer.",
+    use  = "topsis"
+  ),
+  saaty_1980 = list(
+    key  = "saaty_1980",
+    apa  = "Saaty, T. L. (1980). *The analytic hierarchy process*. McGraw-Hill.",
+    use  = "ahp"
+  ),
+  # The 8 remaining decision methods. Every entry below was checked against
+  # the publication record on 2026-07-31 rather than carried over from the
+  # harvest audit's draft strings. That check produced one correction: ELECTRE
+  # is volume 2 issue 1, not the "2(8)" the audit recorded. Numdam's scan of
+  # the original journal is RO_1968__2_1_57_0.
+  saaty_1996 = list(
+    key  = "saaty_1996",
+    apa  = "Saaty, T. L. (1996). *Decision making with dependence and feedback: The analytic network process*. RWS Publications.",
+    use  = "anp"
+  ),
+  # DEMATEL has no single canonical publication. It was developed as a
+  # programme at the Battelle Geneva Research Centre between 1972 and 1976
+  # across at least 4 grey-literature reports, and secondary sources disagree
+  # over which to cite and even over the author order. None can be sighted,
+  # and an unverified reference must not be cited as though it were checked,
+  # so the originating report is given for provenance and paired with a
+  # peer-reviewed review a reader can actually obtain.
+  gabus_1972 = list(
+    key  = "gabus_1972",
+    apa  = "Gabus, A., & Fontela, E. (1972). *World problems, an invitation to further thought within the framework of DEMATEL*. Battelle Geneva Research Centre.",
+    use  = "dematel"
+  ),
+  si_2018 = list(
+    key  = "si_2018",
+    apa  = "Si, S.-L., You, X.-Y., Liu, H.-C., & Zhang, P. (2018). DEMATEL technique: A systematic review of the state-of-the-art literature on methodologies and applications. *Mathematical Problems in Engineering*, *2018*, 3696457. https://doi.org/10.1155/2018/3696457",
+    use  = "dematel"
+  ),
+  opricovic_2004 = list(
+    key  = "opricovic_2004",
+    apa  = "Opricovic, S., & Tzeng, G.-H. (2004). Compromise solution by MCDM methods: A comparative analysis of VIKOR and TOPSIS. *European Journal of Operational Research*, *156*(2), 445-455. https://doi.org/10.1016/S0377-2217(03)00020-1",
+    use  = "vikor"
+  ),
+  brauers_2006 = list(
+    key  = "brauers_2006",
+    apa  = "Brauers, W. K. M., & Zavadskas, E. K. (2006). The MOORA method and its application to privatization in a transition economy. *Control and Cybernetics*, *35*(2), 445-469.",
+    use  = "moora"
+  ),
+  edwards_1977 = list(
+    key  = "edwards_1977",
+    apa  = "Edwards, W. (1977). How to use multiattribute utility measurement for social decisionmaking. *IEEE Transactions on Systems, Man, and Cybernetics*, *7*(5), 326-340. https://doi.org/10.1109/TSMC.1977.4309720",
+    use  = "smart"
+  ),
+  zavadskas_2012 = list(
+    key  = "zavadskas_2012",
+    apa  = "Zavadskas, E. K., Turskis, Z., Antucheviciene, J., & Zakarevicius, A. (2012). Optimization of weighted aggregated sum product assessment. *Elektronika ir Elektrotechnika*, *122*(6), 3-6. https://doi.org/10.5755/j01.eee.122.6.1810",
+    use  = "waspas"
+  ),
+  brans_1985 = list(
+    key  = "brans_1985",
+    apa  = "Brans, J. P., & Vincke, P. (1985). A preference ranking organisation method: The PROMETHEE method for multiple criteria decision-making. *Management Science*, *31*(6), 647-656. https://doi.org/10.1287/mnsc.31.6.647",
+    use  = "promethee"
+  ),
+  roy_1968 = list(
+    key  = "roy_1968",
+    apa  = "Roy, B. (1968). Classement et choix en presence de points de vue multiples (la methode ELECTRE). *Revue Francaise d'Informatique et de Recherche Operationnelle*, *2*(1), 57-75.",
+    use  = "electre"
   ),
   macKinnon_2008 = list(
     key = "mackinnon_2008",
@@ -76,6 +153,16 @@
     key = "aiken_1991",
     apa = "Aiken, L. S., & West, S. G. (1991). *Multiple regression: Testing and interpreting interactions*. SAGE.",
     use = "moderation"
+  ),
+  blondel_2008 = list(
+    key  = "blondel_2008",
+    apa  = "Blondel, V. D., Guillaume, J.-L., Lambiotte, R., & Lefebvre, E. (2008). Fast unfolding of communities in large networks. *Journal of Statistical Mechanics: Theory and Experiment*, *2008*(10), P10008. https://doi.org/10.1088/1742-5468/2008/10/P10008",
+    use  = "co_occurrence_network"
+  ),
+  fruchterman_1991 = list(
+    key  = "fruchterman_1991",
+    apa  = "Fruchterman, T. M. J., & Reingold, E. M. (1991). Graph drawing by force-directed placement. *Software: Practice and Experience*, *21*(11), 1129-1164. https://doi.org/10.1002/spe.4380211102",
+    use  = "co_occurrence_network"
   ),
   r_core = list(
     key  = "r_core",
@@ -278,12 +365,18 @@ sframe_run_mann_whitney <- function(data, vars) {
   g1 <- suppressWarnings(as.numeric(data[[outcome_col]][data[[group_col]] == groups[1]]))
   g2 <- suppressWarnings(as.numeric(data[[outcome_col]][data[[group_col]] == groups[2]]))
   g1 <- g1[!is.na(g1)]; g2 <- g2[!is.na(g2)]
-  wt <- tryCatch(stats::wilcox.test(g1, g2, exact = FALSE), error = function(e) NULL)
+  wt <- tryCatch(
+    stats::wilcox.test(g1, g2, exact = FALSE, conf.int = TRUE),
+    error = function(e) NULL
+  )
   if (is.null(wt)) return(list(test = "mann_whitney", error = "Test failed."))
   n <- length(g1) + length(g2)
   z <- stats::qnorm(wt$p.value / 2)
   r <- abs(z) / sqrt(n)
   r_ci <- sframe_rank_r_ci(g1, g2)
+  hl_shift <- unname(wt$estimate)
+  hl_conf_int <- as.numeric(wt$conf.int)
+  hl_ci_named <- c(lower = hl_conf_int[1], upper = hl_conf_int[2])
   list(
     test     = "mann_whitney",
     vars     = vars,
@@ -293,11 +386,13 @@ sframe_run_mann_whitney <- function(data, vars) {
     U        = unname(wt$statistic),
     z        = z, p = wt$p.value, r = r,
     r_ci     = r_ci,
+    hl_shift = hl_shift,
+    hl_conf_int = hl_conf_int,
     effect_label = sframe_effect_label(r, "r"),
     apa      = sprintf(
-      "U = %.0f, z = %.2f, p %s, r = %.2f%s",
+      "U = %.0f, z = %.2f, p %s, r = %.2f%s, Hodges-Lehmann shift = %.2f%s",
       wt$statistic, z, sframe_p_string(wt$p.value), r,
-      sframe_ci_string(r_ci)
+      sframe_ci_string(r_ci), hl_shift, sframe_ci_string(hl_ci_named)
     ),
     prompt   = sprintf(
       "The Mann-Whitney test %s a significant difference between %s (Mdn = %.2f) and %s (Mdn = %.2f), U = %.0f, p %s, r = %.2f%s (%s effect). Interpret the direction and practical significance.",
@@ -498,7 +593,7 @@ sframe_run_wilcoxon_pair <- function(data, vars) {
   }
 
   wt <- tryCatch(
-    stats::wilcox.test(x, y, paired = TRUE, exact = FALSE),
+    stats::wilcox.test(x, y, paired = TRUE, exact = FALSE, conf.int = TRUE),
     error = function(e) NULL
   )
   if (is.null(wt)) return(list(test = "wilcoxon_pair", error = "Test failed."))
@@ -506,6 +601,9 @@ sframe_run_wilcoxon_pair <- function(data, vars) {
   z <- stats::qnorm(wt$p.value / 2)
   r <- abs(z) / sqrt(n)
   r_ci <- sframe_signed_rank_r_ci(x - y)
+  pseudomedian <- unname(wt$estimate)
+  pseudomedian_conf_int <- as.numeric(wt$conf.int)
+  pm_ci_named <- c(lower = pseudomedian_conf_int[1], upper = pseudomedian_conf_int[2])
 
   list(
     test = "wilcoxon_pair",
@@ -518,11 +616,13 @@ sframe_run_wilcoxon_pair <- function(data, vars) {
     p = wt$p.value,
     r = r,
     r_ci = r_ci,
+    pseudomedian = pseudomedian,
+    pseudomedian_conf_int = pseudomedian_conf_int,
     effect_label = sframe_effect_label(r, "r"),
     apa = sprintf(
-      "V = %.0f, z = %.2f, p %s, r = %.2f%s",
+      "V = %.0f, z = %.2f, p %s, r = %.2f%s, pseudomedian = %.2f%s",
       wt$statistic, z, sframe_p_string(wt$p.value), r,
-      sframe_ci_string(r_ci)
+      sframe_ci_string(r_ci), pseudomedian, sframe_ci_string(pm_ci_named)
     ),
     prompt = sprintf(
       "The Wilcoxon signed-rank test %s a significant difference between %s (Mdn = %.2f) and %s (Mdn = %.2f), V = %.0f, z = %.2f, p %s, r = %.2f%s (%s effect). Discuss the direction and practical significance.",
@@ -817,6 +917,8 @@ sframe_vars_for_method <- function(method, roles, block) {
                                     sframe_role_values(roles, c("dependent", "outcome"))),
     regression_logistic_multinomial = c(sframe_role_values(roles, c("predictors", "covariates")),
                                         sframe_role_values(roles, c("dependent", "outcome"))),
+    firth_logistic = c(sframe_role_values(roles, c("predictors", "covariates")),
+                       sframe_role_values(roles, c("dependent", "outcome"))),
     moderation = c(sframe_role_values(roles, "predictor"),
                    sframe_role_values(roles, "moderator"),
                    sframe_role_values(roles, c("outcome", "dependent"))),
@@ -942,6 +1044,19 @@ sframe_result_table <- function(result) {
         Estimate = fmt(co[["Estimate"]]),
         `Odds ratio` = fmt(co[["odds_ratio"]]),
         p = vapply(co[["Pr(>|z|)"]], sframe_p_string, character(1)),
+        check.names = FALSE, stringsAsFactors = FALSE, row.names = NULL
+      )
+    },
+    firth_logistic = {
+      co <- result$coefficients
+      if (!is.data.frame(co)) return(NULL)
+      data.frame(
+        Term = rownames(co),
+        Estimate = fmt(co[["Estimate"]]),
+        `Odds ratio` = fmt(co[["odds_ratio"]]),
+        `CI low` = fmt(co[["or_ci_low"]]),
+        `CI high` = fmt(co[["or_ci_high"]]),
+        p = vapply(co[["p"]], sframe_p_string, character(1)),
         check.names = FALSE, stringsAsFactors = FALSE, row.names = NULL
       )
     },
@@ -1090,8 +1205,22 @@ sframe_run_one_block <- function(block, data, instrument, plots = FALSE,
   vars <- sframe_vars_for_method(test, roles, block)
   options <- block$options %||% list()
   weights <- sframe_role_values(roles, c("weights", "weight"))
+  # Decision methods take their criterion weights through `weights_item` or
+  # `options$weights` (a numeric vector), so the frequency-weighting variable
+  # role must never be folded into their options.
+  if (test %in% sframe_decision_methods) weights <- character(0)
   if (length(weights) > 0 && is.null(options$weights)) {
     options$weights <- weights[1]
+  }
+  # Optional `group` role on term_freq/tidy_sentiment (todo_0.5.md section
+  # 1a): resolved into options the same way weights is above, so the 2
+  # runners read options$group without knowing about roles at all. Additive
+  # only, so every other method's options are untouched.
+  if (test %in% c("term_freq", "tidy_sentiment")) {
+    group <- sframe_role_values(roles, "group")
+    if (length(group) > 0 && is.null(options$group)) {
+      options$group <- group[1]
+    }
   }
   if (!is.null(block$alpha) && sframe_method_uses_alpha(test)) {
     options$alpha <- block$alpha
@@ -1153,13 +1282,41 @@ sframe_run_one_block <- function(block, data, instrument, plots = FALSE,
       regression_logistic_binary = sframe_run_logistic_binary(data, vars),
       regression_logistic_ordinal = sframe_run_ordinal_logistic(data, roles, options),
       regression_logistic_multinomial = sframe_run_multinomial_logistic(data, roles, options),
+      firth_logistic     = sframe_run_firth_logistic(data, roles, options),
+      topsis             = sframe_run_topsis(data, roles, options, instrument),
+      ahp                = sframe_run_ahp(data, roles, options, instrument),
+      anp                = sframe_run_anp(data, roles, options, instrument),
+      dematel            = sframe_run_dematel(data, roles, options, instrument),
+      vikor              = sframe_run_vikor(data, roles, options, instrument),
+      moora              = sframe_run_moora(data, roles, options, instrument),
+      smart              = sframe_run_smart(data, roles, options, instrument),
+      waspas             = sframe_run_waspas(data, roles, options, instrument),
+      promethee          = sframe_run_promethee(data, roles, options, instrument),
+      electre            = sframe_run_electre(data, roles, options, instrument),
       moderation = sframe_run_moderation(data, roles),
       mediation = sframe_run_mediation(data, roles, options),
+      term_freq = sframe_run_term_freq(data, roles, options, instrument),
+      co_occurrence = sframe_run_co_occurrence(data, roles, options, instrument),
+      topic_model_lda = sframe_run_topic_model_lda(data, roles, options, instrument),
+      stm_topics = sframe_run_stm_topics(data, roles, options, instrument),
+      ngram_freq = sframe_run_ngram_freq(data, roles, options, instrument),
+      term_context = sframe_run_term_context(data, roles, options, instrument),
+      co_occurrence_network = sframe_run_cooccurrence_network(data, roles, options, instrument),
+      tidy_sentiment = sframe_run_tidy_sentiment(data, roles, options, instrument),
+      quanteda_dfm = sframe_run_quanteda_dfm(data, roles, options, instrument),
       list(test = test, error = paste0("Test '", test, "' is unavailable."))
     )
   }, error = function(e) {
     list(test = test, error = conditionMessage(e))
   })
+
+  # Weight sensitivity is opt-in per block via options$sensitivity = TRUE.
+  # Attached here, once, rather than inside each of the 7 ranking runners,
+  # for the same reason label substitution below is handled centrally.
+  result <- tryCatch(
+    sframe_attach_sensitivity(result, data, roles, options, instrument),
+    error = function(e) result
+  )
 
   result$research_question <- block$research_question
   result$block_id          <- block$id
@@ -1176,9 +1333,16 @@ sframe_run_one_block <- function(block, data, instrument, plots = FALSE,
   # The runners above compute on the raw response codes (item ids, coded
   # choice values), so the table they build carries those, not what a
   # reader sees. Substitute labels here, once, for every test type, rather
-  # than teaching each runner about the instrument's labels.
+  # than teaching each runner about the instrument's labels. A text-family
+  # id's free-text columns (term, term_a/term_b, before/match/after) are
+  # excluded via .sframe_text_free_text_cols: those hold a respondent's own
+  # words, not coded values, and humanising them risks silently relabelling
+  # a term that happens to collide with an unrelated item's choice code. A
+  # coded column on the same table, such as term_freq's `group`, is not in
+  # that exclusion list and keeps humanising normally.
   result$table <- tryCatch(
-    sframe_humanize_table(result$table, sframe_label_lookup(instrument)),
+    sframe_humanize_table(result$table, sframe_label_lookup(instrument),
+                          exclude_cols = .sframe_text_free_text_cols[[test]] %||% character(0)),
     error = function(e) result$table
   )
   if (isTRUE(plots) && is.null(result$plot)) {

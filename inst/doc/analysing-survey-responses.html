@@ -398,7 +398,7 @@ only known columns.</p>
 <div id="missing-data-and-quality" class="section level2">
 <h2>Missing data and quality</h2>
 <div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a>mr <span class="ot">&lt;-</span> <span class="fu">missing_data_report</span>(responses, instr)</span>
-<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a><span class="fu">kable</span>(mr<span class="sc">$</span>item_missing, <span class="at">digits =</span> <span class="dv">2</span>,</span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a><span class="fu">kable</span>(<span class="fu">as.data.frame</span>(mr), <span class="at">digits =</span> <span class="dv">2</span>,</span>
 <span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a>      <span class="at">col.names =</span> <span class="fu">c</span>(<span class="st">&quot;Variable&quot;</span>, <span class="st">&quot;Missing (n)&quot;</span>, <span class="st">&quot;Missing (%)&quot;</span>, <span class="st">&quot;Valid (n)&quot;</span>),</span>
 <span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a>      <span class="at">caption =</span> <span class="st">&quot;Item-level missingness&quot;</span>)</span></code></pre></div>
 <table>
@@ -527,13 +527,15 @@ only known columns.</p>
 <span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a>  <span class="at">submitted_at  =</span> <span class="st">&quot;submitted_at&quot;</span>,</span>
 <span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a>  <span class="at">started_at    =</span> <span class="st">&quot;started_at&quot;</span></span>
 <span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a>)</span>
-<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a>quality_summary <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
-<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a>  <span class="at">Metric =</span> <span class="fu">c</span>(<span class="st">&quot;Respondents&quot;</span>, <span class="st">&quot;Items&quot;</span>, <span class="st">&quot;Flagged for review&quot;</span>, <span class="st">&quot;Flag rate&quot;</span>),</span>
-<span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a>  <span class="at">Value  =</span> <span class="fu">c</span>(qr<span class="sc">$</span>summary<span class="sc">$</span>n_respondents, qr<span class="sc">$</span>summary<span class="sc">$</span>n_items, qr<span class="sc">$</span>summary<span class="sc">$</span>n_flagged,</span>
-<span id="cb4-11"><a href="#cb4-11" tabindex="-1"></a>             <span class="fu">sprintf</span>(<span class="st">&quot;%.1f%%&quot;</span>, <span class="dv">100</span> <span class="sc">*</span> qr<span class="sc">$</span>summary<span class="sc">$</span>flag_rate)),</span>
-<span id="cb4-12"><a href="#cb4-12" tabindex="-1"></a>  <span class="at">stringsAsFactors =</span> <span class="cn">FALSE</span></span>
-<span id="cb4-13"><a href="#cb4-13" tabindex="-1"></a>)</span>
-<span id="cb4-14"><a href="#cb4-14" tabindex="-1"></a><span class="fu">kable</span>(quality_summary, <span class="at">align =</span> <span class="fu">c</span>(<span class="st">&quot;l&quot;</span>, <span class="st">&quot;r&quot;</span>), <span class="at">caption =</span> <span class="st">&quot;Quality screening summary&quot;</span>)</span></code></pre></div>
+<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a><span class="co"># as.data.frame() gives the summary row.</span></span>
+<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a>qr_summary <span class="ot">&lt;-</span> <span class="fu">as.data.frame</span>(qr)</span>
+<span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a>quality_summary <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb4-11"><a href="#cb4-11" tabindex="-1"></a>  <span class="at">Metric =</span> <span class="fu">c</span>(<span class="st">&quot;Respondents&quot;</span>, <span class="st">&quot;Items&quot;</span>, <span class="st">&quot;Flagged for review&quot;</span>, <span class="st">&quot;Flag rate&quot;</span>),</span>
+<span id="cb4-12"><a href="#cb4-12" tabindex="-1"></a>  <span class="at">Value  =</span> <span class="fu">c</span>(qr_summary<span class="sc">$</span>n_respondents, qr_summary<span class="sc">$</span>n_items, qr_summary<span class="sc">$</span>n_flagged,</span>
+<span id="cb4-13"><a href="#cb4-13" tabindex="-1"></a>             <span class="fu">sprintf</span>(<span class="st">&quot;%.1f%%&quot;</span>, <span class="dv">100</span> <span class="sc">*</span> qr_summary<span class="sc">$</span>flag_rate)),</span>
+<span id="cb4-14"><a href="#cb4-14" tabindex="-1"></a>  <span class="at">stringsAsFactors =</span> <span class="cn">FALSE</span></span>
+<span id="cb4-15"><a href="#cb4-15" tabindex="-1"></a>)</span>
+<span id="cb4-16"><a href="#cb4-16" tabindex="-1"></a><span class="fu">kable</span>(quality_summary, <span class="at">align =</span> <span class="fu">c</span>(<span class="st">&quot;l&quot;</span>, <span class="st">&quot;r&quot;</span>), <span class="at">caption =</span> <span class="st">&quot;Quality screening summary&quot;</span>)</span></code></pre></div>
 <table>
 <caption>Quality screening summary</caption>
 <thead>
@@ -657,125 +659,9 @@ for a regression.</p>
 <span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a>  <span class="at">predictors =</span> <span class="fu">c</span>(<span class="st">&quot;digital_marketing&quot;</span>, <span class="st">&quot;service_quality&quot;</span>, <span class="st">&quot;sustainability&quot;</span>),</span>
 <span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a>  <span class="at">outcome    =</span> <span class="st">&quot;satisfaction&quot;</span></span>
 <span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a>)</span>
-<span id="cb8-6"><a href="#cb8-6" tabindex="-1"></a><span class="co">#&gt; $method</span></span>
-<span id="cb8-7"><a href="#cb8-7" tabindex="-1"></a><span class="co">#&gt; [1] &quot;assumptions&quot;</span></span>
-<span id="cb8-8"><a href="#cb8-8" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb8-9"><a href="#cb8-9" tabindex="-1"></a><span class="co">#&gt; $normality</span></span>
-<span id="cb8-10"><a href="#cb8-10" tabindex="-1"></a><span class="co">#&gt; data frame with 0 columns and 0 rows</span></span>
-<span id="cb8-11"><a href="#cb8-11" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb8-12"><a href="#cb8-12" tabindex="-1"></a><span class="co">#&gt; $homogeneity</span></span>
-<span id="cb8-13"><a href="#cb8-13" tabindex="-1"></a><span class="co">#&gt; data frame with 0 columns and 0 rows</span></span>
-<span id="cb8-14"><a href="#cb8-14" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb8-15"><a href="#cb8-15" tabindex="-1"></a><span class="co">#&gt; $regression</span></span>
-<span id="cb8-16"><a href="#cb8-16" tabindex="-1"></a><span class="co">#&gt; $regression$n</span></span>
-<span id="cb8-17"><a href="#cb8-17" tabindex="-1"></a><span class="co">#&gt; [1] 120</span></span>
-<span id="cb8-18"><a href="#cb8-18" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb8-19"><a href="#cb8-19" tabindex="-1"></a><span class="co">#&gt; $regression$residual_shapiro_w</span></span>
-<span id="cb8-20"><a href="#cb8-20" tabindex="-1"></a><span class="co">#&gt; [1] 0.9941063</span></span>
-<span id="cb8-21"><a href="#cb8-21" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb8-22"><a href="#cb8-22" tabindex="-1"></a><span class="co">#&gt; $regression$residual_shapiro_p</span></span>
-<span id="cb8-23"><a href="#cb8-23" tabindex="-1"></a><span class="co">#&gt; [1] 0.8980753</span></span>
-<span id="cb8-24"><a href="#cb8-24" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb8-25"><a href="#cb8-25" tabindex="-1"></a><span class="co">#&gt; $regression$vif</span></span>
-<span id="cb8-26"><a href="#cb8-26" tabindex="-1"></a><span class="co">#&gt; digital_marketing   service_quality    sustainability </span></span>
-<span id="cb8-27"><a href="#cb8-27" tabindex="-1"></a><span class="co">#&gt;          1.212656          1.200070          1.012163 </span></span>
-<span id="cb8-28"><a href="#cb8-28" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb8-29"><a href="#cb8-29" tabindex="-1"></a><span class="co">#&gt; $regression$cooks_distance</span></span>
-<span id="cb8-30"><a href="#cb8-30" tabindex="-1"></a><span class="co">#&gt;            1            2            3            4            5            6 </span></span>
-<span id="cb8-31"><a href="#cb8-31" tabindex="-1"></a><span class="co">#&gt; 1.184326e-04 9.147336e-03 1.482864e-03 3.583748e-07 2.883541e-03 1.731349e-04 </span></span>
-<span id="cb8-32"><a href="#cb8-32" tabindex="-1"></a><span class="co">#&gt;            7            8            9           10           11           12 </span></span>
-<span id="cb8-33"><a href="#cb8-33" tabindex="-1"></a><span class="co">#&gt; 1.323697e-02 4.460344e-03 4.542716e-05 4.287879e-02 2.143130e-02 1.509419e-03 </span></span>
-<span id="cb8-34"><a href="#cb8-34" tabindex="-1"></a><span class="co">#&gt;           13           14           15           16           17           18 </span></span>
-<span id="cb8-35"><a href="#cb8-35" tabindex="-1"></a><span class="co">#&gt; 5.088239e-02 5.722577e-03 2.174172e-07 1.127457e-02 8.743696e-03 2.593670e-03 </span></span>
-<span id="cb8-36"><a href="#cb8-36" tabindex="-1"></a><span class="co">#&gt;           19           20           21           22           23           24 </span></span>
-<span id="cb8-37"><a href="#cb8-37" tabindex="-1"></a><span class="co">#&gt; 7.553824e-03 2.109049e-02 1.932134e-05 2.370723e-03 3.851322e-04 5.461064e-03 </span></span>
-<span id="cb8-38"><a href="#cb8-38" tabindex="-1"></a><span class="co">#&gt;           25           26           27           28           29           30 </span></span>
-<span id="cb8-39"><a href="#cb8-39" tabindex="-1"></a><span class="co">#&gt; 1.872377e-04 4.489098e-07 1.706497e-02 2.752537e-06 1.434770e-04 3.195816e-03 </span></span>
-<span id="cb8-40"><a href="#cb8-40" tabindex="-1"></a><span class="co">#&gt;           31           32           33           34           35           36 </span></span>
-<span id="cb8-41"><a href="#cb8-41" tabindex="-1"></a><span class="co">#&gt; 6.905977e-02 1.536396e-02 1.260801e-02 1.534755e-03 1.380360e-02 6.848461e-03 </span></span>
-<span id="cb8-42"><a href="#cb8-42" tabindex="-1"></a><span class="co">#&gt;           37           38           39           40           41           42 </span></span>
-<span id="cb8-43"><a href="#cb8-43" tabindex="-1"></a><span class="co">#&gt; 1.700720e-06 3.793174e-04 2.134337e-03 2.287672e-02 1.001287e-02 4.071700e-03 </span></span>
-<span id="cb8-44"><a href="#cb8-44" tabindex="-1"></a><span class="co">#&gt;           43           44           45           46           47           48 </span></span>
-<span id="cb8-45"><a href="#cb8-45" tabindex="-1"></a><span class="co">#&gt; 5.471299e-03 5.270891e-02 3.433051e-02 2.975180e-03 3.167244e-03 9.174703e-04 </span></span>
-<span id="cb8-46"><a href="#cb8-46" tabindex="-1"></a><span class="co">#&gt;           49           50           51           52           53           54 </span></span>
-<span id="cb8-47"><a href="#cb8-47" tabindex="-1"></a><span class="co">#&gt; 1.170983e-02 8.648779e-04 1.116591e-03 8.230930e-03 1.381027e-02 3.504105e-02 </span></span>
-<span id="cb8-48"><a href="#cb8-48" tabindex="-1"></a><span class="co">#&gt;           55           56           57           58           59           60 </span></span>
-<span id="cb8-49"><a href="#cb8-49" tabindex="-1"></a><span class="co">#&gt; 1.571502e-04 2.905749e-03 1.402942e-03 5.808575e-03 2.019476e-03 6.948885e-06 </span></span>
-<span id="cb8-50"><a href="#cb8-50" tabindex="-1"></a><span class="co">#&gt;           61           62           63           64           65           66 </span></span>
-<span id="cb8-51"><a href="#cb8-51" tabindex="-1"></a><span class="co">#&gt; 1.170618e-03 3.652109e-03 2.922443e-02 9.678057e-03 3.620026e-06 3.218468e-03 </span></span>
-<span id="cb8-52"><a href="#cb8-52" tabindex="-1"></a><span class="co">#&gt;           67           68           69           70           71           72 </span></span>
-<span id="cb8-53"><a href="#cb8-53" tabindex="-1"></a><span class="co">#&gt; 1.378174e-03 5.716292e-03 3.730149e-03 9.087202e-03 8.357802e-03 1.187750e-02 </span></span>
-<span id="cb8-54"><a href="#cb8-54" tabindex="-1"></a><span class="co">#&gt;           73           74           75           76           77           78 </span></span>
-<span id="cb8-55"><a href="#cb8-55" tabindex="-1"></a><span class="co">#&gt; 2.430428e-02 3.348263e-04 9.538221e-03 1.257656e-03 1.433252e-03 1.356868e-03 </span></span>
-<span id="cb8-56"><a href="#cb8-56" tabindex="-1"></a><span class="co">#&gt;           79           80           81           82           83           84 </span></span>
-<span id="cb8-57"><a href="#cb8-57" tabindex="-1"></a><span class="co">#&gt; 2.563597e-05 1.801658e-03 1.835160e-03 5.784606e-04 2.366539e-02 8.884675e-04 </span></span>
-<span id="cb8-58"><a href="#cb8-58" tabindex="-1"></a><span class="co">#&gt;           85           86           87           88           89           90 </span></span>
-<span id="cb8-59"><a href="#cb8-59" tabindex="-1"></a><span class="co">#&gt; 3.063566e-04 9.322376e-03 1.300065e-02 5.103375e-03 6.710071e-04 3.902158e-03 </span></span>
-<span id="cb8-60"><a href="#cb8-60" tabindex="-1"></a><span class="co">#&gt;           91           92           93           94           95           96 </span></span>
-<span id="cb8-61"><a href="#cb8-61" tabindex="-1"></a><span class="co">#&gt; 3.851322e-04 3.045158e-03 4.482863e-04 3.504325e-03 3.537797e-03 4.644052e-04 </span></span>
-<span id="cb8-62"><a href="#cb8-62" tabindex="-1"></a><span class="co">#&gt;           97           98           99          100          101          102 </span></span>
-<span id="cb8-63"><a href="#cb8-63" tabindex="-1"></a><span class="co">#&gt; 1.386934e-02 4.444185e-03 5.864202e-03 9.236185e-03 2.563387e-02 3.445601e-04 </span></span>
-<span id="cb8-64"><a href="#cb8-64" tabindex="-1"></a><span class="co">#&gt;          103          104          105          106          107          108 </span></span>
-<span id="cb8-65"><a href="#cb8-65" tabindex="-1"></a><span class="co">#&gt; 1.467024e-03 1.170618e-03 9.051071e-04 7.373574e-03 2.295924e-05 6.910949e-04 </span></span>
-<span id="cb8-66"><a href="#cb8-66" tabindex="-1"></a><span class="co">#&gt;          109          110          111          112          113          114 </span></span>
-<span id="cb8-67"><a href="#cb8-67" tabindex="-1"></a><span class="co">#&gt; 3.504325e-03 2.274586e-04 9.266580e-05 4.857092e-03 4.700977e-08 2.921484e-03 </span></span>
-<span id="cb8-68"><a href="#cb8-68" tabindex="-1"></a><span class="co">#&gt;          115          116          117          118          119          120 </span></span>
-<span id="cb8-69"><a href="#cb8-69" tabindex="-1"></a><span class="co">#&gt; 4.090240e-03 1.105467e-02 7.365409e-04 1.938023e-02 1.012910e-03 1.535916e-02 </span></span>
-<span id="cb8-70"><a href="#cb8-70" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb8-71"><a href="#cb8-71" tabindex="-1"></a><span class="co">#&gt; $regression$standardised_residuals</span></span>
-<span id="cb8-72"><a href="#cb8-72" tabindex="-1"></a><span class="co">#&gt;            1            2            3            4            5            6 </span></span>
-<span id="cb8-73"><a href="#cb8-73" tabindex="-1"></a><span class="co">#&gt; -0.082923698 -1.870645918  0.395846500  0.004591293 -0.692174489 -0.185004873 </span></span>
-<span id="cb8-74"><a href="#cb8-74" tabindex="-1"></a><span class="co">#&gt;            7            8            9           10           11           12 </span></span>
-<span id="cb8-75"><a href="#cb8-75" tabindex="-1"></a><span class="co">#&gt;  1.084968504  0.780147050  0.110776991 -2.638742712 -1.795997774  0.319306483 </span></span>
-<span id="cb8-76"><a href="#cb8-76" tabindex="-1"></a><span class="co">#&gt;           13           14           15           16           17           18 </span></span>
-<span id="cb8-77"><a href="#cb8-77" tabindex="-1"></a><span class="co">#&gt;  1.954971640 -1.219815183  0.004191993  1.118225981  1.039309006  0.527129425 </span></span>
-<span id="cb8-78"><a href="#cb8-78" tabindex="-1"></a><span class="co">#&gt;           19           20           21           22           23           24 </span></span>
-<span id="cb8-79"><a href="#cb8-79" tabindex="-1"></a><span class="co">#&gt; -0.961835047  0.980099373  0.063225377  0.551354644  0.278271787 -0.647978136 </span></span>
-<span id="cb8-80"><a href="#cb8-80" tabindex="-1"></a><span class="co">#&gt;           25           26           27           28           29           30 </span></span>
-<span id="cb8-81"><a href="#cb8-81" tabindex="-1"></a><span class="co">#&gt;  0.227581315  0.004986299 -1.172216599  0.021868776 -0.095706217 -0.782623908 </span></span>
-<span id="cb8-82"><a href="#cb8-82" tabindex="-1"></a><span class="co">#&gt;           31           32           33           34           35           36 </span></span>
-<span id="cb8-83"><a href="#cb8-83" tabindex="-1"></a><span class="co">#&gt; -2.309384417 -1.374470793  0.932880267 -0.690640105  1.255066667  0.671314169 </span></span>
-<span id="cb8-84"><a href="#cb8-84" tabindex="-1"></a><span class="co">#&gt;           37           38           39           40           41           42 </span></span>
-<span id="cb8-85"><a href="#cb8-85" tabindex="-1"></a><span class="co">#&gt;  0.012570683  0.352662125  0.374079633  1.867781077 -1.228052989  0.606343018 </span></span>
-<span id="cb8-86"><a href="#cb8-86" tabindex="-1"></a><span class="co">#&gt;           43           44           45           46           47           48 </span></span>
-<span id="cb8-87"><a href="#cb8-87" tabindex="-1"></a><span class="co">#&gt; -0.617848955 -1.662835019  2.074446939  0.978590982 -0.793286443  0.252351509 </span></span>
-<span id="cb8-88"><a href="#cb8-88" tabindex="-1"></a><span class="co">#&gt;           49           50           51           52           53           54 </span></span>
-<span id="cb8-89"><a href="#cb8-89" tabindex="-1"></a><span class="co">#&gt;  1.156356561 -0.449473176 -0.363323806  1.152172372 -1.440809735 -1.866773520 </span></span>
-<span id="cb8-90"><a href="#cb8-90" tabindex="-1"></a><span class="co">#&gt;           55           56           57           58           59           60 </span></span>
-<span id="cb8-91"><a href="#cb8-91" tabindex="-1"></a><span class="co">#&gt;  0.189559954 -0.858506945 -0.309992596 -1.198889104  0.696726010 -0.035497078 </span></span>
-<span id="cb8-92"><a href="#cb8-92" tabindex="-1"></a><span class="co">#&gt;           61           62           63           64           65           66 </span></span>
-<span id="cb8-93"><a href="#cb8-93" tabindex="-1"></a><span class="co">#&gt; -0.594649744  0.646085118  1.892162918  1.346958028  0.012140769 -1.050312804 </span></span>
-<span id="cb8-94"><a href="#cb8-94" tabindex="-1"></a><span class="co">#&gt;           67           68           69           70           71           72 </span></span>
-<span id="cb8-95"><a href="#cb8-95" tabindex="-1"></a><span class="co">#&gt;  0.598618566 -1.508218399 -0.521321175 -0.874142231  1.497519709  1.032511438 </span></span>
-<span id="cb8-96"><a href="#cb8-96" tabindex="-1"></a><span class="co">#&gt;           73           74           75           76           77           78 </span></span>
-<span id="cb8-97"><a href="#cb8-97" tabindex="-1"></a><span class="co">#&gt;  2.208163710  0.178475846  1.021361391  0.616360158 -0.448239907 -0.298894184 </span></span>
-<span id="cb8-98"><a href="#cb8-98" tabindex="-1"></a><span class="co">#&gt;           79           80           81           82           83           84 </span></span>
-<span id="cb8-99"><a href="#cb8-99" tabindex="-1"></a><span class="co">#&gt; -0.041513884  0.484623799 -0.711839662 -0.445277725  2.271897566  0.424028147 </span></span>
-<span id="cb8-100"><a href="#cb8-100" tabindex="-1"></a><span class="co">#&gt;           85           86           87           88           89           90 </span></span>
-<span id="cb8-101"><a href="#cb8-101" tabindex="-1"></a><span class="co">#&gt;  0.236369610  1.923468863 -1.537113657 -0.910885755  0.287247717  0.885761213 </span></span>
-<span id="cb8-102"><a href="#cb8-102" tabindex="-1"></a><span class="co">#&gt;           91           92           93           94           95           96 </span></span>
-<span id="cb8-103"><a href="#cb8-103" tabindex="-1"></a><span class="co">#&gt;  0.278271787 -1.099326747 -0.299846917 -0.670336465  1.075297214  0.241274096 </span></span>
-<span id="cb8-104"><a href="#cb8-104" tabindex="-1"></a><span class="co">#&gt;           97           98           99          100          101          102 </span></span>
-<span id="cb8-105"><a href="#cb8-105" tabindex="-1"></a><span class="co">#&gt;  1.521915286  0.863717913  0.560137775 -0.839407809 -1.485896784 -0.173199125 </span></span>
-<span id="cb8-106"><a href="#cb8-106" tabindex="-1"></a><span class="co">#&gt;          103          104          105          106          107          108 </span></span>
-<span id="cb8-107"><a href="#cb8-107" tabindex="-1"></a><span class="co">#&gt; -0.230361700 -0.594649744  0.499913855 -1.172602644 -0.046456880 -0.397268813 </span></span>
-<span id="cb8-108"><a href="#cb8-108" tabindex="-1"></a><span class="co">#&gt;          109          110          111          112          113          114 </span></span>
-<span id="cb8-109"><a href="#cb8-109" tabindex="-1"></a><span class="co">#&gt; -0.670336465  0.181786019 -0.202323795 -0.825310891  0.001891811 -0.577856052 </span></span>
-<span id="cb8-110"><a href="#cb8-110" tabindex="-1"></a><span class="co">#&gt;          115          116          117          118          119          120 </span></span>
-<span id="cb8-111"><a href="#cb8-111" tabindex="-1"></a><span class="co">#&gt; -0.520419080  1.827370061 -0.348396466 -1.215115771  0.250475472  0.752951062 </span></span>
-<span id="cb8-112"><a href="#cb8-112" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb8-113"><a href="#cb8-113" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb8-114"><a href="#cb8-114" tabindex="-1"></a><span class="co">#&gt; $expected_counts</span></span>
-<span id="cb8-115"><a href="#cb8-115" tabindex="-1"></a><span class="co">#&gt; NULL</span></span>
-<span id="cb8-116"><a href="#cb8-116" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb8-117"><a href="#cb8-117" tabindex="-1"></a><span class="co">#&gt; $apa</span></span>
-<span id="cb8-118"><a href="#cb8-118" tabindex="-1"></a><span class="co">#&gt; [1] &quot;Assumption checks were computed.&quot;</span></span>
-<span id="cb8-119"><a href="#cb8-119" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb8-120"><a href="#cb8-120" tabindex="-1"></a><span class="co">#&gt; $prompt</span></span>
-<span id="cb8-121"><a href="#cb8-121" tabindex="-1"></a><span class="co">#&gt; [1] &quot;Report assumption checks before interpreting inferential models, especially sparse cells, non-normal residuals, and high VIF values.&quot;</span></span>
-<span id="cb8-122"><a href="#cb8-122" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb8-123"><a href="#cb8-123" tabindex="-1"></a><span class="co">#&gt; attr(,&quot;class&quot;)</span></span>
-<span id="cb8-124"><a href="#cb8-124" tabindex="-1"></a><span class="co">#&gt; [1] &quot;sframe_assumption_report&quot;</span></span></code></pre></div>
+<span id="cb8-6"><a href="#cb8-6" tabindex="-1"></a><span class="co">#&gt; Assumption Report</span></span>
+<span id="cb8-7"><a href="#cb8-7" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-8"><a href="#cb8-8" tabindex="-1"></a><span class="co">#&gt; Regression residuals: n = 120, Shapiro-Wilk p = 0.898</span></span></code></pre></div>
 </div>
 <div id="define-the-plan" class="section level2">
 <h2>Define the plan</h2>
@@ -784,7 +670,7 @@ variables that fill each role. A correlation expects <code>x</code> and
 <code>y</code>. A regression expects <code>predictors</code> and a
 <code>dependent</code> variable. A group comparison expects a
 <code>group</code> and an <code>outcome</code>.</p>
-<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a>instr<span class="sc">$</span>analysis_plan <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a><span class="fu">sf_plan</span>(instr) <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
 <span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">id =</span> <span class="st">&quot;RQ1&quot;</span>,</span>
 <span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a>       <span class="at">research_question =</span> <span class="st">&quot;Is digital marketing perception associated with satisfaction?&quot;</span>,</span>
 <span id="cb9-4"><a href="#cb9-4" tabindex="-1"></a>       <span class="at">family =</span> <span class="st">&quot;association&quot;</span>, <span class="at">method =</span> <span class="st">&quot;correlation_pearson&quot;</span>,</span>
@@ -810,10 +696,10 @@ variables that fill each role. A correlation expects <code>x</code> and
 <table>
 <colgroup>
 <col width="2%" />
-<col width="46%" />
+<col width="35%" />
+<col width="4%" />
+<col width="52%" />
 <col width="5%" />
-<col width="37%" />
-<col width="7%" />
 </colgroup>
 <thead>
 <tr class="header">
@@ -846,8 +732,8 @@ satisfaction?</td>
 <td align="left">Do first-time and repeat visitors differ in behavioural
 intention?</td>
 <td align="left"></td>
-<td align="right">U = 1576, z = -0.98, p = 0.327, r = 0.09 [0.00,
-0.27]</td>
+<td align="right">U = 1576, z = -0.98, p = 0.327, r = 0.09 [0.01, 0.26],
+Hodges-Lehmann shift = -0.00 [-0.50, 0.00]</td>
 <td align="left">negligible</td>
 </tr>
 </tbody>
@@ -882,7 +768,7 @@ writing prompt, and the references that support the technique.</p>
 <span id="cb12-14"><a href="#cb12-14" tabindex="-1"></a><span class="co">#&gt;                                                                                                                                                             r_core </span></span>
 <span id="cb12-15"><a href="#cb12-15" tabindex="-1"></a><span class="co">#&gt;                                          &quot;R Core Team. (2026). *R: A language and environment for statistical computing*. R Foundation for Statistical Computing.&quot; </span></span>
 <span id="cb12-16"><a href="#cb12-16" tabindex="-1"></a><span class="co">#&gt;                                                                                                                                                        surveyframe </span></span>
-<span id="cb12-17"><a href="#cb12-17" tabindex="-1"></a><span class="co">#&gt; &quot;Sharafuddin, M. A. (2026). *surveyframe: Survey Instrument Workflows* (Version 0.3.4) [Computer software]. https://github.com/MohammedAliSharafuddin/surveyframe&quot;</span></span></code></pre></div>
+<span id="cb12-17"><a href="#cb12-17" tabindex="-1"></a><span class="co">#&gt; &quot;Sharafuddin, M. A. (2026). *surveyframe: Survey Instrument Workflows* (Version 0.4.0) [Computer software]. https://github.com/MohammedAliSharafuddin/surveyframe&quot;</span></span></code></pre></div>
 </div>
 <div id="render-the-results-report" class="section level2">
 <h2>Render the results report</h2>

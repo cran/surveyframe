@@ -19,15 +19,17 @@
 print.sframe <- function(x, ...) {
   n_items  <- length(x$items)
   n_scales <- length(x$scales)
+  n_plan   <- length(x$analysis_plan)
   status   <- if (isTRUE(x$meta$validated)) "valid" else "not validated"
 
   cat(
     sprintf(
-      "<sframe>\n  Title:      %s\n  Version:    %s\n  Items:      %d\n  Scales:     %d\n  Status:     %s\n",
+      "<sframe>\n  Title:      %s\n  Version:    %s\n  Items:      %d\n  Scales:     %d\n  Analysis:   %d block(s)\n  Status:     %s\n",
       x$meta$title,
       x$meta$version,
       n_items,
       n_scales,
+      n_plan,
       status
     )
   )
@@ -43,11 +45,12 @@ print.sframe <- function(x, ...) {
 #' @exportS3Method format sframe
 format.sframe <- function(x, ...) {
   sprintf(
-    "<sframe: %s v%s | %d items | %d scales>",
+    "<sframe: %s v%s | %d items | %d scales | %d analysis block(s)>",
     x$meta$title,
     x$meta$version,
     length(x$items),
-    length(x$scales)
+    length(x$scales),
+    length(x$analysis_plan)
   )
 }
 
@@ -86,7 +89,17 @@ summary.sframe <- function(object, ...) {
   cat(sprintf("\nScales:    %d\n", length(object$scales)))
   cat(sprintf("Branches:  %d\n", length(object$branching)))
   cat(sprintf("Checks:    %d\n", length(object$checks)))
-  cat(sprintf("Status:    %s\n",
+  plan <- object$analysis_plan %||% list()
+  cat(sprintf("\nAnalysis plan: %d block(s)\n", length(plan)))
+  if (length(plan) > 0) {
+    methods <- vapply(plan, function(b) {
+      as.character(b$method %||% b$test %||% "(unset)")
+    }, character(1))
+    for (i in seq_along(plan)) {
+      cat(sprintf("  %-8s %s\n", plan[[i]]$id %||% sprintf("[%d]", i), methods[i]))
+    }
+  }
+  cat(sprintf("\nStatus:    %s\n",
               if (isTRUE(object$meta$validated)) "valid" else "not validated"))
   invisible(object)
 }

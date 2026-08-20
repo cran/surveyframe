@@ -516,6 +516,17 @@ analysis_registry <- local({
       output = "nnet::multinom plan, odds ratios, and classification table.",
       refs = "hosmer_2013"
     ),
+    firth_logistic = list(
+      family = "regression", label = "Firth penalised logistic",
+      roles = list(
+        role("dependent", "Binary outcome", levels = "nominal"),
+        role("predictors", "Predictors", min = 1, max = 99, levels = c("nominal", "ordinal", "continuous", "scale"))
+      ),
+      show_alpha = TRUE, show_hypotheses = TRUE, show_effect_size = TRUE,
+      assumptions = c("Small sample", "Separation warning"),
+      output = "Penalised odds ratios with profile-likelihood confidence intervals. Requires the logistf package.",
+      refs = c("firth_1993", "heinze_2002")
+    ),
     mediation = list(
       family = "regression", label = "Mediation",
       roles = list(
@@ -603,6 +614,200 @@ analysis_registry <- local({
       assumptions = "Construct modes and bootstrapping",
       output = "seminr measurement, structural, bootstrap, reliability, AVE, and HTMT syntax.",
       refs = "field_2018"
+    ),
+    topsis = list(
+      family = "decision", label = "TOPSIS",
+      roles = list(
+        role("performance_items", "Performance matrix items (one per criterion)", min = 1, max = 99, levels = "matrix"),
+        role("weights_item", "Weights item", levels = c("pairwise_saaty", "criteria_weight"))
+      ),
+      show_alpha = FALSE, show_hypotheses = FALSE, show_effect_size = FALSE,
+      assumptions = c("Weights sum to 1 (renormalised if not)", "Criteria labelled benefit or cost"),
+      output = "Ranking table (alternative, score, rank) by closeness to the ideal solution.",
+      refs = "hwang_1981"
+    ),
+    vikor = list(
+      family = "decision", label = "VIKOR",
+      roles = list(
+        role("performance_items", "Performance matrix items (one per criterion)", min = 1, max = 99, levels = "matrix"),
+        role("weights_item", "Weights item", levels = c("pairwise_saaty", "criteria_weight"))
+      ),
+      show_alpha = FALSE, show_hypotheses = FALSE, show_effect_size = FALSE,
+      assumptions = c("Weights sum to 1 (renormalised if not)", "Criteria labelled benefit or cost"),
+      output = "Compromise ranking (S, R, Q) with acceptable-advantage and acceptable-stability checks.",
+      refs = character(0)
+    ),
+    moora = list(
+      family = "decision", label = "MOORA",
+      roles = list(
+        role("performance_items", "Performance matrix items (one per criterion)", min = 1, max = 99, levels = "matrix"),
+        role("weights_item", "Weights item", levels = c("pairwise_saaty", "criteria_weight"))
+      ),
+      show_alpha = FALSE, show_hypotheses = FALSE, show_effect_size = FALSE,
+      assumptions = c("Weights sum to 1 (renormalised if not)", "Criteria labelled benefit or cost"),
+      output = "Ranking table (alternative, score, rank) by the ratio system.",
+      refs = character(0)
+    ),
+    smart = list(
+      family = "decision", label = "SMART",
+      roles = list(
+        role("performance_items", "Performance matrix items (one per criterion)", min = 1, max = 99, levels = "matrix"),
+        role("weights_item", "Weights item", levels = c("pairwise_saaty", "criteria_weight"))
+      ),
+      show_alpha = FALSE, show_hypotheses = FALSE, show_effect_size = FALSE,
+      assumptions = c("Weights sum to 1 (renormalised if not)", "Criteria labelled benefit or cost"),
+      output = "Ranking table (alternative, score, rank) by normalised weighted value.",
+      refs = character(0)
+    ),
+    waspas = list(
+      family = "decision", label = "WASPAS",
+      roles = list(
+        role("performance_items", "Performance matrix items (one per criterion)", min = 1, max = 99, levels = "matrix"),
+        role("weights_item", "Weights item", levels = c("pairwise_saaty", "criteria_weight"))
+      ),
+      show_alpha = FALSE, show_hypotheses = FALSE, show_effect_size = FALSE,
+      assumptions = c("Weights sum to 1 (renormalised if not)", "Criteria labelled benefit or cost"),
+      output = "Ranking table (alternative, score, rank) by the WSM/WPM blend.",
+      refs = character(0)
+    ),
+    promethee = list(
+      family = "decision", label = "PROMETHEE II",
+      roles = list(
+        role("performance_items", "Performance matrix items (one per criterion)", min = 1, max = 99, levels = "matrix"),
+        role("weights_item", "Weights item", levels = c("pairwise_saaty", "criteria_weight"))
+      ),
+      show_alpha = FALSE, show_hypotheses = FALSE, show_effect_size = FALSE,
+      assumptions = c("Weights sum to 1 (renormalised if not)", "Criteria labelled benefit or cost"),
+      output = "Ranking table (alternative, score, rank) by net preference flow.",
+      refs = character(0)
+    ),
+    electre = list(
+      family = "decision", label = "ELECTRE I",
+      roles = list(
+        role("performance_items", "Performance matrix items (one per criterion)", min = 1, max = 99, levels = "matrix"),
+        role("weights_item", "Weights item", levels = c("pairwise_saaty", "criteria_weight"))
+      ),
+      show_alpha = FALSE, show_hypotheses = FALSE, show_effect_size = FALSE,
+      assumptions = c("Weights sum to 1 (renormalised if not)", "Criteria labelled benefit or cost"),
+      output = "Outranking relation and best-effort ranking (ELECTRE I does not always produce a total order).",
+      refs = character(0)
+    ),
+    ahp = list(
+      family = "decision", label = "AHP",
+      roles = list(role("pairwise", "Pairwise comparison item", levels = "pairwise_saaty")),
+      show_alpha = FALSE, show_hypotheses = FALSE, show_effect_size = FALSE,
+      assumptions = c("Reciprocal pairwise matrix", "Consistency ratio below 0.10 recommended"),
+      output = "Criterion weights and consistency ratio.",
+      refs = "saaty_1980"
+    ),
+    anp = list(
+      family = "decision", label = "ANP",
+      roles = list(role("pairwise", "Pairwise comparison item", levels = "pairwise_saaty")),
+      show_alpha = FALSE, show_hypotheses = FALSE, show_effect_size = FALSE,
+      assumptions = c("Reciprocal pairwise matrix", "Supermatrix must converge"),
+      output = "Limiting priority weights from the supermatrix.",
+      refs = character(0)
+    ),
+    dematel = list(
+      family = "decision", label = "DEMATEL",
+      roles = list(role("pairwise", "Influence comparison item", levels = "pairwise_influence")),
+      show_alpha = FALSE, show_hypotheses = FALSE, show_effect_size = FALSE,
+      assumptions = "Directed 0-4 influence matrix",
+      output = "Cause-effect table (prominence, relation, role) and influence map.",
+      refs = character(0)
+    ),
+    term_freq = list(
+      family = "text", label = "Term frequency",
+      roles = list(
+        role("item", "Text item", levels = "text"),
+        role("group", "Group by", min = 0, max = 1, levels = c("nominal", "ordinal"))
+      ),
+      show_alpha = FALSE, show_hypotheses = FALSE, show_effect_size = FALSE,
+      show_wordcloud = TRUE, show_top_n = TRUE, default_top_n = 30L,
+      assumptions = "At least 10 usable responses",
+      output = "Top terms by frequency, optionally split by a group variable, and a bar chart or word cloud.",
+      refs = character(0)
+    ),
+    co_occurrence = list(
+      family = "text", label = "Co-occurrence",
+      roles = list(role("item", "Text item", levels = "text")),
+      show_alpha = FALSE, show_hypotheses = FALSE, show_effect_size = FALSE,
+      show_top_n = TRUE, default_top_n = 20L,
+      assumptions = c("At least 10 usable responses", "At least 1 co-occurring term pair"),
+      output = "Pairwise within-response co-occurrence counts on the top terms, and a heatmap.",
+      refs = character(0)
+    ),
+    ngram_freq = list(
+      family = "text", label = "N-gram frequency",
+      roles = list(role("item", "Text item", levels = "text")),
+      show_alpha = FALSE, show_hypotheses = FALSE, show_effect_size = FALSE,
+      show_ngram_n = TRUE, show_top_n = TRUE, default_top_n = 30L,
+      assumptions = "At least 10 usable responses",
+      output = "Top bigrams or trigrams by frequency, and a bar chart.",
+      refs = character(0)
+    ),
+    term_context = list(
+      family = "text", label = "Keyword in context",
+      roles = list(role("item", "Text item", levels = "text")),
+      show_alpha = FALSE, show_hypotheses = FALSE, show_effect_size = FALSE,
+      show_term = TRUE,
+      assumptions = c("At least 10 usable responses"),
+      output = "A keyword-in-context concordance table (before/match/after) for a chosen term.",
+      refs = character(0)
+    ),
+    co_occurrence_network = list(
+      family = "text", label = "Co-occurrence network",
+      roles = list(role("item", "Text item", levels = "text")),
+      show_alpha = FALSE, show_hypotheses = FALSE, show_effect_size = FALSE,
+      show_top_n = TRUE, default_top_n = 20L, show_seed = TRUE,
+      assumptions = c("At least 10 usable responses",
+                      "At least 5 distinct terms with 1 co-occurrence edge",
+                      "Requires the optional igraph package"),
+      output = "A Louvain-clustered, force-directed term co-occurrence network (node table plus edge list).",
+      refs = c("blondel_2008", "fruchterman_1991")
+    ),
+    tidy_sentiment = list(
+      family = "text", label = "Sentiment",
+      roles = list(
+        role("item", "Text item", levels = "text"),
+        role("group", "Group by", min = 0, max = 1, levels = c("nominal", "ordinal"))
+      ),
+      show_alpha = FALSE, show_hypotheses = FALSE, show_effect_size = FALSE,
+      show_wordcloud = TRUE,
+      assumptions = c("At least 10 usable responses", "Requires the optional tidytext package"),
+      output = paste("Positive/negative sentiment counts and proportion positive (bing lexicon),",
+                     "optionally split by a group variable, and a diverging bar chart or a",
+                     "positive/negative comparison cloud (options$wordcloud = TRUE)."),
+      refs = character(0)
+    ),
+    quanteda_dfm = list(
+      family = "text", label = "Document-feature matrix",
+      roles = list(role("item", "Text item", levels = "text")),
+      show_alpha = FALSE, show_hypotheses = FALSE, show_effect_size = FALSE,
+      show_top_n = TRUE, default_top_n = 30L,
+      assumptions = c("At least 10 usable responses", "Requires the optional quanteda package"),
+      output = "Document-feature matrix summary: feature count, sparsity, and top features.",
+      refs = character(0)
+    ),
+    topic_model_lda = list(
+      family = "text", label = "Topic model (LDA)",
+      roles = list(role("item", "Text item", levels = "text")),
+      show_alpha = FALSE, show_hypotheses = FALSE, show_effect_size = FALSE,
+      show_k = TRUE, default_k = 4L, show_seed = TRUE,
+      assumptions = c("At least 10 usable responses", "Enough documents to support k topics",
+                      "Requires the optional tidytext and topicmodels packages"),
+      output = "Top terms per topic (LDA, Gibbs-free VEM) as a ranked table, and a faceted bar chart.",
+      refs = character(0)
+    ),
+    stm_topics = list(
+      family = "text", label = "Topic model (STM)",
+      roles = list(role("item", "Text item", levels = "text")),
+      show_alpha = FALSE, show_hypotheses = FALSE, show_effect_size = FALSE,
+      show_k = TRUE, default_k = 3L, show_seed = TRUE,
+      assumptions = c("At least 10 usable responses", "Enough documents to support k topics",
+                      "Requires the optional stm and tidytext packages"),
+      output = "Top terms per topic (structural topic model) as a ranked table, and a faceted bar chart.",
+      refs = character(0)
     )
   )
 })
@@ -630,6 +835,32 @@ studio_level_meta <- function(item = NULL, scale = NULL) {
   }
   if (type %in% c("text", "textarea")) {
     return(list(level = "text", code = "TXT", type = type))
+  }
+  # Decision-family items. The 2 comparison scales get separate levels because
+  # they are not interchangeable: AHP and ANP read reciprocal Saaty importance,
+  # DEMATEL reads a directed 0-4 influence matrix, and a weights source must
+  # express importance rather than influence. The builder's varLevel() and
+  # validate_sframe() enforce the same split.
+  if (identical(type, "pairwise_comparison")) {
+    influence <- identical(item$comparison_scale %||% "saaty", "influence")
+    return(list(
+      level = if (influence) "pairwise_influence" else "pairwise_saaty",
+      code  = "PWC",
+      type  = if (influence) "influence matrix" else "pairwise comparison"
+    ))
+  }
+  if (identical(type, "criteria_weight")) {
+    return(list(level = "criteria_weight", code = "WGT", type = "criteria weights"))
+  }
+  # A matrix item is how the rated performance matrix gets collected: one
+  # matrix item per criterion, rows are the alternatives. That is what the 7
+  # ranking methods read through their performance_items role, which declares
+  # levels = "matrix". Without this branch a matrix item fell through to
+  # "identifier", so nothing ever carried the level the role wanted and the
+  # dropdown was empty for all 7 methods, leaving the whole rated-matrix path
+  # unwirable here. Same failure shape as the decision item types before A6.
+  if (identical(type, "matrix")) {
+    return(list(level = "matrix", code = "MTX", type = type))
   }
   list(level = "identifier", code = "ID", type = type)
 }
@@ -732,6 +963,16 @@ studio_validate_plan_roles <- function(method, roles) {
     cfa_lavaan_syntax = "CFA requires a saved model or construct plan; constructs with fewer than three indicators should be justified.",
     sem_lavaan_syntax = "CB-SEM requires a saved model with measurement and structural paths.",
     seminr_syntax = "PLS-SEM requires at least one construct and one structural path.",
+    topsis = ,
+    vikor = ,
+    moora = ,
+    smart = ,
+    waspas = ,
+    promethee = ,
+    electre = "Needs a performance matrix (either supplied directly or one matrix item per criterion) and a weights item or supplied weights.",
+    ahp = ,
+    anp = "Needs a pairwise comparison item (Saaty 1-9 scale) or a supplied reciprocal matrix.",
+    dematel = "Needs a pairwise comparison item using the influence (0-4) scale, or a supplied directed matrix.",
     "Review compatibility before saving."
   )
   list(valid = length(messages) == 0, messages = messages, guidance = guidance)
@@ -2403,6 +2644,12 @@ server <- function(input, output, session) {
         tags$div(class = "hint", "Variables are assigned below by methodological role."),
         uiOutput("analysis_role_fields"),
         uiOutput("analysis_alpha_field"),
+        uiOutput("analysis_term_field"),
+        uiOutput("analysis_wordcloud_field"),
+        uiOutput("analysis_top_n_field"),
+        uiOutput("analysis_ngram_n_field"),
+        uiOutput("analysis_k_field"),
+        uiOutput("analysis_seed_field"),
         textAreaInput(
           "analysis_decision_rule",
           "Planned decision rule",
@@ -2456,6 +2703,26 @@ server <- function(input, output, session) {
         if (isTRUE(reg$show_alpha)) {
           tags$p(tags$strong("Significance level: "), input$analysis_alpha %||% 0.05)
         },
+        if (isTRUE(reg$show_term)) {
+          tags$p(tags$strong("Keyword: "), input$analysis_term %||% "(not set)")
+        },
+        if (isTRUE(reg$show_wordcloud)) {
+          tags$p(tags$strong("Display: "),
+                 if (isTRUE(input$analysis_wordcloud)) "Word cloud" else "Bar chart")
+        },
+        if (isTRUE(reg$show_top_n)) {
+          tags$p(tags$strong("Top N: "), input$analysis_top_n %||% reg$default_top_n %||% 30L)
+        },
+        if (isTRUE(reg$show_ngram_n)) {
+          tags$p(tags$strong("N-gram size: "),
+                 paste0(input$analysis_ngram_n %||% "2", "-word"))
+        },
+        if (isTRUE(reg$show_k)) {
+          tags$p(tags$strong("Topics (k): "), input$analysis_k %||% reg$default_k %||% 4L)
+        },
+        if (isTRUE(reg$show_seed)) {
+          tags$p(tags$strong("Random seed: "), input$analysis_seed %||% 42L)
+        },
         if (length(reg$refs %||% character(0)) > 0) {
           tags$p(tags$strong("Reporting references: "), paste(reg$refs, collapse = ", "))
         }
@@ -2506,6 +2773,89 @@ server <- function(input, output, session) {
     )
   })
 
+  output$analysis_term_field <- renderUI({
+    method <- input$analysis_method %||% "descriptives"
+    reg <- analysis_registry[[method]] %||% analysis_registry$descriptives
+    if (!isTRUE(reg$show_term)) {
+      return(NULL)
+    }
+    textInput(
+      "analysis_term",
+      "Keyword *",
+      value = shiny::isolate(input$analysis_term %||% ""),
+      placeholder = "Enter the keyword to search for"
+    )
+  })
+
+  output$analysis_wordcloud_field <- renderUI({
+    method <- input$analysis_method %||% "descriptives"
+    reg <- analysis_registry[[method]] %||% analysis_registry$descriptives
+    if (!isTRUE(reg$show_wordcloud)) {
+      return(NULL)
+    }
+    checkboxInput(
+      "analysis_wordcloud",
+      "Show as word cloud (instead of a bar chart)",
+      value = shiny::isolate(input$analysis_wordcloud %||% FALSE)
+    )
+  })
+
+  output$analysis_top_n_field <- renderUI({
+    method <- input$analysis_method %||% "descriptives"
+    reg <- analysis_registry[[method]] %||% analysis_registry$descriptives
+    if (!isTRUE(reg$show_top_n)) {
+      return(NULL)
+    }
+    numericInput(
+      "analysis_top_n",
+      "Top N terms",
+      value = shiny::isolate(input$analysis_top_n %||% reg$default_top_n %||% 30L),
+      min = 1, max = 200, step = 1
+    )
+  })
+
+  output$analysis_ngram_n_field <- renderUI({
+    method <- input$analysis_method %||% "descriptives"
+    reg <- analysis_registry[[method]] %||% analysis_registry$descriptives
+    if (!isTRUE(reg$show_ngram_n)) {
+      return(NULL)
+    }
+    selectInput(
+      "analysis_ngram_n",
+      "N-gram size",
+      choices = c("Bigrams (2 words)" = "2", "Trigrams (3 words)" = "3"),
+      selected = shiny::isolate(input$analysis_ngram_n %||% "2")
+    )
+  })
+
+  output$analysis_k_field <- renderUI({
+    method <- input$analysis_method %||% "descriptives"
+    reg <- analysis_registry[[method]] %||% analysis_registry$descriptives
+    if (!isTRUE(reg$show_k)) {
+      return(NULL)
+    }
+    numericInput(
+      "analysis_k",
+      "Number of topics (k)",
+      value = shiny::isolate(input$analysis_k %||% reg$default_k %||% 4L),
+      min = 2, max = 20, step = 1
+    )
+  })
+
+  output$analysis_seed_field <- renderUI({
+    method <- input$analysis_method %||% "descriptives"
+    reg <- analysis_registry[[method]] %||% analysis_registry$descriptives
+    if (!isTRUE(reg$show_seed)) {
+      return(NULL)
+    }
+    numericInput(
+      "analysis_seed",
+      "Random seed",
+      value = shiny::isolate(input$analysis_seed %||% 42L),
+      min = 0, step = 1
+    )
+  })
+
   output$analysis_plan_validation <- renderUI({
     method <- input$analysis_method %||% "descriptives"
     status <- studio_validate_plan_roles(method, current_analysis_roles())
@@ -2538,12 +2888,34 @@ server <- function(input, output, session) {
       showNotification(paste(status$messages, collapse = " "), type = "error")
       return()
     }
+    if (isTRUE(reg$show_term) && is.null(trim_or_null(input$analysis_term))) {
+      showNotification("A keyword is required for this method.", type = "error")
+      return()
+    }
     plan_id <- studio_safe_id(trim_or_null(input$analysis_plan_id) %||%
                                 studio_next_plan_id(rv$builder$analysis_plan), prefix = "RQ")
     question <- trim_or_null(input$analysis_question) %||% paste(reg$label, "analysis")
     options <- list()
     if (isTRUE(reg$show_alpha)) {
       options$alpha <- input$analysis_alpha %||% 0.05
+    }
+    if (isTRUE(reg$show_term)) {
+      options$term <- trim_or_null(input$analysis_term) %||% ""
+    }
+    if (isTRUE(reg$show_wordcloud)) {
+      options$wordcloud <- isTRUE(input$analysis_wordcloud)
+    }
+    if (isTRUE(reg$show_top_n)) {
+      options$top_n <- as.integer(input$analysis_top_n %||% reg$default_top_n %||% 30L)
+    }
+    if (isTRUE(reg$show_ngram_n)) {
+      options$n <- as.integer(input$analysis_ngram_n %||% "2")
+    }
+    if (isTRUE(reg$show_k)) {
+      options$k <- as.integer(input$analysis_k %||% reg$default_k %||% 4L)
+    }
+    if (isTRUE(reg$show_seed)) {
+      options$seed <- as.integer(input$analysis_seed %||% 42L)
     }
     block <- list(
       id = plan_id,

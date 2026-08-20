@@ -490,41 +490,49 @@ instrument items.</p>
 </div>
 <div id="validate-the-instrument" class="section level2">
 <h2>Validate the instrument</h2>
-<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a>validation <span class="ot">&lt;-</span> <span class="fu">validate_sframe</span>(instr, <span class="at">strict =</span> <span class="cn">FALSE</span>)</span>
-<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a>validation<span class="sc">$</span>valid</span>
-<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a><span class="co">#&gt; [1] TRUE</span></span>
-<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a>validation<span class="sc">$</span>problems</span>
-<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a><span class="co">#&gt; character(0)</span></span></code></pre></div>
-<p>In production, strict validation returns the validated instrument or
-stops with a structured error.</p>
-<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a>instr <span class="ot">&lt;-</span> <span class="fu">validate_sframe</span>(instr)</span>
-<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a>instr<span class="sc">$</span>meta<span class="sc">$</span>validated</span>
-<span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a><span class="co">#&gt; [1] TRUE</span></span></code></pre></div>
+<p><code>validate_sframe()</code> returns a diagnostic. Print it to read
+the result, and use the accessors to get at the parts.</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a><span class="fu">validate_sframe</span>(instr, <span class="at">strict =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a><span class="co">#&gt; &lt;sframe validation&gt;</span></span>
+<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a><span class="co">#&gt;   Instrument:  Digital marketing study (teaching slice) (1.0.0)</span></span>
+<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a><span class="co">#&gt;   Status:      valid</span></span>
+<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a><span class="co">#&gt;   Checks:      18 run, 0 with problems</span></span></code></pre></div>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a>validation <span class="ot">&lt;-</span> <span class="fu">validate_sframe</span>(instr, <span class="at">strict =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a><span class="fu">sf_is_valid</span>(validation)</span>
+<span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a><span class="co">#&gt; [1] TRUE</span></span>
+<span id="cb9-4"><a href="#cb9-4" tabindex="-1"></a><span class="fu">sf_problems</span>(validation)</span>
+<span id="cb9-5"><a href="#cb9-5" tabindex="-1"></a><span class="co">#&gt; character(0)</span></span></code></pre></div>
+<p>In production, strict validation stops with a structured error when
+anything is wrong. When it passes, <code>as_sframe()</code> recovers the
+instrument with its validated stamp set.</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a>instr <span class="ot">&lt;-</span> <span class="fu">as_sframe</span>(<span class="fu">validate_sframe</span>(instr))</span>
+<span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a><span class="fu">sf_meta</span>(instr)<span class="sc">$</span>validated</span>
+<span id="cb10-3"><a href="#cb10-3" tabindex="-1"></a><span class="co">#&gt; [1] TRUE</span></span></code></pre></div>
 </div>
 <div id="write-and-read-.sframe-files" class="section level2">
 <h2>Write and read <code>.sframe</code> files</h2>
 <p>The <code>.sframe</code> file is the portable instrument file. It
 keeps the validated metadata, the analysis plan, and the model in one
 place.</p>
-<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a>path <span class="ot">&lt;-</span> <span class="fu">tempfile</span>(<span class="at">fileext =</span> <span class="st">&quot;.sframe&quot;</span>)</span>
-<span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a><span class="fu">write_sframe</span>(instr, path, <span class="at">overwrite =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb10-3"><a href="#cb10-3" tabindex="-1"></a></span>
-<span id="cb10-4"><a href="#cb10-4" tabindex="-1"></a>loaded <span class="ot">&lt;-</span> <span class="fu">read_sframe</span>(path)</span>
-<span id="cb10-5"><a href="#cb10-5" tabindex="-1"></a><span class="fu">inherits</span>(loaded, <span class="st">&quot;sframe&quot;</span>)</span>
-<span id="cb10-6"><a href="#cb10-6" tabindex="-1"></a><span class="co">#&gt; [1] TRUE</span></span>
-<span id="cb10-7"><a href="#cb10-7" tabindex="-1"></a>loaded<span class="sc">$</span>meta<span class="sc">$</span>title</span>
-<span id="cb10-8"><a href="#cb10-8" tabindex="-1"></a><span class="co">#&gt; [1] &quot;Digital marketing study (teaching slice)&quot;</span></span>
-<span id="cb10-9"><a href="#cb10-9" tabindex="-1"></a><span class="fu">length</span>(loaded<span class="sc">$</span>analysis_plan)</span>
-<span id="cb10-10"><a href="#cb10-10" tabindex="-1"></a><span class="co">#&gt; [1] 2</span></span>
-<span id="cb10-11"><a href="#cb10-11" tabindex="-1"></a><span class="fu">length</span>(loaded<span class="sc">$</span>models)</span>
-<span id="cb10-12"><a href="#cb10-12" tabindex="-1"></a><span class="co">#&gt; [1] 1</span></span></code></pre></div>
+<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" tabindex="-1"></a>path <span class="ot">&lt;-</span> <span class="fu">tempfile</span>(<span class="at">fileext =</span> <span class="st">&quot;.sframe&quot;</span>)</span>
+<span id="cb11-2"><a href="#cb11-2" tabindex="-1"></a><span class="fu">write_sframe</span>(instr, path, <span class="at">overwrite =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb11-3"><a href="#cb11-3" tabindex="-1"></a></span>
+<span id="cb11-4"><a href="#cb11-4" tabindex="-1"></a>loaded <span class="ot">&lt;-</span> <span class="fu">read_sframe</span>(path)</span>
+<span id="cb11-5"><a href="#cb11-5" tabindex="-1"></a><span class="fu">inherits</span>(loaded, <span class="st">&quot;sframe&quot;</span>)</span>
+<span id="cb11-6"><a href="#cb11-6" tabindex="-1"></a><span class="co">#&gt; [1] TRUE</span></span>
+<span id="cb11-7"><a href="#cb11-7" tabindex="-1"></a><span class="fu">sf_meta</span>(loaded)<span class="sc">$</span>title</span>
+<span id="cb11-8"><a href="#cb11-8" tabindex="-1"></a><span class="co">#&gt; [1] &quot;Digital marketing study (teaching slice)&quot;</span></span>
+<span id="cb11-9"><a href="#cb11-9" tabindex="-1"></a><span class="fu">length</span>(<span class="fu">sf_plan</span>(loaded))</span>
+<span id="cb11-10"><a href="#cb11-10" tabindex="-1"></a><span class="co">#&gt; [1] 2</span></span>
+<span id="cb11-11"><a href="#cb11-11" tabindex="-1"></a><span class="fu">length</span>(loaded<span class="sc">$</span>models)</span>
+<span id="cb11-12"><a href="#cb11-12" tabindex="-1"></a><span class="co">#&gt; [1] 1</span></span></code></pre></div>
 </div>
 <div id="gui-option" class="section level2">
 <h2>GUI option</h2>
 <p>The same instrument, plan, and model can be authored in
 SurveyBuilder, which saves a <code>.sframe</code> file for use in R.</p>
-<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" tabindex="-1"></a><span class="fu">launch_builder</span>()</span>
-<span id="cb11-2"><a href="#cb11-2" tabindex="-1"></a><span class="fu">launch_builder_demo</span>(<span class="at">open =</span> <span class="cn">FALSE</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" tabindex="-1"></a><span class="fu">launch_builder</span>()</span>
+<span id="cb12-2"><a href="#cb12-2" tabindex="-1"></a><span class="fu">launch_builder_demo</span>(<span class="at">open =</span> <span class="cn">FALSE</span>)</span></code></pre></div>
 </div>
 
 

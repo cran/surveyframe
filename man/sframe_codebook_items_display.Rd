@@ -17,11 +17,11 @@ replaced by display text.
 Replaces \code{items_table}'s \code{choice_set} id with the choice set's actual
 response options ("1 = Strongly disagree; 2 = Disagree; ...") and its
 \code{scale_id} with the scale's label, so each row of the printed codebook is
-self-contained. \code{\link[=codebook_report]{codebook_report()}} itself keeps the raw ids (for joining
-\code{items_table} to \code{choices_table}/\code{scales_table} programmatically); this
-is for the rendered document, where a reader should not need to
-cross-reference a separate table just to see what "1" means on a scale
-shared by many items.
+self-contained. \code{\link[=codebook_report]{codebook_report()}} itself keeps the raw ids, for joining
+\code{items_table} to \code{choices_table}/\code{scales_table} programmatically. This
+enrichment is for the rendered document, where a reader should not need
+to cross-reference a separate table just to see what "1" means on a
+scale shared by many items.
 }
 \seealso{
 \code{\link[=codebook_report]{codebook_report()}}

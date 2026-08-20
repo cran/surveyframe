@@ -12,8 +12,8 @@
 #' @param label Character. A human-readable name for the scale, used in
 #'   reports and codebooks.
 #' @param items Character vector. The `id` values of items that belong to this
-#'   scale. Order controls presentation in reports; scoring uses the same item
-#'   IDs regardless of order.
+#'   scale. Order controls presentation in reports, while scoring uses the
+#'   same item IDs regardless of order.
 #' @param method Character. Scoring method. Either `"mean"` (default) or
 #'   `"sum"`.
 #' @param min_valid Integer or NULL. The minimum number of non-missing items

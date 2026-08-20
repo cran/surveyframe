@@ -183,18 +183,26 @@ instr <- add_model(instr, ts_model)
 
 ## Validate the instrument
 
+`validate_sframe()` returns a diagnostic. Print it to read the result, and use
+the accessors to get at the parts.
+
 ```{r validate}
-validation <- validate_sframe(instr, strict = FALSE)
-validation$valid
-validation$problems
+validate_sframe(instr, strict = FALSE)
 ```
 
-In production, strict validation returns the validated instrument or stops with
-a structured error.
+```{r validate-explore}
+validation <- validate_sframe(instr, strict = FALSE)
+sf_is_valid(validation)
+sf_problems(validation)
+```
+
+In production, strict validation stops with a structured error when anything
+is wrong. When it passes, `as_sframe()` recovers the instrument with its
+validated stamp set.
 
 ```{r strict}
-instr <- validate_sframe(instr)
-instr$meta$validated
+instr <- as_sframe(validate_sframe(instr))
+sf_meta(instr)$validated
 ```
 
 ## Write and read `.sframe` files
@@ -208,8 +216,8 @@ write_sframe(instr, path, overwrite = TRUE)
 
 loaded <- read_sframe(path)
 inherits(loaded, "sframe")
-loaded$meta$title
-length(loaded$analysis_plan)
+sf_meta(loaded)$title
+length(sf_plan(loaded))
 length(loaded$models)
 ```
 

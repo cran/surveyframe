@@ -13,7 +13,8 @@
 #' @param type Character. The response type. One of `"likert"`,
 #'   `"single_choice"`, `"multiple_choice"`, `"numeric"`, `"text"`,
 #'   `"textarea"`, `"date"`, `"matrix"`, `"slider"`, `"ranking"`, `"rating"`,
-#'   `"section_break"`, or `"text_block"`.
+#'   `"pairwise_comparison"`, `"criteria_weight"`, `"section_break"`, or
+#'   `"text_block"`.
 #' @param required Logical. Whether the respondent must answer this item.
 #' @param choice_set Character or NULL. The `id` of a choice set defined with
 #'   [sf_choices()].
@@ -22,6 +23,17 @@
 #' @param help Character or NULL. Help text displayed beneath the question.
 #' @param placeholder Character or NULL. Placeholder text for text inputs.
 #' @param matrix_items Character vector or NULL. Row labels for `"matrix"` type.
+#' @param comparison_items Character vector or NULL. The things being compared
+#'   or weighted, for `"pairwise_comparison"` and `"criteria_weight"` types.
+#'   At least 2 entries, all distinct. A `"saaty"` pairwise item renders
+#'   `n(n-1)/2` unordered pair rows, an `"influence"` item renders `n(n-1)`
+#'   ordered rows, and a `"criteria_weight"` item renders one numeric input
+#'   per entry. An advisory warning is raised above 7 items (`"saaty"`) or 6
+#'   (`"influence"`), and above 10 the item is rejected.
+#' @param comparison_scale Character or NULL. For `"pairwise_comparison"`
+#'   only. `"saaty"` (the default) gives the bipolar 1-9 importance scale used
+#'   by AHP and ANP, while `"influence"` gives the unipolar 0-4 directed
+#'   influence scale used by DEMATEL.
 #' @param slider_min Numeric or NULL. Minimum value for `"slider"` type.
 #' @param slider_max Numeric or NULL. Maximum value for `"slider"` type.
 #' @param slider_step Numeric or NULL. Step size for `"slider"` type.
@@ -53,6 +65,7 @@ sf_item <- function(
     type          = c("likert", "single_choice", "multiple_choice",
                       "numeric", "text", "textarea", "date",
                       "matrix", "slider", "ranking", "rating",
+                      "pairwise_comparison", "criteria_weight",
                       "section_break", "text_block"),
     required      = FALSE,
     choice_set    = NULL,
@@ -61,6 +74,8 @@ sf_item <- function(
     help          = NULL,
     placeholder   = NULL,
     matrix_items  = NULL,
+    comparison_items  = NULL,
+    comparison_scale  = NULL,
     slider_min    = NULL,
     slider_max    = NULL,
     slider_step   = NULL,
@@ -80,6 +95,10 @@ sf_item <- function(
     rlang::abort("`date_min` must not be later than `date_max`.",
                  class = c("sframe_validation_error", "sframe_error"))
   }
+  comparison_scale <- sframe_check_comparison_scale(comparison_scale, type)
+  comparison_items <- sframe_check_comparison_items(
+    comparison_items, comparison_scale, type, id
+  )
 
   structure(
     list(
@@ -93,6 +112,8 @@ sf_item <- function(
       help = help,
       placeholder = placeholder,
       matrix_items = matrix_items,
+      comparison_items = comparison_items,
+      comparison_scale = comparison_scale,
       slider_min = slider_min,
       slider_max = slider_max,
       slider_step = slider_step,
@@ -124,4 +145,90 @@ sframe_check_date_bound <- function(value, arg) {
     )
   }
   as.character(parsed)
+}
+
+# The comparison scale only means something for a pairwise item. It is
+# defaulted rather than declared through arg_match() in the signature so that
+# every other item type keeps a NULL field instead of inheriting "saaty".
+sframe_check_comparison_scale <- function(value, type) {
+  if (!identical(type, "pairwise_comparison")) {
+    if (!is.null(value)) {
+      rlang::abort(
+        "`comparison_scale` applies only to `type = \"pairwise_comparison\"`.",
+        class = c("sframe_validation_error", "sframe_error")
+      )
+    }
+    return(NULL)
+  }
+  if (is.null(value)) return("saaty")
+  value <- as.character(value)
+  if (length(value) != 1 || !value %in% c("saaty", "influence")) {
+    rlang::abort(
+      "`comparison_scale` must be either \"saaty\" or \"influence\".",
+      class = c("sframe_validation_error", "sframe_error")
+    )
+  }
+  value
+}
+
+# Size limits come from respondent burden, not from the maths: a saaty item
+# renders n(n-1)/2 rows and an influence item n(n-1), so 10 items is 45 or 90
+# comparison rows. The Saaty random index also stops at n = 10, past which no
+# consistency ratio can be computed at all.
+sframe_check_comparison_items <- function(items, scale, type, id = "") {
+  comparison_types <- c("pairwise_comparison", "criteria_weight")
+  if (!type %in% comparison_types) {
+    if (!is.null(items)) {
+      rlang::abort(
+        paste0("`comparison_items` applies only to items of type ",
+               "\"pairwise_comparison\" or \"criteria_weight\"."),
+        class = c("sframe_validation_error", "sframe_error")
+      )
+    }
+    return(NULL)
+  }
+  items <- as.character(items %||% character(0))
+  if (length(items) < 2) {
+    rlang::abort(
+      sprintf("Item '%s' of type \"%s\" needs at least 2 `comparison_items`.",
+              id, type),
+      class = c("sframe_validation_error", "sframe_error")
+    )
+  }
+  if (anyDuplicated(items) > 0) {
+    rlang::abort(
+      sprintf("Item '%s' has duplicated `comparison_items`: %s.", id,
+              paste(unique(items[duplicated(items)]), collapse = ", ")),
+      class = c("sframe_validation_error", "sframe_error")
+    )
+  }
+  if (any(!nzchar(trimws(items)))) {
+    rlang::abort(
+      sprintf("Item '%s' has an empty `comparison_items` entry.", id),
+      class = c("sframe_validation_error", "sframe_error")
+    )
+  }
+  if (length(items) > 10) {
+    rlang::abort(
+      sprintf(paste0("Item '%s' declares %d `comparison_items`. The maximum ",
+                     "is 10."), id, length(items)),
+      class = c("sframe_validation_error", "sframe_error")
+    )
+  }
+  limit <- if (identical(scale, "influence")) 6L else 7L
+  if (identical(type, "pairwise_comparison") && length(items) > limit) {
+    rows <- if (identical(scale, "influence")) {
+      length(items) * (length(items) - 1)
+    } else {
+      length(items) * (length(items) - 1) / 2
+    }
+    sframe_warn_design(
+      sprintf(paste0("Item '%s' declares %d `comparison_items`, which renders ",
+                     "%d comparison rows. Above %d items respondent fatigue ",
+                     "and inconsistent judgements rise sharply."),
+              id, length(items), rows, limit),
+      item_id = id
+    )
+  }
+  items
 }

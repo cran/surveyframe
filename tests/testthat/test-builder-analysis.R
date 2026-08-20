@@ -329,6 +329,7 @@ test_that("run_analysis_plan handles two RQs correctly", {
 
 # ---- render_results ---------------------------------------------------------
 test_that("render_results writes an HTML file", {
+  skip_on_cran()
   instr <- add_rq(make_instr(), "r1", "Freq of gender", "gender", "frequency")
   res   <- run_analysis_plan(make_responses(), instr)
   tmp   <- tempfile(fileext = ".html")
@@ -340,6 +341,7 @@ test_that("render_results writes an HTML file", {
 })
 
 test_that("render_results HTML contains the research question text", {
+  skip_on_cran()
   q     <- "Is gender associated with satisfaction level?"
   instr <- add_rq(make_instr(), "r1", q, c("gender","sat1"), "crosstab")
   res   <- run_analysis_plan(make_responses(), instr)
@@ -351,6 +353,7 @@ test_that("render_results HTML contains the research question text", {
 })
 
 test_that("render_results accepts output_path alias", {
+  skip_on_cran()
   instr <- add_rq(make_instr(), "r1", "Q", "gender", "frequency")
   res   <- run_analysis_plan(make_responses(), instr)
   tmp   <- tempfile(fileext = ".html")
@@ -381,6 +384,7 @@ test_that("write_sframe/read_sframe preserve analysis plans and extended item fi
 
 # ---- render_report ----------------------------------------------------------
 test_that("render_report produces an HTML file", {
+  skip_on_cran()
   tmp <- tempfile(fileext = ".html")
   render_report(make_instr(), output_file = tmp)
   expect_true(file.exists(tmp))
@@ -390,6 +394,7 @@ test_that("render_report produces an HTML file", {
 })
 
 test_that("render_report codebook includes all item IDs", {
+  skip_on_cran()
   tmp <- tempfile(fileext = ".html")
   render_report(make_instr(), output_file = tmp, include_codebook = TRUE)
   html <- paste(readLines(tmp, warn = FALSE), collapse = "\n")
@@ -400,6 +405,7 @@ test_that("render_report codebook includes all item IDs", {
 })
 
 test_that("render_report accepts output_path alias", {
+  skip_on_cran()
   tmp <- tempfile(fileext = ".html")
   render_report(make_instr(), output_path = tmp)
   expect_true(file.exists(tmp))
@@ -407,6 +413,7 @@ test_that("render_report accepts output_path alias", {
 })
 
 test_that("render_report includes analysis plan questions", {
+  skip_on_cran()
   instr <- add_rq(make_instr(), "r1",
                   "Does age predict satisfaction?",
                   c("sat1","age"), "regression_linear")
@@ -418,6 +425,7 @@ test_that("render_report includes analysis plan questions", {
 })
 
 test_that("render_report includes reliability when data supplied", {
+  skip_on_cran()
   tmp  <- tempfile(fileext = ".html")
   suppressWarnings(render_report(
     make_instr(), data = make_responses(), output_file = tmp,

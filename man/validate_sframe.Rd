@@ -11,17 +11,16 @@ validate_sframe(instrument, strict = TRUE)
 
 \item{strict}{Logical. When \code{TRUE} (default), any detected problem raises
 an error of class \code{sframe_validation_error}. When \code{FALSE}, problems are
-returned as a character vector of messages without stopping.}
+reported in the returned diagnostic without stopping.}
 }
 \value{
-When \code{strict = TRUE} and the instrument is valid, the instrument
-is returned invisibly with \code{meta$validated} set to \code{TRUE}. When
-\code{strict = FALSE}, a named list with elements \code{valid} (logical) and
-\code{problems} (character vector) is returned.
+An \link{sframe_validation} object. When the instrument is valid, the
+instrument carried inside it has \code{meta$validated} set to \code{TRUE} and can
+be recovered with \code{\link[=as_sframe]{as_sframe()}}.
 }
 \description{
 Checks the internal consistency of an \code{sframe} instrument object and
-reports all detected problems. Validation is performed automatically by
+returns a diagnostic result. Validation is performed automatically by
 \code{\link[=write_sframe]{write_sframe()}} and optionally by \code{\link[=read_sframe]{read_sframe()}}. It can also be run
 independently at any point during instrument construction.
 }
@@ -44,6 +43,18 @@ The following checks are performed:
 \item Model specifications referencing missing indicators or constructs
 }
 }
+\section{Changed in 0.4.0}{
+
+Earlier versions returned two different things depending on \code{strict}: the
+instrument itself, invisibly, when \code{strict = TRUE}, and a bare unclassed
+list when \code{strict = FALSE}. A validator should report a diagnostic, so
+both paths now return an \link{sframe_validation} object, and they return it
+visibly, so \code{validate_sframe(instrument)} typed at the console shows the
+result. Code that read \verb{$valid} and \verb{$problems} keeps working. Code that
+used the \code{strict = TRUE} return as an instrument should now wrap the call
+in \code{\link[=as_sframe]{as_sframe()}}.
+}
+
 \examples{
 # Build a minimal valid instrument and validate it
 cs    <- sf_choices("ag5", 1:5,
@@ -54,15 +65,20 @@ item  <- sf_item("sat_1", "The service met my expectations.",
 scale <- sf_scale("sat", "Satisfaction", items = "sat_1")
 instr <- sf_instrument("Demo Survey", components = list(cs, item, scale))
 
-# Non-strict: returns a list without stopping
-result <- validate_sframe(instr, strict = FALSE)
-result$valid
-result$problems
+# The result prints its own diagnostic
+validate_sframe(instr, strict = FALSE)
 
-# Strict: returns instrument invisibly when valid
-validated <- validate_sframe(instr, strict = TRUE)
-isTRUE(validated$meta$validated)
+# Explore it with dedicated methods rather than reaching in with `$`
+v <- validate_sframe(instr, strict = FALSE)
+sf_is_valid(v)
+sf_problems(v)
+summary(v)
+
+# Recover the validated instrument
+validated <- as_sframe(validate_sframe(instr, strict = TRUE))
+isTRUE(sf_meta(validated)$validated)
 }
 \seealso{
-\code{\link[=sf_instrument]{sf_instrument()}}, \code{\link[=write_sframe]{write_sframe()}}
+\link{sframe_validation}, \code{\link[=as_sframe]{as_sframe()}}, \code{\link[=sf_problems]{sf_problems()}},
+\code{\link[=sf_is_valid]{sf_is_valid()}}, \code{\link[=sf_instrument]{sf_instrument()}}, \code{\link[=write_sframe]{write_sframe()}}
 }

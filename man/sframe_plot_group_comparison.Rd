@@ -25,7 +25,7 @@ carries \code{vars = c(group_column, outcome_column)}: \code{t_test_ind},
 \code{mann_whitney}, \code{kruskal_wallis}, and \code{anova_one}. One function instead of
 four, since the underlying comparison (an outcome split by a grouping
 factor) and the data shape needed to plot it are identical across all
-four tests; only the inferential statistic differs.
+four tests, and only the inferential statistic differs.
 }
 \seealso{
 \code{\link[=run_analysis_plan]{run_analysis_plan()}}

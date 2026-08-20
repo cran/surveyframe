@@ -1,0 +1,267 @@
+---
+lang: en-GB
+title: "Small-sample inference"
+output:
+  rmarkdown::html_vignette:
+    toc: true
+    toc_depth: 2
+vignette: >
+  %\VignetteIndexEntry{Small-sample inference}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+library(surveyframe)
+library(knitr)
+set.seed(2026)
+
+results_table <- function(results) {
+  g <- function(r, f) { v <- r[[f]]; if (is.null(v) || !length(v)) "" else as.character(v)[1] }
+  df <- data.frame(
+    RQ       = vapply(results, g, "", "block_id"),
+    Question = vapply(results, g, "", "research_question"),
+    Method   = vapply(results, g, "", "method"),
+    Result   = vapply(results, g, "", "apa"),
+    check.names = FALSE, stringsAsFactors = FALSE
+  )
+  kable(df, row.names = FALSE,
+        col.names = c("RQ", "Research question", "Method", "Result (APA)"),
+        align = c("l", "l", "l", "r"))
+}
+```
+
+```{=html}
+<style>
+body { color: #1a1a2e; }
+h1, h2, h3 { color: #1a1a2e; }
+a { color: #0e7c7a; }
+table { border-collapse: collapse; margin: 1em 0; }
+table caption { caption-side: top; font-style: italic; color: #444; padding-bottom: .3em; }
+th { border-top: 2px solid #1a1a2e; border-bottom: 1px solid #1a1a2e; padding: 6px 12px; }
+td { padding: 5px 12px; border: none; }
+tbody tr:last-child td { border-bottom: 2px solid #1a1a2e; }
+/* WCAG 2.2 AA pass: darker link and syntax-token colours (at least
+   4.5:1 on the #f7f7f7 code background), wrapped code lines instead of a
+   keyboard-inaccessible scroll region, empty per-line anchors removed from
+   the accessibility tree, and 24px minimum TOC link targets. */
+code span.at { color: #576419; }
+code span.dv, code span.fl, code span.bn { color: #276245; }
+code span.co { color: #396a80; }
+pre, pre code { white-space: pre-wrap; word-break: break-word; }
+div.sourceCode { overflow: visible; }
+pre.sourceCode a:empty { display: none; }
+#TOC a { display: inline-block; min-height: 24px; }
+</style>
+```
+
+## When is a sample "small"?
+
+Survey research often works with far fewer than the 30-or-more cases that
+justify asymptotic approximations: pilot studies, specialised populations,
+classroom studies, and early-stage organisational diagnostics routinely land
+at n = 10 to 25. Below that conventional threshold, p-values from tests that
+assume large-sample normality can be unreliable, and point estimates carry
+wide, often asymmetric uncertainty that a single p-value does not convey.
+
+surveyframe's small-sample tools do three things: flag when a sample has
+crossed below the n = 30 threshold, prefer exact or distribution-free
+alternatives to the asymptotic default where one exists, and pair every
+affected estimate with a confidence interval rather than a point value
+alone. Together they surface the cases where design judgement matters most,
+leaving that judgement itself to the researcher.
+
+## Planning a small-sample study
+
+`sample_size_plan()` estimates a required sample size for a design and
+attaches the same small-sample advisory used elsewhere in the package when
+the estimate itself falls below 30.
+
+```{r plan-n}
+sample_size_plan(type = "t_test", groups = 2)
+```
+
+A worked instrument in this vignette targets n = 20 complete responses, well
+below that planning estimate. The instrument below has a two-level grouping
+question, a numeric outcome, and a binary outcome for the logistic example
+later in this vignette.
+
+```{r instrument}
+group_cs     <- sf_choices(id = "grp_cs", values = c("control", "treatment"),
+                            labels = c("Control", "Treatment"))
+converted_cs <- sf_choices(id = "conv_cs", values = c("no", "yes"),
+                            labels = c("No", "Yes"))
+
+items <- list(
+  sf_item(id = "group", label = "Study arm", type = "single_choice", choice_set = "grp_cs"),
+  sf_item(id = "outcome", label = "Outcome score", type = "numeric"),
+  sf_item(id = "converted", label = "Converted (yes/no)", type = "single_choice",
+          choice_set = "conv_cs")
+)
+
+study <- sf_instrument(
+  title      = "Small-sample pilot",
+  version    = "0.1.0",
+  authors    = "surveyframe",
+  components = c(list(group_cs, converted_cs), items)
+)
+
+study
+```
+
+## Reading the advisory
+
+`assumption_report()` and `sample_size_plan()` both attach an `advisory`
+element once a relevant n drops below 30. It prints automatically and is
+also available as a field for programmatic checks.
+
+```{r assumption-advisory}
+n20 <- data.frame(score = rnorm(20, mean = 50, sd = 10))
+n50 <- data.frame(score = rnorm(50, mean = 50, sd = 10))
+
+ar_small <- assumption_report(n20, variables = "score")
+ar_small$advisory
+
+ar_large <- assumption_report(n50, variables = "score")
+is.null(ar_large$advisory)
+```
+
+## Mann-Whitney with the Hodges-Lehmann estimate
+
+The Mann-Whitney runner now reports the Hodges-Lehmann shift estimate
+alongside the rank-biserial effect size, with a confidence interval on the
+shift rather than a point estimate alone.
+
+```{r mann-whitney}
+pilot <- data.frame(
+  group   = rep(c("control", "treatment"), each = 10),
+  outcome = c(rnorm(10, 48, 8), rnorm(10, 55, 8)),
+  converted = sample(c("no", "yes"), 20, replace = TRUE, prob = c(0.6, 0.4)),
+  covariate = rnorm(20, 0, 1)
+)
+
+sf_plan(study) <- list(
+  list(id = "RQ1",
+       research_question = "Does the treatment arm score higher than control?",
+       family = "group_comparison", method = "mann_whitney",
+       roles = list(group = "group", outcome = "outcome"),
+       options = list(alpha = 0.05))
+)
+
+mw_results <- run_analysis_plan(pilot, study)
+results_table(mw_results)
+mw_results[[1]]$hl_shift
+mw_results[[1]]$hl_conf_int
+```
+
+## Paired Wilcoxon with the pseudomedian CI
+
+The paired runner reports a Hodges-Lehmann pseudomedian for the within-pair
+shift, again with an interval rather than a point value.
+
+```{r wilcoxon-pair}
+before <- rnorm(8, 50, 6)
+after  <- before + rnorm(8, 4, 5)
+
+sf_plan(study) <- list(
+  list(id = "RQ2",
+       research_question = "Did scores change from before to after?",
+       family = "group_comparison", method = "wilcoxon_pair",
+       roles = list(before = "before", after = "after"),
+       options = list(alpha = 0.05))
+)
+
+wp_results <- run_analysis_plan(data.frame(before = before, after = after), study)
+results_table(wp_results)
+wp_results[[1]]$pseudomedian
+wp_results[[1]]$pseudomedian_conf_int
+```
+
+## Fisher's exact test with the exact odds-ratio CI
+
+For a 2x2 table, `fisher_exact` now attaches an exact odds-ratio confidence
+interval alongside the test's p-value. The interval is only defined for a
+2x2 table, and is dropped (not approximated) when `simulate_p_value` is
+requested, since base R's `fisher.test()` cannot return both together.
+
+```{r fisher}
+sf_plan(study) <- list(
+  list(id = "RQ3",
+       research_question = "Is conversion associated with study arm?",
+       family = "association", method = "fisher_exact",
+       roles = list(row = "group", column = "converted"),
+       options = list(alpha = 0.05))
+)
+
+fe_results <- run_analysis_plan(pilot, study)
+results_table(fe_results)
+fe_results[[1]]$odds_ratio
+fe_results[[1]]$odds_ratio_conf_int
+```
+
+## Bootstrap confidence interval on a median
+
+`bootstrap_ci()` computes a bootstrap interval for an arbitrary statistic,
+useful when no exact interval exists for the estimator you need. It is
+already exported and used elsewhere in the package, applied here to the
+median of the pilot outcome scores.
+
+```{r bootstrap-median}
+bootstrap_ci(pilot$outcome, FUN = stats::median, R = 999)
+```
+
+## Firth logistic regression for a rare or small binary outcome
+
+Ordinary logistic regression can fail to converge or produce severely
+biased estimates with small samples or separated data. Firth's
+penalised-likelihood correction (Firth, 1993) addresses both. surveyframe's
+`firth_logistic` runner needs the optional `logistf` package.
+
+```{r firth, eval = requireNamespace("logistf", quietly = TRUE)}
+sf_plan(study) <- list(
+  list(id = "RQ4",
+       research_question = "Does the covariate predict conversion?",
+       family = "regression", method = "firth_logistic",
+       roles = list(dependent = "converted", predictors = "covariate"),
+       options = list(conf.level = 0.95))
+)
+
+firth_results <- run_analysis_plan(pilot, study)
+results_table(firth_results)
+firth_results[[1]]$coefficients
+```
+
+```{r firth-note, eval = !requireNamespace("logistf", quietly = TRUE), echo = FALSE}
+cat("logistf is not installed in this build environment, so the Firth",
+    "example above is skipped. Install logistf to run it.\n")
+```
+
+## Cohen's d with a bootstrap interval
+
+`cohens_d_ci()` pairs Cohen's d with a bootstrap interval, which is
+informative precisely where it matters most: interval width grows visibly
+as n falls, making the extra uncertainty at small n explicit rather than
+implicit in a single point estimate.
+
+```{r cohens-d}
+cohens_d_ci(pilot$outcome[pilot$group == "treatment"],
+            pilot$outcome[pilot$group == "control"], R = 999)
+```
+
+## Citation
+
+```{r citation, eval = FALSE}
+citation("surveyframe")
+```
+
+The small-sample methods demonstrated in this vignette are described in
+full, with guidance on when to prefer each one, in:
+
+> Sharafuddin, M. A., Jaleel, A. A., and Madhavan, M. (2026). *Quantitative
+> Analysis with Small Samples: A Practical Guide for Students and
+> Early-Career Researchers* (Version 0.1.0) [Book]. Zenodo.
+> https://doi.org/10.5281/zenodo.20221929
+
+A companion preprint validating these method choices by simulation is in
+preparation and will be added here once posted.

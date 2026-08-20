@@ -25,7 +25,7 @@ kurtosis numbers, so the reader sees the actual shape (asymmetry,
 multimodality, tails) instead of reading it off a bar height. Each
 variable is standardised (z-scored) before plotting so variables on
 different original scales (a 5-point Likert item next to a 0-100 slider)
-share one comparable y-axis; standardising is a linear transform and does
+share one comparable y-axis. Standardising is a linear transform and does
 not change skewness. Each violin's subtitle-free panel keeps the
 variable's skewness value in its axis label. Grouped \code{descriptives_report()}
 output (one row per variable per \code{split_by} group) is faceted by group.

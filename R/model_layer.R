@@ -64,6 +64,30 @@ sframe_constructs_from_scales <- function(instrument, scales = NULL) {
   })
 }
 
+# A syntax generator is specific to an estimation family. Generating PLS-SEM
+# syntax from a covariance-based model (or the reverse) produces a runnable
+# script that silently estimates something the researcher never declared, so
+# the mismatch is refused rather than written out.
+sframe_check_model_type <- function(model, allowed, fn_label, family_label) {
+  type <- (sframe_model_as_list(model)$type %||% "")[1]
+  if (!nzchar(type)) {
+    sframe_abort_validation(sprintf(
+      "%s needs a model with a declared type. Set type in sf_model() to one of %s.",
+      fn_label, paste0("'", allowed, "'", collapse = " or ")
+    ))
+  }
+  if (!type %in% allowed) {
+    sframe_abort_validation(sprintf(
+      paste0("%s generates %s syntax and needs a model of type %s, ",
+             "but this model is of type '%s'. Generating it anyway would ",
+             "estimate a different model from the one declared."),
+      fn_label, family_label,
+      paste0("'", allowed, "'", collapse = " or "), type
+    ))
+  }
+  invisible(TRUE)
+}
+
 sframe_model_constructs <- function(model) {
   model <- sframe_model_as_list(model)
   model$measurement$constructs %||% list()
@@ -267,44 +291,53 @@ sf_model <- function(
 #' @param instrument Optional `sframe` object. When supplied, model indicators
 #'   must match instrument item IDs.
 #' @param strict Logical. When `TRUE`, invalid models raise an error. When
-#'   `FALSE`, a list with `valid` and `problems` is returned.
+#'   `FALSE`, problems are reported in the returned diagnostic without
+#'   stopping.
 #'
-#' @return The model invisibly when valid and `strict = TRUE`, otherwise a
-#'   validation result list.
+#' @section Changed in 0.4.0:
+#' Earlier versions returned the model invisibly when `strict = TRUE` and a
+#' bare unclassed list when `strict = FALSE`. Both paths now return an
+#' [sframe_validation] object, visibly, so the diagnostic is readable at the
+#' console. Code that read `$valid` and `$problems` keeps working.
+#'
+#' @return An [sframe_validation] object. The model is carried inside it and
+#'   can be recovered with [sf_object()].
 #' @export
+#' @seealso [sframe_validation], [sf_problems()], [sf_is_valid()]
 validate_model <- function(model, instrument = NULL, strict = TRUE) {
   model <- sframe_model_as_list(model)
-  problems <- character(0)
+  log <- sframe_new_problem_log()
+  add <- function(check, messages) sframe_log_problem(log, check, messages)
 
   if (!sframe_model_safe_id(model$id %||% "")) {
-    problems <- c(problems,
+    add("model_id",
       "Model ID must start with a letter and contain only letters, numbers, and `_` characters.")
   }
 
   valid_types <- c("efa", "cfa", "cb_sem", "pls_sem")
   if (!identical(model$type %in% valid_types, TRUE)) {
-    problems <- c(problems,
+    add("model_type",
       paste0("Model type must be one of: ", paste(valid_types, collapse = ", "), "."))
   }
 
   constructs <- sframe_model_constructs(model)
   if ((model$type %||% "") %in% c("cfa", "cb_sem", "pls_sem") &&
       length(constructs) == 0) {
-    problems <- c(problems, "Model must contain at least one construct.")
+    add("constructs", "Model must contain at least one construct.")
   }
   construct_ids <- vapply(constructs, function(x) x$id %||% "", character(1))
   missing_construct_ids <- which(!nzchar(construct_ids))
   if (length(missing_construct_ids) > 0) {
-    problems <- c(problems, "Every construct must have an ID.")
+    add("construct_ids", "Every construct must have an ID.")
   }
   bad_construct_ids <- construct_ids[nzchar(construct_ids) & !grepl("^[A-Za-z][A-Za-z0-9_]*$", construct_ids)]
   if (length(bad_construct_ids) > 0) {
-    problems <- c(problems,
+    add("construct_ids",
       paste0("Invalid construct ID(s): ", paste(unique(bad_construct_ids), collapse = ", "), "."))
   }
   dup_constructs <- construct_ids[nzchar(construct_ids) & duplicated(construct_ids)]
   if (length(dup_constructs) > 0) {
-    problems <- c(problems,
+    add("construct_ids",
       paste0("Duplicate construct ID(s): ", paste(unique(dup_constructs), collapse = ", "), "."))
   }
 
@@ -317,27 +350,27 @@ validate_model <- function(model, instrument = NULL, strict = TRUE) {
   for (con in constructs) {
     mode <- con$mode %||% "reflective"
     if (!mode %in% c("reflective", "composite", "formative", "single_item")) {
-      problems <- c(problems,
+      add("construct_modes",
         paste0("Construct '", con$id, "' uses unrecognised mode '", mode, "'."))
     }
     indicators <- as.character(con$items %||% character(0))
     if (length(indicators) == 0) {
-      problems <- c(problems, paste0("Construct '", con$id, "' has no indicators."))
+      add("construct_indicators", paste0("Construct '", con$id, "' has no indicators."))
     }
     if (!is.null(item_ids)) {
       missing_items <- setdiff(indicators, item_ids)
       if (length(missing_items) > 0) {
-        problems <- c(problems,
+        add("construct_indicators",
           paste0("Construct '", con$id, "' references unknown item(s): ",
                  paste(missing_items, collapse = ", "), "."))
       }
     }
     if (mode != "single_item" && length(indicators) < 2) {
-      problems <- c(problems,
+      add("construct_indicators",
         paste0("Construct '", con$id, "' should have at least two indicators."))
     }
     if ((model$type %||% "") %in% c("cfa", "cb_sem") && mode %in% c("formative", "composite")) {
-      problems <- c(problems,
+      add("construct_modes",
         paste0("lavaan syntax generation for model '", model$id,
                "' supports reflective or single-item construct modes. ",
                "Construct '", con$id, "' uses mode '", mode, "'."))
@@ -346,38 +379,38 @@ validate_model <- function(model, instrument = NULL, strict = TRUE) {
 
   paths <- sframe_model_paths(model)
   if ((model$type %||% "") == "pls_sem" && length(paths) == 0) {
-    problems <- c(problems, "PLS-SEM models require at least one structural path.")
+    add("structural_paths", "PLS-SEM models require at least one structural path.")
   }
   path_keys <- character(0)
   for (path in paths) {
     if (!path$from %in% construct_ids) {
-      problems <- c(problems,
+      add("structural_paths",
         paste0("Path source '", path$from, "' does not match any construct."))
     }
     if (!path$to %in% construct_ids) {
-      problems <- c(problems,
+      add("structural_paths",
         paste0("Path target '", path$to, "' does not match any construct."))
     }
     if (identical(path$from, path$to)) {
-      problems <- c(problems,
+      add("structural_paths",
         paste0("Path '", path$from, " -> ", path$to, "' is a self-path."))
     }
     path_keys <- c(path_keys, paste(path$from, path$to, sep = "->"))
   }
   dup_paths <- path_keys[duplicated(path_keys)]
   if (length(dup_paths) > 0) {
-    problems <- c(problems,
+    add("structural_paths",
       paste0("Duplicate structural path(s): ", paste(unique(dup_paths), collapse = ", "), "."))
   }
 
   for (cov in sframe_model_covariances(model)) {
     if (!cov$from %in% construct_ids || !cov$to %in% construct_ids) {
-      problems <- c(problems,
+      add("covariances",
         paste0("Covariance '", cov$from, " ~~ ", cov$to,
                "' references an unknown construct."))
     }
     if (identical(cov$from, cov$to)) {
-      problems <- c(problems,
+      add("covariances",
         paste0("Covariance '", cov$from, " ~~ ", cov$to, "' is a self-covariance."))
     }
   }
@@ -386,39 +419,56 @@ validate_model <- function(model, instrument = NULL, strict = TRUE) {
     refs <- c(ind$from, ind$through, ind$to)
     missing_refs <- setdiff(refs, construct_ids)
     if (length(missing_refs) > 0) {
-      problems <- c(problems,
+      add("indirect_effects",
         paste0("Indirect effect references unknown construct(s): ",
                paste(missing_refs, collapse = ", "), "."))
     }
     if (length(ind$through %||% character(0)) == 0) {
-      problems <- c(problems,
+      add("indirect_effects",
         paste0("Indirect effect from '", ind$from, "' to '", ind$to,
                "' must include at least one mediator."))
     }
   }
 
   if ((model$type %||% "") == "pls_sem" && !(model$engine %||% "") %in% c("seminr", "plspm")) {
-    problems <- c(problems, "PLS-SEM models should use engine 'seminr' in v0.3.")
+    add("engine", "PLS-SEM models should use engine 'seminr' in v0.3.")
   }
   if ((model$type %||% "") %in% c("cfa", "cb_sem") && !(model$engine %||% "") %in% c("lavaan")) {
-    problems <- c(problems, "CFA and CB-SEM models should use engine 'lavaan' in v0.3.")
+    add("engine", "CFA and CB-SEM models should use engine 'lavaan' in v0.3.")
   }
 
-  if (strict && length(problems) > 0) {
+  if (strict && length(log$problems) > 0) {
     sframe_abort_validation(
       paste0(
-        "Model validation failed with ", length(problems), " problem(s):\n",
-        paste0("  - ", problems, collapse = "\n")
+        "Model validation failed with ", length(log$problems), " problem(s):\n",
+        paste0("  - ", log$problems, collapse = "\n")
       )
     )
   }
 
-  if (!strict) {
-    return(list(valid = length(problems) == 0, problems = problems))
-  }
-
-  invisible(model)
+  sframe_new_validation(
+    log,
+    roster  = sframe_model_validation_checks,
+    subject = "model",
+    title   = model$id %||% "(unnamed)",
+    version = model$type %||% "",
+    object  = model
+  )
 }
+
+# The full roster of model checks, in the order they run.
+sframe_model_validation_checks <- c(
+  "model_id",
+  "model_type",
+  "constructs",
+  "construct_ids",
+  "construct_modes",
+  "construct_indicators",
+  "structural_paths",
+  "covariances",
+  "indirect_effects",
+  "engine"
+)
 
 #' Serialise a model specification to JSON
 #'
@@ -687,6 +737,12 @@ cfa_lavaan_syntax <- function(
     residual_covariances = NULL,
     latent_covariances = TRUE
 ) {
+  # Only when a model is supplied. With model = NULL the measurement model is
+  # derived from the instrument's scales below, so there is no type to check.
+  if (!is.null(model)) {
+    sframe_check_model_type(model, c("cfa", "cb_sem"), "cfa_lavaan_syntax()",
+                            "covariance-based measurement")
+  }
   if (is.null(model)) {
     if (is.null(instrument) || !inherits(instrument, "sframe")) {
       rlang::abort("Provide either `model` or an `sframe` instrument.",
@@ -755,6 +811,8 @@ cfa_lavaan_syntax <- function(
 #' @return A lavaan syntax string.
 #' @export
 sem_lavaan_syntax <- function(model, instrument = NULL, standardised = TRUE) {
+  sframe_check_model_type(model, c("cfa", "cb_sem"), "sem_lavaan_syntax()",
+                          "covariance-based")
   if (!is.null(instrument)) {
     validate_model(model, instrument = instrument, strict = TRUE)
   } else {
@@ -843,6 +901,8 @@ sem_lavaan_syntax <- function(model, instrument = NULL, standardised = TRUE) {
 #' @return An R syntax string for `seminr`.
 #' @export
 seminr_syntax <- function(model, data_name = "data", nboot = NULL, seed = 123) {
+  sframe_check_model_type(model, "pls_sem", "seminr_syntax()",
+                          "partial-least-squares")
   validate_model(model, strict = TRUE)
   constructs <- sframe_model_constructs(model)
   paths <- sframe_model_paths(model)

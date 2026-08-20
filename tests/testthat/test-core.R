@@ -195,8 +195,23 @@ test_that("validate_sframe() passes a clean instrument", {
 })
 
 test_that("validate_sframe() sets validated = TRUE", {
-  out <- validate_sframe(make_instrument(), strict = TRUE)
-  expect_true(isTRUE(out$meta$validated))
+  # Since 0.4.0 validate_sframe() returns a diagnostic rather than the
+  # instrument, so the stamped instrument comes back through as_sframe().
+  out <- as_sframe(validate_sframe(make_instrument(), strict = TRUE))
+  expect_true(isTRUE(sf_meta(out)$validated))
+})
+
+test_that("validate_sframe() returns a diagnostic, not the instrument", {
+  v <- validate_sframe(make_instrument(), strict = TRUE)
+  expect_s3_class(v, "sframe_validation")
+  expect_false(inherits(v, "sframe"))
+  expect_true(sf_is_valid(v))
+  expect_length(sf_problems(v), 0)
+})
+
+test_that("passing a validation result where an instrument is wanted errors", {
+  v <- validate_sframe(make_instrument(), strict = TRUE)
+  expect_error(codebook_report(v), "as_sframe")
 })
 
 test_that("validate_sframe() catches duplicate item IDs", {
@@ -277,6 +292,30 @@ test_that("summary.sframe() prints and returns invisibly", {
   expect_s3_class(ret, "sframe")
   expect_true(any(grepl("Items", out)))
   expect_true(any(grepl("Scales", out)))
+})
+
+test_that("print/format/summary.sframe() surface an attached analysis plan", {
+  # A plan attached after construction (instr$analysis_plan <- list(...)) is
+  # real data (it round-trips through write_sframe()/read_sframe() and drives
+  # run_analysis_plan() correctly), but none of the three display methods
+  # mentioned it at all, making a correctly-attached plan look silently
+  # dropped. Guards against that regressing.
+  instr <- make_instrument()
+  instr$analysis_plan <- list(list(id = "RQ1", research_question = "Q?",
+                                   family = "association",
+                                   method = "correlation_pearson",
+                                   roles = list(x = "a", y = "b")))
+
+  print_out <- capture.output(print(instr))
+  expect_true(any(grepl("1 block", print_out)))
+
+  fmt <- format(instr)
+  expect_true(grepl("1 analysis block", fmt))
+
+  summary_out <- capture.output(summary(instr))
+  expect_true(any(grepl("Analysis plan: 1 block", summary_out)))
+  expect_true(any(grepl("RQ1", summary_out)))
+  expect_true(any(grepl("correlation_pearson", summary_out)))
 })
 
 # ---------------------------------------------------------------------------
@@ -676,7 +715,7 @@ test_that("print.sframe_codebook() produces output without error", {
 # ---------------------------------------------------------------------------
 
 test_that("render_report() writes an HTML report with the fallback renderer", {
-  instr <- validate_sframe(make_instrument())
+  instr <- as_sframe(validate_sframe(make_instrument()))
   resp <- suppressWarnings(
     read_responses(
       make_responses(8),
@@ -709,7 +748,7 @@ test_that("render_report() writes an HTML report through Quarto when available",
   skip_if_not_installed("quarto")
   skip_if_not(nzchar(Sys.which("quarto")), "Quarto CLI not installed")
 
-  instr <- validate_sframe(make_instrument())
+  instr <- as_sframe(validate_sframe(make_instrument()))
   out <- tempfile(fileext = ".html")
 
   expect_no_error(render_report(instr, output_file = out))
@@ -913,7 +952,7 @@ test_that("render_survey() blocks invalid submissions through the Shiny server",
 # ---------------------------------------------------------------------------
 
 test_that("full workflow runs from instrument to scored outputs", {
-  instr <- validate_sframe(make_instrument(reverse = TRUE))
+  instr <- as_sframe(validate_sframe(make_instrument(reverse = TRUE)))
   path <- tempfile(fileext = ".sframe")
   write_sframe(instr, path, overwrite = TRUE)
 

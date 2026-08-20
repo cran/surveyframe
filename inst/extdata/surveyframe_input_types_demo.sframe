@@ -1,7 +1,7 @@
 {
   "hash": {
     "algo": "sha256",
-    "value": "2283401c79649815436f588796623473fe5fc21491e14ced2a447f4594922d0c"
+    "value": "16c994ac0c658fc03afe73bfaa7c73125885163f66664f5de81ed20f4dcc05e1"
   },
   "version": "0.3.0",
   "meta": {
@@ -582,7 +582,7 @@
       "family": "measurement",
       "roles": {
         "model": [
-          "input_types_sem"
+          "input_types_pls"
         ]
       },
       "options": [],
@@ -1055,6 +1055,37 @@
             "id": "behavioural_intention",
             "items": ["recommend", "reuse"],
             "mode": "reflective"
+          }
+        ]
+      },
+      "structural": {
+        "paths": [
+          {
+            "from": "digital_experience",
+            "to": "behavioural_intention"
+          }
+        ],
+        "covariances": [],
+        "indirect": []
+      },
+      "options": []
+    },
+    {
+      "id": "input_types_pls",
+      "label": "input_types_pls",
+      "type": "pls_sem",
+      "engine": "seminr",
+      "measurement": {
+        "constructs": [
+          {
+            "id": "digital_experience",
+            "items": ["digital_ease", "digital_trust", "digital_confusion"],
+            "mode": "composite"
+          },
+          {
+            "id": "behavioural_intention",
+            "items": ["recommend", "reuse"],
+            "mode": "composite"
           }
         ]
       },

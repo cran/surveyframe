@@ -54,6 +54,20 @@ sframe_item_visible <- function(item, input_values, branch_lookup) {
 
 sframe_missing_value <- function(item, value) {
   if (item$type %in% c("section_break", "text_block")) return(FALSE)
+  if (item$type %in% sframe_expanded_comparison_types) {
+    if (is.null(value) || length(value) == 0) return(TRUE)
+    unanswered <- vapply(value, function(cell) {
+      is.null(cell) || length(cell) == 0 || all(is.na(cell))
+    }, logical(1))
+    if (any(unanswered)) return(TRUE)
+    # A constant-sum allocation that does not total 100 is not a complete
+    # answer, the same rule validatePage() enforces on the static survey.
+    if (identical(item$type, "criteria_weight")) {
+      total <- sum(suppressWarnings(as.numeric(unlist(value))), na.rm = TRUE)
+      if (!isTRUE(all.equal(total, 100))) return(TRUE)
+    }
+    return(FALSE)
+  }
   if (item$type == "matrix") {
     if (is.null(value) || length(value) == 0) return(TRUE)
     return(any(vapply(value, function(cell) {
@@ -74,6 +88,11 @@ sframe_item_input_value <- function(item, input_values) {
     return(lapply(seq_along(item$matrix_items), function(r) {
       input_values[[paste0(item$id, "__", r)]]
     }))
+  }
+  if (item$type %in% sframe_expanded_comparison_types) {
+    cols <- sframe_comparison_columns(item)
+    if (length(cols) == 0) return(NULL)
+    return(lapply(cols, function(col) input_values[[col]]))
   }
 
   input_values[[item$id]]
@@ -96,20 +115,94 @@ sframe_serialise_response_value <- function(value) {
   paste(as.character(value), collapse = "|")
 }
 
+# The expansion values a multi-column item contributes to a response row,
+# named by their export columns. Matrix cells carry the chosen value, ranking
+# options carry their rank position, and multi-select options carry 0 or 1,
+# which is the contract the static template and the Google Sheets collector
+# already emit and read_responses() already expects.
+sframe_expansion_values <- function(item, instrument, input_values) {
+  cols <- sframe_item_expansion_columns(instrument, list(item))
+  if (length(cols) == 0) return(NULL)
+
+  if (identical(item$type, "matrix")) {
+    # The rendered inputs are positional (item__1, item__2), while the export
+    # columns carry the sub-item label, so the 2 are matched by position.
+    vals <- lapply(seq_along(item$matrix_items), function(r) {
+      sframe_serialise_response_value(input_values[[paste0(item$id, "__", r)]])
+    })
+    return(stats::setNames(vals[seq_along(cols)], cols))
+  }
+
+  if (item$type %in% sframe_expanded_comparison_types) {
+    return(stats::setNames(
+      lapply(cols, function(col) {
+        sframe_serialise_response_value(input_values[[col]])
+      }),
+      cols
+    ))
+  }
+
+  # ranking and multiple_choice both post a single input holding every
+  # selection, so the options are derived from the column names.
+  opts <- sub(paste0("^", item$id, "__"), "", cols)
+  chosen <- as.character(input_values[[item$id]] %||% character(0))
+
+  if (identical(item$type, "ranking")) {
+    # The ranking input holds the order as a pipe-joined string.
+    order <- unlist(strsplit(paste(chosen, collapse = "|"), "|", fixed = TRUE))
+    order <- order[nzchar(order)]
+    return(stats::setNames(lapply(opts, function(o) {
+      pos <- match(o, order)
+      if (is.na(pos)) NA_character_ else as.character(pos)
+    }), cols))
+  }
+
+  stats::setNames(lapply(opts, function(o) {
+    if (o %in% chosen) "1" else "0"
+  }), cols)
+}
+
 sframe_response_row <- function(instrument, input_values, branch_lookup,
                                  started_at, submitted_at = Sys.time()) {
-  item_values <- lapply(instrument$items, function(item) {
+  # Multi-column items expand to one column per sub-item, option, pair, or
+  # criterion rather than to a single joined column, matching the static
+  # template and the Google Sheets collector. Before 0.4.0 the Shiny path
+  # pipe-joined matrix cells into one column, so a matrix question answered
+  # here arrived as mx = "4|5" where read_responses() and the whole analysis
+  # layer expect mx__r1 and mx__r2. That data could not be read back by the
+  # package at all. Ranking and multi-select had the same shape problem.
+  expanded_types <- c("matrix", "ranking", "multiple_choice",
+                      sframe_expanded_comparison_types)
+  expanded_items <- Filter(function(i) i$type %in% expanded_types,
+                           instrument$items)
+  plain_items <- Filter(function(i) !i$type %in% expanded_types,
+                        instrument$items)
+
+  item_values <- lapply(plain_items, function(item) {
     if (!sframe_item_visible(item, input_values, branch_lookup))
       return(NA_character_)
-    if (item$type == "matrix" && !is.null(item$matrix_items)) {
-      vals <- lapply(seq_along(item$matrix_items), function(r) {
-        sframe_serialise_response_value(input_values[[paste0(item$id, "__", r)]])
-      })
-      return(paste(vals, collapse = "|"))
-    }
     sframe_serialise_response_value(input_values[[item$id]])
   })
-  names(item_values) <- vapply(instrument$items, function(i) i$id, character(1))
+  names(item_values) <- vapply(plain_items, function(i) i$id, character(1))
+
+  for (item in expanded_items) {
+    visible <- sframe_item_visible(item, input_values, branch_lookup)
+    vals <- sframe_expansion_values(item, instrument, input_values)
+    # An item with nothing to expand (no matrix rows, no choice set) still
+    # needs its own column rather than vanishing from the row.
+    if (is.null(vals)) {
+      item_values[[item$id]] <- if (!visible) {
+        NA_character_
+      } else {
+        sframe_serialise_response_value(input_values[[item$id]])
+      }
+      next
+    }
+    for (col in names(vals)) {
+      item_values[[col]] <- if (!visible) NA_character_ else vals[[col]]
+    }
+  }
+
   sframe_as_data_frame(as.data.frame(c(
     list(
       started_at   = format(as.POSIXct(started_at,   tz = "UTC"), "%Y-%m-%dT%H:%M:%SZ"),
@@ -158,6 +251,7 @@ sframe_render_input <- function(item, choices_lookup) {
   dateInput <- shiny::dateInput
   sliderInput <- shiny::sliderInput
   actionButton <- shiny::actionButton
+  selectInput <- shiny::selectInput
   cs  <- choices_lookup[[item$choice_set %||% ""]]
   lbl <- sframe_label_tag(item)
 
@@ -290,6 +384,106 @@ sframe_render_input <- function(item, choices_lookup) {
                 })
               )
             )
+          )
+        )
+      }
+    },
+
+    # Decision-family items. Both render one input per expansion column, using
+    # the same ids the static template and the export contract use
+    # (item__a__vs__b, item__a__to__b, item__crit), so a survey run in Shiny
+    # produces data that sframe_assemble_pairwise() and
+    # sframe_collected_weights() can read. The matrix type above pipe-joins
+    # its cells into a single column instead, which is why matrix data
+    # collected through Shiny does not match that contract. Decision items
+    # deliberately do not copy that.
+    pairwise_comparison = {
+      cmp_items <- item$comparison_items %||% character(0)
+      cmp_scale <- item$comparison_scale %||% "saaty"
+      if (length(cmp_items) < 2) {
+        tags$div(lbl, tags$p(class = "sf-help-text",
+                             "Comparison not fully configured."))
+      } else {
+        pairs <- sframe_comparison_pairs(cmp_items, cmp_scale)
+        cols  <- sframe_comparison_columns(item)
+        tags$div(
+          class = "sf-decision-block",
+          lbl,
+          tags$div(
+            class = "sf-decision-rows",
+            lapply(seq_len(nrow(pairs)), function(k) {
+              opts <- if (identical(cmp_scale, "influence")) {
+                stats::setNames(
+                  as.character(0:4),
+                  c("No influence", "Low", "Medium", "High", "Very high")
+                )
+              } else {
+                stats::setNames(
+                  as.character(c(-9:-2, 1, 2:9)),
+                  c(paste(pairs$b[k], "extremely more important"),
+                    paste(pairs$b[k], "very strongly more important"),
+                    paste(pairs$b[k], "strongly more important"),
+                    paste(pairs$b[k], "moderately more important"),
+                    paste(pairs$b[k], "slightly more important"),
+                    paste(pairs$b[k], "marginally more important"),
+                    paste(pairs$b[k], "a little more important"),
+                    paste(pairs$b[k], "very slightly more important"),
+                    "Equally important",
+                    paste(pairs$a[k], "very slightly more important"),
+                    paste(pairs$a[k], "a little more important"),
+                    paste(pairs$a[k], "marginally more important"),
+                    paste(pairs$a[k], "slightly more important"),
+                    paste(pairs$a[k], "moderately more important"),
+                    paste(pairs$a[k], "strongly more important"),
+                    paste(pairs$a[k], "very strongly more important"),
+                    paste(pairs$a[k], "extremely more important"))
+                )
+              }
+              prompt <- if (identical(cmp_scale, "influence")) {
+                sprintf("How strongly does %s influence %s?",
+                        pairs$a[k], pairs$b[k])
+              } else {
+                sprintf("%s compared with %s", pairs$a[k], pairs$b[k])
+              }
+              tags$div(
+                class = "sf-decision-row",
+                tags$label(`for` = cols[k], class = "sf-decision-label",
+                           prompt),
+                selectInput(
+                  cols[k], label = NULL, choices = opts,
+                  selected = if (identical(cmp_scale, "influence")) "0" else "1",
+                  width = "100%"
+                )
+              )
+            })
+          )
+        )
+      }
+    },
+
+    criteria_weight = {
+      cmp_items <- item$comparison_items %||% character(0)
+      if (length(cmp_items) < 2) {
+        tags$div(lbl, tags$p(class = "sf-help-text",
+                             "Criteria not fully configured."))
+      } else {
+        cols <- sframe_comparison_columns(item)
+        tags$div(
+          class = "sf-decision-block",
+          lbl,
+          tags$p(class = "sf-help-text",
+                 "Divide 100 points across the criteria. The total must be 100."),
+          tags$div(
+            class = "sf-decision-rows",
+            lapply(seq_along(cmp_items), function(k) {
+              tags$div(
+                class = "sf-decision-row",
+                tags$label(`for` = cols[k], class = "sf-decision-label",
+                           cmp_items[k]),
+                numericInput(cols[k], label = NULL, value = 0,
+                             min = 0, max = 100, step = 1, width = "120px")
+              )
+            })
           )
         )
       }

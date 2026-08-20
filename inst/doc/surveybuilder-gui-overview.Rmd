@@ -30,8 +30,8 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 library(surveyframe)
 ```
 
-`surveyframe` has three graphical entry points. They are kept separate in v0.3,
-and each maps onto a part of the research-design workflow.
+`surveyframe` has three graphical entry points, kept separate on purpose, each
+mapping onto a part of the research-design workflow.
 
 * `launch_builder()` opens SurveyBuilder, a standalone questionnaire builder. It
   runs in the browser, saves `.sframe` files, and authors the analysis plan and
@@ -47,7 +47,10 @@ and each maps onto a part of the research-design workflow.
 ## Input-types demo
 
 The input-types demo covers the main controls available in SurveyBuilder and
-SurveyStudio.
+SurveyStudio. The two decision item types, `pairwise_comparison` and
+`criteria_weight`, are not part of this demo. They get their own worked
+example in the MCDM vignette, because they only make sense alongside a
+declared decision method and a set of alternatives.
 
 ```{r input-types}
 demo      <- sframe_input_types_demo_data()

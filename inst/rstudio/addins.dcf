@@ -1,0 +1,19 @@
+Name: Open SurveyBuilder
+Description: Launch the SurveyBuilder Shiny HTML app in the default browser.
+Binding: addin_launch_builder
+Interactive: true
+
+Name: Open SurveyStudio
+Description: Launch the SurveyStudio Shiny app in the default browser.
+Binding: addin_launch_studio
+Interactive: true
+
+Name: Open Dashboard
+Description: Launch the surveyframe results dashboard in the default browser.
+Binding: addin_launch_dashboard
+Interactive: true
+
+Name: Insert sframe skeleton
+Description: Insert a minimal sf_instrument() call at the cursor position.
+Binding: addin_insert_skeleton
+Interactive: false

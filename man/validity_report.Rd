@@ -21,7 +21,7 @@ of the two constructs' mean absolute monotrait-heteromethod
 correlations. Constructs with a single item have no monotrait
 correlations, so their HTMT entries are \code{NA}. Without this argument,
 \code{htmt} falls back to the absolute inter-construct correlation matrix
-from \code{construct_scores} (the pre-0.3.4 behaviour); the \code{htmt_method}
+from \code{construct_scores} (the pre-0.3.4 behaviour). The \code{htmt_method}
 element records which was computed.}
 }
 \value{

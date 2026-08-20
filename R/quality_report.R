@@ -255,7 +255,17 @@ quality_report <- function(
   )
 
   # --- Missingness ---
-  item_cols     <- intersect(item_ids, colnames(data))
+  # Multi-column items post under their expansion names (item__sub,
+  # item__option, item__a__vs__b, item__crit) and never under the bare item
+  # id, so matching on item ids alone made them invisible here. A respondent
+  # who skipped an entire pairwise battery was reported at 0 percent missing,
+  # because none of its columns were counted at all. Expansion columns now
+  # count as item data, which also brings matrix, ranking, and multi-select
+  # items into the missingness figures for the first time.
+  item_cols <- intersect(
+    unique(c(item_ids, sframe_item_expansion_columns(instrument))),
+    colnames(data)
+  )
   item_data     <- data[, item_cols, drop = FALSE]
   item_miss     <- colMeans(is.na(item_data))
   resp_miss     <- rowMeans(is.na(item_data))

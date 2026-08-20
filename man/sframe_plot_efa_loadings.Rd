@@ -10,8 +10,8 @@ sframe_plot_efa_loadings(x, palette = c("web", "print"))
 \item{x}{An \code{sframe_efa_solution} object from \code{\link[=efa_solution]{efa_solution()}}.}
 
 \item{palette}{One of \code{"web"} (diverging red/teal gradient) or \code{"print"}
-(white-to-black gradient by magnitude; sign is conveyed by the printed
-label, not colour, so it stays legible in monochrome). See
+(white-to-black gradient by magnitude, with sign conveyed by the
+printed label rather than colour, so it stays legible in monochrome). See
 \code{sframe_brand()}.}
 }
 \value{

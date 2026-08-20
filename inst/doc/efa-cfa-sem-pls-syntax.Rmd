@@ -161,8 +161,8 @@ cat(seminr_syntax(pls_model))
 ## Construct modes
 
 A construct's mode is `reflective`, `composite`, `formative`, or `single_item`.
-lavaan syntax generation in v0.3 is intended for reflective measurement models,
-which is why the CFA and CB-SEM models use the default reflective mode. PLS-SEM
+lavaan syntax generation is intended for reflective measurement models, which
+is why the CFA and CB-SEM models use the default reflective mode. PLS-SEM
 syntax uses composite constructs, as above.
 
 ## Model JSON and a reporting template

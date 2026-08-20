@@ -1,0 +1,317 @@
+---
+lang: en-GB
+title: "Multi-criteria decision analysis"
+output:
+  rmarkdown::html_vignette:
+    toc: true
+    toc_depth: 2
+vignette: >
+  %\VignetteIndexEntry{Multi-criteria decision analysis}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+library(surveyframe)
+library(knitr)
+set.seed(2026)
+
+has_ggplot <- requireNamespace("ggplot2", quietly = TRUE)
+knitr::opts_chunk$set(fig.width = 7, fig.height = 4.2, dpi = 96)
+```
+
+```{=html}
+<style>
+body { color: #1a1a2e; }
+h1, h2, h3 { color: #1a1a2e; }
+a { color: #0e7c7a; }
+table { border-collapse: collapse; margin: 1em 0; }
+table caption { caption-side: top; font-style: italic; color: #444; padding-bottom: .3em; }
+th { border-top: 2px solid #1a1a2e; border-bottom: 1px solid #1a1a2e; padding: 6px 12px; }
+td { padding: 5px 12px; border: none; }
+tbody tr:last-child td { border-bottom: 2px solid #1a1a2e; }
+/* WCAG 2.2 AA pass: darker link and syntax-token colours (at least
+   4.5:1 on the #f7f7f7 code background), wrapped code lines instead of a
+   keyboard-inaccessible scroll region, empty per-line anchors removed from
+   the accessibility tree, and 24px minimum TOC link targets. */
+code span.at { color: #576419; }
+code span.dv, code span.fl, code span.bn { color: #276245; }
+code span.co { color: #396a80; }
+pre, pre code { white-space: pre-wrap; word-break: break-word; }
+div.sourceCode { overflow: visible; }
+pre.sourceCode a:empty { display: none; }
+#TOC a { display: inline-block; min-height: 24px; }
+</style>
+```
+
+## What this vignette covers
+
+Multi-criteria decision analysis ranks a handful of alternatives against
+several criteria that pull in different directions. surveyframe treats it the
+same way it treats any other analysis: the method, its inputs, and the roles
+they play are declared in the instrument before data is collected, and the
+analysis is the execution of that declaration.
+
+The worked example is a hotel choosing between 5 suppliers on 4 criteria. It
+ships with the package, so every number below is reproducible.
+
+```{r load}
+demo <- read_sframe(system.file("extdata", "hotel_supplier_mcdm.sframe",
+                                package = "surveyframe"))
+responses <- utils::read.csv(
+  system.file("extdata", "hotel_supplier_mcdm_responses.csv",
+              package = "surveyframe"),
+  stringsAsFactors = FALSE
+)
+
+c(respondents = nrow(responses), criteria = 4, suppliers = 5)
+```
+
+## Where the numbers come from
+
+An MCDM result needs two things: a performance matrix saying how each
+alternative scores on each criterion, and a weight vector saying how much
+each criterion matters. They can come from different places, and being
+explicit about which is the difference between a defensible result and a
+plausible-looking one.
+
+This instrument declares three sources at once, so the example exercises all
+of them.
+
+```{r sources, echo = FALSE}
+kable(
+  data.frame(
+    Source = c("Pairwise comparison", "Constant sum", "Rated matrix",
+               "Researcher supplied"),
+    Item = c("crit_pairs", "crit_points",
+             "rate_service and 3 more", "declared in the plan block"),
+    Provides = c("Criterion weights", "Criterion weights",
+                 "Performance matrix", "Performance matrix"),
+    How = c("Respondents judge each pair on the Saaty 1 to 9 scale",
+            "Respondents divide 100 points across the criteria",
+            "Respondents rate every supplier on every criterion",
+            "Audited figures the researcher enters directly"),
+    check.names = FALSE, stringsAsFactors = FALSE
+  ),
+  row.names = FALSE, align = c("l", "l", "l", "l"),
+  caption = "The 4 declared input sources in the worked example."
+)
+```
+
+Each result records which source it used, so a report can say where its
+numbers came from rather than leaving a reader to assume.
+
+## Criterion weights from pairwise judgements
+
+The first block asks what weight each criterion carries. Respondents compared
+every pair of criteria, and AHP turns those judgements into weights.
+
+```{r ahp}
+results <- run_analysis_plan(responses, demo, plots = has_ggplot)
+ahp <- results[["RQ1"]]
+
+kable(ahp$table, row.names = FALSE,
+      caption = "Criterion weights derived from pairwise judgements.")
+```
+
+Pairwise judgements can contradict each other. If service beats price, and
+price beats delivery, then service ought to beat delivery by roughly the
+product of the two. The consistency ratio measures how far the judgements
+depart from that.
+
+```{r consistency}
+round(ahp$cr, 4)
+```
+
+Saaty's convention treats a consistency ratio below 0.10 as acceptable. This
+one is well inside it. A ratio above 0.10 should be reported alongside the
+result, since it still yields a usable weight set. `options$cr_filter = TRUE`
+will drop individual respondents above the threshold before aggregation if a
+study has pre-declared that rule.
+
+```{r ahp-plot, fig.alt = "Bar chart of the four criterion weights derived from pairwise comparisons, with service carrying the largest weight and delivery the smallest.", eval = has_ggplot}
+ahp$plot
+```
+
+## Ranking suppliers on audited figures
+
+The second block ranks the suppliers using a performance matrix the
+researcher supplies, combined with the weights the respondents produced. This
+is the common hybrid: measured facts about the alternatives, weighted by the
+people who will live with the decision.
+
+```{r topsis-supplied}
+audited <- results[["RQ2"]]
+
+kable(audited$table, row.names = FALSE,
+      caption = paste("TOPSIS ranking on audited figures, weighted by",
+                      "collected judgements."))
+
+c(weights = audited$weights_source, matrix = audited$matrix_source)
+```
+
+Note the `criteria_types` this block declares: service and location are
+`benefit` criteria where more is better, while price and delivery time are
+`cost` criteria where less is better. Getting that wrong silently inverts the
+ranking, which is why it is declared in the instrument rather than inferred.
+
+## Ranking suppliers on collected ratings
+
+The third block answers a different question with the same method: not which
+supplier the audited figures favour, but which one the staff rate best. The
+performance matrix is built from respondents' ratings, and the weights come
+from the constant-sum question instead of the pairwise one.
+
+```{r topsis-rated}
+rated <- results[["RQ3"]]
+
+kable(rated$table, row.names = FALSE,
+      caption = paste("TOPSIS ranking on staff ratings, weighted by the",
+                      "constant-sum question."))
+```
+
+The two rankings do not agree, and that is the useful part. Comparing them is
+a finding rather than a problem to be resolved.
+
+```{r compare, echo = FALSE}
+cmp <- merge(
+  audited$table[, c("Alternative", "Rank")],
+  rated$table[, c("Alternative", "Rank")],
+  by = "Alternative", suffixes = c("_audited", "_rated")
+)
+cmp <- cmp[order(cmp$Rank_audited), ]
+kable(cmp, row.names = FALSE,
+      col.names = c("Supplier", "Rank on audited figures",
+                    "Rank on staff ratings"),
+      caption = "The same method, two declared input sources, two answers.")
+```
+
+### A trap worth naming
+
+All 4 criteria in the rated block are declared `benefit`, including price.
+That is correct here only because the question asked about **value for money**,
+where a higher rating is better. Had it asked respondents to rate price
+directly, a higher rating would mean more expensive and the criterion would be
+a `cost`.
+
+Nothing in the data distinguishes those two cases. The wording of the question
+does, and the declaration has to match it. This is the single easiest way to
+produce a confident, precise, and completely inverted ranking.
+
+## How much do the weights matter?
+
+A ranking produced from collected weights inherits their uncertainty. Before
+reporting a winner, it is worth asking how much of that result survives a
+small change in the weights.
+
+```{r sensitivity}
+sens <- sensitivity_analysis(
+  x = matrix(c(4.1, 3.0, 210, 36,
+               3.6, 4.5, 180, 48,
+               4.8, 2.5, 260, 24,
+               3.9, 4.0, 150, 72,
+               4.4, 3.8, 230, 30),
+             nrow = 5, byrow = TRUE),
+  weights        = audited$weights,
+  criteria_types = c("benefit", "benefit", "cost", "cost"),
+  method         = "topsis",
+  alternatives   = c("Alpha", "Basilica", "Coral", "Dhoni", "Equator"),
+  criteria       = c("service", "location", "price", "delivery")
+)
+
+sens
+```
+
+Each criterion's weight is nudged up and down by 5 percent, renormalised, and
+the ranking is recomputed. `rho` is the rank correlation with the original
+ranking, and `top_changed` records whether the leading alternative changed.
+
+```{r sensitivity-table}
+kable(as.data.frame(sens), row.names = FALSE,
+      caption = "Ranking stability under a 5 percent change in each weight.")
+```
+
+```{r sensitivity-plot, fig.alt = "Bar chart of rank correlation for each criterion perturbed up and down, against a dashed reference line at one marking an unchanged ranking.", eval = has_ggplot}
+plot(sens)
+```
+
+This example is worth reading closely, because it is not the clean case. Four
+of the 8 perturbations changed the ranking, so `stable` is `FALSE`. But
+`top_changed` is `FALSE` throughout: the order shuffles among the middle
+suppliers while Equator stays first under every nudge.
+
+That distinction is the whole point of running this. "Equator ranks first, and
+that holds under a 5 percent change in any single weight" is a defensible
+claim. "The ranking is Equator, Coral, Basilica, Alpha, Dhoni" is not, because
+positions 2 to 5 move. Reporting the full ranking as though it were as solid
+as the winner would overstate what the data supports.
+
+A result where `top_changed` is `TRUE` anywhere deserves a stronger caveat
+still, and one where `stable` is `TRUE` throughout can be reported as robust
+to the weights.
+
+## Which criteria drive the others
+
+The criteria are not independent. Delivery speed and price move together, and
+service quality may drive both. DEMATEL asks respondents how strongly each
+factor influences each other factor and separates the causes from the effects.
+
+```{r dematel}
+dematel <- results[["RQ4"]]
+
+kable(dematel$table, row.names = FALSE,
+      caption = "DEMATEL cause and effect classification.")
+```
+
+The prominence column measures how involved a criterion is in the system
+overall, and the relation column separates the drivers from the driven. A
+criterion with a positive relation value influences others more than it is
+influenced.
+
+```{r dematel-plot, fig.alt = "Influence map plotting prominence against relation for the four criteria, separating causal drivers above the axis from affected criteria below it.", eval = has_ggplot}
+dematel$plot
+```
+
+Note that the influence question uses a different scale from the AHP one. AHP
+reads reciprocal relative importance on Saaty's 1 to 9 ratio scale, while
+DEMATEL reads directed 0 to 4 influence with no reciprocity. They are not
+interchangeable, and surveyframe refuses to pair one with the other's method
+at validation time rather than returning plausible numbers from meaningless
+input.
+
+## Reporting the whole plan
+
+Because every block is declared in the instrument, the whole analysis is one
+call and the report writes itself in the same order the plan was declared.
+
+```{r summary, echo = FALSE}
+# as.data.frame() flattens the results to one row per block, so the whole
+# summary is a column selection rather than a loop over internals.
+results_df <- as.data.frame(results)
+summary_df <- data.frame(
+  RQ = results_df$block_id,
+  Question = results_df$research_question,
+  Method = toupper(results_df$test),
+  Result = results_df$apa,
+  check.names = FALSE, stringsAsFactors = FALSE
+)
+kable(summary_df, row.names = FALSE,
+      col.names = c("RQ", "Research question", "Method", "Result"),
+      caption = "The declared analysis plan and what each block returned.")
+```
+
+## What surveyframe does not do here
+
+The decision family ranks and weights. It does not tell a researcher which
+method to use, and the choice matters: the 10 available methods encode
+different assumptions about how criteria trade off against one another.
+
+Two limits are worth stating plainly. surveyframe does not estimate choice
+models, so `sf_conjoint_design()` declares a conjoint design without
+analysing its responses. And PROMETHEE defaults to Brans and Vincke's type I
+step function rather than the linear function some implementations default
+to, because the linear function needs thresholds that are commonly derived
+from the data range, which makes a result depend on a choice nobody declared.
+See `?sframe_decision_options` for the detail, including how far rankings
+move between the two.

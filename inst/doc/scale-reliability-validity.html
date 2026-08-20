@@ -381,18 +381,20 @@ sustainability quality, 0.897 and 0.936 for satisfaction, and 0.921 and
 <span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a>responses <span class="ot">&lt;-</span> demo<span class="sc">$</span>responses</span>
 <span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a></span>
 <span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a>rr <span class="ot">&lt;-</span> <span class="fu">reliability_report</span>(responses, instr, <span class="at">omega =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb1-6"><a href="#cb1-6" tabindex="-1"></a>rel_df <span class="ot">&lt;-</span> <span class="fu">do.call</span>(rbind, <span class="fu">lapply</span>(rr, <span class="cf">function</span>(s) <span class="fu">data.frame</span>(</span>
-<span id="cb1-7"><a href="#cb1-7" tabindex="-1"></a>  <span class="at">Scale   =</span> <span class="fu">paste0</span>(s<span class="sc">$</span>label, <span class="st">&quot; (&quot;</span>, s<span class="sc">$</span>scale_id, <span class="st">&quot;)&quot;</span>),</span>
-<span id="cb1-8"><a href="#cb1-8" tabindex="-1"></a>  <span class="at">Items   =</span> s<span class="sc">$</span>n_items,</span>
-<span id="cb1-9"><a href="#cb1-9" tabindex="-1"></a>  <span class="at">N       =</span> s<span class="sc">$</span>n,</span>
-<span id="cb1-10"><a href="#cb1-10" tabindex="-1"></a>  <span class="at">Alpha   =</span> <span class="cf">if</span> (<span class="sc">!</span><span class="fu">is.null</span>(s<span class="sc">$</span>alpha))   <span class="fu">sprintf</span>(<span class="st">&quot;%.2f&quot;</span>, s<span class="sc">$</span>alpha)   <span class="cf">else</span> <span class="st">&quot;n/a&quot;</span>,</span>
-<span id="cb1-11"><a href="#cb1-11" tabindex="-1"></a>  <span class="at">Omega_h =</span> <span class="cf">if</span> (<span class="sc">!</span><span class="fu">is.null</span>(s<span class="sc">$</span>omega_h)) <span class="fu">sprintf</span>(<span class="st">&quot;%.2f&quot;</span>, s<span class="sc">$</span>omega_h) <span class="cf">else</span> <span class="st">&quot;n/a&quot;</span>,</span>
-<span id="cb1-12"><a href="#cb1-12" tabindex="-1"></a>  <span class="at">Omega_t =</span> <span class="cf">if</span> (<span class="sc">!</span><span class="fu">is.null</span>(s<span class="sc">$</span>omega_t)) <span class="fu">sprintf</span>(<span class="st">&quot;%.2f&quot;</span>, s<span class="sc">$</span>omega_t) <span class="cf">else</span> <span class="st">&quot;n/a&quot;</span>,</span>
-<span id="cb1-13"><a href="#cb1-13" tabindex="-1"></a>  <span class="at">stringsAsFactors =</span> <span class="cn">FALSE</span>)))</span>
-<span id="cb1-14"><a href="#cb1-14" tabindex="-1"></a><span class="fu">kable</span>(rel_df, <span class="at">row.names =</span> <span class="cn">FALSE</span>,</span>
-<span id="cb1-15"><a href="#cb1-15" tabindex="-1"></a>      <span class="at">col.names =</span> <span class="fu">c</span>(<span class="st">&quot;Scale&quot;</span>, <span class="st">&quot;Items&quot;</span>, <span class="st">&quot;N&quot;</span>, <span class="st">&quot;Alpha&quot;</span>, <span class="st">&quot;Omega h&quot;</span>, <span class="st">&quot;Omega total&quot;</span>),</span>
-<span id="cb1-16"><a href="#cb1-16" tabindex="-1"></a>      <span class="at">align =</span> <span class="fu">c</span>(<span class="st">&quot;l&quot;</span>, <span class="st">&quot;c&quot;</span>, <span class="st">&quot;c&quot;</span>, <span class="st">&quot;r&quot;</span>, <span class="st">&quot;r&quot;</span>, <span class="st">&quot;r&quot;</span>),</span>
-<span id="cb1-17"><a href="#cb1-17" tabindex="-1"></a>      <span class="at">caption =</span> <span class="st">&quot;Scale reliability statistics&quot;</span>)</span></code></pre></div>
+<span id="cb1-6"><a href="#cb1-6" tabindex="-1"></a><span class="co"># as.data.frame() gives one row per scale, so no reaching into the object.</span></span>
+<span id="cb1-7"><a href="#cb1-7" tabindex="-1"></a>rr_df <span class="ot">&lt;-</span> <span class="fu">as.data.frame</span>(rr)</span>
+<span id="cb1-8"><a href="#cb1-8" tabindex="-1"></a>rel_df <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb1-9"><a href="#cb1-9" tabindex="-1"></a>  <span class="at">Scale   =</span> <span class="fu">paste0</span>(rr_df<span class="sc">$</span>label, <span class="st">&quot; (&quot;</span>, rr_df<span class="sc">$</span>scale_id, <span class="st">&quot;)&quot;</span>),</span>
+<span id="cb1-10"><a href="#cb1-10" tabindex="-1"></a>  <span class="at">Items   =</span> rr_df<span class="sc">$</span>n_items,</span>
+<span id="cb1-11"><a href="#cb1-11" tabindex="-1"></a>  <span class="at">N       =</span> rr_df<span class="sc">$</span>n,</span>
+<span id="cb1-12"><a href="#cb1-12" tabindex="-1"></a>  <span class="at">Alpha   =</span> <span class="fu">ifelse</span>(<span class="fu">is.na</span>(rr_df<span class="sc">$</span>alpha),   <span class="st">&quot;n/a&quot;</span>, <span class="fu">sprintf</span>(<span class="st">&quot;%.2f&quot;</span>, rr_df<span class="sc">$</span>alpha)),</span>
+<span id="cb1-13"><a href="#cb1-13" tabindex="-1"></a>  <span class="at">Omega_h =</span> <span class="fu">ifelse</span>(<span class="fu">is.na</span>(rr_df<span class="sc">$</span>omega_h), <span class="st">&quot;n/a&quot;</span>, <span class="fu">sprintf</span>(<span class="st">&quot;%.2f&quot;</span>, rr_df<span class="sc">$</span>omega_h)),</span>
+<span id="cb1-14"><a href="#cb1-14" tabindex="-1"></a>  <span class="at">Omega_t =</span> <span class="fu">ifelse</span>(<span class="fu">is.na</span>(rr_df<span class="sc">$</span>omega_t), <span class="st">&quot;n/a&quot;</span>, <span class="fu">sprintf</span>(<span class="st">&quot;%.2f&quot;</span>, rr_df<span class="sc">$</span>omega_t)),</span>
+<span id="cb1-15"><a href="#cb1-15" tabindex="-1"></a>  <span class="at">stringsAsFactors =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb1-16"><a href="#cb1-16" tabindex="-1"></a><span class="fu">kable</span>(rel_df, <span class="at">row.names =</span> <span class="cn">FALSE</span>,</span>
+<span id="cb1-17"><a href="#cb1-17" tabindex="-1"></a>      <span class="at">col.names =</span> <span class="fu">c</span>(<span class="st">&quot;Scale&quot;</span>, <span class="st">&quot;Items&quot;</span>, <span class="st">&quot;N&quot;</span>, <span class="st">&quot;Alpha&quot;</span>, <span class="st">&quot;Omega h&quot;</span>, <span class="st">&quot;Omega total&quot;</span>),</span>
+<span id="cb1-18"><a href="#cb1-18" tabindex="-1"></a>      <span class="at">align =</span> <span class="fu">c</span>(<span class="st">&quot;l&quot;</span>, <span class="st">&quot;c&quot;</span>, <span class="st">&quot;c&quot;</span>, <span class="st">&quot;r&quot;</span>, <span class="st">&quot;r&quot;</span>, <span class="st">&quot;r&quot;</span>),</span>
+<span id="cb1-19"><a href="#cb1-19" tabindex="-1"></a>      <span class="at">caption =</span> <span class="st">&quot;Scale reliability statistics&quot;</span>)</span></code></pre></div>
 <table style="width:100%;">
 <caption>Scale reliability statistics</caption>
 <colgroup>
@@ -490,7 +492,7 @@ facts behind a retention decision.</p>
 <td align="left">dm_1</td>
 <td align="right">3.14</td>
 <td align="right">1.00</td>
-<td align="right">-0.51</td>
+<td align="right">0.69</td>
 <td align="right">0.05</td>
 <td align="right">0.10</td>
 <td align="right">0</td>
@@ -499,7 +501,7 @@ facts behind a retention decision.</p>
 <td align="left">dm_2</td>
 <td align="right">3.12</td>
 <td align="right">0.97</td>
-<td align="right">-0.46</td>
+<td align="right">0.71</td>
 <td align="right">0.05</td>
 <td align="right">0.07</td>
 <td align="right">0</td>
@@ -508,7 +510,7 @@ facts behind a retention decision.</p>
 <td align="left">dm_3</td>
 <td align="right">3.19</td>
 <td align="right">1.00</td>
-<td align="right">-0.51</td>
+<td align="right">0.70</td>
 <td align="right">0.06</td>
 <td align="right">0.08</td>
 <td align="right">0</td>
@@ -552,7 +554,7 @@ model.</p>
 <span id="cb4-11"><a href="#cb4-11" tabindex="-1"></a>)</span>
 <span id="cb4-12"><a href="#cb4-12" tabindex="-1"></a></span>
 <span id="cb4-13"><a href="#cb4-13" tabindex="-1"></a>validity <span class="ot">&lt;-</span> <span class="fu">validity_report</span>(published_loadings)</span>
-<span id="cb4-14"><a href="#cb4-14" tabindex="-1"></a><span class="fu">kable</span>(validity<span class="sc">$</span>reliability, <span class="at">digits =</span> <span class="dv">2</span>,</span>
+<span id="cb4-14"><a href="#cb4-14" tabindex="-1"></a><span class="fu">kable</span>(<span class="fu">as.data.frame</span>(validity), <span class="at">digits =</span> <span class="dv">2</span>,</span>
 <span id="cb4-15"><a href="#cb4-15" tabindex="-1"></a>      <span class="at">caption =</span> <span class="st">&quot;Composite reliability and average variance extracted&quot;</span>)</span></code></pre></div>
 <table>
 <caption>Composite reliability and average variance extracted</caption>

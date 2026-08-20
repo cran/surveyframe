@@ -35,8 +35,8 @@ instr <- sf_instrument("Demo Survey", components = list(cs, i1, i2, scale))
 
 cb <- codebook_report(instr)
 print(cb)
-nrow(cb$items_table)
-nrow(cb$scales_table)
+nrow(sf_items(cb))
+nrow(sf_scales(cb))
 }
 \seealso{
 \code{\link[=render_report]{render_report()}}

@@ -115,3 +115,39 @@ test_that("degenerate data keeps the 0.3.3 apa string, with no bracket", {
   expect_true(anyNA(pe$ci))
   expect_no_match(pe$apa, "\\[")
 })
+
+test_that("mann_whitney runner carries a Hodges-Lehmann shift estimate and CI", {
+  dat <- data.frame(
+    g = rep(c("a", "b"), each = 5),
+    o = c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
+  )
+  mw <- surveyframe:::sframe_run_mann_whitney(dat, c("g", "o"))
+  expect_true(is.numeric(mw$hl_shift))
+  expect_length(mw$hl_shift, 1)
+  expect_length(mw$hl_conf_int, 2)
+  expect_match(mw$apa, "Hodges-Lehmann shift = -?\\d+\\.\\d+")
+})
+
+test_that("wilcoxon_pair runner carries a pseudomedian estimate and CI", {
+  set.seed(4)
+  dat <- data.frame(x1 = rnorm(8, 3), x2 = rnorm(8, 3.6))
+  wx <- surveyframe:::sframe_run_wilcoxon_pair(dat, c("x1", "x2"))
+  expect_true(is.numeric(wx$pseudomedian))
+  expect_length(wx$pseudomedian, 1)
+  expect_length(wx$pseudomedian_conf_int, 2)
+  expect_match(wx$apa, "pseudomedian = -?\\d+\\.\\d+")
+})
+
+test_that("fisher runner carries an exact odds-ratio CI for a 2x2 table, guarded by simulate_p_value", {
+  dat <- data.frame(
+    a = rep(c("x", "y"), c(20, 20)),
+    b = c(rep("yes", 15), rep("no", 5), rep("yes", 6), rep("no", 14))
+  )
+  ft <- surveyframe:::sframe_run_fisher(dat, list(row = "a", column = "b"))
+  expect_length(ft$odds_ratio_conf_int, 2)
+
+  ft_sim <- surveyframe:::sframe_run_fisher(
+    dat, list(row = "a", column = "b"), options = list(simulate_p_value = TRUE)
+  )
+  expect_null(ft_sim$odds_ratio_conf_int)
+})

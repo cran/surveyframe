@@ -13,7 +13,7 @@ sframe_draw_mosaic(result, palette = c("web", "print"))
 \item{palette}{One of \code{"web"} or \code{"print"}. See \code{sframe_brand()}.}
 }
 \value{
-Invisibly \code{NULL}; called for its plotting side effect on the
+Invisibly \code{NULL}, called for its plotting side effect on the
 current graphics device.
 }
 \description{
@@ -21,7 +21,7 @@ Base-graphics mosaic plot (via \code{\link[graphics:mosaicplot]{graphics::mosaic
 existing base-graphics precedent in this file
 (\code{\link[=sframe_draw_likert_diverging]{sframe_draw_likert_diverging()}}) so it renders without ggplot2. An
 alternative view of the same crosstab data
-\code{sframe_plot_crosstab()} renders as a grouped bar; use whichever reads
+\code{sframe_plot_crosstab()} renders as a grouped bar. Use whichever reads
 better for the table's shape (mosaic scales better to unbalanced group
 sizes).
 }

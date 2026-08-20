@@ -8,7 +8,8 @@ sf_item(
   id,
   label,
   type = c("likert", "single_choice", "multiple_choice", "numeric", "text", "textarea",
-    "date", "matrix", "slider", "ranking", "rating", "section_break", "text_block"),
+    "date", "matrix", "slider", "ranking", "rating", "pairwise_comparison",
+    "criteria_weight", "section_break", "text_block"),
   required = FALSE,
   choice_set = NULL,
   scale_id = NULL,
@@ -16,6 +17,8 @@ sf_item(
   help = NULL,
   placeholder = NULL,
   matrix_items = NULL,
+  comparison_items = NULL,
+  comparison_scale = NULL,
   slider_min = NULL,
   slider_max = NULL,
   slider_step = NULL,
@@ -37,7 +40,8 @@ respondent.}
 \item{type}{Character. The response type. One of \code{"likert"},
 \code{"single_choice"}, \code{"multiple_choice"}, \code{"numeric"}, \code{"text"},
 \code{"textarea"}, \code{"date"}, \code{"matrix"}, \code{"slider"}, \code{"ranking"}, \code{"rating"},
-\code{"section_break"}, or \code{"text_block"}.}
+\code{"pairwise_comparison"}, \code{"criteria_weight"}, \code{"section_break"}, or
+\code{"text_block"}.}
 
 \item{required}{Logical. Whether the respondent must answer this item.}
 
@@ -53,6 +57,19 @@ respondent.}
 \item{placeholder}{Character or NULL. Placeholder text for text inputs.}
 
 \item{matrix_items}{Character vector or NULL. Row labels for \code{"matrix"} type.}
+
+\item{comparison_items}{Character vector or NULL. The things being compared
+or weighted, for \code{"pairwise_comparison"} and \code{"criteria_weight"} types.
+At least 2 entries, all distinct. A \code{"saaty"} pairwise item renders
+\code{n(n-1)/2} unordered pair rows, an \code{"influence"} item renders \code{n(n-1)}
+ordered rows, and a \code{"criteria_weight"} item renders one numeric input
+per entry. An advisory warning is raised above 7 items (\code{"saaty"}) or 6
+(\code{"influence"}), and above 10 the item is rejected.}
+
+\item{comparison_scale}{Character or NULL. For \code{"pairwise_comparison"}
+only. \code{"saaty"} (the default) gives the bipolar 1-9 importance scale used
+by AHP and ANP, while \code{"influence"} gives the unipolar 0-4 directed
+influence scale used by DEMATEL.}
 
 \item{slider_min}{Numeric or NULL. Minimum value for \code{"slider"} type.}
 

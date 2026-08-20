@@ -25,8 +25,8 @@ expected.}
 \item{submitted_at}{Character or NULL. The name of the column containing
 submission timestamps.}
 
-\item{meta_cols}{Character vector or NULL. Additional column names that are
-not item IDs but should be retained (for example, condition assignment or
+\item{meta_cols}{Character vector or NULL. Additional column names, outside
+the item IDs, to retain (for example, condition assignment or
 source URL).}
 
 \item{strict}{Logical. When \code{TRUE} (default), columns in the response data

@@ -1,7 +1,7 @@
 {
   "hash": {
     "algo": "sha256",
-    "value": "b6221976cb88be70a3c57df1b8e1034d10f6f20cc3995d47fea67b5dc11b9d3f"
+    "value": "c3df10ecd42713431378ed472d5f53d05294d48bc7f34256c12e017244603f69"
   },
   "version": "0.3.0",
   "meta": {
@@ -486,7 +486,7 @@
       "family": "measurement",
       "roles": {
         "model": [
-          "tourism_sem"
+          "tourism_pls"
         ]
       },
       "options": [],
@@ -921,6 +921,64 @@
             "id": "behavioural_intention",
             "items": ["bi_1", "bi_2"],
             "mode": "reflective"
+          }
+        ]
+      },
+      "structural": {
+        "paths": [
+          {
+            "from": "digital_marketing",
+            "to": "satisfaction"
+          },
+          {
+            "from": "service_quality",
+            "to": "satisfaction"
+          },
+          {
+            "from": "sustainability",
+            "to": "satisfaction"
+          },
+          {
+            "from": "satisfaction",
+            "to": "behavioural_intention"
+          }
+        ],
+        "covariances": [],
+        "indirect": []
+      },
+      "options": []
+    },
+    {
+      "id": "tourism_pls",
+      "label": "tourism_pls",
+      "type": "pls_sem",
+      "engine": "seminr",
+      "measurement": {
+        "constructs": [
+          {
+            "id": "digital_marketing",
+            "items": ["dm_1", "dm_2", "dm_3"],
+            "mode": "composite"
+          },
+          {
+            "id": "service_quality",
+            "items": ["sq_1", "sq_2", "sq_3"],
+            "mode": "composite"
+          },
+          {
+            "id": "sustainability",
+            "items": ["sus_1", "sus_2"],
+            "mode": "composite"
+          },
+          {
+            "id": "satisfaction",
+            "items": ["sat_1", "sat_2"],
+            "mode": "composite"
+          },
+          {
+            "id": "behavioural_intention",
+            "items": ["bi_1", "bi_2"],
+            "mode": "composite"
           }
         ]
       },

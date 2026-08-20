@@ -20,7 +20,7 @@ outlier_report(
 \code{NULL}, all numeric columns are used.}
 
 \item{method}{Outlier rule. \code{"zscore"} flags absolute z scores above
-\code{z_cut}; \code{"iqr"} flags values outside Tukey fences; \code{"mahalanobis"}
+\code{z_cut}, \code{"iqr"} flags values outside Tukey fences, and \code{"mahalanobis"}
 flags rows above the chi-square cutoff for the selected variables.}
 
 \item{z_cut}{Numeric cutoff for \code{"zscore"}. Defaults to \code{3}.}

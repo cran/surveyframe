@@ -95,7 +95,7 @@ dim(responses)
 
 ```{r screening}
 mr <- missing_data_report(responses, instr)
-kable(mr$item_missing, digits = 2,
+kable(as.data.frame(mr), digits = 2,
       col.names = c("Variable", "Missing (n)", "Missing (%)", "Valid (n)"),
       caption = "Item-level missingness")
 
@@ -105,10 +105,12 @@ qr <- quality_report(
   submitted_at  = "submitted_at",
   started_at    = "started_at"
 )
+# as.data.frame() gives the summary row.
+qr_summary <- as.data.frame(qr)
 quality_summary <- data.frame(
   Metric = c("Respondents", "Items", "Flagged for review", "Flag rate"),
-  Value  = c(qr$summary$n_respondents, qr$summary$n_items, qr$summary$n_flagged,
-             sprintf("%.1f%%", 100 * qr$summary$flag_rate)),
+  Value  = c(qr_summary$n_respondents, qr_summary$n_items, qr_summary$n_flagged,
+             sprintf("%.1f%%", 100 * qr_summary$flag_rate)),
   stringsAsFactors = FALSE
 )
 kable(quality_summary, align = c("l", "r"), caption = "Quality screening summary")
@@ -162,7 +164,7 @@ fill each role. A correlation expects `x` and `y`. A regression expects
 and an `outcome`.
 
 ```{r plan}
-instr$analysis_plan <- list(
+sf_plan(instr) <- list(
   list(id = "RQ1",
        research_question = "Is digital marketing perception associated with satisfaction?",
        family = "association", method = "correlation_pearson",

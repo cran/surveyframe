@@ -35,7 +35,7 @@ related batch of items (a satisfaction scale's 2-3 items, say) across
 several charts instead of showing them the way a Likert matrix or a
 typical multi-item satisfaction grid is reported: one grouped chart, one
 diverging bar per item, sharing an x scale and a legend. Applies only
-when every item in the scale shares the same choice set; scales that mix
+when every item in the scale shares the same choice set. Scales that mix
 response scales fall back to one chart per item.
 }
 \seealso{

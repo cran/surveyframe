@@ -8,6 +8,12 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 <!-- badges: end -->
 
+> **Just here to verify a `.sframe` file's integrity hash or read its
+> amendment log?**
+> **[Verify a file now](https://mohammedalisharafuddin.github.io/surveyframe/verify/)**.
+> No R, no install; it runs entirely in your browser and nothing is
+> uploaded.
+
 `surveyframe` is a research-design-first survey package for R. Most survey tools
 collect answers and return counts. `surveyframe` begins at the research design
 and carries it through to a written results report.
@@ -59,9 +65,14 @@ packages when you want to fit the generated CFA, CB-SEM, or PLS-SEM models.
 
 ## Already have data?
 
-If you have collected responses in a CSV or Google Sheet and want to start
-from the analysis step, build a minimal instrument that matches your column
-names and load the data directly:
+`surveyframe` is not a replacement for whatever collection tool your
+institution already has approved -- Qualtrics, REDCap, Google Forms, or a
+paper form typed up afterward. It reads response data as a plain CSV or
+`data.frame` from any of them: export from your collection tool, rename
+columns to match your instrument's item IDs (or build the instrument to
+match the export), and load it. If you have collected responses in a CSV
+or Google Sheet and want to start from the analysis step, build a minimal
+instrument that matches your column names and load the data directly:
 
 ```r
 library(surveyframe)
@@ -144,13 +155,16 @@ instr <- sf_instrument(
   )
 )
 
-instr <- validate_sframe(instr)
 write_sframe(instr, tempfile(fileext = ".sframe"))
+
+# See the instrument as a survey a respondent would fill in:
+export_static_survey(instr, open = FALSE)
 ```
 
 `write_sframe()` validates the instrument and writes the validated object,
 including the validation flag, the analysis plan, and any saved model
-specifications.
+specifications. `export_static_survey()` renders it as a self-contained
+HTML survey, the same function covered in "Visual tools" below.
 
 ## Import and score
 
@@ -291,9 +305,36 @@ and examples avoid opening browsers.
 
 ## Roadmap
 
-Small-sample inference helpers, validated by a simulation study of survey
-methods, are planned for v0.4. Multi-criteria decision-making methods
-(MCDM) and DEMATEL are planned for v0.5.
+Small-sample inference, multi-criteria decision analysis, and text and
+open-ended response analysis all arrive in 0.4.0. Small-sample and MCDM
+were once planned as two releases, v0.4 and v0.5, and text analysis had at
+one stage its own working label before it, too, was folded into 0.4.0.
+There is no 0.3.5 and no 0.5.x.
+
+0.4.0 adds small-sample helpers validated by a simulation study
+(Hodges-Lehmann, paired-Wilcoxon pseudomedian, exact Fisher odds-ratio
+intervals, Firth logistic regression); 10 MCDM methods (TOPSIS, AHP, ANP,
+DEMATEL, VIKOR, MOORA, SMART, WASPAS, PROMETHEE, ELECTRE) with 2 new
+question types for collecting judgements, weight-sensitivity analysis, and
+declared conjoint designs; a 9-method text and open-ended response
+analysis family (term/n-gram frequency, keyword in context, co-occurrence
+and co-occurrence networks, sentiment, document-feature matrices, and
+topic modelling via LDA or a structural topic model); and a
+disclosed-amendment and Git-linked provenance mechanism alongside the
+existing `.sframe` integrity hash. See `NEWS.md` for the full detail on
+each.
+
+**After 0.4.0, no new capability theme for at least one release cycle.**
+Four themes landing in one release is already more than this project
+should repeat; 0.4.1 and 0.4.2 are stabilisation and bug-fix releases
+against what 0.4.0 shipped, not a vehicle for new method families. If
+that changes, it will be stated here first, not discovered from a diff.
+
+**If this package is ever archived by CRAN**, the GitHub repository
+remains the canonical source: `remotes::install_github("MohammedAliSharafuddin/surveyframe")`.
+Each CRAN release is also deposited to Zenodo with its own DOI, so a
+specific version stays citable and retrievable independently of both
+CRAN's and GitHub's continued availability.
 
 ## Citation
 

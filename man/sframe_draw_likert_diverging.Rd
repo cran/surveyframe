@@ -18,7 +18,7 @@ sframe_draw_likert_diverging(
 \item{palette}{One of \code{"web"} or \code{"print"}. See \code{sframe_brand()}.}
 }
 \value{
-Invisibly \code{NULL}; called for its plotting side effect on the
+Invisibly \code{NULL}, called for its plotting side effect on the
 current graphics device.
 }
 \description{
@@ -29,7 +29,7 @@ including from the Quarto report template, which runs in its own
 \code{counts} is a named numeric vector in scale order (names are the response
 labels, e.g. "Strongly disagree" .. "Strongly agree"), not sorted
 alphabetically or by frequency. The middle category of an odd-length
-scale is treated as neutral and split evenly across the zero line; an
+scale is treated as neutral and split evenly across the zero line. An
 even-length scale has no neutral category. This is the standard
 survey-report convention (Pew Research, SurveyMonkey) for visualising an
 ordered agree/disagree scale, and reads in one glance which way opinion

@@ -353,8 +353,8 @@ div.sourceCode { overflow: visible; }
 pre.sourceCode a:empty { display: none; }
 #TOC a { display: inline-block; min-height: 24px; }
 </style>
-<p><code>surveyframe</code> has three graphical entry points. They are
-kept separate in v0.3, and each maps onto a part of the research-design
+<p><code>surveyframe</code> has three graphical entry points, kept
+separate on purpose, each mapping onto a part of the research-design
 workflow.</p>
 <ul>
 <li><code>launch_builder()</code> opens SurveyBuilder, a standalone
@@ -373,7 +373,11 @@ for an instrument and response data that already exist.</li>
 <div id="input-types-demo" class="section level2">
 <h2>Input-types demo</h2>
 <p>The input-types demo covers the main controls available in
-SurveyBuilder and SurveyStudio.</p>
+SurveyBuilder and SurveyStudio. The two decision item types,
+<code>pairwise_comparison</code> and <code>criteria_weight</code>, are
+not part of this demo. They get their own worked example in the MCDM
+vignette, because they only make sense alongside a declared decision
+method and a set of alternatives.</p>
 <div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a>demo      <span class="ot">&lt;-</span> <span class="fu">sframe_input_types_demo_data</span>()</span>
 <span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a>instr     <span class="ot">&lt;-</span> demo<span class="sc">$</span>instrument</span>
 <span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a>responses <span class="ot">&lt;-</span> demo<span class="sc">$</span>responses</span>

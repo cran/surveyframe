@@ -63,7 +63,19 @@ sframe_label_lookup <- function(instrument) {
 # so every table shape (frequency, crosstab, group comparison, regression
 # coefficients, and so on) reads in respondent-facing language without
 # touching each runner's own table-building code.
-sframe_humanize_table <- function(tbl, lookup) {
+#
+# `exclude_cols` opts specific columns (by their pre-relabel name) out of
+# cell-value substitution, for a column whose values are free text rather
+# than coded values (a text-family result's `term`/`term_a`/`match`
+# column): a respondent's own word can otherwise collide with an unrelated
+# item's choice CODE anywhere in the instrument and get silently swapped
+# for that item's choice LABEL (found in review_050; a comment containing
+# "pool" read back as "Pool area" because some other item happened to code
+# a choice "pool"). Column names and row names are still relabelled
+# normally; only cell values in an excluded column are left alone, so a
+# genuinely coded column on the same table (a `group` column, say) keeps
+# humanising as before.
+sframe_humanize_table <- function(tbl, lookup, exclude_cols = character(0)) {
   if (!is.data.frame(tbl) || nrow(tbl) == 0 || length(lookup) == 0) {
     return(tbl)
   }
@@ -71,12 +83,14 @@ sframe_humanize_table <- function(tbl, lookup) {
     hit <- lookup[x]
     ifelse(is.na(hit), x, unname(hit))
   }
+  orig_names <- names(tbl)
   rn <- rownames(tbl)
   if (!is.null(rn) && !identical(rn, as.character(seq_len(nrow(tbl))))) {
     rownames(tbl) <- relabel(rn)
   }
   names(tbl) <- relabel(names(tbl))
   char_cols <- vapply(tbl, is.character, logical(1))
+  char_cols[orig_names %in% exclude_cols] <- FALSE
   tbl[char_cols] <- lapply(tbl[char_cols], relabel)
   tbl
 }
