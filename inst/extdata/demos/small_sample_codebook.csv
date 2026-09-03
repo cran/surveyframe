@@ -1,0 +1,6 @@
+"item_id","item_label","type","scale_id","value","value_label"
+"format","How did you attend?","single_choice",,"in_person","In person"
+"format","How did you attend?","single_choice",,"online","Online"
+"sessions_attended","How many sessions did you attend?","numeric",,,
+"will_return","Will you attend next year?","single_choice",,"no","No"
+"will_return","Will you attend next year?","single_choice",,"yes","Yes"

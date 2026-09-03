@@ -128,6 +128,30 @@ test_that("multiple amendments accumulate as an ordered log, not an overwrite", 
   expect_equal(log$reason_text, c("fix 1", "fix 2"))
 })
 
+test_that("a second amendment still accumulates when the 'after' object was not derived from the amended 'previous'", {
+  # The existing accumulation test above always passes the same object as
+  # both previous and instrument for the follow-up call (amend_sframe(a1,
+  # a1, ...)), so instrument$amendments already carries the prior entry in
+  # by construction. That shape never exercises the actual risk: a caller
+  # (SurveyStudio's Amendments screen, or any external tool such as the
+  # SurveyBuilder JS app) supplying a genuinely independent "after" object
+  # that was never derived from the amended "previous" and so does not
+  # carry its amendment history forward on its own. Found live: a second
+  # amendment applied through SurveyStudio silently replaced the first
+  # log entry instead of appending to it, because amend_sframe() based the
+  # new log on instrument$amendments (the "after" object's own, absent,
+  # history) rather than previous$amendments (the actual prior history).
+  instr <- amend_instr()
+  a1 <- amend_sframe(instr, instr, reason_code = "data_correction", reason_text = "fix 1")
+  expect_equal(nrow(amendment_log(a1)), 1)
+
+  fresh_after <- amend_instr_revised()  # built from scratch, carries no amendments
+  a2 <- amend_sframe(a1, fresh_after, reason_code = "bot_removal", reason_text = "fix 2")
+  log <- amendment_log(a2)
+  expect_equal(nrow(log), 2)
+  expect_equal(log$reason_text, c("fix 1", "fix 2"))
+})
+
 test_that("amendments survive a write_sframe()/read_sframe() round trip", {
   instr <- amend_instr()
   revised <- amend_instr_revised()

@@ -833,12 +833,36 @@ sem_lavaan_syntax <- function(model, instrument = NULL, standardised = TRUE) {
   )
   lines <- c(lines, vapply(constructs, sframe_lavaan_indicator_line, character(1)), "")
 
+  # An indirect effect multiplies parameter labels, so every path it walks must
+  # carry that label in the structural block. Without it lavaan parses the
+  # syntax and then rejects the model with "unknown label(s)".
+  sframe_edge_key <- function(from, to) paste(from, to, sep = "->")
+  labelled_edges <- unique(unlist(lapply(indirect, function(ind) {
+    nodes <- c(ind$from, ind$through, ind$to)
+    c(sframe_edge_key(utils::head(nodes, -1), utils::tail(nodes, -1)),
+      sframe_edge_key(ind$from, ind$to))
+  })))
+  # A path the user labelled keeps that label. A path an indirect effect walks
+  # gains a derived one. Every other path is left bare, so a model without
+  # indirect effects generates exactly what it did before.
+  sframe_path_label <- function(path) {
+    safe <- sframe_lavaan_safe_label(path$label)
+    if (!is.null(safe)) {
+      return(safe)
+    }
+    key <- sframe_edge_key(path$from, path$to)
+    if (key %in% labelled_edges) {
+      return(gsub("[^A-Za-z0-9_]", "_", key))
+    }
+    NULL
+  }
+
   if (length(paths) > 0) {
     lines <- c(lines, "# Structural paths")
     incoming <- split(paths, vapply(paths, function(p) p$to, character(1)))
     for (target in names(incoming)) {
       rhs <- vapply(incoming[[target]], function(path) {
-        safe <- sframe_lavaan_safe_label(path$label)
+        safe <- sframe_path_label(path)
         if (!is.null(safe)) {
           paste0(safe, "*", path$from)
         } else {
@@ -867,11 +891,10 @@ sem_lavaan_syntax <- function(model, instrument = NULL, standardised = TRUE) {
         hit <- paths[vapply(paths, function(path) {
           identical(edge, paste(path$from, path$to, sep = "->"))
         }, logical(1))]
-        if (length(hit) && !is.null(hit[[1]]$label) && nzchar(hit[[1]]$label)) {
-          sframe_lavaan_safe_label(hit[[1]]$label)
-        } else {
-          gsub("[^A-Za-z0-9_]", "_", edge)
-        }
+        # The same function the structural block used, so the label written on
+        # the path and the label multiplied here cannot diverge.
+        lab <- if (length(hit)) sframe_path_label(hit[[1]]) else NULL
+        lab %||% gsub("[^A-Za-z0-9_]", "_", edge)
       }, character(1))
       effect_name <- sframe_lavaan_safe_label(ind$label) %||%
         paste0("indirect_", sframe_lavaan_path_label(ind$from, ind$through, ind$to))
@@ -880,10 +903,11 @@ sem_lavaan_syntax <- function(model, instrument = NULL, standardised = TRUE) {
       direct <- paths[vapply(paths, function(path) {
         identical(direct_key, paste(path$from, path$to, sep = "->"))
       }, logical(1))]
-      if (length(direct) && !is.null(direct[[1]]$label) && nzchar(direct[[1]]$label)) {
+      direct_label <- if (length(direct)) sframe_path_label(direct[[1]]) else NULL
+      if (!is.null(direct_label)) {
         lines <- c(lines,
           paste0("total_", ind$from, "_", ind$to, " := ",
-                 sframe_lavaan_safe_label(direct[[1]]$label), " + ", effect_name))
+                 direct_label, " + ", effect_name))
       }
     }
   }

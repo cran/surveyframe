@@ -1,3 +1,57 @@
+# surveyframe 0.4.1
+
+## New
+
+* **A demo library.** Twenty-two small demos, each showing one thing, in
+  `sframe_demos()`. Load one with `sframe_demo("two_group")`, or get a
+  Quarto notebook to edit with `sframe_demo_qmd("two_group")`. Together they
+  cover every analysis method and every question type.
+* **`vignette("learn-by-example")`.** Pick the demo that matches the data you
+  have, and follow it from questionnaire to report.
+* **`sframe_export_labelled()`** writes SPSS `.sav` or Stata `.dta` with the
+  question wording and response options attached, so variables arrive
+  labelled rather than as codes.
+* Each demo also ships a codebook of variable and value labels, and the
+  results surveyframe produced, so you can check the numbers in other
+  software.
+
+## Reports are now reproducible
+
+`run_analysis_plan()` gains a `seed` argument, set by default. Bootstrap
+confidence intervals and the EFA parallel analysis previously drew from the
+random stream unseeded, so the same data gave a slightly different interval
+on every run.
+
+**Confidence intervals will move once** when you re-run an older analysis.
+Test statistics and p values are unaffected. Use `seed = NULL` for the
+previous behaviour.
+
+`render_report()` now says which engine produced the file, Quarto or the
+built-in writer, in a message, in an `engine` attribute, and in the report
+itself beside the instrument hash and the seed.
+
+## Bug fixes
+
+* **The Google Sheets collector could corrupt collected data.** Adding a
+  question mid-study left the sheet's header stale while new rows used the
+  new order, so values landed under the wrong headings with no error. The
+  collector now matches columns by name.
+* **Branching rules using `%in%` with more than one value never worked in an
+  exported survey.** The question stayed hidden whatever the respondent
+  answered. Present since 0.3.0.
+* **`sem_lavaan_syntax()` produced a mediation model lavaan could not fit.**
+  Indirect effects referred to path labels that were never written.
+* Straight-lining no longer flags scales shorter than four items, where
+  identical answers are normal rather than careless. `quality_report()` gains
+  `straightline_min_items`. When no scale is long enough to check, the report
+  now says so instead of omitting the chart silently.
+* Reading a response file with `read.csv()` no longer mangles matrix columns
+  whose labels contain spaces. Use `check.names = FALSE`.
+
+## Dependencies
+
+`haven` and `V8` join Suggests, both optional.
+
 # surveyframe 0.4.0
 
 A major release. It adds multi-criteria decision analysis (10 methods),

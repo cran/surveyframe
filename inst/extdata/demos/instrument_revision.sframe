@@ -1,0 +1,164 @@
+{
+  "sframe_format": "1.0",
+  "hash": {
+    "algo": "sha256",
+    "value": "3006061d3a434e0d6cadfc2d696059b67db95801c80ca9bda6fada0373f57094"
+  },
+  "version": "1.1.0",
+  "meta": {
+    "title": "Event feedback",
+    "version": "1.1.0",
+    "description": "The shortest complete surveyframe study: 4 questions, 1 plan.",
+    "authors": null,
+    "languages": "en",
+    "validated": true,
+    "created_at": "2026-08-28T10:20:39Z"
+  },
+  "items": [
+    {
+      "id": "attendee_type",
+      "label": "Have you attended this event before?",
+      "type": "single_choice",
+      "required": true,
+      "choice_set": "attendee",
+      "reverse": false
+    },
+    {
+      "id": "age",
+      "label": "How old are you?",
+      "type": "numeric",
+      "required": false,
+      "reverse": false
+    },
+    {
+      "id": "attended_on",
+      "label": "Which day did you attend?",
+      "type": "date",
+      "required": false,
+      "reverse": false,
+      "date_min": "2026-06-01",
+      "date_max": "2026-06-03"
+    },
+    {
+      "id": "optional_intro",
+      "label": "A few optional questions",
+      "type": "section_break",
+      "required": false,
+      "reverse": false,
+      "section_intro": "These help us plan next year. Skip any you prefer to."
+    },
+    {
+      "id": "why_ask",
+      "label": "We ask so we can improve the programme.",
+      "type": "text_block",
+      "required": false,
+      "reverse": false
+    },
+    {
+      "id": "suggestion",
+      "label": "What is the single thing you would change about next year?",
+      "type": "text",
+      "required": false,
+      "reverse": false
+    }
+  ],
+  "choices": [
+    {
+      "id": "attendee",
+      "values": ["first_time", "returning"],
+      "labels": ["This is my first time", "I have attended before"],
+      "allow_other": false,
+      "randomise": false
+    }
+  ],
+  "scales": [],
+  "branching": [],
+  "checks": [],
+  "analysis_plan": [
+    {
+      "id": "RQ1",
+      "research_question": "Who came to the event?",
+      "family": "descriptive",
+      "method": "frequency",
+      "roles": {
+        "variables": "attendee_type"
+      },
+      "options": [],
+      "decision_rule": "",
+      "reporting_references": [],
+      "status": "draft",
+      "requires_data": true,
+      "test": "frequency",
+      "interpretation": "",
+      "citations": []
+    },
+    {
+      "id": "RQ2",
+      "research_question": "How old are attendees?",
+      "family": "descriptive",
+      "method": "descriptives",
+      "roles": {
+        "variables": "age"
+      },
+      "options": [],
+      "decision_rule": "",
+      "reporting_references": [],
+      "status": "draft",
+      "requires_data": true,
+      "test": "descriptives",
+      "interpretation": "",
+      "citations": []
+    },
+    {
+      "id": "RQ3",
+      "research_question": "How complete is the data?",
+      "family": "data_quality",
+      "method": "missing_data",
+      "roles": {
+        "variables": [
+          "age",
+          "suggestion"
+        ]
+      },
+      "options": [],
+      "decision_rule": "",
+      "reporting_references": [],
+      "status": "draft",
+      "requires_data": true,
+      "test": "missing_data",
+      "interpretation": "",
+      "citations": []
+    },
+    {
+      "id": "RQ4",
+      "research_question": "Are there inattentive responses?",
+      "family": "data_quality",
+      "method": "quality",
+      "roles": [],
+      "options": [],
+      "decision_rule": "",
+      "reporting_references": [],
+      "status": "draft",
+      "requires_data": true,
+      "test": "quality",
+      "interpretation": "",
+      "citations": []
+    }
+  ],
+  "models": [],
+  "render": [],
+  "amendments": [
+    {
+      "timestamp": "2026-08-28T10:20:56Z",
+      "reason_code": "instrument_revision",
+      "reason_text": "Reworded the open question after a face-validity pass: readers were listing several changes at once, so the answers were hard to code.",
+      "tier": "design",
+      "author": "M. A. Sharafuddin",
+      "deviation_report": "The open question moved from an unbounded prompt to a single-change prompt. No analysis block changed. Responses collected before this amendment remain analysable and are reported separately.",
+      "signoff": "none",
+      "previous_hash": "5cd4bc1db8e47bb2e26719848cd4a54ed9fbd534321d294a04cc78c7d3f65b6a",
+      "new_hash": "1d7178f79a84bf9161f0e24af5bd044f4729711ccc8bf669ebe5bb774623dddb",
+      "changed_fields": ["version", "meta", "items"]
+    }
+  ]
+}

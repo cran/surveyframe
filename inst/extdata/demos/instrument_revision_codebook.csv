@@ -1,0 +1,6 @@
+"item_id","item_label","type","scale_id","value","value_label"
+"attendee_type","Have you attended this event before?","single_choice",,"first_time","This is my first time"
+"attendee_type","Have you attended this event before?","single_choice",,"returning","I have attended before"
+"age","How old are you?","numeric",,,
+"attended_on","Which day did you attend?","date",,,
+"suggestion","What is the single thing you would change about next year?","text",,,

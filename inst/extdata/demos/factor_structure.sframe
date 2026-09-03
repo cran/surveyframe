@@ -1,0 +1,174 @@
+{
+  "sframe_format": "1.0",
+  "hash": {
+    "algo": "sha256",
+    "value": "5d0029b9b68b01d53f844ab9813dd5977ae5dca0901cc734701a6770bbe55488"
+  },
+  "version": "1.0.0",
+  "meta": {
+    "title": "Two things attendees judge",
+    "version": "1.0.0",
+    "description": "Eight items, 2 factors, and whether the data supports that.",
+    "authors": null,
+    "languages": "en",
+    "validated": true,
+    "created_at": "2026-08-28T10:20:48Z"
+  },
+  "items": [
+    {
+      "id": "org_1",
+      "label": "The event ran to time.",
+      "type": "likert",
+      "required": false,
+      "choice_set": "agree5",
+      "scale_id": "organisation",
+      "reverse": false
+    },
+    {
+      "id": "org_2",
+      "label": "It was easy to find my way around.",
+      "type": "likert",
+      "required": false,
+      "choice_set": "agree5",
+      "scale_id": "organisation",
+      "reverse": false
+    },
+    {
+      "id": "org_3",
+      "label": "Staff were helpful.",
+      "type": "likert",
+      "required": false,
+      "choice_set": "agree5",
+      "scale_id": "organisation",
+      "reverse": false
+    },
+    {
+      "id": "org_4",
+      "label": "The venue suited the event.",
+      "type": "likert",
+      "required": false,
+      "choice_set": "agree5",
+      "scale_id": "organisation",
+      "reverse": false
+    },
+    {
+      "id": "con_1",
+      "label": "The sessions were relevant to my work.",
+      "type": "likert",
+      "required": false,
+      "choice_set": "agree5",
+      "scale_id": "content",
+      "reverse": false
+    },
+    {
+      "id": "con_2",
+      "label": "The material went deep enough.",
+      "type": "likert",
+      "required": false,
+      "choice_set": "agree5",
+      "scale_id": "content",
+      "reverse": false
+    },
+    {
+      "id": "con_3",
+      "label": "The speakers knew their subject.",
+      "type": "likert",
+      "required": false,
+      "choice_set": "agree5",
+      "scale_id": "content",
+      "reverse": false
+    },
+    {
+      "id": "con_4",
+      "label": "The handouts were useful.",
+      "type": "likert",
+      "required": false,
+      "choice_set": "agree5",
+      "scale_id": "content",
+      "reverse": false
+    }
+  ],
+  "choices": [
+    {
+      "id": "agree5",
+      "values": [1, 2, 3, 4, 5],
+      "labels": ["Strongly disagree", "Disagree", "Neither agree nor disagree", "Agree", "Strongly agree"],
+      "allow_other": false,
+      "randomise": false
+    }
+  ],
+  "scales": [
+    {
+      "id": "organisation",
+      "label": "Perceived organisation",
+      "items": ["org_1", "org_2", "org_3", "org_4"],
+      "method": "mean",
+      "min_valid": null
+    },
+    {
+      "id": "content",
+      "label": "Perceived content quality",
+      "items": ["con_1", "con_2", "con_3", "con_4"],
+      "method": "mean",
+      "min_valid": null
+    }
+  ],
+  "branching": [],
+  "checks": [],
+  "analysis_plan": [
+    {
+      "id": "RQ1",
+      "research_question": "Is this data suitable for factor analysis?",
+      "family": "measurement",
+      "method": "efa_readiness",
+      "roles": {
+        "items": [
+          "org_1",
+          "org_2",
+          "org_3",
+          "org_4",
+          "con_1",
+          "con_2",
+          "con_3",
+          "con_4"
+        ]
+      },
+      "options": [],
+      "decision_rule": "",
+      "reporting_references": [],
+      "status": "draft",
+      "requires_data": true,
+      "test": "efa_readiness",
+      "interpretation": "",
+      "citations": []
+    },
+    {
+      "id": "RQ2",
+      "research_question": "How many factors, and which items load where?",
+      "family": "measurement",
+      "method": "efa_solution",
+      "roles": {
+        "items": [
+          "org_1",
+          "org_2",
+          "org_3",
+          "org_4",
+          "con_1",
+          "con_2",
+          "con_3",
+          "con_4"
+        ]
+      },
+      "options": [],
+      "decision_rule": "",
+      "reporting_references": [],
+      "status": "draft",
+      "requires_data": true,
+      "test": "efa_solution",
+      "interpretation": "",
+      "citations": []
+    }
+  ],
+  "models": [],
+  "render": []
+}

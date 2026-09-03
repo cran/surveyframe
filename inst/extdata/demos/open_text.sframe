@@ -1,0 +1,234 @@
+{
+  "sframe_format": "1.0",
+  "hash": {
+    "algo": "sha256",
+    "value": "d73d4ae885a9ba3d3dd32bce3e5a6883af09d413164476a1d36480d2cbc73f1c"
+  },
+  "version": "1.0.0",
+  "meta": {
+    "title": "What worked, and what to change",
+    "version": "1.0.0",
+    "description": "Two open questions, and the 9 things surveyframe can do with them.",
+    "authors": null,
+    "languages": "en",
+    "validated": true,
+    "created_at": "2026-08-28T10:20:51Z"
+  },
+  "items": [
+    {
+      "id": "format",
+      "label": "How did you attend?",
+      "type": "single_choice",
+      "required": true,
+      "choice_set": "fmt",
+      "reverse": false
+    },
+    {
+      "id": "what_worked",
+      "label": "What worked well?",
+      "type": "textarea",
+      "required": false,
+      "reverse": false
+    },
+    {
+      "id": "what_to_improve",
+      "label": "What should we change?",
+      "type": "textarea",
+      "required": false,
+      "reverse": false
+    }
+  ],
+  "choices": [
+    {
+      "id": "fmt",
+      "values": ["in_person", "online"],
+      "labels": ["In person", "Online"],
+      "allow_other": false,
+      "randomise": false
+    }
+  ],
+  "scales": [],
+  "branching": [],
+  "checks": [],
+  "analysis_plan": [
+    {
+      "id": "RQ1",
+      "research_question": "Which words come up most often?",
+      "family": "text",
+      "method": "term_freq",
+      "roles": {
+        "item": "what_worked"
+      },
+      "options": [],
+      "decision_rule": "",
+      "reporting_references": [],
+      "status": "draft",
+      "requires_data": true,
+      "test": "term_freq",
+      "interpretation": "",
+      "citations": []
+    },
+    {
+      "id": "RQ2",
+      "research_question": "And which pairs of words?",
+      "family": "text",
+      "method": "ngram_freq",
+      "roles": {
+        "item": "what_worked"
+      },
+      "options": [],
+      "decision_rule": "",
+      "reporting_references": [],
+      "status": "draft",
+      "requires_data": true,
+      "test": "ngram_freq",
+      "interpretation": "",
+      "citations": []
+    },
+    {
+      "id": "RQ3",
+      "research_question": "How is a key word actually used?",
+      "family": "text",
+      "method": "term_context",
+      "roles": {
+        "item": "what_worked"
+      },
+      "options": {
+        "term": "sessions"
+      },
+      "decision_rule": "",
+      "reporting_references": [],
+      "status": "draft",
+      "requires_data": true,
+      "test": "term_context",
+      "interpretation": "",
+      "citations": []
+    },
+    {
+      "id": "RQ4",
+      "research_question": "Which words appear together?",
+      "family": "text",
+      "method": "co_occurrence",
+      "roles": {
+        "item": "what_worked"
+      },
+      "options": [],
+      "decision_rule": "",
+      "reporting_references": [],
+      "status": "draft",
+      "requires_data": true,
+      "test": "co_occurrence",
+      "interpretation": "",
+      "citations": []
+    },
+    {
+      "id": "RQ5",
+      "research_question": "Do in-person and online attendees say different things?",
+      "family": "text",
+      "method": "term_freq",
+      "roles": {
+        "item": "what_to_improve",
+        "group": "format"
+      },
+      "options": [],
+      "decision_rule": "",
+      "reporting_references": [],
+      "status": "draft",
+      "requires_data": true,
+      "test": "term_freq",
+      "interpretation": "",
+      "citations": []
+    },
+    {
+      "id": "RQ6",
+      "research_question": "Which words cluster together?",
+      "family": "text",
+      "method": "co_occurrence_network",
+      "roles": {
+        "item": "what_worked"
+      },
+      "options": [],
+      "decision_rule": "",
+      "reporting_references": [],
+      "status": "draft",
+      "requires_data": true,
+      "test": "co_occurrence_network",
+      "interpretation": "",
+      "citations": []
+    },
+    {
+      "id": "RQ7",
+      "research_question": "Is the tone positive or negative?",
+      "family": "text",
+      "method": "tidy_sentiment",
+      "roles": {
+        "item": "what_to_improve"
+      },
+      "options": [],
+      "decision_rule": "",
+      "reporting_references": [],
+      "status": "draft",
+      "requires_data": true,
+      "test": "tidy_sentiment",
+      "interpretation": "",
+      "citations": []
+    },
+    {
+      "id": "RQ8",
+      "research_question": "What does a document-feature matrix show?",
+      "family": "text",
+      "method": "quanteda_dfm",
+      "roles": {
+        "item": "what_worked"
+      },
+      "options": [],
+      "decision_rule": "",
+      "reporting_references": [],
+      "status": "draft",
+      "requires_data": true,
+      "test": "quanteda_dfm",
+      "interpretation": "",
+      "citations": []
+    },
+    {
+      "id": "RQ9",
+      "research_question": "What topics are people writing about?",
+      "family": "text",
+      "method": "topic_model_lda",
+      "roles": {
+        "item": "what_to_improve"
+      },
+      "options": {
+        "k": 2
+      },
+      "decision_rule": "",
+      "reporting_references": [],
+      "status": "draft",
+      "requires_data": true,
+      "test": "topic_model_lda",
+      "interpretation": "",
+      "citations": []
+    },
+    {
+      "id": "RQ10",
+      "research_question": "The same question with a structural topic model.",
+      "family": "text",
+      "method": "stm_topics",
+      "roles": {
+        "item": "what_to_improve"
+      },
+      "options": {
+        "k": 2
+      },
+      "decision_rule": "",
+      "reporting_references": [],
+      "status": "draft",
+      "requires_data": true,
+      "test": "stm_topics",
+      "interpretation": "",
+      "citations": []
+    }
+  ],
+  "models": [],
+  "render": []
+}

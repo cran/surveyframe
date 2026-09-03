@@ -1,0 +1,140 @@
+{
+  "sframe_format": "1.0",
+  "hash": {
+    "algo": "sha256",
+    "value": "76790808c0f7f2af6fe9e71af8cc6b5f95bb0a0ee62cbc65b26e722be55575ff"
+  },
+  "version": "1.0.0",
+  "meta": {
+    "title": "Was the event well organised?",
+    "version": "1.0.0",
+    "description": "One 4-item scale, and what reliability analysis says about it.",
+    "authors": null,
+    "languages": "en",
+    "validated": true,
+    "created_at": "2026-08-28T10:20:40Z"
+  },
+  "items": [
+    {
+      "id": "org_1",
+      "label": "The event ran to time.",
+      "type": "likert",
+      "required": false,
+      "choice_set": "agree5",
+      "scale_id": "organisation",
+      "reverse": false
+    },
+    {
+      "id": "org_2",
+      "label": "It was easy to find my way around.",
+      "type": "likert",
+      "required": false,
+      "choice_set": "agree5",
+      "scale_id": "organisation",
+      "reverse": false
+    },
+    {
+      "id": "org_3",
+      "label": "Staff were helpful when I had a question.",
+      "type": "likert",
+      "required": false,
+      "choice_set": "agree5",
+      "scale_id": "organisation",
+      "reverse": false
+    },
+    {
+      "id": "org_4",
+      "label": "I struggled to work out where to go.",
+      "type": "likert",
+      "required": false,
+      "choice_set": "agree5",
+      "scale_id": "organisation",
+      "reverse": true
+    }
+  ],
+  "choices": [
+    {
+      "id": "agree5",
+      "values": [1, 2, 3, 4, 5],
+      "labels": ["Strongly disagree", "Disagree", "Neither agree nor disagree", "Agree", "Strongly agree"],
+      "allow_other": false,
+      "randomise": false
+    }
+  ],
+  "scales": [
+    {
+      "id": "organisation",
+      "label": "Perceived organisation",
+      "items": ["org_1", "org_2", "org_3", "org_4"],
+      "method": "mean",
+      "min_valid": null,
+      "reverse_items": "org_4"
+    }
+  ],
+  "branching": [],
+  "checks": [],
+  "analysis_plan": [
+    {
+      "id": "RQ1",
+      "research_question": "How does the scale score overall?",
+      "family": "descriptive",
+      "method": "scale_descriptives",
+      "roles": [],
+      "options": [],
+      "decision_rule": "",
+      "reporting_references": [],
+      "status": "draft",
+      "requires_data": true,
+      "test": "scale_descriptives",
+      "interpretation": "",
+      "citations": []
+    },
+    {
+      "id": "RQ2",
+      "research_question": "Is the scale internally consistent?",
+      "family": "reliability",
+      "method": "reliability_alpha",
+      "roles": [],
+      "options": [],
+      "decision_rule": "",
+      "reporting_references": [],
+      "status": "draft",
+      "requires_data": true,
+      "test": "reliability_alpha",
+      "interpretation": "",
+      "citations": []
+    },
+    {
+      "id": "RQ3",
+      "research_question": "Same question, omega rather than alpha.",
+      "family": "reliability",
+      "method": "reliability_omega",
+      "roles": [],
+      "options": [],
+      "decision_rule": "",
+      "reporting_references": [],
+      "status": "draft",
+      "requires_data": true,
+      "test": "reliability_omega",
+      "interpretation": "",
+      "citations": []
+    },
+    {
+      "id": "RQ4",
+      "research_question": "Does any item sit poorly with the rest?",
+      "family": "reliability",
+      "method": "item_diagnostics",
+      "roles": [],
+      "options": [],
+      "decision_rule": "",
+      "reporting_references": [],
+      "status": "draft",
+      "requires_data": true,
+      "test": "item_diagnostics",
+      "interpretation": "",
+      "citations": []
+    }
+  ],
+  "models": [],
+  "render": []
+}

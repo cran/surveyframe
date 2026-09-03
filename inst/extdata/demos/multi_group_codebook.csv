@@ -1,0 +1,8 @@
+"item_id","item_label","type","scale_id","value","value_label"
+"attendee_role","Which best describes you?","single_choice",,"student","Student"
+"attendee_role","Which best describes you?","single_choice",,"practitioner","Practitioner"
+"attendee_role","Which best describes you?","single_choice",,"academic","Academic"
+"format","How did you attend?","single_choice",,"in_person","In person"
+"format","How did you attend?","single_choice",,"online","Online"
+"age","How old are you?","numeric",,,
+"sessions_attended","How many sessions did you attend?","numeric",,,

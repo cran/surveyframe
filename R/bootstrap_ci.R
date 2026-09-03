@@ -1,4 +1,43 @@
 # R/bootstrap_ci.R
+
+# Run `expr` with a fixed RNG seed, restoring whatever state the caller had
+# on exit, so seeding here does not silently reset randomness for unrelated
+# code that runs afterwards. Factored out of the identical blocks that were
+# already inside bootstrap_ci(), cohens_d_ci(), cramers_v_ci() and
+# eta_sq_ci(), and now also used by run_analysis_plan() to make a whole plan
+# run reproducible in one place rather than by threading a seed through every
+# helper signature.
+sframe_with_seed <- function(seed, expr) {
+  if (is.null(seed)) {
+    return(force(expr))
+  }
+  has_state <- exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)
+  old_state <- if (has_state) get(".Random.seed", envir = .GlobalEnv) else NULL
+  on.exit({
+    if (has_state) {
+      assign(".Random.seed", old_state, envir = .GlobalEnv)
+    } else if (exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)) {
+      rm(".Random.seed", envir = .GlobalEnv)
+    }
+  }, add = TRUE)
+  # psych::fa.parallel() splits across forked mclapply() workers, whose own RNG
+  # streams set.seed() cannot reach, and splits by core count. Running serially
+  # keeps every draw on the parent's seeded stream and the answer machine
+  # independent.
+  old_cores <- getOption("mc.cores")
+  on.exit({
+    if (is.null(old_cores)) {
+      options(mc.cores = NULL)
+    } else {
+      options(mc.cores = old_cores)
+    }
+  }, add = TRUE)
+  options(mc.cores = 1L)
+
+  set.seed(seed)
+  force(expr)
+}
+
 # Percentile bootstrap confidence intervals for effect sizes. Base R only:
 # these helpers back the CI keys the analysis-plan runners attach to their
 # results, and v0.4's small-sample methods reuse bootstrap_ci() directly.
@@ -324,7 +363,12 @@ sframe_kw_eta_sq <- function(outcome, group) {
   max(0, (H - k + 1) / (n - k))
 }
 
-sframe_kw_eta_sq_ci <- function(outcome, group, R = 2000, conf.level = 0.95) {
+sframe_kw_eta_sq_ci <- function(outcome, group, R = 2000, conf.level = 0.95,
+                                seed = NULL) {
+  if (!is.null(seed)) {
+    return(sframe_with_seed(seed, sframe_kw_eta_sq_ci(outcome, group, R,
+                                                      conf.level)))
+  }
   group <- as.factor(group)
   n <- length(outcome)
   obs <- sframe_kw_eta_sq(outcome, group)

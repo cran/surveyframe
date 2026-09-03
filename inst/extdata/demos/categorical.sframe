@@ -1,0 +1,112 @@
+{
+  "sframe_format": "1.0",
+  "hash": {
+    "algo": "sha256",
+    "value": "74d247e4c71fb4a48a11e7305aa81c8d5e8a9433ad55954929ec16a610909d07"
+  },
+  "version": "1.0.0",
+  "meta": {
+    "title": "What do attendees prefer?",
+    "version": "1.0.0",
+    "description": "Two categorical items, a crosstab, and 2 tests of association.",
+    "authors": null,
+    "languages": "en",
+    "validated": true,
+    "created_at": "2026-08-28T10:20:46Z"
+  },
+  "items": [
+    {
+      "id": "format",
+      "label": "How did you attend?",
+      "type": "single_choice",
+      "required": true,
+      "choice_set": "fmt",
+      "reverse": false
+    },
+    {
+      "id": "preferred_session_type",
+      "label": "Which session type do you value most?",
+      "type": "single_choice",
+      "required": true,
+      "choice_set": "pref",
+      "reverse": false
+    }
+  ],
+  "choices": [
+    {
+      "id": "fmt",
+      "values": ["in_person", "online"],
+      "labels": ["In person", "Online"],
+      "allow_other": false,
+      "randomise": false
+    },
+    {
+      "id": "pref",
+      "values": ["workshop", "keynote", "panel"],
+      "labels": ["Workshops", "Keynotes", "Panel discussions"],
+      "allow_other": false,
+      "randomise": false
+    }
+  ],
+  "scales": [],
+  "branching": [],
+  "checks": [],
+  "analysis_plan": [
+    {
+      "id": "RQ1",
+      "research_question": "How do format and preference cross-tabulate?",
+      "family": "categorical",
+      "method": "crosstab",
+      "roles": {
+        "row": "format",
+        "column": "preferred_session_type"
+      },
+      "options": [],
+      "decision_rule": "",
+      "reporting_references": [],
+      "status": "draft",
+      "requires_data": true,
+      "test": "crosstab",
+      "interpretation": "",
+      "citations": []
+    },
+    {
+      "id": "RQ2",
+      "research_question": "Are format and preference associated?",
+      "family": "categorical",
+      "method": "chi_square",
+      "roles": {
+        "row": "format",
+        "column": "preferred_session_type"
+      },
+      "options": [],
+      "decision_rule": "",
+      "reporting_references": [],
+      "status": "draft",
+      "requires_data": true,
+      "test": "chi_square",
+      "interpretation": "",
+      "citations": []
+    },
+    {
+      "id": "RQ3",
+      "research_question": "The same question with an exact test, for the small cell.",
+      "family": "categorical",
+      "method": "fisher_exact",
+      "roles": {
+        "row": "format",
+        "column": "preferred_session_type"
+      },
+      "options": [],
+      "decision_rule": "",
+      "reporting_references": [],
+      "status": "draft",
+      "requires_data": true,
+      "test": "fisher_exact",
+      "interpretation": "",
+      "citations": []
+    }
+  ],
+  "models": [],
+  "render": []
+}

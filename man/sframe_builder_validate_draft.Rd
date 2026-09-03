@@ -13,7 +13,8 @@ sframe_builder_validate_draft(
   checks = list(),
   analysis_plan = list(),
   models = list(),
-  render = list()
+  render = list(),
+  amendments = list()
 )
 }
 \arguments{
@@ -27,6 +28,9 @@ sframe_builder_validate_draft(
 
 \item{render}{List of rendering settings (welcome, header/logo, thankyou,
 theme) carried from the loaded instrument so previews and exports match.}
+
+\item{amendments}{List of previously disclosed amendment entries, carried
+through unchanged so a draft round trip does not drop them.}
 }
 \value{
 A list with \code{valid}, \code{problems}, and \code{instrument}.

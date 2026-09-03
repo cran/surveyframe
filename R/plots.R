@@ -1,4 +1,32 @@
 # plots.R
+
+# Why sframe_plot_quality() has nothing to draw.
+#
+# A NULL return alone cannot say whether nothing was flagged or nothing was
+# long enough to check, which are opposite conclusions. NULL carries no
+# attributes, so the reason is a separate call that render_report() prints in
+# place of the missing chart.
+sframe_quality_plot_note <- function(x) {
+  stopifnot(inherits(x, "sframe_quality_report"))
+  sl <- x$straightline %||% list()
+  if (length(sl) == 0) {
+    return("No scales were defined, so straight-lining was not checked.")
+  }
+  rates <- vapply(sl, function(s) s$flag_rate %||% NA_real_, numeric(1))
+  if (any(!is.na(rates))) {
+    return(NULL)
+  }
+  if (any(vapply(sl, function(s) isTRUE(s$checked), logical(1)))) {
+    "No scale was flagged for straight-lining, so there is no chart to draw."
+  } else {
+    paste0("No scale was long enough to check for straight-lining, so there ",
+           "is no chart to draw. Straight-lining needs at least ",
+           "`straightline_min_items` items in a scale, 4 by default, because ",
+           "identical answers to 2 or 3 items are what a consistent ",
+           "respondent gives rather than evidence of inattention.")
+  }
+}
+
 # v0.3.4 visualisation foundation: the surveyframe brand theme and the first
 # family of analysis plots. ggplot2 lives in Suggests, so every entry point
 # is guarded with rlang::check_installed().
@@ -191,7 +219,7 @@ sframe_plot_frequency <- function(result, palette = c("web", "print")) {
 # whenever positions happened to land close together (visible in the
 # 0.5 vignette/demo's word clouds: "comfortable" overlapping "respond").
 #
-# Still no new dependency (todo_0.5.md: "do not add a wordcloud/
+# Still no new dependency (todo_text_analysis.md: "do not add a wordcloud/
 # ggwordcloud package for this"): text is measured with base
 # `grDevices::pdf(NULL)` (a null device, writes no file, the standard R
 # trick for off-screen `strwidth()`/`strheight()`) plus base graphics
@@ -239,7 +267,7 @@ sframe_plot_frequency <- function(result, palette = c("web", "print")) {
 # organic edge. `shape = "organic"` (default) is uncapped, the original
 # freeform behaviour.
 #
-# Still no new dependency (todo_0.5.md: "do not add a wordcloud/
+# Still no new dependency (todo_text_analysis.md: "do not add a wordcloud/
 # ggwordcloud package for this"): `grid` and `grDevices::pdf(NULL)` (a
 # null device, writes no file) are both base R, not the wordcloud/
 # ggwordcloud packages themselves.
@@ -331,7 +359,7 @@ sframe_plot_frequency <- function(result, palette = c("web", "print")) {
 #' Top terms from a `term_freq` result as a horizontal bar chart, or a word
 #' cloud when `result$options$wordcloud` is `TRUE` (opt-in, default
 #' `FALSE`). Facets by group when the result carries a `group` role
-#' (todo_0.5.md section 1a).
+#' (todo_text_analysis.md section 1a).
 #'
 #' @param result A `term_freq` result list from [run_analysis_plan()].
 #' @param palette One of `"web"` or `"print"`. See `sframe_brand()`.
@@ -1354,6 +1382,7 @@ sframe_plot_reliability <- function(x, palette = c("web", "print")) {
 #' @return Invisibly `NULL`, called for its plotting side effect on the
 #'   current graphics device.
 #' @export
+#' @keywords internal
 #' @seealso `sframe_plot_crosstab()`
 sframe_draw_mosaic <- function(result, palette = c("web", "print")) {
   palette <- match.arg(palette)
@@ -1436,6 +1465,13 @@ sframe_plot_quality <- function(x, palette = c("web", "print")) {
   })
   df <- do.call(rbind, rows)
   df <- df[!is.na(df$flag_rate), , drop = FALSE]
+  # Returning NULL here reads as "nothing was flagged" and can mean "no scale
+  # was long enough to check", which are opposite things. Since 0.4.1
+  # straight-lining skips scales shorter than straightline_min_items, and an
+  # instrument whose scales are all short (the bundled demo's are all 2 or 3
+  # items) produced an empty frame and a silently missing chart. The NULL is
+  # kept, because there is genuinely nothing to draw, but it now carries the
+  # reason so the caller can say which case it is instead of guessing.
   if (nrow(df) == 0) return(NULL)
   # Web keeps the deliberate red "flagged" warning colour; print swaps to
   # the light neutral fill (a large solid red-analogue area would be just
@@ -1825,8 +1861,13 @@ sframe_plot_group_comparison <- function(result, data, palette = c("web", "print
                                    fill = .data$group)) +
     ggplot2::geom_boxplot(outlier.shape = NA, width = 0.55, alpha = 0.85,
                           colour = brand$ink, linewidth = 0.35) +
-    ggplot2::geom_jitter(width = 0.08, height = 0, alpha = 0.6, size = 1.6,
-                         colour = brand$ink) +
+    # Seeded so 2 renders of the same report place the points identically.
+    # geom_jitter() otherwise draws offsets at plot time, after
+    # run_analysis_plan() has restored the caller's RNG stream.
+    ggplot2::geom_point(position = ggplot2::position_jitter(width = 0.08,
+                                                            height = 0,
+                                                            seed = 20260828L),
+                        alpha = 0.6, size = 1.6, colour = brand$ink) +
     ggplot2::scale_fill_manual(values = sframe_series_fill_colours(length(unique(df$group)), palette),
                                guide = "none") +
     ggplot2::labs(title = sprintf("%s by %s", .sframe_title_case_names(outcome_col),
@@ -2392,7 +2433,7 @@ sframe_plot_cooccurrence_network <- function(result, palette = c("web", "print")
 # tidytext comparison cloud (bookdown.org/jdholster1/idsr/text-analysis.html
 # section 8.4: count(word, sentiment) %>% acast() %>% comparison.cloud()),
 # without adding the wordcloud/reshape2 dependency that reference code
-# uses — consistent with todo_0.5.md's "no wordcloud/ggwordcloud package"
+# uses — consistent with todo_text_analysis.md's "no wordcloud/ggwordcloud package"
 # rule for the plain term-frequency cloud.
 .sframe_sentiment_cloud_layout <- function(word_sentiment, max_per_side = 25) {
   neg <- utils::head(word_sentiment[word_sentiment$sentiment == "negative", , drop = FALSE], max_per_side)

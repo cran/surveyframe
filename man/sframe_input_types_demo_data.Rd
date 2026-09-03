@@ -2,7 +2,7 @@
 % Please edit documentation in R/demo_helpers.R
 \name{sframe_input_types_demo_data}
 \alias{sframe_input_types_demo_data}
-\title{Load bundled input-types demo data}
+\title{Load the input-types demo backing SurveyBuilder and SurveyStudio}
 \usage{
 sframe_input_types_demo_data()
 }
@@ -12,5 +12,14 @@ A list with \code{instrument}, \code{responses}, \code{instrument_path}, and
 }
 \description{
 Loads the bundled \code{.sframe} instrument and simulated response dataset that
-cover all main survey input types supported by surveyframe.
+cover all main survey input types supported by surveyframe. This is a
+different demo from the 22-item teaching library behind \code{\link[=sframe_demo]{sframe_demo()}}:
+where \code{\link[=sframe_demo]{sframe_demo()}} demonstrates one analysis method per call,
+this one exists to exercise every input control SurveyBuilder and
+SurveyStudio support in a single instrument, and is what backs
+\code{\link[=launch_builder_demo]{launch_builder_demo()}}, \code{\link[=launch_studio_demo]{launch_studio_demo()}}, and
+\code{\link[=launch_dashboard_demo]{launch_dashboard_demo()}}.
+}
+\seealso{
+\code{\link[=sframe_demo]{sframe_demo()}} for the 22-item teaching library instead.
 }

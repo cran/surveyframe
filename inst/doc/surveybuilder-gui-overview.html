@@ -348,7 +348,9 @@ a { color: #0e7c7a; }
 code span.at { color: #576419; }
 code span.dv, code span.fl, code span.bn { color: #276245; }
 code span.co { color: #396a80; }
-pre, pre code { white-space: pre-wrap; word-break: break-word; }
+
+pre, pre code, pre > code.sourceCode { white-space: pre-wrap; word-break: break-word; }
+pre > code.sourceCode > span { text-indent: -2em; padding-left: 2em; }
 div.sourceCode { overflow: visible; }
 pre.sourceCode a:empty { display: none; }
 #TOC a { display: inline-block; min-height: 24px; }
@@ -424,12 +426,19 @@ generate the Apps Script collector.</p>
 <div id="surveystudio-the-screens" class="section level2">
 <h2>SurveyStudio: the screens</h2>
 <p>SurveyStudio is a Shiny application, so it can run R. Its left
-navigation lists eight screens in this order: Open Instrument, Preview
-Survey, Upload Responses, Quality Dashboard, Reliability, Analysis Plan,
-Dashboard, and Export. Survey design is done in the SurveyBuilder, and
-the studio opens the resulting <code>.sframe</code>. The Preview Survey
-screen renders the exact deployable survey, identical to the exported
-HTML.</p>
+navigation lists nine screens in this order: Open Instrument,
+Amendments, Preview Survey, Upload Responses, Quality Dashboard,
+Reliability, Analysis Plan, Dashboard, and Export. Survey design is done
+in the SurveyBuilder, and the studio opens the resulting
+<code>.sframe</code>.</p>
+<p>The Amendments screen discloses a change to the open instrument:
+upload a revised <code>.sframe</code>, give a reason and an explanation,
+and <code>amend_sframe()</code> appends the change to the instrument’s
+amendment log rather than replacing its history. Exporting the amended
+instrument keeps that log inside the <code>.sframe</code> file, readable
+later with <code>amendment_log()</code>.</p>
+<p>The Preview Survey screen renders the exact deployable survey,
+identical to the exported HTML.</p>
 <p>The Analysis Plan screen does two jobs. It edits the plan, with the
 same research question, method, significance level, and role fields as
 the builder. It also runs the plan. When response data have been
@@ -442,7 +451,10 @@ before running.</p>
 missing data, descriptives, reliability, the saved analysis-plan
 results, and the model appendices. The per-question report produced by
 <code>render_results()</code> in an R session is a separate route to a
-written report and is covered in the main vignette.</p>
+written report and is covered in the main vignette. The same screen’s
+“Analysis notebook” card writes a Quarto notebook alongside the
+instrument and its responses, via <code>sframe_analysis_qmd()</code>, so
+the same analysis can be run and edited outside SurveyStudio.</p>
 </div>
 <div id="recommended-workflow" class="section level2">
 <h2>Recommended workflow</h2>

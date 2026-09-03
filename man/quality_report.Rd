@@ -12,6 +12,7 @@ quality_report(
   started_at = NULL,
   time_min = NULL,
   straightline_scales = TRUE,
+  straightline_min_items = 4L,
   missing_threshold = 0.2
 )
 }
@@ -37,6 +38,16 @@ flagged as speeders when timing data are available.}
 
 \item{straightline_scales}{Logical. Whether to check for straight-lining
 within each defined scale block. Defaults to \code{TRUE}.}
+
+\item{straightline_min_items}{Integer. The minimum number of items a scale
+must have before it is checked for straight-lining. Defaults to \code{4}. A
+respondent who gives the identical response to every item in a 2-item
+scale has done exactly what a genuinely consistent respondent does,
+this is not evidence of inattention on its own, and checking scales
+that short flags a large share of honest respondents (see the worked
+example in \code{vignette("surveyframe")}, where 3 two-item scales alone
+drove a 91 percent flag rate before this threshold existed). Set to
+\code{2} to restore the previous, more permissive behaviour.}
 
 \item{missing_threshold}{Numeric. The proportion of missing item responses
 above which a respondent is flagged. Defaults to \code{0.2}.}

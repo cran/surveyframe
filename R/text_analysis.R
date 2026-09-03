@@ -1,6 +1,6 @@
 # R/text_analysis.R
 # Text and open-ended response analysis: cleaning, base-R term/n-gram
-# frequency, keyword-in-context, and co-occurrence. See todo_0.5.md for the
+# frequency, keyword-in-context, and co-occurrence. See todo_text_analysis.md for the
 # full 9-method-id build plan; this file grows across that build rather than
 # landing complete in one diff.
 
@@ -866,7 +866,7 @@ sframe_run_term_context <- function(data, roles, options, instrument) {
 
 
 # ---------------------------------------------------------------------------
-# Co-occurrence network (method id `co_occurrence_network`, todo_0.5.md)
+# Co-occurrence network (method id `co_occurrence_network`, todo_text_analysis.md)
 # ---------------------------------------------------------------------------
 
 # Pairwise within-response co-occurrence edge list over the top-N terms by
@@ -1036,7 +1036,7 @@ sframe_run_cooccurrence_network <- function(data, roles, options, instrument) {
 
 
 # ---------------------------------------------------------------------------
-# tidy_sentiment (todo_0.5.md section 1b): tidytext + the bundled "bing"
+# tidy_sentiment (todo_text_analysis.md section 1b): tidytext + the bundled "bing"
 # lexicon. quanteda_dfm below uses quanteda. Both guard via the
 # sframe_require_*() helpers in R/conditions.R.
 
@@ -1189,7 +1189,7 @@ sframe_run_tidy_sentiment <- function(data, roles, options, instrument) {
 }
 
 # ---------------------------------------------------------------------------
-# quanteda_dfm (todo_0.5.md section 1b): a descriptive document-feature
+# quanteda_dfm (todo_text_analysis.md section 1b): a descriptive document-feature
 # matrix summary. Table-only (no plot, no group role for this method id).
 
 # Runner contract wrapper: $table with feature count, sparsity, and the top

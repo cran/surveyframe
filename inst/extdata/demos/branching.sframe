@@ -1,0 +1,106 @@
+{
+  "sframe_format": "1.0",
+  "hash": {
+    "algo": "sha256",
+    "value": "2cc4d1bdbe5827f763f05258e3d0f08e88ea7a1921ed29d80656217053e26710"
+  },
+  "version": "1.0.0",
+  "meta": {
+    "title": "Questions that depend on who you are",
+    "version": "1.0.0",
+    "description": "Skip logic, and why a skipped question differs from a missing answer.",
+    "authors": null,
+    "languages": "en",
+    "validated": true,
+    "created_at": "2026-08-28T10:20:51Z"
+  },
+  "items": [
+    {
+      "id": "attendee_type",
+      "label": "What brought you here?",
+      "type": "single_choice",
+      "required": true,
+      "choice_set": "who",
+      "reverse": false
+    },
+    {
+      "id": "sessions_attended",
+      "label": "How many sessions did you attend?",
+      "type": "numeric",
+      "required": false,
+      "reverse": false
+    },
+    {
+      "id": "comment",
+      "label": "Anything you would change about the programme?",
+      "type": "text",
+      "required": false,
+      "reverse": false
+    }
+  ],
+  "choices": [
+    {
+      "id": "who",
+      "values": ["delegate", "speaker", "exhibitor", "visitor"],
+      "labels": ["Delegate", "Speaker", "Exhibitor", "Day visitor"],
+      "allow_other": false,
+      "randomise": false
+    }
+  ],
+  "scales": [],
+  "branching": [
+    {
+      "item_id": "sessions_attended",
+      "depends_on": "attendee_type",
+      "operator": "%in%",
+      "value": ["delegate", "speaker"],
+      "action": "show"
+    },
+    {
+      "item_id": "comment",
+      "depends_on": "attendee_type",
+      "operator": "%in%",
+      "value": ["delegate", "speaker"],
+      "action": "show"
+    }
+  ],
+  "checks": [],
+  "analysis_plan": [
+    {
+      "id": "RQ1",
+      "research_question": "Who attended, and in what proportions?",
+      "family": "descriptive",
+      "method": "frequency",
+      "roles": {
+        "variable": "attendee_type"
+      },
+      "options": [],
+      "decision_rule": "",
+      "reporting_references": [],
+      "status": "draft",
+      "requires_data": true,
+      "test": "frequency",
+      "interpretation": "",
+      "citations": []
+    },
+    {
+      "id": "RQ2",
+      "research_question": "Among those asked, how many sessions did they attend?",
+      "family": "descriptive",
+      "method": "descriptives",
+      "roles": {
+        "variables": "sessions_attended"
+      },
+      "options": [],
+      "decision_rule": "",
+      "reporting_references": [],
+      "status": "draft",
+      "requires_data": true,
+      "test": "descriptives",
+      "interpretation": "",
+      "citations": []
+    }
+  ],
+  "models": [],
+  "render": []
+}

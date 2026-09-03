@@ -48,7 +48,8 @@ item  <- sf_item("sat_1", "How satisfied are you?",
                  type = "likert", choice_set = "ag5")
 instr <- sf_instrument("My Survey", components = list(cs, item))
 app <- render_survey(instr)
-app <- render_survey(instr, save_responses = "csv", output_path = tempfile(fileext = ".csv"))
+app <- render_survey(instr, save_responses = "csv",
+                      output_path = tempfile(fileext = ".csv"))
 }
 }
 \seealso{

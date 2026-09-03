@@ -38,7 +38,11 @@ tbody tr:last-child td { border-bottom: 2px solid #1a1a2e; }
 code span.at { color: #576419; }
 code span.dv, code span.fl, code span.bn { color: #276245; }
 code span.co { color: #396a80; }
-pre, pre code { white-space: pre-wrap; word-break: break-word; }
+/* Pandoc emits `pre > code.sourceCode { white-space: pre }` for screen, which
+   outranks a bare `pre code` rule on specificity, so source chunks have to be
+   named explicitly or they scroll sideways instead of wrapping. */
+pre, pre code, pre > code.sourceCode { white-space: pre-wrap; word-break: break-word; }
+pre > code.sourceCode > span { text-indent: -2em; padding-left: 2em; }
 div.sourceCode { overflow: visible; }
 pre.sourceCode a:empty { display: none; }
 #TOC a { display: inline-block; min-height: 24px; }
@@ -47,8 +51,8 @@ pre.sourceCode a:empty { display: none; }
 
 ## What this vignette covers
 
-Multi-criteria decision analysis ranks a handful of alternatives against
-several criteria that pull in different directions. surveyframe treats it the
+Multi-criteria decision analysis ranks a set of alternatives against multiple
+criteria that pull in different directions. surveyframe treats it the
 same way it treats any other analysis: the method, its inputs, and the roles
 they play are declared in the instrument before data is collected, and the
 analysis is the execution of that declaration.

@@ -1,0 +1,13 @@
+"respondent_id","started_at","submitted_at","crit_pairs__cost__vs__capacity","crit_pairs__cost__vs__transport","crit_pairs__cost__vs__catering","crit_pairs__capacity__vs__transport","crit_pairs__capacity__vs__catering","crit_pairs__transport__vs__catering","crit_points__cost","crit_points__capacity","crit_points__transport","crit_points__catering","crit_influence__cost__to__capacity","crit_influence__cost__to__transport","crit_influence__cost__to__catering","crit_influence__capacity__to__cost","crit_influence__capacity__to__transport","crit_influence__capacity__to__catering","crit_influence__transport__to__cost","crit_influence__transport__to__capacity","crit_influence__transport__to__catering","crit_influence__catering__to__cost","crit_influence__catering__to__capacity","crit_influence__catering__to__transport"
+"R001","2026-06-01T09:15:00Z","2026-06-01T09:19:00Z",2,2,3,1,1,1,47,27,13,13,2,4,3,1,1,3,1,2,1,2,0,1
+"R002","2026-06-01T09:15:37Z","2026-06-01T09:19:37Z",1,2,4,1,1,1,35,25,24,16,2,2,3,1,2,2,2,2,1,2,1,0
+"R003","2026-06-01T09:16:14Z","2026-06-01T09:20:14Z",2,2,3,1,2,2,45,28,20,7,3,4,3,1,1,2,1,1,1,2,1,1
+"R004","2026-06-01T09:16:51Z","2026-06-01T09:20:51Z",2,2,3,-2,1,1,46,30,12,12,2,4,4,1,1,3,0,1,1,2,1,1
+"R005","2026-06-01T09:17:28Z","2026-06-01T09:21:28Z",1,1,2,1,2,1,40,19,21,20,2,2,2,1,1,2,1,1,1,2,1,2
+"R006","2026-06-01T09:18:05Z","2026-06-01T09:22:05Z",1,2,4,-2,2,1,37,31,13,19,2,2,4,1,2,2,1,2,0,1,2,1
+"R007","2026-06-01T09:18:42Z","2026-06-01T09:22:42Z",1,2,3,2,2,1,43,23,14,20,2,3,2,2,0,2,1,2,1,3,1,1
+"R008","2026-06-01T09:19:19Z","2026-06-01T09:23:19Z",1,2,2,1,2,2,42,20,28,10,2,4,3,1,1,2,2,1,1,3,0,0
+"R009","2026-06-01T09:19:56Z","2026-06-01T09:23:56Z",2,3,3,1,2,1,28,27,29,16,1,3,3,1,1,3,2,1,1,1,1,1
+"R010","2026-06-01T09:20:33Z","2026-06-01T09:24:33Z",2,2,3,1,2,2,45,20,29,6,2,4,3,0,1,3,0,2,1,2,1,1
+"R011","2026-06-01T09:21:10Z","2026-06-01T09:25:10Z",2,2,2,2,2,2,45,15,14,26,2,3,2,1,2,1,1,1,1,2,0,0
+"R012","2026-06-01T09:21:47Z","2026-06-01T09:25:47Z",1,2,3,2,2,2,43,30,13,14,2,3,3,1,1,1,2,1,2,2,1,1

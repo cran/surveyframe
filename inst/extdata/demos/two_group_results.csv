@@ -1,0 +1,7 @@
+"block","method","quantity","value"
+"RQ1","t_test_ind","apa","t(57.89) = 3.36, p = 0.001, d = 0.87 [0.43, 1.35]"
+"RQ1","t_test_ind","n [1]","30"
+"RQ1","t_test_ind","n [2]","30"
+"RQ2","mann_whitney","apa","U = 626, z = -2.62, p = 0.009, r = 0.34 [0.10, 0.54], Hodges-Lehmann shift = 2.00 [0.00, 3.00]"
+"RQ2","mann_whitney","n [1]","30"
+"RQ2","mann_whitney","n [2]","30"

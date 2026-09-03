@@ -1,0 +1,7 @@
+"item_id","item_label","type","scale_id","value","value_label"
+"attendee_type","What brought you here?","single_choice",,"delegate","Delegate"
+"attendee_type","What brought you here?","single_choice",,"speaker","Speaker"
+"attendee_type","What brought you here?","single_choice",,"exhibitor","Exhibitor"
+"attendee_type","What brought you here?","single_choice",,"visitor","Day visitor"
+"sessions_attended","How many sessions did you attend?","numeric",,,
+"comment","Anything you would change about the programme?","text",,,

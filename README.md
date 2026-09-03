@@ -11,7 +11,7 @@
 > **Just here to verify a `.sframe` file's integrity hash or read its
 > amendment log?**
 > **[Verify a file now](https://mohammedalisharafuddin.github.io/surveyframe/verify/)**.
-> No R, no install; it runs entirely in your browser and nothing is
+> No R, no install. It runs entirely in your browser and nothing is
 > uploaded.
 
 `surveyframe` is a research-design-first survey package for R. Most survey tools
@@ -30,11 +30,16 @@ things together:
 3. **The measurement or structural model.** Constructs, indicators, and paths
    for EFA, CFA, CB-SEM, and PLS-SEM.
 
-Because the plan and the model live inside the instrument, the link between a
-question, the variable it produces, and the test that variable feeds is fixed at
-design time. When responses come back, the plan runs in one pass and returns
-results already formatted for reporting, with effect sizes, a writing prompt for
-each finding, and the reference that supports each test.
+Because the plan and the model live inside the instrument, you never have to go
+back and match up questions, variables, and tests by hand. Say you're comparing
+satisfaction between first-time and repeat visitors: write that comparison into
+the plan once, alongside the questions, and it stays linked to the right
+variables from then on. When responses arrive, running the plan is a single
+step: each result comes back ready to write up, with a plot, a table, an APA
+statistic, an effect size where it applies, a writing prompt, and the reference
+that supports it. Plots switch between a colour palette for on-screen use and a
+black-and-white palette for print, both checked against WCAG contrast rules, so
+the same run produces a journal-ready figure with no separate step.
 
 The package works offline during examples, tests, vignettes, and checks. Browser
 and Shiny entry points use `open = FALSE` or explicit launch functions, so
@@ -66,7 +71,7 @@ packages when you want to fit the generated CFA, CB-SEM, or PLS-SEM models.
 ## Already have data?
 
 `surveyframe` is not a replacement for whatever collection tool your
-institution already has approved -- Qualtrics, REDCap, Google Forms, or a
+institution already has approved: Qualtrics, REDCap, Google Forms, or a
 paper form typed up afterward. It reads response data as a plain CSV or
 `data.frame` from any of them: export from your collection tool, rename
 columns to match your instrument's item IDs (or build the instrument to
@@ -99,12 +104,17 @@ Start with:
 
 1. A worked study: digital marketing and tourism services
 2. Building a survey instrument: questions, plan, and model
-3. Analysing survey responses: running the plan
-4. Scale reliability and validity
-5. EFA, CFA, CB-SEM, and PLS-SEM syntax generation
-6. The visual workflow: SurveyBuilder, SurveyStudio, and the dashboard
+3. Deploying a survey and collecting responses on free hosting
+4. Analysing survey responses: running the plan
+5. Scale reliability and validity
+6. EFA, CFA, CB-SEM, and PLS-SEM syntax generation
+7. The visual workflow: SurveyBuilder, SurveyStudio, and the dashboard
+8. Learn by example: 22 small surveys, the bundled demo library
+9. Multi-criteria decision analysis: AHP, TOPSIS, and 8 other methods
+10. Small-sample inference
+11. Text and open-ended response analysis
 
-Read all six vignettes inside R with:
+Read all eleven vignettes inside R with:
 
 ```r
 browseVignettes("surveyframe")
@@ -288,7 +298,7 @@ export_static_survey(instr, open = FALSE)
 ```
 
 Use `launch_builder()` to author the questionnaire, the plan, and the model and
-to export the `.sframe` file and model syntax; it runs no statistics.
+to export the `.sframe` file and model syntax. It runs no statistics.
 `launch_studio()` uploads responses, runs the plan on its Analysis Plan screen,
 and renders the report on its Export screen. `launch_dashboard()` is a read-only
 response explorer. Demo launchers are available for training:
@@ -305,36 +315,82 @@ and examples avoid opening browsers.
 
 ## Roadmap
 
-Small-sample inference, multi-criteria decision analysis, and text and
-open-ended response analysis all arrive in 0.4.0. Small-sample and MCDM
-were once planned as two releases, v0.4 and v0.5, and text analysis had at
-one stage its own working label before it, too, was folded into 0.4.0.
-There is no 0.3.5 and no 0.5.x.
+0.4.0 (CRAN, 2026-08-20) added three capability themes:
 
-0.4.0 adds small-sample helpers validated by a simulation study
-(Hodges-Lehmann, paired-Wilcoxon pseudomedian, exact Fisher odds-ratio
-intervals, Firth logistic regression); 10 MCDM methods (TOPSIS, AHP, ANP,
-DEMATEL, VIKOR, MOORA, SMART, WASPAS, PROMETHEE, ELECTRE) with 2 new
-question types for collecting judgements, weight-sensitivity analysis, and
-declared conjoint designs; a 9-method text and open-ended response
-analysis family (term/n-gram frequency, keyword in context, co-occurrence
-and co-occurrence networks, sentiment, document-feature matrices, and
-topic modelling via LDA or a structural topic model); and a
-disclosed-amendment and Git-linked provenance mechanism alongside the
-existing `.sframe` integrity hash. See `NEWS.md` for the full detail on
-each.
+- **Small-sample survey helpers**, validated by a simulation study:
+  Hodges-Lehmann and paired-Wilcoxon pseudomedian estimators, exact
+  Fisher odds-ratio intervals, and Firth logistic regression.
+- **10 multi-criteria decision methods** (TOPSIS, AHP, ANP, DEMATEL,
+  VIKOR, MOORA, SMART, WASPAS, PROMETHEE, ELECTRE), with 2 new
+  question types for collecting judgements, weight-sensitivity
+  analysis, and declared conjoint designs.
+- **Text and open-ended response analysis**, 9 methods: term and
+  n-gram frequency, keyword in context, co-occurrence networks,
+  sentiment, document-feature matrices, and topic modelling via LDA
+  or a structural topic model.
 
-**After 0.4.0, no new capability theme for at least one release cycle.**
-Four themes landing in one release is already more than this project
-should repeat; 0.4.1 and 0.4.2 are stabilisation and bug-fix releases
-against what 0.4.0 shipped, not a vehicle for new method families. If
-that changes, it will be stated here first, not discovered from a diff.
+A disclosed-amendment and Git-linked provenance mechanism shipped
+alongside, on top of the existing `.sframe` integrity hash. Full
+detail in `NEWS.md`.
+
+0.4.1 focuses on stability: fixes found by using surveyframe on real
+instruments, no new capability theme. 0.4.2 continues in the same
+direction.
+
+## When to use surveyframe, and when not to
+
+surveyframe is a fit when a study's analysis has to be decided before
+data collection: a scale to validate, a pre-registered hypothesis test,
+a measurement model to fit, or an audit trail showing the plan wasn't
+changed after seeing results. Its core strength is a pre-declared,
+integrity-checked analysis plan bound to the instrument itself. It also
+interoperates with [survey](https://cran.r-project.org/package=survey)
+and [srvyr](https://cran.r-project.org/package=srvyr), the standard
+tools for weighting and variance estimation on data from a complex
+probability sample.
+
+Haven't decided the analysis yet? Collect first with any web-form tool,
+Google Forms, Qualtrics, REDCap, or the R package
+[surveydown](https://github.com/surveydown-dev/surveydown), and add the plan when you're
+ready: surveyframe reads exported CSV data from any of them (see
+"Already have data?" above).
 
 **If this package is ever archived by CRAN**, the GitHub repository
 remains the canonical source: `remotes::install_github("MohammedAliSharafuddin/surveyframe")`.
 Each CRAN release is also deposited to Zenodo with its own DOI, so a
 specific version stays citable and retrievable independently of both
 CRAN's and GitHub's continued availability.
+
+## FAQ
+
+**Is surveyframe a replacement for Qualtrics, Google Forms, or REDCap?**
+No. Those collect responses with no plan required up front. surveyframe
+declares the analysis plan before collection, and reads exported CSV
+data from any of them once the plan is added (see "Already have data?"
+above).
+
+**Does surveyframe do survey weighting or complex-sample variance
+estimation?** No. [survey](https://cran.r-project.org/package=survey)
+and [srvyr](https://cran.r-project.org/package=srvyr) are the standard R
+tools for stratified, clustered, or weighted samples. surveyframe's
+instruments interoperate with that workflow instead of duplicating it.
+
+**Can I use surveyframe with data I've already collected?** Yes. Build
+a minimal instrument that matches your column names, then load your CSV
+or `data.frame` directly with `read_responses()`. See "Already have
+data?" above for a worked example.
+
+**What is a pre-declared analysis plan, and why does it matter?** A
+list of research questions written into the instrument at design time,
+each bound to a technique and to the variables that fill its roles,
+before any response arrives. It removes matching questions, variables,
+and tests up by hand, and it's the basis for the audit trail showing the
+plan wasn't changed after seeing results.
+
+**What happens if surveyframe is ever archived by CRAN?** The GitHub
+repository stays the canonical source
+(`remotes::install_github("MohammedAliSharafuddin/surveyframe")`), and
+every CRAN release is separately deposited to Zenodo with its own DOI.
 
 ## Citation
 
@@ -350,8 +406,12 @@ citation("surveyframe")
   <https://doi.org/10.5281/zenodo.20221929>. A companion textbook on
   statistical inference when sample sizes are small, also available at
   <https://flairmi.com/textbooks/smallsamplelab.html>. It describes the
-  small-sample methods that surveyframe will add in v0.4 and when to prefer
+  small-sample methods that surveyframe added in 0.4.0 and when to prefer
   each one.
+- Sharafuddin, M. A. (2026). *surveyframe: A Pre-Declared, Reproducible
+  Framework for Multi-Criteria Decision Analysis in Survey Research*.
+  Manuscript in preparation for Computo. Describes the 10 MCDM methods
+  surveyframe added in 0.4.0.
 
 ## License
 

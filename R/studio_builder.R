@@ -141,7 +141,14 @@ sframe_builder_state_from_instrument <- function(instrument = NULL) {
     checks = lapply(instrument$checks %||% list(), sframe_builder_as_check),
     analysis_plan = instrument$analysis_plan %||% list(),
     models = instrument$models %||% list(),
-    render = instrument$render %||% list()
+    render = instrument$render %||% list(),
+    # Carried through so a round trip via the builder (any observer or flow
+    # that rebuilds rv$instrument from rv$builder, e.g. SurveyStudio's
+    # standing draft_result() sync) does not silently drop a previously
+    # disclosed amendment log. sf_instrument() itself takes no amendments
+    # argument; it is reattached after composing, in
+    # sframe_builder_compose_instrument().
+    amendments = instrument$amendments %||% list()
   )
 }
 
@@ -154,7 +161,8 @@ sframe_builder_compose_instrument <- function(
     checks = list(),
     analysis_plan = list(),
     models = list(),
-    render = list()
+    render = list(),
+    amendments = list()
 ) {
   choices <- lapply(choices, sframe_builder_as_choice)
   items <- lapply(items, sframe_builder_as_item)
@@ -185,7 +193,7 @@ sframe_builder_compose_instrument <- function(
     }
   }
 
-  sf_instrument(
+  instrument <- sf_instrument(
     title = meta$title %||% "Untitled Survey",
     version = meta$version %||% "0.1.0",
     description = meta$description %||% NULL,
@@ -196,6 +204,16 @@ sframe_builder_compose_instrument <- function(
     models = models,
     render = render %||% list()
   )
+
+  # sf_instrument() has no amendments argument (see its own definition); a
+  # freshly built instrument legitimately has none, but one round-tripped
+  # through the builder from an already-amended instrument must keep its
+  # disclosed history rather than silently losing it here.
+  if (length(amendments) > 0) {
+    instrument$amendments <- amendments
+  }
+
+  instrument
 }
 
 #' Validate a SurveyStudio draft state
@@ -206,6 +224,8 @@ sframe_builder_compose_instrument <- function(
 #' @param models List of draft model specifications.
 #' @param render List of rendering settings (welcome, header/logo, thankyou,
 #'   theme) carried from the loaded instrument so previews and exports match.
+#' @param amendments List of previously disclosed amendment entries, carried
+#'   through unchanged so a draft round trip does not drop them.
 #'
 #' @return A list with `valid`, `problems`, and `instrument`.
 #' @export
@@ -218,7 +238,8 @@ sframe_builder_validate_draft <- function(
     checks = list(),
     analysis_plan = list(),
     models = list(),
-    render = list()
+    render = list(),
+    amendments = list()
 ) {
   instrument <- sframe_builder_compose_instrument(
     meta = meta,
@@ -229,7 +250,8 @@ sframe_builder_validate_draft <- function(
     checks = checks,
     analysis_plan = analysis_plan,
     models = models,
-    render = render
+    render = render,
+    amendments = amendments
   )
 
   validation <- validate_sframe(instrument, strict = FALSE)

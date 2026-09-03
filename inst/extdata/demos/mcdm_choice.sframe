@@ -1,0 +1,591 @@
+{
+  "sframe_format": "1.0",
+  "hash": {
+    "algo": "sha256",
+    "value": "d6466bdb96f27eee7cce56d14cbae4f46c111df11e94c194c0299a25a762a93a"
+  },
+  "version": "1.0.0",
+  "meta": {
+    "title": "Choosing next year's venue",
+    "version": "1.0.0",
+    "description": "One decision, 10 methods, and whether they agree.",
+    "authors": null,
+    "languages": "en",
+    "validated": true,
+    "created_at": "2026-08-28T10:20:54Z"
+  },
+  "items": [
+    {
+      "id": "crit_pairs",
+      "label": "Compare the importance of each pair of criteria",
+      "type": "pairwise_comparison",
+      "required": true,
+      "reverse": false,
+      "comparison_items": ["cost", "capacity", "transport", "catering"],
+      "comparison_scale": "saaty"
+    },
+    {
+      "id": "crit_points",
+      "label": "Divide 100 points across the criteria",
+      "type": "criteria_weight",
+      "required": true,
+      "reverse": false,
+      "comparison_items": ["cost", "capacity", "transport", "catering"]
+    },
+    {
+      "id": "crit_influence",
+      "label": "How strongly does each factor influence the others?",
+      "type": "pairwise_comparison",
+      "required": true,
+      "reverse": false,
+      "comparison_items": ["cost", "capacity", "transport", "catering"],
+      "comparison_scale": "influence"
+    }
+  ],
+  "choices": [],
+  "scales": [],
+  "branching": [],
+  "checks": [],
+  "analysis_plan": [
+    {
+      "id": "RQ1",
+      "research_question": "What weight does each criterion carry?",
+      "family": "decision",
+      "method": "ahp",
+      "roles": {
+        "pairwise": "crit_pairs"
+      },
+      "options": {
+        "cr_filter": false
+      },
+      "decision_rule": "",
+      "reporting_references": [],
+      "status": "draft",
+      "requires_data": true,
+      "test": "ahp",
+      "interpretation": "",
+      "citations": []
+    },
+    {
+      "id": "RQ2",
+      "research_question": "The same weights with network dependence allowed.",
+      "family": "decision",
+      "method": "anp",
+      "roles": {
+        "pairwise": "crit_pairs"
+      },
+      "options": {
+        "cr_filter": false
+      },
+      "decision_rule": "",
+      "reporting_references": [],
+      "status": "draft",
+      "requires_data": true,
+      "test": "anp",
+      "interpretation": "",
+      "citations": []
+    },
+    {
+      "id": "RQ3",
+      "research_question": "Which criteria drive the others?",
+      "family": "decision",
+      "method": "dematel",
+      "roles": {
+        "pairwise": "crit_influence"
+      },
+      "options": [],
+      "decision_rule": "",
+      "reporting_references": [],
+      "status": "draft",
+      "requires_data": true,
+      "test": "dematel",
+      "interpretation": "",
+      "citations": []
+    },
+    {
+      "id": "RQ4",
+      "research_question": "Which venue ranks best overall?",
+      "family": "decision",
+      "method": "topsis",
+      "roles": {
+        "weights_item": "crit_pairs"
+      },
+      "options": {
+        "matrix": [
+          [
+            4.1,
+            3,
+            210,
+            36
+          ],
+          [
+            3.6,
+            4.5,
+            180,
+            48
+          ],
+          [
+            4.8,
+            2.5,
+            260,
+            24
+          ],
+          [
+            3.9,
+            4,
+            150,
+            72
+          ],
+          [
+            4.4,
+            3.8,
+            230,
+            30
+          ]
+        ],
+        "alternatives": [
+          "Riverside",
+          "Old Mill",
+          "Civic Hall",
+          "Parkview",
+          "Harbour Suite"
+        ],
+        "criteria": [
+          "cost",
+          "capacity",
+          "transport",
+          "catering"
+        ],
+        "criteria_types": [
+          "benefit",
+          "benefit",
+          "cost",
+          "cost"
+        ]
+      },
+      "decision_rule": "",
+      "reporting_references": [],
+      "status": "draft",
+      "requires_data": true,
+      "test": "topsis",
+      "interpretation": "",
+      "citations": []
+    },
+    {
+      "id": "RQ5",
+      "research_question": "And by compromise ranking?",
+      "family": "decision",
+      "method": "vikor",
+      "roles": {
+        "weights_item": "crit_pairs"
+      },
+      "options": {
+        "matrix": [
+          [
+            4.1,
+            3,
+            210,
+            36
+          ],
+          [
+            3.6,
+            4.5,
+            180,
+            48
+          ],
+          [
+            4.8,
+            2.5,
+            260,
+            24
+          ],
+          [
+            3.9,
+            4,
+            150,
+            72
+          ],
+          [
+            4.4,
+            3.8,
+            230,
+            30
+          ]
+        ],
+        "alternatives": [
+          "Riverside",
+          "Old Mill",
+          "Civic Hall",
+          "Parkview",
+          "Harbour Suite"
+        ],
+        "criteria": [
+          "cost",
+          "capacity",
+          "transport",
+          "catering"
+        ],
+        "criteria_types": [
+          "benefit",
+          "benefit",
+          "cost",
+          "cost"
+        ]
+      },
+      "decision_rule": "",
+      "reporting_references": [],
+      "status": "draft",
+      "requires_data": true,
+      "test": "vikor",
+      "interpretation": "",
+      "citations": []
+    },
+    {
+      "id": "RQ6",
+      "research_question": "And by ratio analysis?",
+      "family": "decision",
+      "method": "moora",
+      "roles": {
+        "weights_item": "crit_pairs"
+      },
+      "options": {
+        "matrix": [
+          [
+            4.1,
+            3,
+            210,
+            36
+          ],
+          [
+            3.6,
+            4.5,
+            180,
+            48
+          ],
+          [
+            4.8,
+            2.5,
+            260,
+            24
+          ],
+          [
+            3.9,
+            4,
+            150,
+            72
+          ],
+          [
+            4.4,
+            3.8,
+            230,
+            30
+          ]
+        ],
+        "alternatives": [
+          "Riverside",
+          "Old Mill",
+          "Civic Hall",
+          "Parkview",
+          "Harbour Suite"
+        ],
+        "criteria": [
+          "cost",
+          "capacity",
+          "transport",
+          "catering"
+        ],
+        "criteria_types": [
+          "benefit",
+          "benefit",
+          "cost",
+          "cost"
+        ]
+      },
+      "decision_rule": "",
+      "reporting_references": [],
+      "status": "draft",
+      "requires_data": true,
+      "test": "moora",
+      "interpretation": "",
+      "citations": []
+    },
+    {
+      "id": "RQ7",
+      "research_question": "And by simple multi-attribute rating?",
+      "family": "decision",
+      "method": "smart",
+      "roles": {
+        "weights_item": "crit_pairs"
+      },
+      "options": {
+        "matrix": [
+          [
+            4.1,
+            3,
+            210,
+            36
+          ],
+          [
+            3.6,
+            4.5,
+            180,
+            48
+          ],
+          [
+            4.8,
+            2.5,
+            260,
+            24
+          ],
+          [
+            3.9,
+            4,
+            150,
+            72
+          ],
+          [
+            4.4,
+            3.8,
+            230,
+            30
+          ]
+        ],
+        "alternatives": [
+          "Riverside",
+          "Old Mill",
+          "Civic Hall",
+          "Parkview",
+          "Harbour Suite"
+        ],
+        "criteria": [
+          "cost",
+          "capacity",
+          "transport",
+          "catering"
+        ],
+        "criteria_types": [
+          "benefit",
+          "benefit",
+          "cost",
+          "cost"
+        ]
+      },
+      "decision_rule": "",
+      "reporting_references": [],
+      "status": "draft",
+      "requires_data": true,
+      "test": "smart",
+      "interpretation": "",
+      "citations": []
+    },
+    {
+      "id": "RQ8",
+      "research_question": "And by weighted aggregated sum product?",
+      "family": "decision",
+      "method": "waspas",
+      "roles": {
+        "weights_item": "crit_pairs"
+      },
+      "options": {
+        "matrix": [
+          [
+            4.1,
+            3,
+            210,
+            36
+          ],
+          [
+            3.6,
+            4.5,
+            180,
+            48
+          ],
+          [
+            4.8,
+            2.5,
+            260,
+            24
+          ],
+          [
+            3.9,
+            4,
+            150,
+            72
+          ],
+          [
+            4.4,
+            3.8,
+            230,
+            30
+          ]
+        ],
+        "alternatives": [
+          "Riverside",
+          "Old Mill",
+          "Civic Hall",
+          "Parkview",
+          "Harbour Suite"
+        ],
+        "criteria": [
+          "cost",
+          "capacity",
+          "transport",
+          "catering"
+        ],
+        "criteria_types": [
+          "benefit",
+          "benefit",
+          "cost",
+          "cost"
+        ]
+      },
+      "decision_rule": "",
+      "reporting_references": [],
+      "status": "draft",
+      "requires_data": true,
+      "test": "waspas",
+      "interpretation": "",
+      "citations": []
+    },
+    {
+      "id": "RQ9",
+      "research_question": "And by outranking flows?",
+      "family": "decision",
+      "method": "promethee",
+      "roles": {
+        "weights_item": "crit_pairs"
+      },
+      "options": {
+        "matrix": [
+          [
+            4.1,
+            3,
+            210,
+            36
+          ],
+          [
+            3.6,
+            4.5,
+            180,
+            48
+          ],
+          [
+            4.8,
+            2.5,
+            260,
+            24
+          ],
+          [
+            3.9,
+            4,
+            150,
+            72
+          ],
+          [
+            4.4,
+            3.8,
+            230,
+            30
+          ]
+        ],
+        "alternatives": [
+          "Riverside",
+          "Old Mill",
+          "Civic Hall",
+          "Parkview",
+          "Harbour Suite"
+        ],
+        "criteria": [
+          "cost",
+          "capacity",
+          "transport",
+          "catering"
+        ],
+        "criteria_types": [
+          "benefit",
+          "benefit",
+          "cost",
+          "cost"
+        ]
+      },
+      "decision_rule": "",
+      "reporting_references": [],
+      "status": "draft",
+      "requires_data": true,
+      "test": "promethee",
+      "interpretation": "",
+      "citations": []
+    },
+    {
+      "id": "RQ10",
+      "research_question": "And by outranking with thresholds?",
+      "family": "decision",
+      "method": "electre",
+      "roles": {
+        "weights_item": "crit_pairs"
+      },
+      "options": {
+        "matrix": [
+          [
+            4.1,
+            3,
+            210,
+            36
+          ],
+          [
+            3.6,
+            4.5,
+            180,
+            48
+          ],
+          [
+            4.8,
+            2.5,
+            260,
+            24
+          ],
+          [
+            3.9,
+            4,
+            150,
+            72
+          ],
+          [
+            4.4,
+            3.8,
+            230,
+            30
+          ]
+        ],
+        "alternatives": [
+          "Riverside",
+          "Old Mill",
+          "Civic Hall",
+          "Parkview",
+          "Harbour Suite"
+        ],
+        "criteria": [
+          "cost",
+          "capacity",
+          "transport",
+          "catering"
+        ],
+        "criteria_types": [
+          "benefit",
+          "benefit",
+          "cost",
+          "cost"
+        ]
+      },
+      "decision_rule": "",
+      "reporting_references": [],
+      "status": "draft",
+      "requires_data": true,
+      "test": "electre",
+      "interpretation": "",
+      "citations": []
+    }
+  ],
+  "models": [],
+  "render": []
+}

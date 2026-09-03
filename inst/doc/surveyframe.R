@@ -573,7 +573,7 @@ length(sf_plan(study))
 
 ## ----assumptions--------------------------------------------------------------
 if (requireNamespace("psych", quietly = TRUE)) {
-  ar <- assumption_report(scored, study)
+  ar <- assumption_report(scored, variables = scale_cols)
   print(ar)
 }
 

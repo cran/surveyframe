@@ -1,0 +1,5 @@
+"item_id","item_label","type","scale_id","value","value_label"
+"sessions_attended","How many sessions did you attend?","numeric",,,
+"networking_minutes","Roughly how many minutes did you spend networking?","slider",,,
+"overall_value","Overall, how much value did you get? (0 to 100)","slider",,,
+"age","How old are you?","numeric",,,

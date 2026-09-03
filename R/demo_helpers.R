@@ -51,14 +51,21 @@ sframe_demo_data <- function() {
   )
 }
 
-#' Load bundled input-types demo data
+#' Load the input-types demo backing SurveyBuilder and SurveyStudio
 #'
 #' Loads the bundled `.sframe` instrument and simulated response dataset that
-#' cover all main survey input types supported by surveyframe.
+#' cover all main survey input types supported by surveyframe. This is a
+#' different demo from the 22-item teaching library behind [sframe_demo()]:
+#' where [sframe_demo()] demonstrates one analysis method per call,
+#' this one exists to exercise every input control SurveyBuilder and
+#' SurveyStudio support in a single instrument, and is what backs
+#' [launch_builder_demo()], [launch_studio_demo()], and
+#' [launch_dashboard_demo()].
 #'
 #' @return A list with `instrument`, `responses`, `instrument_path`, and
 #'   `responses_path`.
 #' @export
+#' @seealso [sframe_demo()] for the 22-item teaching library instead.
 sframe_input_types_demo_data <- function() {
   instrument_path <- system.file(
     "extdata", "surveyframe_input_types_demo.sframe",

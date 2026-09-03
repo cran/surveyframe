@@ -1,0 +1,125 @@
+{
+  "sframe_format": "1.0",
+  "hash": {
+    "algo": "sha256",
+    "value": "4580d6975987eae720e418c919172b49c778876e46d1000d812f57050cba096a"
+  },
+  "version": "1.0.0",
+  "meta": {
+    "title": "Which sessions, and why come at all?",
+    "version": "1.0.0",
+    "description": "Two items that expand into one column per option.",
+    "authors": null,
+    "languages": "en",
+    "validated": true,
+    "created_at": "2026-08-28T10:20:54Z"
+  },
+  "items": [
+    {
+      "id": "sessions_chosen",
+      "label": "Which did you attend? Choose any.",
+      "type": "multiple_choice",
+      "required": true,
+      "choice_set": "sessions",
+      "reverse": false
+    },
+    {
+      "id": "rank_priorities",
+      "label": "Rank your reasons for attending.",
+      "type": "ranking",
+      "required": true,
+      "choice_set": "reasons",
+      "reverse": false
+    }
+  ],
+  "choices": [
+    {
+      "id": "sessions",
+      "values": ["keynote", "workshop", "panel", "poster", "social"],
+      "labels": ["Opening keynote", "Workshops", "Panel discussion", "Poster session", "Social evening"],
+      "allow_other": false,
+      "randomise": false
+    },
+    {
+      "id": "reasons",
+      "values": ["content", "networking", "location"],
+      "labels": ["The content", "The networking", "The location"],
+      "allow_other": false,
+      "randomise": false
+    }
+  ],
+  "scales": [],
+  "branching": [],
+  "checks": [],
+  "analysis_plan": [
+    {
+      "id": "RQ1",
+      "research_question": "Which sessions were best attended?",
+      "family": "descriptive",
+      "method": "descriptives",
+      "roles": {
+        "variables": [
+          "sessions_chosen__keynote",
+          "sessions_chosen__workshop",
+          "sessions_chosen__panel",
+          "sessions_chosen__poster",
+          "sessions_chosen__social"
+        ]
+      },
+      "options": [],
+      "decision_rule": "",
+      "reporting_references": [],
+      "status": "draft",
+      "requires_data": true,
+      "test": "descriptives",
+      "interpretation": "",
+      "citations": []
+    },
+    {
+      "id": "RQ2",
+      "research_question": "Do the sessions differ in how often they were chosen?",
+      "family": "categorical",
+      "method": "cochran_q",
+      "roles": {
+        "measures": [
+          "sessions_chosen__keynote",
+          "sessions_chosen__workshop",
+          "sessions_chosen__panel",
+          "sessions_chosen__poster",
+          "sessions_chosen__social"
+        ]
+      },
+      "options": [],
+      "decision_rule": "",
+      "reporting_references": [],
+      "status": "draft",
+      "requires_data": true,
+      "test": "cochran_q",
+      "interpretation": "",
+      "citations": []
+    },
+    {
+      "id": "RQ3",
+      "research_question": "What did attendees come for?",
+      "family": "descriptive",
+      "method": "descriptives",
+      "roles": {
+        "variables": [
+          "rank_priorities__content",
+          "rank_priorities__networking",
+          "rank_priorities__location"
+        ]
+      },
+      "options": [],
+      "decision_rule": "",
+      "reporting_references": [],
+      "status": "draft",
+      "requires_data": true,
+      "test": "descriptives",
+      "interpretation": "",
+      "citations": []
+    }
+  ],
+  "models": [],
+  "render": []
+}

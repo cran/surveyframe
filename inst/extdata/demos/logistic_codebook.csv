@@ -1,0 +1,12 @@
+"item_id","item_label","type","scale_id","value","value_label"
+"sessions_attended","How many sessions did you attend?","numeric",,,
+"will_return","Will you attend next year?","single_choice",,"no","No"
+"will_return","Will you attend next year?","single_choice",,"yes","Yes"
+"satisfaction","I was satisfied with the event.","likert",,"1","Strongly disagree"
+"satisfaction","I was satisfied with the event.","likert",,"2","Disagree"
+"satisfaction","I was satisfied with the event.","likert",,"3","Neither agree nor disagree"
+"satisfaction","I was satisfied with the event.","likert",,"4","Agree"
+"satisfaction","I was satisfied with the event.","likert",,"5","Strongly agree"
+"preferred_session_type","Which session type do you value most?","single_choice",,"workshop","Workshops"
+"preferred_session_type","Which session type do you value most?","single_choice",,"keynote","Keynotes"
+"preferred_session_type","Which session type do you value most?","single_choice",,"panel","Panel discussions"

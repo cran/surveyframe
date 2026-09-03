@@ -488,9 +488,46 @@ test_that("quality_report() flags straight-lining respondents", {
   resp  <- suppressWarnings(
     read_responses(resp, instr, respondent_id = "id",
                    submitted_at = "submitted_at"))
-  qr    <- quality_report(resp, instr)
+  # sat has 3 items, below the default straightline_min_items = 4, so the
+  # threshold is lowered explicitly here to exercise the detection logic
+  # itself. The default's own behaviour is covered separately below.
+  qr <- quality_report(resp, instr, straightline_min_items = 3)
   expect_true("sat" %in% names(qr$straightline))
+  expect_true(isTRUE(qr$straightline$sat$checked))
   expect_gte(length(qr$straightline$sat$flagged_rows), 5)
+})
+
+test_that("quality_report() does not check a scale shorter than straightline_min_items by default", {
+  # sat has 3 items. Real fix, 2026-08-26: a 2-item scale flagged 44 to 53%
+  # of a bundled demo instrument's respondents for giving the same answer
+  # to both items, which is what a genuinely consistent respondent does on
+  # a short scale, not evidence of inattention. The default threshold of 4
+  # keeps the check meaningful and marks a too-short scale as not checked
+  # rather than silently reporting a 0% flag rate that looks like a clean
+  # pass.
+  instr <- make_instrument()
+  resp  <- make_responses(20)
+  resp[1:20, c("sat_1","sat_2","sat_3")] <- 3
+  resp  <- suppressWarnings(
+    read_responses(resp, instr, respondent_id = "id",
+                   submitted_at = "submitted_at"))
+  qr <- quality_report(resp, instr)
+  expect_true("sat" %in% names(qr$straightline))
+  expect_false(isTRUE(qr$straightline$sat$checked))
+  expect_length(qr$straightline$sat$flagged_rows, 0)
+  expect_true(is.na(qr$straightline$sat$flag_rate))
+})
+
+test_that("straightline_min_items = 2 restores the previous, more permissive behaviour", {
+  instr <- make_instrument()
+  resp  <- make_responses(20)
+  resp[1:20, c("sat_1","sat_2","sat_3")] <- 3
+  resp  <- suppressWarnings(
+    read_responses(resp, instr, respondent_id = "id",
+                   submitted_at = "submitted_at"))
+  qr <- quality_report(resp, instr, straightline_min_items = 2)
+  expect_true(isTRUE(qr$straightline$sat$checked))
+  expect_equal(length(qr$straightline$sat$flagged_rows), 20)
 })
 
 test_that("quality_report() detects duplicate respondent IDs", {
@@ -819,6 +856,40 @@ test_that("builder helpers reclassify components from a loaded sframe file", {
   )
 
   expect_true(rebuilt$valid)
+})
+
+test_that("a builder draft round trip preserves an existing amendment log", {
+  # Found live in SurveyStudio's Amendments screen: sframe_builder_state_
+  # from_instrument()'s draft list carried no amendments field at all, and
+  # sframe_builder_compose_instrument() built a fresh instrument via
+  # sf_instrument(), which also has no amendments argument. SurveyStudio
+  # keeps rv$instrument synced to draft_result()$instrument on every
+  # builder-state change, so an already-amended instrument silently lost
+  # its entire disclosed history the moment it passed through the builder,
+  # not just via this new Amendments screen but via anything that opens an
+  # already-amended .sframe in SurveyStudio at all.
+  instr <- make_instrument(reverse = TRUE)
+  amended <- amend_sframe(
+    instr, instr,
+    reason_code = "data_correction",
+    reason_text = "Corrected a mis-keyed respondent ID."
+  )
+  expect_equal(nrow(amendment_log(amended)), 1)
+
+  state <- surveyframe::sframe_builder_state_from_instrument(amended)
+  expect_equal(length(state$amendments), 1)
+
+  rebuilt <- surveyframe::sframe_builder_validate_draft(
+    meta = state$meta,
+    choices = state$choices,
+    items = state$items,
+    scales = state$scales,
+    branching = state$branching,
+    checks = state$checks,
+    amendments = state$amendments
+  )
+  expect_true(rebuilt$valid)
+  expect_equal(nrow(amendment_log(rebuilt$instrument)), 1)
 })
 
 # ---------------------------------------------------------------------------

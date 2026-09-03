@@ -1,0 +1,125 @@
+{
+  "sframe_format": "1.0",
+  "hash": {
+    "algo": "sha256",
+    "value": "ece99be2aa5a145806f28c740e360f9701204d5d2e28f80d4b67b3db5ad209d3"
+  },
+  "version": "1.0.0",
+  "meta": {
+    "title": "Before and after the workshop",
+    "version": "1.0.0",
+    "description": "The same people measured twice, which is a different test from 2 groups.",
+    "authors": null,
+    "languages": "en",
+    "validated": true,
+    "created_at": "2026-08-28T10:20:43Z"
+  },
+  "items": [
+    {
+      "id": "confidence_before",
+      "label": "Before today, how confident were you applying this? (0 to 100)",
+      "type": "slider",
+      "required": false,
+      "reverse": false,
+      "slider_min": 0,
+      "slider_max": 100,
+      "slider_step": 1
+    },
+    {
+      "id": "confidence_after",
+      "label": "And now? (0 to 100)",
+      "type": "slider",
+      "required": false,
+      "reverse": false,
+      "slider_min": 0,
+      "slider_max": 100,
+      "slider_step": 1
+    },
+    {
+      "id": "recommend_before",
+      "label": "Before today, would you have recommended this event?",
+      "type": "single_choice",
+      "required": false,
+      "choice_set": "yn",
+      "reverse": false
+    },
+    {
+      "id": "recommend_after",
+      "label": "Would you recommend it now?",
+      "type": "single_choice",
+      "required": false,
+      "choice_set": "yn",
+      "reverse": false
+    }
+  ],
+  "choices": [
+    {
+      "id": "yn",
+      "values": ["no", "yes"],
+      "labels": ["No", "Yes"],
+      "allow_other": false,
+      "randomise": false
+    }
+  ],
+  "scales": [],
+  "branching": [],
+  "checks": [],
+  "analysis_plan": [
+    {
+      "id": "RQ1",
+      "research_question": "Did confidence change over the day?",
+      "family": "group_comparison",
+      "method": "t_test_pair",
+      "roles": {
+        "before": "confidence_before",
+        "after": "confidence_after"
+      },
+      "options": [],
+      "decision_rule": "",
+      "reporting_references": [],
+      "status": "draft",
+      "requires_data": true,
+      "test": "t_test_pair",
+      "interpretation": "",
+      "citations": []
+    },
+    {
+      "id": "RQ2",
+      "research_question": "The same question without assuming normality.",
+      "family": "group_comparison",
+      "method": "wilcoxon_pair",
+      "roles": {
+        "before": "confidence_before",
+        "after": "confidence_after"
+      },
+      "options": [],
+      "decision_rule": "",
+      "reporting_references": [],
+      "status": "draft",
+      "requires_data": true,
+      "test": "wilcoxon_pair",
+      "interpretation": "",
+      "citations": []
+    },
+    {
+      "id": "RQ3",
+      "research_question": "Did willingness to recommend change?",
+      "family": "categorical",
+      "method": "mcnemar",
+      "roles": {
+        "before": "recommend_before",
+        "after": "recommend_after"
+      },
+      "options": [],
+      "decision_rule": "",
+      "reporting_references": [],
+      "status": "draft",
+      "requires_data": true,
+      "test": "mcnemar",
+      "interpretation": "",
+      "citations": []
+    }
+  ],
+  "models": [],
+  "render": []
+}

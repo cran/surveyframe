@@ -18,7 +18,7 @@ A ggplot2 object, or \code{NULL} when the result carries no table.
 Top terms from a \code{term_freq} result as a horizontal bar chart, or a word
 cloud when \code{result$options$wordcloud} is \code{TRUE} (opt-in, default
 \code{FALSE}). Facets by group when the result carries a \code{group} role
-(todo_0.5.md section 1a).
+(todo_text_analysis.md section 1a).
 }
 \seealso{
 \code{\link[=run_analysis_plan]{run_analysis_plan()}}, \code{\link[=term_frequency]{term_frequency()}}

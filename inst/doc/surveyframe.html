@@ -387,7 +387,9 @@ tbody tr:last-child td { border-bottom: 2px solid #1a1a2e; }
 code span.at { color: #576419; }
 code span.dv, code span.fl, code span.bn { color: #276245; }
 code span.co { color: #396a80; }
-pre, pre code { white-space: pre-wrap; word-break: break-word; }
+
+pre, pre code, pre > code.sourceCode { white-space: pre-wrap; word-break: break-word; }
+pre > code.sourceCode > span { text-indent: -2em; padding-left: 2em; }
 div.sourceCode { overflow: visible; }
 pre.sourceCode a:empty { display: none; }
 #TOC a { display: inline-block; min-height: 24px; }
@@ -712,7 +714,7 @@ detectable.</p>
 <span id="cb14-2"><a href="#cb14-2" tabindex="-1"></a><span class="co">#&gt; &lt;sframe validation&gt;</span></span>
 <span id="cb14-3"><a href="#cb14-3" tabindex="-1"></a><span class="co">#&gt;   Instrument:  Digital Marketing Effectiveness of Tourism Services (1.0.0)</span></span>
 <span id="cb14-4"><a href="#cb14-4" tabindex="-1"></a><span class="co">#&gt;   Status:      valid</span></span>
-<span id="cb14-5"><a href="#cb14-5" tabindex="-1"></a><span class="co">#&gt;   Checks:      18 run, 0 with problems</span></span></code></pre></div>
+<span id="cb14-5"><a href="#cb14-5" tabindex="-1"></a><span class="co">#&gt;   Checks:      19 run, 0 with problems</span></span></code></pre></div>
 <p>Read the parts of the diagnostic with the accessors rather than
 reaching into it. <code>summary()</code> shows every check that ran,
 including the ones that found nothing, which is how you tell a check
@@ -739,11 +741,11 @@ that passed from a check that was never reached.</p>
 <span id="cb16-8"><a href="#cb16-8" tabindex="-1"></a><span class="co">#&gt; [1] TRUE</span></span></code></pre></div>
 <div id="what-the-sha-256-hash-proves-and-what-it-does-not" class="section level3">
 <h3>What the SHA-256 hash proves, and what it does not</h3>
-<p>The hash [write_sframe()] embeds confirms one thing: the
+<p>The hash <code>write_sframe()</code> embeds confirms one thing: the
 <code>.sframe</code> file on disk is byte-identical to what was written.
-If any byte changes – an item’s wording, a scale’s membership, a plan’s
-variables – [read_sframe()] detects the mismatch and refuses to load the
-file rather than silently accepting it.</p>
+If any byte changes, whether an item’s wording, a scale’s membership, or
+a plan’s variables, <code>read_sframe()</code> detects the mismatch and
+refuses to load the file rather than silently accepting it.</p>
 <p>That is a narrow, specific guarantee. It proves file identity. It
 does not prove the survey has good questions, an unbiased sample, or a
 sound analysis, and it says nothing about p-hacking or HARKing on its
@@ -752,14 +754,14 @@ mechanism: the <code>analysis_plan</code> slot is bound to the
 instrument at design time, before data arrive, and
 <code>run_analysis_plan()</code> executes that pre-declared plan in one
 pass rather than letting a plan be assembled after looking at results.
-Keep the two claims distinct – “this file wasn’t edited after the fact”
+Keep the two claims distinct: “this file wasn’t edited after the fact”
 and “this analysis was decided before seeing the data” are different
 guarantees from different mechanisms, and neither substitutes for the
 other.</p>
 </div>
 <div id="sframe-is-plain-json-not-a-proprietary-format" class="section level3">
 <h3><code>.sframe</code> is plain JSON, not a proprietary format</h3>
-<p>A <code>.sframe</code> file is ordinary, git-diffable, UTF-8 JSON –
+<p>A <code>.sframe</code> file is ordinary, git-diffable, UTF-8 JSON,
 not a binary or R-specific object. Any tool that reads JSON can open
 one, and the format is documented independently of this package in
 <code>system.file(&quot;schema&quot;, &quot;sframe_schema.json&quot;, package = &quot;surveyframe&quot;)</code>,
@@ -787,21 +789,21 @@ installing R.</p>
 <p>Because the file is plain text, two versions of it diff the same way
 any source file does. If <code>tourism_services_v1.sframe</code> were
 committed to a Git repository, revising it and running
-<code>git diff</code> on the file would show exactly which lines – which
-item, which choice, which plan block – changed, alongside Git’s own
+<code>git diff</code> on the file would show exactly which lines, which
+item, which choice, which plan block, changed, alongside Git’s own
 commit history for who changed it and when. That diff is Git’s job, not
-this package’s; see the next section for how the two connect.</p>
+this package’s. See the next section for how the two connect.</p>
 </div>
 <div id="disclosed-revision-amend_sframe" class="section level3">
 <h3>Disclosed revision: <code>amend_sframe()</code></h3>
 <p>A hash mismatch alone can’t distinguish a legitimate correction
 (fixing a data-entry error, removing bot responses, correcting a
-misspecified model) from an undisclosed change – both break the hash
+misspecified model) from an undisclosed change: both break the hash
 identically. <code>amend_sframe()</code> gives legitimate revision a
 structured, disclosed path instead: it compares the instrument before
-and after a change, and appends a record – never overwrites – of what
-changed and why, directly inside the <code>.sframe</code> file next to
-the content it explains.</p>
+and after a change, and appends a record of what changed and why,
+directly inside the <code>.sframe</code> file next to the content it
+explains, never overwriting an earlier entry.</p>
 <p>Amendments come in two tiers, because not every change carries the
 same risk to the plan’s design-time-binding logic:</p>
 <ul>
@@ -810,15 +812,15 @@ same risk to the plan’s design-time-binding logic:</p>
 researcher hygiene and stay low-friction: a reason code and a short
 explanation are enough.</li>
 <li><strong><code>&quot;design&quot;</code></strong> amendments (anything touching
-the analysis plan or a model – <code>model_respecification</code>, or
+the analysis plan or a model, <code>model_respecification</code>, or
 <code>instrument_revision</code>/<code>other</code> by default) are
 exactly the kind of post-hoc change the design-time plan binding exists
 to guard against. They require a <code>deviation_report</code>
 describing what changed in the research question, method, or model and
-why, and record <code>signoff</code> explicitly – as a reviewer’s name,
-or the literal value <code>&quot;none&quot;</code> when no second sign-off was
-given, so an unreviewed design change stays visible to an auditor rather
-than looking identical to a signed-off one.</li>
+why, and record <code>signoff</code> explicitly, as a reviewer’s name or
+the literal value <code>&quot;none&quot;</code> when no second sign-off was given,
+so an unreviewed design change stays visible to an auditor rather than
+looking identical to a signed-off one.</li>
 </ul>
 <div class="sourceCode" id="cb18"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" tabindex="-1"></a><span class="co"># Suppose a pilot round surfaces an ambiguous item and it needs rewording.</span></span>
 <span id="cb18-2"><a href="#cb18-2" tabindex="-1"></a>dmre_1_revised <span class="ot">&lt;-</span> <span class="fu">sf_item</span>(</span>
@@ -839,19 +841,19 @@ than looking identical to a signed-off one.</li>
 <span id="cb18-17"><a href="#cb18-17" tabindex="-1"></a></span>
 <span id="cb18-18"><a href="#cb18-18" tabindex="-1"></a><span class="fu">amendment_log</span>(study_amended)</span>
 <span id="cb18-19"><a href="#cb18-19" tabindex="-1"></a><span class="co">#&gt;              timestamp         reason_code</span></span>
-<span id="cb18-20"><a href="#cb18-20" tabindex="-1"></a><span class="co">#&gt; 1 2026-08-20T06:56:53Z instrument_revision</span></span>
+<span id="cb18-20"><a href="#cb18-20" tabindex="-1"></a><span class="co">#&gt; 1 2026-09-03T17:10:27Z instrument_revision</span></span>
 <span id="cb18-21"><a href="#cb18-21" tabindex="-1"></a><span class="co">#&gt;                                    reason_text   tier author</span></span>
 <span id="cb18-22"><a href="#cb18-22" tabindex="-1"></a><span class="co">#&gt; 1 Clarified item wording after pilot feedback. design   &lt;NA&gt;</span></span>
 <span id="cb18-23"><a href="#cb18-23" tabindex="-1"></a><span class="co">#&gt;                                     deviation_report signoff</span></span>
 <span id="cb18-24"><a href="#cb18-24" tabindex="-1"></a><span class="co">#&gt; 1 Wording only; the construct measured is unchanged.    none</span></span>
 <span id="cb18-25"><a href="#cb18-25" tabindex="-1"></a><span class="co">#&gt;                                                      previous_hash</span></span>
-<span id="cb18-26"><a href="#cb18-26" tabindex="-1"></a><span class="co">#&gt; 1 61644747b9c720fd857fa68beb123a3548e47c005238a94098a529b871665723</span></span>
+<span id="cb18-26"><a href="#cb18-26" tabindex="-1"></a><span class="co">#&gt; 1 3925f88212ca7a1ca4871af319aaedee6197b505eaad234128d6ee5ac4639641</span></span>
 <span id="cb18-27"><a href="#cb18-27" tabindex="-1"></a><span class="co">#&gt;                                                           new_hash</span></span>
-<span id="cb18-28"><a href="#cb18-28" tabindex="-1"></a><span class="co">#&gt; 1 d99b57c954077fe3066df862bce4600226058736f204d397f9ffe77784cd5284</span></span>
+<span id="cb18-28"><a href="#cb18-28" tabindex="-1"></a><span class="co">#&gt; 1 355ac837afa3c4954ac31782723f441b24c4e1b7b5d0fca7c249352d75bad8e6</span></span>
 <span id="cb18-29"><a href="#cb18-29" tabindex="-1"></a><span class="co">#&gt;   changed_fields</span></span>
 <span id="cb18-30"><a href="#cb18-30" tabindex="-1"></a><span class="co">#&gt; 1          items</span></span></code></pre></div>
-<p><code>amendment_log()</code> returns the full history as a data frame
-– one row per disclosed change, printable or exported with
+<p><code>amendment_log()</code> returns the full history as a data
+frame, one row per disclosed change, printable or exported with
 <code>write.csv()</code> for an external audit trail.
 <code>write_sframe()</code> on the amended instrument persists the log
 in the file; a reviewer who later loads it with
@@ -861,25 +863,25 @@ edit made directly to the file, bypassing <code>amend_sframe()</code>,
 still fails <code>read_sframe()</code>’s integrity check exactly as
 before.</p>
 <p>Be clear about what this does and does not guarantee.
-<code>amend_sframe()</code> records a disclosed change – it cannot
-compel disclosure, the same way a preregistration deviation report can’t
-be forced. Nothing prevents a researcher from reconstructing an
-instrument from scratch and calling <code>write_sframe()</code> on it
-directly, skipping the amendment log entirely. What the mechanism
-actually guarantees is narrower and still useful: <em>if</em> a change
-is disclosed through <code>amend_sframe()</code>, the record is
-structured, timestamped, and permanent inside the file – not that every
-change will be.</p>
+<code>amend_sframe()</code> records a disclosed change. It cannot compel
+disclosure, the same way a preregistration deviation report can’t be
+forced. Nothing prevents a researcher from reconstructing an instrument
+from scratch and calling <code>write_sframe()</code> on it directly,
+skipping the amendment log entirely. What the mechanism actually
+guarantees is narrower and still useful: <em>if</em> a change is
+disclosed through <code>amend_sframe()</code>, the record is structured,
+timestamped, and permanent inside the file. It does not guarantee that
+every change is disclosed in the first place.</p>
 </div>
 <div id="linking-a-saved-instrument-to-its-git-commit" class="section level3">
 <h3>Linking a saved instrument to its Git commit</h3>
-<p>A bare hash gives no diff, author, or explanation for a change – Git
+<p>A bare hash gives no diff, author, or explanation for a change. Git
 already provides all three. <code>link_git_commit()</code> points the
 instrument at Git rather than duplicating it: it records the current
 commit’s SHA and subject line, so the SHA-256 hash’s role narrows to
 confirming that the file on disk matches what that specific,
 already-explained commit produced. It degrades gracefully with no error
-when Git isn’t installed or the path isn’t a repository – Git is
+when Git isn’t installed or the path isn’t a repository. Git is
 optional, never a dependency of the rest of the package.</p>
 <div class="sourceCode" id="cb19"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" tabindex="-1"></a><span class="fu">link_git_commit</span>(study_amended, <span class="at">repo_path =</span> <span class="fu">tempdir</span>())</span>
 <span id="cb19-2"><a href="#cb19-2" tabindex="-1"></a><span class="co">#&gt; $linked</span></span>
@@ -913,7 +915,7 @@ GitHub Pages, shared by email, or opened directly from disk.</p>
 <span id="cb21-3"><a href="#cb21-3" tabindex="-1"></a>  <span class="at">output_path =</span> <span class="fu">file.path</span>(<span class="fu">tempdir</span>(), <span class="st">&quot;tourism_services_survey.html&quot;</span>),</span>
 <span id="cb21-4"><a href="#cb21-4" tabindex="-1"></a>  <span class="at">open        =</span> <span class="cn">FALSE</span></span>
 <span id="cb21-5"><a href="#cb21-5" tabindex="-1"></a>)</span>
-<span id="cb21-6"><a href="#cb21-6" tabindex="-1"></a><span class="co">#&gt; Static survey written to &#39;/tmp/Rtmpqq2PK1/tourism_services_survey.html&#39; (85.2</span></span>
+<span id="cb21-6"><a href="#cb21-6" tabindex="-1"></a><span class="co">#&gt; Static survey written to &#39;/tmp/RtmpH4U5N2/tourism_services_survey.html&#39; (85.5</span></span>
 <span id="cb21-7"><a href="#cb21-7" tabindex="-1"></a><span class="co">#&gt; KB).</span></span>
 <span id="cb21-8"><a href="#cb21-8" tabindex="-1"></a><span class="fu">file.exists</span>(html_path)</span>
 <span id="cb21-9"><a href="#cb21-9" tabindex="-1"></a><span class="co">#&gt; [1] TRUE</span></span></code></pre></div>
@@ -960,7 +962,7 @@ no string-splitting step.</p>
 <span id="cb23-3"><a href="#cb23-3" tabindex="-1"></a>  <span class="at">sheet_url  =</span> <span class="st">&quot;https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID&quot;</span>,</span>
 <span id="cb23-4"><a href="#cb23-4" tabindex="-1"></a>  <span class="at">output_dir =</span> <span class="fu">tempdir</span>()</span>
 <span id="cb23-5"><a href="#cb23-5" tabindex="-1"></a>)</span>
-<span id="cb23-6"><a href="#cb23-6" tabindex="-1"></a><span class="co">#&gt; Apps Script written to: /tmp/Rtmpqq2PK1/surveyframe_collector.gs</span></span>
+<span id="cb23-6"><a href="#cb23-6" tabindex="-1"></a><span class="co">#&gt; Apps Script written to: /tmp/RtmpH4U5N2/surveyframe_collector.gs</span></span>
 <span id="cb23-7"><a href="#cb23-7" tabindex="-1"></a><span class="co">#&gt; Follow the setup instructions inside the file to deploy it.</span></span>
 <span id="cb23-8"><a href="#cb23-8" tabindex="-1"></a><span class="fu">file.exists</span>(script_path)</span>
 <span id="cb23-9"><a href="#cb23-9" tabindex="-1"></a><span class="co">#&gt; [1] TRUE</span></span></code></pre></div>
@@ -1125,11 +1127,11 @@ onward to use real data.</p>
 </tr>
 <tr class="odd">
 <td align="left">Flagged for review</td>
-<td align="right">59</td>
+<td align="right">52</td>
 </tr>
 <tr class="even">
 <td align="left">Flag rate</td>
-<td align="right">98.3%</td>
+<td align="right">86.7%</td>
 </tr>
 </tbody>
 </table>
@@ -1826,10 +1828,22 @@ the variables involved. <code>assumption_report()</code> tests normality
 (Shapiro-Wilk for samples below 5,000), homogeneity of variance (Levene)
 for grouped tests, and linearity for regression pairs.</p>
 <div class="sourceCode" id="cb36"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb36-1"><a href="#cb36-1" tabindex="-1"></a><span class="cf">if</span> (<span class="fu">requireNamespace</span>(<span class="st">&quot;psych&quot;</span>, <span class="at">quietly =</span> <span class="cn">TRUE</span>)) {</span>
-<span id="cb36-2"><a href="#cb36-2" tabindex="-1"></a>  ar <span class="ot">&lt;-</span> <span class="fu">assumption_report</span>(scored, study)</span>
+<span id="cb36-2"><a href="#cb36-2" tabindex="-1"></a>  ar <span class="ot">&lt;-</span> <span class="fu">assumption_report</span>(scored, <span class="at">variables =</span> scale_cols)</span>
 <span id="cb36-3"><a href="#cb36-3" tabindex="-1"></a>  <span class="fu">print</span>(ar)</span>
 <span id="cb36-4"><a href="#cb36-4" tabindex="-1"></a>}</span>
-<span id="cb36-5"><a href="#cb36-5" tabindex="-1"></a><span class="co">#&gt; Assumption Report</span></span></code></pre></div>
+<span id="cb36-5"><a href="#cb36-5" tabindex="-1"></a><span class="co">#&gt; Assumption Report</span></span>
+<span id="cb36-6"><a href="#cb36-6" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb36-7"><a href="#cb36-7" tabindex="-1"></a><span class="co">#&gt; Normality:</span></span>
+<span id="cb36-8"><a href="#cb36-8" tabindex="-1"></a><span class="co">#&gt;  variable  n shapiro_w    shapiro_p    skewness   kurtosis</span></span>
+<span id="cb36-9"><a href="#cb36-9" tabindex="-1"></a><span class="co">#&gt;      DMRE 60 0.9507082 1.681885e-02 -0.01764237 -0.8595994</span></span>
+<span id="cb36-10"><a href="#cb36-10" tabindex="-1"></a><span class="co">#&gt;      DMAU 60 0.9400575 5.447373e-03 -0.27466443 -0.3742255</span></span>
+<span id="cb36-11"><a href="#cb36-11" tabindex="-1"></a><span class="co">#&gt;      DMEU 60 0.9202802 7.870891e-04 -0.13995250 -0.9009628</span></span>
+<span id="cb36-12"><a href="#cb36-12" tabindex="-1"></a><span class="co">#&gt;      DMPV 60 0.9236779 1.081931e-03 -0.16121971 -1.3529371</span></span>
+<span id="cb36-13"><a href="#cb36-13" tabindex="-1"></a><span class="co">#&gt;      DSQA 60 0.9431484 7.509031e-03 -0.68528436  0.2173799</span></span>
+<span id="cb36-14"><a href="#cb36-14" tabindex="-1"></a><span class="co">#&gt;      DSQT 60 0.9590129 4.211033e-02 -0.37357996 -0.1216330</span></span>
+<span id="cb36-15"><a href="#cb36-15" tabindex="-1"></a><span class="co">#&gt;      DSUQ 60 0.9488769 1.379674e-02  0.04178933 -0.6397338</span></span>
+<span id="cb36-16"><a href="#cb36-16" tabindex="-1"></a><span class="co">#&gt;        TS 60 0.8780098 2.274819e-05 -0.74469442  0.1776129</span></span>
+<span id="cb36-17"><a href="#cb36-17" tabindex="-1"></a><span class="co">#&gt;        BI 60 0.9527818 2.108952e-02 -0.33102932 -0.4335865</span></span></code></pre></div>
 <p>Review the <code>$normality</code> and <code>$homogeneity</code>
 slots to decide whether parametric or non-parametric alternatives are
 appropriate. The analysis plan can override the test method per block if
@@ -1940,7 +1954,7 @@ and descriptives alongside the analysis results.</p>
 <span id="cb41-4"><a href="#cb41-4" tabindex="-1"></a>  <span class="at">output_file =</span> <span class="fu">file.path</span>(<span class="fu">tempdir</span>(), <span class="st">&quot;tourism_results.html&quot;</span>)</span>
 <span id="cb41-5"><a href="#cb41-5" tabindex="-1"></a>)</span>
 <span id="cb41-6"><a href="#cb41-6" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">&quot;Results report written:&quot;</span>, results_path, <span class="st">&quot;</span><span class="sc">\n</span><span class="st">&quot;</span>)</span>
-<span id="cb41-7"><a href="#cb41-7" tabindex="-1"></a><span class="co">#&gt; Results report written: /tmp/Rtmpqq2PK1/tourism_results.html</span></span>
+<span id="cb41-7"><a href="#cb41-7" tabindex="-1"></a><span class="co">#&gt; Results report written: /tmp/RtmpH4U5N2/tourism_results.html</span></span>
 <span id="cb41-8"><a href="#cb41-8" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">&quot;Size:&quot;</span>, <span class="fu">round</span>(<span class="fu">file.size</span>(results_path) <span class="sc">/</span> <span class="dv">1024</span>, <span class="dv">1</span>), <span class="st">&quot;KB</span><span class="sc">\n</span><span class="st">&quot;</span>)</span>
 <span id="cb41-9"><a href="#cb41-9" tabindex="-1"></a><span class="co">#&gt; Size: 13.5 KB</span></span></code></pre></div>
 <p>The results report contains one section per research question, with
@@ -1962,7 +1976,8 @@ plain frequency bar.</p>
 <span id="cb42-9"><a href="#cb42-9" tabindex="-1"></a>  <span class="at">include_reliability  =</span> <span class="cn">TRUE</span>,</span>
 <span id="cb42-10"><a href="#cb42-10" tabindex="-1"></a>  <span class="at">include_analysis =</span> <span class="cn">TRUE</span>,</span>
 <span id="cb42-11"><a href="#cb42-11" tabindex="-1"></a>  <span class="at">include_models   =</span> <span class="cn">FALSE</span></span>
-<span id="cb42-12"><a href="#cb42-12" tabindex="-1"></a>)</span></code></pre></div>
+<span id="cb42-12"><a href="#cb42-12" tabindex="-1"></a>)</span>
+<span id="cb42-13"><a href="#cb42-13" tabindex="-1"></a><span class="co">#&gt; Report rendered with the Quarto engine: /tmp/RtmpH4U5N2/tourism_report.html</span></span></code></pre></div>
 <hr />
 </div>
 <div id="the-live-workflow" class="section level2">

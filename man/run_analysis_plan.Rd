@@ -9,7 +9,8 @@ run_analysis_plan(
   instrument,
   scored = TRUE,
   plots = FALSE,
-  plot_palette = c("web", "print")
+  plot_palette = c("web", "print"),
+  seed = 20260828L
 )
 }
 \arguments{
@@ -30,6 +31,15 @@ Defaults to \code{FALSE}.}
 \item{plot_palette}{One of \code{"web"} (brand colours, for on-screen use) or
 \code{"print"} (black, grey, and white, for journal-ready print figures).
 Applied to every plot attached when \code{plots = TRUE}. See \code{sframe_brand()}.}
+
+\item{seed}{Integer or \code{NULL}. The random seed the analysis runs under.
+Defaults to a fixed value so the same instrument and the same data give
+the same answer every time, which is what makes a rendered report usable
+as an audit artefact. Every bootstrap confidence interval in the plan, and
+the parallel analysis behind the EFA family, depend on it. Pass \code{NULL} for
+the unseeded behaviour of releases before 0.4.1. The caller's own random
+stream is restored afterwards, so seeding here does not affect anything
+that runs later.}
 }
 \value{
 An object of class \code{sframe_analysis_results}, a list with one

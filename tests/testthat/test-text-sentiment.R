@@ -1,5 +1,5 @@
 # tests/testthat/test-text-sentiment.R
-# Sentiment and DFM analysis (todo_0.5.md section 1b, agent 3): the bing-
+# Sentiment and DFM analysis (todo_text_analysis.md section 1b, agent 3): the bing-
 # lexicon sentiment runner sframe_run_tidy_sentiment(), the descriptive
 # document-feature matrix runner sframe_run_quanteda_dfm(), and the
 # diverging sentiment plot sframe_plot_sentiment(). Every test that needs

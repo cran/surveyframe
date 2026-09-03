@@ -1,0 +1,92 @@
+---
+title: "surveyframe: {{DEMO_TITLE}}"
+format:
+  html:
+    toc: true
+    embed-resources: true
+execute:
+  warning: false
+  message: false
+---
+
+```{r setup}
+#| include: false
+library(surveyframe)
+```
+
+## The study
+
+This notebook runs the `{{DEMO_NAME}}` demo end to end: load the instrument,
+read the responses, run the pre-declared analysis plan, and render a report.
+It is yours to change. Replace the demo with your own instrument and your own
+data and the rest of the notebook still works.
+
+```{r load}
+demo       <- sframe_demo("{{DEMO_NAME}}")
+instrument <- demo$instrument
+responses  <- demo$responses
+instrument
+```
+
+`{{DEMO_TEACHES}}`
+
+## The questions
+
+```{r items}
+codebook <- as.data.frame(codebook_report(instrument))
+knitr::kable(codebook[, c("id", "label", "type")])
+```
+
+## The plan, declared before the data existed
+
+This is what makes the analysis a contract rather than a search. The blocks
+below were written into the instrument at design time.
+
+```{r plan}
+knitr::kable(do.call(rbind, lapply(sf_plan(instrument), function(b) {
+  data.frame(id = b$id, question = b$research_question, method = b$method)
+})))
+```
+
+## The results
+
+```{r run}
+results <- run_analysis_plan(responses, instrument)
+for (b in results) {
+  cat("\n###", b$block_id, b$research_question, "\n\n")
+  if (!is.null(b$apa)) cat(b$apa, "\n\n")
+  if (is.data.frame(b$table)) print(knitr::kable(b$table))
+}
+```
+
+## A report you can hand to somebody
+
+```{r report}
+#| eval: false
+render_report(instrument, responses, output_path = "report.html")
+```
+
+## Checking these numbers against other software
+
+Every demo ships its data, a codebook of variable and value labels, and the
+results surveyframe produced. Take them into `psych`, SPSS, JASP, jamovi or
+Stata and compare.
+
+```{r export}
+#| eval: false
+sframe_export_labelled(responses, instrument, "{{DEMO_NAME}}.sav")
+```
+
+The `.sav` arrives with the question wording and the response options already
+attached, so your variables read as questions rather than as codes.
+
+If a number comes out differently, please
+[open an issue](https://github.com/MohammedAliSharafuddin/surveyframe/issues)
+with the demo name, the software you used, and both results.
+
+## Adapt this for your own survey
+
+1. Replace `sframe_demo("{{DEMO_NAME}}")` with your own `read_sframe()` call,
+   or build an instrument with `sf_instrument()`.
+2. Declare your analysis plan **before** you collect anything.
+3. Everything below stays as it is.

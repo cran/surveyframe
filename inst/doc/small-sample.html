@@ -375,7 +375,9 @@ tbody tr:last-child td { border-bottom: 2px solid #1a1a2e; }
 code span.at { color: #576419; }
 code span.dv, code span.fl, code span.bn { color: #276245; }
 code span.co { color: #396a80; }
-pre, pre code { white-space: pre-wrap; word-break: break-word; }
+
+pre, pre code, pre > code.sourceCode { white-space: pre-wrap; word-break: break-word; }
+pre > code.sourceCode > span { text-indent: -2em; padding-left: 2em; }
 div.sourceCode { overflow: visible; }
 pre.sourceCode a:empty { display: none; }
 #TOC a { display: inline-block; min-height: 24px; }
@@ -498,7 +500,7 @@ the shift rather than a point estimate alone.</p>
 <td align="left">RQ1</td>
 <td align="left">Does the treatment arm score higher than control?</td>
 <td align="left"></td>
-<td align="right">U = 34, z = -1.17, p = 0.241, r = 0.26 [0.02, 0.65],
+<td align="right">U = 34, z = -1.17, p = 0.241, r = 0.26 [0.02, 0.64],
 Hodges-Lehmann shift = -3.99 [-14.38, 5.36]</td>
 </tr>
 </tbody>
@@ -546,14 +548,14 @@ within-pair shift, again with an interval rather than a point value.</p>
 <td align="left">Did scores change from before to after?</td>
 <td align="left"></td>
 <td align="right">V = 0, z = -2.45, p = 0.014, r = 0.87 [0.89, 0.90],
-pseudomedian = -6.62 [-9.04, -4.38]</td>
+pseudomedian = -6.46 [-11.98, -3.50]</td>
 </tr>
 </tbody>
 </table>
 <div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a>wp_results[[<span class="dv">1</span>]]<span class="sc">$</span>pseudomedian</span>
-<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a><span class="co">#&gt; [1] -6.617024</span></span>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a><span class="co">#&gt; [1] -6.45986</span></span>
 <span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a>wp_results[[<span class="dv">1</span>]]<span class="sc">$</span>pseudomedian_conf_int</span>
-<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a><span class="co">#&gt; [1] -9.043759 -4.377587</span></span></code></pre></div>
+<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a><span class="co">#&gt; [1] -11.977167  -3.498729</span></span></code></pre></div>
 </div>
 <div id="fishers-exact-test-with-the-exact-odds-ratio-ci" class="section level2">
 <h2>Fisher’s exact test with the exact odds-ratio CI</h2>
@@ -609,7 +611,7 @@ estimator you need. It is already exported and used elsewhere in the
 package, applied here to the median of the pilot outcome scores.</p>
 <div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a><span class="fu">bootstrap_ci</span>(pilot<span class="sc">$</span>outcome, <span class="at">FUN =</span> stats<span class="sc">::</span>median, <span class="at">R =</span> <span class="dv">999</span>)</span>
 <span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a><span class="co">#&gt; estimate    lower    upper </span></span>
-<span id="cb10-3"><a href="#cb10-3" tabindex="-1"></a><span class="co">#&gt; 52.82878 46.89976 57.67398</span></span></code></pre></div>
+<span id="cb10-3"><a href="#cb10-3" tabindex="-1"></a><span class="co">#&gt; 52.82878 47.33676 56.66709</span></span></code></pre></div>
 </div>
 <div id="firth-logistic-regression-for-a-rare-or-small-binary-outcome" class="section level2">
 <h2>Firth logistic regression for a rare or small binary outcome</h2>
@@ -670,7 +672,7 @@ explicit rather than implicit in a single point estimate.</p>
 <div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" tabindex="-1"></a><span class="fu">cohens_d_ci</span>(pilot<span class="sc">$</span>outcome[pilot<span class="sc">$</span>group <span class="sc">==</span> <span class="st">&quot;treatment&quot;</span>],</span>
 <span id="cb13-2"><a href="#cb13-2" tabindex="-1"></a>            pilot<span class="sc">$</span>outcome[pilot<span class="sc">$</span>group <span class="sc">==</span> <span class="st">&quot;control&quot;</span>], <span class="at">R =</span> <span class="dv">999</span>)</span>
 <span id="cb13-3"><a href="#cb13-3" tabindex="-1"></a><span class="co">#&gt;   estimate      lower      upper </span></span>
-<span id="cb13-4"><a href="#cb13-4" tabindex="-1"></a><span class="co">#&gt; 0.54201883 0.03383121 1.48685928</span></span></code></pre></div>
+<span id="cb13-4"><a href="#cb13-4" tabindex="-1"></a><span class="co">#&gt; 0.54201883 0.02928852 1.54044282</span></span></code></pre></div>
 </div>
 <div id="citation" class="section level2">
 <h2>Citation</h2>

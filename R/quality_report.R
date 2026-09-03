@@ -180,6 +180,15 @@ sframe_timing_report <- function(
 #'   flagged as speeders when timing data are available.
 #' @param straightline_scales Logical. Whether to check for straight-lining
 #'   within each defined scale block. Defaults to `TRUE`.
+#' @param straightline_min_items Integer. The minimum number of items a scale
+#'   must have before it is checked for straight-lining. Defaults to `4`. A
+#'   respondent who gives the identical response to every item in a 2-item
+#'   scale has done exactly what a genuinely consistent respondent does,
+#'   this is not evidence of inattention on its own, and checking scales
+#'   that short flags a large share of honest respondents (see the worked
+#'   example in `vignette("surveyframe")`, where 3 two-item scales alone
+#'   drove a 91 percent flag rate before this threshold existed). Set to
+#'   `2` to restore the previous, more permissive behaviour.
 #' @param missing_threshold Numeric. The proportion of missing item responses
 #'   above which a respondent is flagged. Defaults to `0.2`.
 #'
@@ -214,12 +223,13 @@ sframe_timing_report <- function(
 quality_report <- function(
     data,
     instrument,
-    respondent_id         = NULL,
-    submitted_at          = NULL,
-    started_at            = NULL,
-    time_min              = NULL,
-    straightline_scales   = TRUE,
-    missing_threshold     = 0.2
+    respondent_id           = NULL,
+    submitted_at            = NULL,
+    started_at              = NULL,
+    time_min                = NULL,
+    straightline_scales     = TRUE,
+    straightline_min_items  = 4L,
+    missing_threshold       = 0.2
 ) {
   sframe_check_instrument(instrument)
   stopifnot(is.data.frame(data))
@@ -279,11 +289,29 @@ quality_report <- function(
   )
 
   # --- Straight-lining ---
+  # A scale shorter than straightline_min_items is recorded, not silently
+  # skipped: checked = FALSE and flagged_rows left empty, so a caller can
+  # tell "too short to check" apart from "checked and nobody straight-lined
+  # it" instead of the two looking identical. Below the threshold, a
+  # respondent giving the same answer to every item is what a genuinely
+  # consistent respondent does on a short scale, not evidence of
+  # inattention, so checking it produces mostly false positives rather than
+  # signal. See the straightline_min_items argument above.
   sl_results <- list()
   if (straightline_scales && length(instrument$scales) > 0) {
     for (scale in instrument$scales) {
       scale_cols <- intersect(scale$items, colnames(data))
       if (length(scale_cols) < 2) next
+      if (length(scale_cols) < straightline_min_items) {
+        sl_results[[scale$id]] <- list(
+          scale_id      = scale$id,
+          n_items       = length(scale_cols),
+          checked       = FALSE,
+          flagged_rows  = integer(0),
+          flag_rate     = NA_real_
+        )
+        next
+      }
       scale_data <- data[, scale_cols, drop = FALSE]
       row_vars <- apply(scale_data, 1, function(row) {
         vals <- suppressWarnings(as.numeric(row))
@@ -293,6 +321,7 @@ quality_report <- function(
       sl_results[[scale$id]] <- list(
         scale_id      = scale$id,
         n_items       = length(scale_cols),
+        checked       = TRUE,
         flagged_rows  = which(!is.na(row_vars) & row_vars == 0),
         flag_rate     = mean(!is.na(row_vars) & row_vars == 0)
       )
@@ -369,5 +398,17 @@ print.sframe_quality_report <- function(x, ...) {
               mean(x$missing$respondent_miss > x$missing$flagged_threshold,
                    na.rm = TRUE) * 100,
               x$missing$flagged_threshold * 100))
+  if (length(x$straightline) > 0) {
+    cat("\nStraight-lining:\n")
+    for (sl in x$straightline) {
+      if (isFALSE(sl$checked)) {
+        cat(sprintf("  %-20s not checked, %d item%s, below straightline_min_items\n",
+                    sl$scale_id, sl$n_items, if (sl$n_items == 1L) "" else "s"))
+      } else {
+        cat(sprintf("  %-20s flagged %d (%.1f%%)\n",
+                    sl$scale_id, length(sl$flagged_rows), sl$flag_rate * 100))
+      }
+    }
+  }
   invisible(x)
 }

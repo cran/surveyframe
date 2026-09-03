@@ -222,7 +222,7 @@ sframe_module_eval_op <- function(op, actual, value) {
   switch(op,
     "==" = actual == value,
     "!=" = actual != value,
-    "%in%" = actual %in% strsplit(value, ",\\s*")[[1]],
+    "%in%" = trimws(actual) %in% sframe_branch_in_values(value),
     ">"   = suppressWarnings(!is.na(as.numeric(actual)) &&
                as.numeric(actual) > as.numeric(value)),
     ">="  = suppressWarnings(!is.na(as.numeric(actual)) &&

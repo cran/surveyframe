@@ -6,6 +6,11 @@
   "type": "object",
   "required": ["hash", "version", "meta", "items", "choices", "scales"],
   "properties": {
+    "sframe_format": {
+      "type": "string",
+      "description": "The .sframe format version (SFRAME_FORMAT_VERSION in R/read_write_sframe.R), written as the first key of every file. Distinct from `version` below, which is the instrument's own version, and from the surveyframe package version. Absent in files written before 2026-08-22, which remain valid and still verify, since the hash is computed over whatever the file contains. Not listed in `required` for that reason. Conformance profiles key on this value.",
+      "examples": ["1.0"]
+    },
     "hash": {
       "type": "object",
       "description": "File-level integrity hash. Confirms the file on disk is byte-identical to what write_sframe() produced. Not a proof of methodological validity -- see the `amendments` field below for the disclosed-revision mechanism, and the package's analysis-plan binding (run_analysis_plan()) for the package's separate anti-HARKing safeguard.",

@@ -1,5 +1,5 @@
 # tests/testthat/test-text-analysis.R
-# Text and open-ended response analysis (todo_0.5.md). This file covers the
+# Text and open-ended response analysis (todo_text_analysis.md). This file covers the
 # lead reference diff: clean_text_responses(), term_frequency(),
 # .sframe_tokenise(), sframe_run_term_freq() (including the group role and
 # the minimum-response guard), sframe_plot_term_frequency(), and the
@@ -231,7 +231,7 @@ test_that("sframe_plot_term_frequency draws a word cloud when opted in", {
   # A word cloud lays out one label per term at distinct (x, y) coordinates;
   # duplicated coordinates would mean the spiral layout degenerated (e.g.
   # back to a single point), which is the concrete overlap failure mode
-  # todo_0.5.md's exit checklist calls out.
+  # todo_text_analysis.md's exit checklist calls out.
   coords <- unique(built$data[[1]][c("x", "y")])
   expect_equal(nrow(coords), nrow(built$data[[1]]))
 })

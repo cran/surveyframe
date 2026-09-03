@@ -26,21 +26,24 @@ function doPost(e) {
     }
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     let sheet = ss.getSheetByName(SHEET_NAME);
-
     if (!sheet) {
       sheet = ss.insertSheet(SHEET_NAME);
-      sheet.appendRow(EXPECTED_COLUMNS);
-      sheet.getRange(1, 1, 1, EXPECTED_COLUMNS.length)
-           .setFontWeight("bold")
-           .setBackground("#1a1a2e")
-           .setFontColor("#ffffff");
     }
 
     const data = JSON.parse(e.postData.contents);
     if (!data || Array.isArray(data) || typeof data !== "object") {
       throw new Error("POST body must be a JSON object.");
     }
-    const row = EXPECTED_COLUMNS.map(col => data[col] !== undefined ? data[col] : "");
+
+    // Rows are mapped to the sheet's own header by name, never positionally
+    // against EXPECTED_COLUMNS. Writing the header once at creation and then
+    // building rows positionally silently corrupted every sheet whose
+    // instrument gained an item mid-collection: the header stayed as first
+    // deployed while rows arrived in the new order, so every column from the
+    // insertion point onward was off by one. Nothing errored, the sheet stayed
+    // well-formed, and read_responses() read it happily.
+    const header = readHeader_(sheet);
+    const row = header.map(col => data[col] !== undefined ? data[col] : "");
     sheet.appendRow(row);
 
     return ContentService
@@ -52,6 +55,44 @@ function doPost(e) {
       .createTextOutput(JSON.stringify({ status: "error", message: err.toString() }))
       .setMimeType(ContentService.MimeType.JSON);
   }
+}
+
+// Returns the sheet's live header, creating or extending it as needed.
+// An existing column never moves, so rows already collected stay valid. A
+// column the instrument has gained since the last deployment is appended at
+// the right-hand end, which is why a redeploy after an instrument change is
+// safe.
+function readHeader_(sheet) {
+  let header = [];
+  if (sheet.getLastRow() > 0 && sheet.getLastColumn() > 0) {
+    header = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0]
+                  .map(h => String(h).trim());
+    while (header.length && header[header.length - 1] === "") {
+      header.pop();
+    }
+  }
+
+  if (header.length === 0) {
+    header = EXPECTED_COLUMNS.slice();
+    sheet.getRange(1, 1, 1, header.length).setValues([header]);
+    styleHeader_(sheet, 1, header.length);
+    return header;
+  }
+
+  const missing = EXPECTED_COLUMNS.filter(col => header.indexOf(col) === -1);
+  if (missing.length) {
+    sheet.getRange(1, header.length + 1, 1, missing.length).setValues([missing]);
+    styleHeader_(sheet, header.length + 1, missing.length);
+    header = header.concat(missing);
+  }
+  return header;
+}
+
+function styleHeader_(sheet, startColumn, numColumns) {
+  sheet.getRange(1, startColumn, 1, numColumns)
+       .setFontWeight("bold")
+       .setBackground("#1a1a2e")
+       .setFontColor("#ffffff");
 }
 
 function doGet(e) {

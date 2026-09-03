@@ -1,5 +1,20 @@
 # sf_branch.R
 
+# A `%in%` value arrives either as a vector, which is what sf_branch()
+# documents and what serialises to a JSON array, or as one comma-separated
+# string from a hand-written file. All 3 evaluators share this so they agree.
+sframe_branch_in_values <- function(value) {
+  chr <- as.character(value)
+  chr <- chr[!is.na(chr)]
+  if (length(chr) == 0L) {
+    return(character(0))
+  }
+  if (length(chr) == 1L) {
+    chr <- strsplit(chr, ",", fixed = TRUE)[[1]]
+  }
+  trimws(chr)
+}
+
 #' Define a branching rule
 #'
 #' Creates a single-condition branching rule that shows or hides a survey item

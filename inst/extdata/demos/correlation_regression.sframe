@@ -1,0 +1,155 @@
+{
+  "sframe_format": "1.0",
+  "hash": {
+    "algo": "sha256",
+    "value": "fad77a72dfd342f7b0ec677317d86fbb01943b965cdc11c418a96eee6001b019"
+  },
+  "version": "1.0.0",
+  "meta": {
+    "title": "What goes with getting value from the event?",
+    "version": "1.0.0",
+    "description": "Correlation, a partial correlation, and a regression on the same data.",
+    "authors": null,
+    "languages": "en",
+    "validated": true,
+    "created_at": "2026-08-28T10:20:47Z"
+  },
+  "items": [
+    {
+      "id": "sessions_attended",
+      "label": "How many sessions did you attend?",
+      "type": "numeric",
+      "required": true,
+      "reverse": false
+    },
+    {
+      "id": "networking_minutes",
+      "label": "Roughly how many minutes did you spend networking?",
+      "type": "slider",
+      "required": false,
+      "reverse": false,
+      "slider_min": 0,
+      "slider_max": 240,
+      "slider_step": 5
+    },
+    {
+      "id": "overall_value",
+      "label": "Overall, how much value did you get? (0 to 100)",
+      "type": "slider",
+      "required": false,
+      "reverse": false,
+      "slider_min": 0,
+      "slider_max": 100,
+      "slider_step": 1
+    },
+    {
+      "id": "age",
+      "label": "How old are you?",
+      "type": "numeric",
+      "required": false,
+      "reverse": false
+    }
+  ],
+  "choices": [],
+  "scales": [],
+  "branching": [],
+  "checks": [],
+  "analysis_plan": [
+    {
+      "id": "RQ1",
+      "research_question": "Do sessions attended and perceived value go together?",
+      "family": "correlation",
+      "method": "correlation_pearson",
+      "roles": {
+        "x": "sessions_attended",
+        "y": "overall_value"
+      },
+      "options": [],
+      "decision_rule": "",
+      "reporting_references": [],
+      "status": "draft",
+      "requires_data": true,
+      "test": "correlation_pearson",
+      "interpretation": "",
+      "citations": []
+    },
+    {
+      "id": "RQ2",
+      "research_question": "The same question on ranks.",
+      "family": "correlation",
+      "method": "correlation_spearman",
+      "roles": {
+        "x": "sessions_attended",
+        "y": "overall_value"
+      },
+      "options": [],
+      "decision_rule": "",
+      "reporting_references": [],
+      "status": "draft",
+      "requires_data": true,
+      "test": "correlation_spearman",
+      "interpretation": "",
+      "citations": []
+    },
+    {
+      "id": "RQ3",
+      "research_question": "And with Kendall's tau.",
+      "family": "correlation",
+      "method": "correlation_kendall",
+      "roles": {
+        "x": "sessions_attended",
+        "y": "overall_value"
+      },
+      "options": [],
+      "decision_rule": "",
+      "reporting_references": [],
+      "status": "draft",
+      "requires_data": true,
+      "test": "correlation_kendall",
+      "interpretation": "",
+      "citations": []
+    },
+    {
+      "id": "RQ4",
+      "research_question": "Does the relationship hold once age is held constant?",
+      "family": "correlation",
+      "method": "partial_correlation",
+      "roles": {
+        "x": "sessions_attended",
+        "y": "overall_value",
+        "controls": "age"
+      },
+      "options": [],
+      "decision_rule": "",
+      "reporting_references": [],
+      "status": "draft",
+      "requires_data": true,
+      "test": "partial_correlation",
+      "interpretation": "",
+      "citations": []
+    },
+    {
+      "id": "RQ5",
+      "research_question": "How much value do sessions and networking together explain?",
+      "family": "regression",
+      "method": "regression_linear",
+      "roles": {
+        "predictors": [
+          "sessions_attended",
+          "networking_minutes"
+        ],
+        "dependent": "overall_value"
+      },
+      "options": [],
+      "decision_rule": "",
+      "reporting_references": [],
+      "status": "draft",
+      "requires_data": true,
+      "test": "regression_linear",
+      "interpretation": "",
+      "citations": []
+    }
+  ],
+  "models": [],
+  "render": []
+}

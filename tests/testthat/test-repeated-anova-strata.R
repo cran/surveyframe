@@ -76,3 +76,24 @@ test_that("subject id is a factor in the fitted long data", {
   expect_s3_class(mat$.subject, "factor")
   expect_length(levels(mat$.subject), 12)
 })
+
+test_that("an unbalanced design (some subjects missing one condition) still finds the within-subject stratum", {
+  # With every subject complete, Error(.subject/condition)'s ".subject"
+  # stratum carries no "condition" row at all, so picking the first stratum
+  # with a non-NA F for "condition" happens to land on the right one
+  # (".subject:condition") by luck, not by design. Once some subjects are
+  # missing one condition, the ".subject" stratum gains its own spurious
+  # "condition" row, and a first-match search silently returns that one
+  # instead: on surveyframe's own bundled input-types demo data this
+  # produced F(1, 118) = 0.01, p = 0.916 where the correct
+  # ".subject:condition" stratum gives F(2, 234) = 30.66, p < .001.
+  dat <- rm_fixture(n = 40)
+  dat$t2[1:4] <- NA
+
+  res <- sframe_run_repeated_anova(dat, rm_roles)
+
+  expect_null(res$error)
+  expect_equal(res$df1, 2)
+  expect_gt(res$F_stat, 50)
+  expect_lt(res$p, 1e-10)
+})

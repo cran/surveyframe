@@ -1,0 +1,7 @@
+"item_id","item_label","type","scale_id","value","value_label"
+"confidence_before","Before today, how confident were you applying this? (0 to 100)","slider",,,
+"confidence_after","And now? (0 to 100)","slider",,,
+"recommend_before","Before today, would you have recommended this event?","single_choice",,"no","No"
+"recommend_before","Before today, would you have recommended this event?","single_choice",,"yes","Yes"
+"recommend_after","Would you recommend it now?","single_choice",,"no","No"
+"recommend_after","Would you recommend it now?","single_choice",,"yes","Yes"

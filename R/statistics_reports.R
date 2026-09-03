@@ -116,7 +116,7 @@ sframe_analysis_roles <- function(block) {
     ahp = list(pairwise = vars[1]),
     anp = list(pairwise = vars[1]),
     dematel = list(pairwise = vars[1]),
-    # Text family (todo_0.5.md). `group` (section 1a) is optional so a bare
+    # Text family (todo_text_analysis.md). `group` (section 1a) is optional so a bare
     # 2-element variable list still resolves without one.
     term_freq = list(item = vars[1], group = vars[2]),
     co_occurrence = list(item = vars[1]),
@@ -983,11 +983,18 @@ sframe_run_repeated_anova <- function(data, roles) {
                   error = function(e) NULL)
   if (is.null(fit)) return(list(test = "repeated_anova", error = "Repeated-measures ANOVA failed."))
   fit_summary <- utils::capture.output(summary(fit))
-  # With .subject a factor, the within-subject F for `condition` sits in the
-  # "Error: .subject:condition" stratum and there is no "Error: Within"
-  # stratum at all, so looking the effect up by a fixed stratum name silently
-  # finds nothing. Search the strata for the `condition` row that actually
-  # carries an F instead, which holds whichever way aov() splits the design.
+  # Error(.subject / condition) always expands to exactly 2 strata, in this
+  # fixed order: "Error: .subject" (a between-subjects leftover, degenerate
+  # for a purely within-subject design) and "Error: .subject:condition" (the
+  # real within-subject test). Both strata carry a row literally named
+  # "condition" with a non-NA F, so taking the *first* match, as an earlier
+  # version of this function did, silently returns the wrong one: on the
+  # bundled demo data it reported F(1, 118) = 0.01, p = 0.916 (not
+  # significant) from the ".subject" stratum, where the correct
+  # ".subject:condition" stratum gives F(2, 234) = 30.66, p < .001 (highly
+  # significant). Do not `break` on the first match; keep searching so the
+  # last (innermost) stratum wins, which is always the within-subject one
+  # for this fixed model structure.
   smry <- summary(fit)
   stat_row <- NULL
   within   <- NULL
@@ -998,7 +1005,6 @@ sframe_run_repeated_anova <- function(data, roles) {
     if (length(cond_row) && !is.na(tab[cond_row, "F value"])) {
       within   <- tab
       stat_row <- tab[cond_row, , drop = FALSE]
-      break
     }
   }
   if (is.null(stat_row)) {

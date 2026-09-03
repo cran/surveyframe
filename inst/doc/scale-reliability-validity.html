@@ -354,7 +354,9 @@ tbody tr:last-child td { border-bottom: 2px solid #1a1a2e; }
 code span.at { color: #576419; }
 code span.dv, code span.fl, code span.bn { color: #276245; }
 code span.co { color: #396a80; }
-pre, pre code { white-space: pre-wrap; word-break: break-word; }
+
+pre, pre code, pre > code.sourceCode { white-space: pre-wrap; word-break: break-word; }
+pre > code.sourceCode > span { text-indent: -2em; padding-left: 2em; }
 div.sourceCode { overflow: visible; }
 pre.sourceCode a:empty { display: none; }
 #TOC a { display: inline-block; min-height: 24px; }
@@ -659,8 +661,8 @@ returns the Fornell-Larcker matrix and the HTMT matrix directly.</p>
 <p>The study reported variance inflation factors below 5 for every
 indicator, which indicates no severe multicollinearity.
 <code>assumption_report()</code> returns variance inflation factors when
-a regression is specified, which is shown in the analysing-responses
-vignette.</p>
+a regression is specified, which is shown in the “Analysing survey
+responses” vignette.</p>
 </div>
 <div id="cautious-interpretation" class="section level2">
 <h2>Cautious interpretation</h2>

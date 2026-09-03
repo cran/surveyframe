@@ -1,0 +1,7 @@
+"block","method","quantity","value"
+"RQ1","repeated_anova","apa","F(2, 98) = 14.51, p < .001, partial η² = 0.228"
+"RQ1","repeated_anova","df1","2"
+"RQ1","repeated_anova","df2","98"
+"RQ2","friedman","apa","Friedman chi-square(2, N = 50) = 22.90, p < .001"
+"RQ2","friedman","df","2"
+"RQ2","friedman","n","50"

@@ -378,7 +378,9 @@ tbody tr:last-child td { border-bottom: 2px solid #1a1a2e; }
 code span.at { color: #576419; }
 code span.dv, code span.fl, code span.bn { color: #276245; }
 code span.co { color: #396a80; }
-pre, pre code { white-space: pre-wrap; word-break: break-word; }
+
+pre, pre code, pre > code.sourceCode { white-space: pre-wrap; word-break: break-word; }
+pre > code.sourceCode > span { text-indent: -2em; padding-left: 2em; }
 div.sourceCode { overflow: visible; }
 pre.sourceCode a:empty { display: none; }
 #TOC a { display: inline-block; min-height: 24px; }
@@ -1861,8 +1863,8 @@ sanity check before a heavier method.</p>
 <p><code>stm_topics</code> fits a structural topic model via the
 optional <code>stm</code> package (tokenising uses
 <code>tidytext</code>, so both are needed). A small <code>k</code> keeps
-this example fast; a real study would try several values of
-<code>k</code> and compare fit – <code>k = 3</code> (or
+this example fast. A real study would try three to six values of
+<code>k</code> and compare fit. <code>k = 3</code> (or
 <code>topic_model_lda</code>’s default <code>k = 4</code>) is a
 demonstration value, not a recommendation, and neither default was
 chosen from any fit criterion. The accepted way to choose <code>k</code>
@@ -1873,7 +1875,7 @@ same <code>documents</code>/<code>vocab</code>
 <code>stm::prepDocuments()</code> would produce), and
 <code>topicmodels::perplexity()</code> on a held-out split serves the
 same purpose for <code>topic_model_lda</code>. Neither is wrapped by
-surveyframe – <code>k</code> selection is a modelling decision for the
+surveyframe. <code>k</code> selection is a modelling decision for the
 researcher to make and report, not a default to trust unexamined.</p>
 <div class="sourceCode" id="cb23"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" tabindex="-1"></a><span class="fu">sf_plan</span>(instr) <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="fu">sf_plan</span>(instr), <span class="fu">list</span>(<span class="fu">list</span>(</span>
 <span id="cb23-2"><a href="#cb23-2" tabindex="-1"></a>  <span class="at">id =</span> <span class="st">&quot;RQ7&quot;</span>,</span>
@@ -2199,7 +2201,7 @@ uses.</p>
 <h2>What surveyframe does not do here</h2>
 <p>This is algorithmic counting and clustering, not interpretation. Term
 frequency, co-occurrence, and topic modelling surface <em>candidate</em>
-themes; a human reader still decides what they mean and whether they
+themes. A human reader still decides what they mean and whether they
 answer the research question.</p>
 <p>surveyframe also does not build a qualitative coding interface.
 Manual, inductive coding (code-and-retrieve, memos, a hierarchical code

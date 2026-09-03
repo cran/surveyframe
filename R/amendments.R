@@ -216,8 +216,13 @@ amend_sframe <- function(previous, instrument, reason_code, reason_text,
     class = "sf_amendment"
   )
 
+  # Base the appended log on previous$amendments, not instrument$amendments.
+  # `instrument` is the "after" object a caller supplies; nothing guarantees
+  # it already carries previous's full history forward (a builder or export
+  # round trip unaware of this field could easily drop it), and this is an
+  # audit log, so a caller's incomplete "after" state must never truncate it.
   amended <- instrument
-  amended$amendments <- c(amended$amendments %||% list(), list(entry))
+  amended$amendments <- c(previous$amendments %||% list(), list(entry))
 
   as_sframe(validate_sframe(amended, strict = TRUE))
 }

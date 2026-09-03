@@ -374,19 +374,20 @@ tbody tr:last-child td { border-bottom: 2px solid #1a1a2e; }
 code span.at { color: #576419; }
 code span.dv, code span.fl, code span.bn { color: #276245; }
 code span.co { color: #396a80; }
-pre, pre code { white-space: pre-wrap; word-break: break-word; }
+
+pre, pre code, pre > code.sourceCode { white-space: pre-wrap; word-break: break-word; }
+pre > code.sourceCode > span { text-indent: -2em; padding-left: 2em; }
 div.sourceCode { overflow: visible; }
 pre.sourceCode a:empty { display: none; }
 #TOC a { display: inline-block; min-height: 24px; }
 </style>
 <div id="what-this-vignette-covers" class="section level2">
 <h2>What this vignette covers</h2>
-<p>Multi-criteria decision analysis ranks a handful of alternatives
-against several criteria that pull in different directions. surveyframe
-treats it the same way it treats any other analysis: the method, its
-inputs, and the roles they play are declared in the instrument before
-data is collected, and the analysis is the execution of that
-declaration.</p>
+<p>Multi-criteria decision analysis ranks a set of alternatives against
+multiple criteria that pull in different directions. surveyframe treats
+it the same way it treats any other analysis: the method, its inputs,
+and the roles they play are declared in the instrument before data is
+collected, and the analysis is the execution of that declaration.</p>
 <p>The worked example is a hotel choosing between 5 suppliers on 4
 criteria. It ships with the package, so every number below is
 reproducible.</p>

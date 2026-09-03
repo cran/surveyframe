@@ -16,6 +16,15 @@ sframe_normalise_component <- function(component, restore) {
   sframe_strip_component_class(restore(sframe_strip_component_class(component)))
 }
 
+#' The `.sframe` format version, written into every file as `sframe_format`.
+#'
+#' Tracks the shape of the serialised object, not the package version and not
+#' the instrument's own version. Bump it only when the file's structure
+#' changes in a way a consumer must react to. `sframe-schema` conformance
+#' profiles are keyed to this value.
+#' @keywords internal
+SFRAME_FORMAT_VERSION <- "1.0"
+
 sframe_serialization_payload <- function(instrument, hash_value = "") {
   # Strip list-level names before serialisation so items, choices, scales,
   # branching, and checks are always written as JSON arrays. Without unname(),
@@ -23,6 +32,14 @@ sframe_serialization_payload <- function(instrument, hash_value = "") {
   # a JSON object keyed by item ID, while the round-tripped structure produces
   # integer-keyed or differently keyed objects, causing a hash mismatch on read.
   payload <- list(
+    # The format's own version, distinct from `version` below, which is the
+    # instrument's. Without this a consumer cannot tell which shape of file it
+    # is holding, so it cannot version-negotiate or validate against a schema.
+    # Added 2026-08-22. Files written before then carry no such field: the
+    # reader hashes whatever the file contains, so those still verify, and only
+    # a read-then-rewrite changes their hash, which is correct because the
+    # content genuinely changed.
+    sframe_format = SFRAME_FORMAT_VERSION,
     hash = list(algo = "sha256", value = hash_value),
     version = instrument$meta$version,
     meta = instrument$meta,

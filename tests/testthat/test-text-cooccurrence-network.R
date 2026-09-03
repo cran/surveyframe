@@ -1,11 +1,11 @@
 # tests/testthat/test-text-cooccurrence-network.R
-# Co-occurrence network (todo_0.5.md, method id `co_occurrence_network`):
+# Co-occurrence network (todo_text_analysis.md, method id `co_occurrence_network`):
 # .sframe_cooccurrence_edges() edge-list correctness, the minimum-content
 # guard (5 distinct terms, 1 edge), Louvain/layout seed determinism, the
 # modularity score, .sframe_cluster_palette()'s 8-cluster boundary, and
 # sframe_plot_cooccurrence_network(). Written by the lead reviewing this
 # id closely (the most expensive/highest-risk item in the release, per
-# todo_0.5.md's delegation section) since the building agent stalled
+# todo_text_analysis.md's delegation section) since the building agent stalled
 # before writing its own test file; every claim here was verified against
 # the actual runner output first (see the manual determinism check in the
 # integration session), not written on trust.

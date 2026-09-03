@@ -1,0 +1,134 @@
+{
+  "sframe_format": "1.0",
+  "hash": {
+    "algo": "sha256",
+    "value": "142e5e507a212926d7bf3d64c5d65b0bd070f330586e8c6be0fb16b2bc90ac3c"
+  },
+  "version": "1.0.0",
+  "meta": {
+    "title": "Will they come back?",
+    "version": "1.0.0",
+    "description": "Binary, ordinal and 3-category outcomes from one predictor.",
+    "authors": null,
+    "languages": "en",
+    "validated": true,
+    "created_at": "2026-08-28T10:20:48Z"
+  },
+  "items": [
+    {
+      "id": "sessions_attended",
+      "label": "How many sessions did you attend?",
+      "type": "numeric",
+      "required": true,
+      "reverse": false
+    },
+    {
+      "id": "will_return",
+      "label": "Will you attend next year?",
+      "type": "single_choice",
+      "required": true,
+      "choice_set": "yn",
+      "reverse": false
+    },
+    {
+      "id": "satisfaction",
+      "label": "I was satisfied with the event.",
+      "type": "likert",
+      "required": true,
+      "choice_set": "agree5",
+      "reverse": false
+    },
+    {
+      "id": "preferred_session_type",
+      "label": "Which session type do you value most?",
+      "type": "single_choice",
+      "required": true,
+      "choice_set": "pref",
+      "reverse": false
+    }
+  ],
+  "choices": [
+    {
+      "id": "yn",
+      "values": ["no", "yes"],
+      "labels": ["No", "Yes"],
+      "allow_other": false,
+      "randomise": false
+    },
+    {
+      "id": "agree5",
+      "values": [1, 2, 3, 4, 5],
+      "labels": ["Strongly disagree", "Disagree", "Neither agree nor disagree", "Agree", "Strongly agree"],
+      "allow_other": false,
+      "randomise": false
+    },
+    {
+      "id": "pref",
+      "values": ["workshop", "keynote", "panel"],
+      "labels": ["Workshops", "Keynotes", "Panel discussions"],
+      "allow_other": false,
+      "randomise": false
+    }
+  ],
+  "scales": [],
+  "branching": [],
+  "checks": [],
+  "analysis_plan": [
+    {
+      "id": "RQ1",
+      "research_question": "Does attending more sessions predict returning?",
+      "family": "regression",
+      "method": "regression_logistic_binary",
+      "roles": {
+        "predictors": "sessions_attended",
+        "dependent": "will_return"
+      },
+      "options": [],
+      "decision_rule": "",
+      "reporting_references": [],
+      "status": "draft",
+      "requires_data": true,
+      "test": "regression_logistic_binary",
+      "interpretation": "",
+      "citations": []
+    },
+    {
+      "id": "RQ2",
+      "research_question": "And does it predict how satisfied they were?",
+      "family": "regression",
+      "method": "regression_logistic_ordinal",
+      "roles": {
+        "predictors": "sessions_attended",
+        "dependent": "satisfaction"
+      },
+      "options": [],
+      "decision_rule": "",
+      "reporting_references": [],
+      "status": "draft",
+      "requires_data": true,
+      "test": "regression_logistic_ordinal",
+      "interpretation": "",
+      "citations": []
+    },
+    {
+      "id": "RQ3",
+      "research_question": "And which session type they prefer?",
+      "family": "regression",
+      "method": "regression_logistic_multinomial",
+      "roles": {
+        "predictors": "sessions_attended",
+        "dependent": "preferred_session_type"
+      },
+      "options": [],
+      "decision_rule": "",
+      "reporting_references": [],
+      "status": "draft",
+      "requires_data": true,
+      "test": "regression_logistic_multinomial",
+      "interpretation": "",
+      "citations": []
+    }
+  ],
+  "models": [],
+  "render": []
+}

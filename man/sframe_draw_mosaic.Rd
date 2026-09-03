@@ -28,3 +28,4 @@ sizes).
 \seealso{
 \code{sframe_plot_crosstab()}
 }
+\keyword{internal}

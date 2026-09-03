@@ -1,5 +1,5 @@
 # tests/testthat/test-text-ngram-context.R
-# N-gram frequency and keyword-in-context (todo_0.5.md), built on the lead
+# N-gram frequency and keyword-in-context (todo_text_analysis.md), built on the lead
 # reference diff in test-text-analysis.R: ngram_frequency(), term_context(),
 # sframe_run_ngram_freq(), sframe_run_term_context().
 

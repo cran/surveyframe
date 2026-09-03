@@ -1,0 +1,4 @@
+"item_id","item_label","type","scale_id","value","value_label"
+"crit_pairs","Compare the importance of each pair of criteria","pairwise_comparison",,,
+"crit_points","Divide 100 points across the criteria","criteria_weight",,,
+"crit_influence","How strongly does each factor influence the others?","pairwise_comparison",,,

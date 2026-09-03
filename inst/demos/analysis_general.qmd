@@ -1,0 +1,77 @@
+---
+title: "{{TITLE}}"
+format:
+  html:
+    toc: true
+    embed-resources: true
+execute:
+  warning: false
+  message: false
+---
+
+```{r setup}
+#| include: false
+library(surveyframe)
+```
+
+## The study
+
+This notebook runs your instrument end to end: load the instrument and its
+responses, run the pre-declared analysis plan, and render a report. It reads
+`{{SFRAME_FILE}}` and `{{CSV_FILE}}` from the same folder as this notebook,
+so keep the 3 files together.
+
+```{r load}
+instrument <- read_sframe("{{SFRAME_FILE}}")
+# strict = FALSE: the CSV may carry extra columns (respondent_id,
+# submitted_at, and similar) that aren't declared in the instrument itself.
+responses  <- read_responses("{{CSV_FILE}}", instrument, strict = FALSE)
+instrument
+```
+
+## The questions
+
+```{r items}
+codebook <- as.data.frame(codebook_report(instrument))
+knitr::kable(codebook[, c("id", "label", "type")])
+```
+
+## The plan, declared before the data existed
+
+This is what makes the analysis a contract rather than a search. The blocks
+below were written into the instrument at design time.
+
+```{r plan}
+knitr::kable(do.call(rbind, lapply(sf_plan(instrument), function(b) {
+  data.frame(id = b$id, question = b$research_question, method = b$method)
+})))
+```
+
+## The results
+
+```{r run}
+results <- run_analysis_plan(responses, instrument)
+for (b in results) {
+  cat("\n###", b$block_id, b$research_question, "\n\n")
+  if (!is.null(b$apa)) cat(b$apa, "\n\n")
+  if (is.data.frame(b$table)) print(knitr::kable(b$table))
+}
+```
+
+## A report you can hand to somebody
+
+```{r report}
+#| eval: false
+render_report(instrument, responses, output_path = "report.html")
+```
+
+## Checking these numbers against other software
+
+```{r export}
+#| eval: false
+sframe_export_labelled(responses, instrument, "responses.sav")
+```
+
+The `.sav` arrives with the question wording and the response options already
+attached, so your variables read as questions rather than as codes. Take it
+into `psych`, SPSS, JASP, jamovi or Stata and compare.

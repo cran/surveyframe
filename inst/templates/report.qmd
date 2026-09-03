@@ -26,6 +26,7 @@ params:
   plot_palette:        "web"
   interpretations_path: ""
   instrument_hash:     ""
+  analysis_seed:       ""
 execute:
   echo:    false
   warning: false
@@ -484,6 +485,13 @@ for (model in instrument$models) {
 hash_val <- params$instrument_hash
 if (is.null(hash_val) || !nzchar(hash_val)) hash_val <- "see .sframe file"
 cat(sprintf("**Instrument hash:** `%s`\n\n", hash_val))
+# The engine and the seed belong next to the hash: the hash says which
+# instrument this describes, the engine says which of surveyframe's 2
+# renderers produced it, and the seed says what reproducing the numbers takes.
+cat("**Rendering engine:** Quarto\n\n")
+seed_val <- params$analysis_seed
+if (is.null(seed_val) || !nzchar(seed_val)) seed_val <- "not recorded"
+cat(sprintf("**Analysis seed:** `%s`\n\n", seed_val))
 cat(sprintf("**Report generated:** %s\n\n", format(Sys.time(), "%Y-%m-%d %H:%M %Z")))
 cat("**To reproduce:**\n\n")
 cat("```r\nlibrary(surveyframe)\n")

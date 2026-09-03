@@ -1,0 +1,7 @@
+"block","method","quantity","value"
+"RQ1","sem_lavaan_syntax","apa","CB-SEM lavaan syntax generated."
+"RQ2","seminr_syntax","apa","PLS-SEM seminr syntax generated."
+"RQ3","mediation","apa","Indirect effect = 0.099, 95% bootstrap CI [0.037, 0.189]."
+"RQ4","cfa_lavaan_syntax","apa","CFA lavaan syntax generated."
+"RQ5","pls_sem","apa","PLS-SEM seminr syntax generated."
+"RQ6","moderation","apa","Moderation was tested with a linear interaction model."

@@ -1,0 +1,150 @@
+{
+  "sframe_format": "1.0",
+  "hash": {
+    "algo": "sha256",
+    "value": "a677623e873632d441187904c82cb3067e3c2e6130b5991f618e8509f4473106"
+  },
+  "version": "1.0.0",
+  "meta": {
+    "title": "Event feedback",
+    "version": "1.0.0",
+    "description": "The shortest complete surveyframe study: 4 questions, 1 plan.",
+    "authors": null,
+    "languages": "en",
+    "validated": true,
+    "created_at": "2026-08-28T10:20:39Z"
+  },
+  "items": [
+    {
+      "id": "attendee_type",
+      "label": "Have you attended this event before?",
+      "type": "single_choice",
+      "required": true,
+      "choice_set": "attendee",
+      "reverse": false
+    },
+    {
+      "id": "age",
+      "label": "How old are you?",
+      "type": "numeric",
+      "required": false,
+      "reverse": false
+    },
+    {
+      "id": "attended_on",
+      "label": "Which day did you attend?",
+      "type": "date",
+      "required": false,
+      "reverse": false,
+      "date_min": "2026-06-01",
+      "date_max": "2026-06-03"
+    },
+    {
+      "id": "optional_intro",
+      "label": "A few optional questions",
+      "type": "section_break",
+      "required": false,
+      "reverse": false,
+      "section_intro": "These help us plan next year. Skip any you prefer to."
+    },
+    {
+      "id": "why_ask",
+      "label": "We ask so we can improve the programme.",
+      "type": "text_block",
+      "required": false,
+      "reverse": false
+    },
+    {
+      "id": "suggestion",
+      "label": "What should we do differently next year?",
+      "type": "text",
+      "required": false,
+      "reverse": false
+    }
+  ],
+  "choices": [
+    {
+      "id": "attendee",
+      "values": ["first_time", "returning"],
+      "labels": ["This is my first time", "I have attended previously"],
+      "allow_other": false,
+      "randomise": false
+    }
+  ],
+  "scales": [],
+  "branching": [],
+  "checks": [],
+  "analysis_plan": [
+    {
+      "id": "RQ1",
+      "research_question": "Who came to the event?",
+      "family": "descriptive",
+      "method": "frequency",
+      "roles": {
+        "variables": "attendee_type"
+      },
+      "options": [],
+      "decision_rule": "",
+      "reporting_references": [],
+      "status": "draft",
+      "requires_data": true,
+      "test": "frequency",
+      "interpretation": "",
+      "citations": []
+    },
+    {
+      "id": "RQ2",
+      "research_question": "How old are attendees?",
+      "family": "descriptive",
+      "method": "descriptives",
+      "roles": {
+        "variables": "age"
+      },
+      "options": [],
+      "decision_rule": "",
+      "reporting_references": [],
+      "status": "draft",
+      "requires_data": true,
+      "test": "descriptives",
+      "interpretation": "",
+      "citations": []
+    },
+    {
+      "id": "RQ3",
+      "research_question": "How complete is the data?",
+      "family": "data_quality",
+      "method": "missing_data",
+      "roles": {
+        "variables": [
+          "age",
+          "suggestion"
+        ]
+      },
+      "options": [],
+      "decision_rule": "",
+      "reporting_references": [],
+      "status": "draft",
+      "requires_data": true,
+      "test": "missing_data",
+      "interpretation": "",
+      "citations": []
+    },
+    {
+      "id": "RQ4",
+      "research_question": "Are there inattentive responses?",
+      "family": "data_quality",
+      "method": "quality",
+      "roles": [],
+      "options": [],
+      "decision_rule": "",
+      "reporting_references": [],
+      "status": "draft",
+      "requires_data": true,
+      "test": "quality",
+      "interpretation": "",
+      "citations": []
+    }
+  ],
+  "models": [],
+  "render": []
+}

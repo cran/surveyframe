@@ -4,6 +4,12 @@
 # shared dashboard/studio item and scale charts. Uses the bundled demo data
 # (sframe_demo_data()) so results reflect a realistic multi-scale instrument.
 
+# Shared 5-point agreement choice set, built once rather than 5 times below;
+# sf_choices() returns an immutable value object, so re-using it across
+# test_that() blocks in this file carries no shared-state risk.
+ag5_choices <- sf_choices("ag5", 1:5,
+  c("Strongly disagree", "Disagree", "Neutral", "Agree", "Strongly agree"))
+
 test_that("regression diagnostics: run_analysis_plan attaches four ggplot panels", {
   skip_on_cran()
   skip_if_not_installed("ggplot2")
@@ -57,7 +63,13 @@ test_that("plot.sframe_quality_report builds a straight-lining flag-rate bar cha
   skip_on_cran()
   skip_if_not_installed("ggplot2")
   demo <- sframe_demo_data()
-  qr <- quality_report(demo$responses, demo$instrument)
+  # The bundled demo instrument's 5 scales are all 2 or 3 items, below the
+  # straightline_min_items = 4 default (see quality_report(), fixed
+  # 2026-08-26), so none are checked and the plot has nothing to draw at
+  # the default threshold. Lowered here to exercise the plot itself, not
+  # the real-world threshold decision.
+  qr <- quality_report(demo$responses, demo$instrument,
+                       straightline_min_items = 2)
   gg <- plot(qr)
   expect_s3_class(gg, "ggplot")
 })
@@ -72,6 +84,19 @@ test_that("report-level results (quality, reliability, EFA) gain a plot via run_
               "efa_readiness", "efa_solution")) {
     blocks <- by_test(t)
     skip_if(length(blocks) == 0, paste("no", t, "block in demo plan"))
+    if (identical(t, "quality")) {
+      # The bundled demo instrument's 5 scales are all 2 or 3 items, below
+      # straightline_min_items = 4 (see quality_report(), fixed
+      # 2026-08-26), so no scale is checked and the quality plot has
+      # nothing to draw: sframe_plot_quality() returns NULL, correctly,
+      # rather than a ggplot object. run_analysis_plan()'s "quality" case
+      # has no options path to lower the threshold per plan block, so this
+      # is skipped rather than asserted false, since a NULL plot here is
+      # the honest, expected result for this specific instrument, not a
+      # defect in plot dispatch.
+      skip_if(is.null(blocks[[1]]$plot),
+              "quality plot is NULL: no scale in the demo instrument meets straightline_min_items")
+    }
     expect_s3_class(blocks[[1]]$plot, "ggplot")
   }
 })
@@ -177,7 +202,7 @@ test_that("sframe_plot_descriptives returns NULL on an empty table", {
 test_that("sframe_plot_likert_matrix draws a grouped diverging chart for a matrix item", {
   skip_on_cran()
   skip_if_not_installed("ggplot2")
-  cs <- sf_choices("ag5", 1:5, c("Strongly disagree", "Disagree", "Neutral", "Agree", "Strongly agree"))
+  cs <- ag5_choices
   item <- sf_item("mx1", "Rate these", type = "matrix", choice_set = "ag5",
                   matrix_items = c("Row A", "Row B", "Row C"))
   set.seed(1)
@@ -193,7 +218,7 @@ test_that("sframe_plot_likert_matrix draws a grouped diverging chart for a matri
 
 test_that("sframe_likert_scale_groups finds scales whose items share a choice set", {
   skip_on_cran()
-  cs <- sf_choices("ag5", 1:5, c("Strongly disagree", "Disagree", "Neutral", "Agree", "Strongly agree"))
+  cs <- ag5_choices
   i1 <- sf_item("a_1", "Item A1", type = "likert", choice_set = "ag5", scale_id = "sa")
   i2 <- sf_item("a_2", "Item A2", type = "likert", choice_set = "ag5", scale_id = "sa")
   # A lone item on its own scale should not be grouped (nothing to group with).
@@ -210,7 +235,7 @@ test_that("sframe_likert_scale_groups finds scales whose items share a choice se
 
 test_that("sframe_likert_scale_groups excludes a scale whose items use different choice sets", {
   skip_on_cran()
-  ag5 <- sf_choices("ag5", 1:5, c("Strongly disagree", "Disagree", "Neutral", "Agree", "Strongly agree"))
+  ag5 <- ag5_choices
   yn <- sf_choices("yn", c("yes", "no"), c("Yes", "No"))
   i1 <- sf_item("a_1", "Item A1", type = "likert", choice_set = "ag5", scale_id = "sa")
   i2 <- sf_item("a_2", "Item A2", type = "single_choice", choice_set = "yn", scale_id = "sa")
@@ -222,7 +247,7 @@ test_that("sframe_likert_scale_groups excludes a scale whose items use different
 test_that("sframe_plot_likert_scale draws a grouped diverging chart for a scale", {
   skip_on_cran()
   skip_if_not_installed("ggplot2")
-  cs <- sf_choices("ag5", 1:5, c("Strongly disagree", "Disagree", "Neutral", "Agree", "Strongly agree"))
+  cs <- ag5_choices
   i1 <- sf_item("a_1", "Item A1", type = "likert", choice_set = "ag5", scale_id = "sa")
   i2 <- sf_item("a_2", "Item A2", type = "likert", choice_set = "ag5", scale_id = "sa")
   set.seed(1)
@@ -235,7 +260,7 @@ test_that("sframe_plot_likert_scale draws a grouped diverging chart for a scale"
 test_that("render_report groups a scale's Likert items into one chart, not one per item", {
   skip_on_cran()
   skip_if_not_installed("ggplot2")
-  cs <- sf_choices("ag5", 1:5, c("Strongly disagree", "Disagree", "Neutral", "Agree", "Strongly agree"))
+  cs <- ag5_choices
   i1 <- sf_item("a_1", "First scale item.", type = "likert", choice_set = "ag5", scale_id = "sa")
   i2 <- sf_item("a_2", "Second scale item.", type = "likert", choice_set = "ag5", scale_id = "sa")
   scale_a <- sf_scale("sa", "Scale A", items = c("a_1", "a_2"))

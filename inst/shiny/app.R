@@ -1298,6 +1298,9 @@ ui <- fluidPage(
           tags$a(href = "#", `data-tab` = "open",
                  class = tab_link_class("open"), "Open Instrument")),
         tags$li(class = "studio-nav-item",
+          tags$a(href = "#", `data-tab` = "amendments",
+                 class = tab_link_class("amendments"), "Amendments")),
+        tags$li(class = "studio-nav-item",
           tags$a(href = "#", `data-tab` = "preview",
                  class = tab_link_class("preview"), "Preview Survey")),
         tags$li(class = "studio-nav-item",
@@ -1399,6 +1402,52 @@ ui <- fluidPage(
           uiOutput("open_status")
         ),
         uiOutput("instrument_summary_card")
+      ),
+
+      tags$div(id = "screen-amendments", class = screen_class("amendments"),
+        tags$h2(class = "screen-title", "Amendments"),
+        uiOutput("amend_gate"),
+        tags$div(class = "card",
+          tags$div(class = "card-title", "Revised instrument"),
+          tags$p(class = "hint",
+            "Disclose a change to the instrument currently open. Edit it in the SurveyBuilder, then upload the revised .sframe here as the \"after\" version."),
+          fileInput("amend_revised_file", NULL,
+                    accept = ".sframe",
+                    buttonLabel = "Browse revised .sframe file",
+                    placeholder = "No file selected"),
+          uiOutput("amend_revised_status")
+        ),
+        tags$div(class = "card",
+          tags$div(class = "card-title", "Amendment details"),
+          selectInput("amend_reason_code", "Reason",
+            choices = c(
+              "Data correction" = "data_correction",
+              "Bot or fraudulent-response removal" = "bot_removal",
+              "Model respecification" = "model_respecification",
+              "Instrument revision" = "instrument_revision",
+              "Other" = "other"
+            )),
+          textAreaInput("amend_reason_text", "Explanation", rows = 3,
+            placeholder = "What changed, and why. Required."),
+          selectInput("amend_tier", "Tier",
+            choices = c(
+              "Infer from reason (recommended)" = "",
+              "Pipeline (data or collection correction)" = "pipeline",
+              "Design (research question, method, or model)" = "design"
+            )),
+          uiOutput("amend_deviation_ui"),
+          fluidRow(
+            column(6, textInput("amend_author", "Author (optional)")),
+            column(6, textInput("amend_signoff", "Second reviewer sign-off (optional)"))
+          ),
+          actionButton("apply_amendment_btn", "Apply amendment", class = "btn-primary")
+        ),
+        tags$div(class = "card",
+          tags$div(class = "card-title", "Amendment log"),
+          tags$p(class = "hint",
+            "Every disclosed change to this instrument, oldest first. Saved into the .sframe file itself once you export it."),
+          tags$div(style = "overflow-x:auto", shiny::tableOutput("amendment_log_table"))
+        )
       ),
 
       tags$div(id = "screen-preview", class = screen_class("preview"),
@@ -1538,6 +1587,13 @@ ui <- fluidPage(
             "Generates a self-contained HTML report. Quarto is optional; an internal HTML fallback is available."),
           tags$p(class = "hint",
             "To export the deployable survey HTML or the Google Sheets collector, use the SurveyBuilder, which owns survey design and deployment.")
+        ),
+        tags$div(class = "card",
+          tags$div(class = "card-title", "Analysis notebook"),
+          tags$p(class = "hint",
+            "Writes a runnable Quarto notebook that loads the instrument and its responses, runs the pre-declared plan, and renders a report, yours to edit and re-run outside SurveyStudio."),
+          uiOutput("qmd_prepare_ui"),
+          uiOutput("qmd_downloads_ui")
         )
       )
     )
@@ -1608,7 +1664,8 @@ server <- function(input, output, session) {
       checks = rv$builder$checks,
       analysis_plan = rv$builder$analysis_plan %||% list(),
       models = rv$builder$models %||% list(),
-      render = rv$builder$render %||% list()
+      render = rv$builder$render %||% list(),
+      amendments = rv$builder$amendments %||% list()
     )
   })
 
@@ -1951,6 +2008,97 @@ server <- function(input, output, session) {
     }, error = function(e) {
       showNotification(paste("Error:", conditionMessage(e)), type = "error")
     })
+  })
+
+  output$amend_gate <- renderUI({
+    if (is.null(rv$instrument)) {
+      tags$div(class = "card",
+        "Open the instrument to amend on the Open Instrument screen first. It becomes the \"previous\" version disclosed against.")
+    }
+  })
+
+  amend_revised <- reactiveVal(NULL)
+
+  observeEvent(input$amend_revised_file, {
+    req(input$amend_revised_file)
+    tryCatch({
+      path <- sframe_validate_upload(input$amend_revised_file, "sframe")
+      amend_revised(surveyframe::read_sframe(path))
+    }, error = function(e) {
+      amend_revised(NULL)
+      showNotification(paste("Error:", conditionMessage(e)), type = "error")
+    })
+  })
+
+  output$amend_revised_status <- renderUI({
+    rev <- amend_revised()
+    if (is.null(rev)) return(NULL)
+    tags$p(class = "hint", paste0("Revised: \"", rev$meta$title %||% "Untitled", "\" loaded."))
+  })
+
+  # Mirrors sframe_amendment_default_tier(): pipeline for a data/collection
+  # correction, design for everything else. Used only to decide whether the
+  # deviation_report field is shown and required, the real default is
+  # applied by amend_sframe() itself when tier isn't explicitly chosen here.
+  amend_effective_tier <- reactive({
+    if (nzchar(input$amend_tier %||% "")) return(input$amend_tier)
+    if ((input$amend_reason_code %||% "") %in% c("data_correction", "bot_removal")) "pipeline" else "design"
+  })
+
+  output$amend_deviation_ui <- renderUI({
+    if (identical(amend_effective_tier(), "design")) {
+      textAreaInput("amend_deviation_report",
+        "Deviation report (required for a design-tier amendment)", rows = 3,
+        placeholder = "What changed in the research question, method, or model, and why.")
+    }
+  })
+
+  observeEvent(input$apply_amendment_btn, {
+    req(rv$instrument)
+    rev <- amend_revised()
+    if (is.null(rev)) {
+      showNotification("Upload the revised .sframe file first.", type = "warning")
+      return(invisible(NULL))
+    }
+    tryCatch({
+      amended <- surveyframe::amend_sframe(
+        previous         = rv$instrument,
+        instrument       = rev,
+        reason_code      = input$amend_reason_code,
+        reason_text      = input$amend_reason_text,
+        tier             = if (nzchar(input$amend_tier %||% "")) input$amend_tier else NULL,
+        author           = trim_or_null(input$amend_author),
+        deviation_report = trim_or_null(input$amend_deviation_report),
+        second_signoff   = trim_or_null(input$amend_signoff)
+      )
+      rv$builder <- builder_state_from_instrument(amended)
+      rv$instrument <- amended
+      rv$responses <- NULL
+      sync_builder_inputs(rv$builder)
+      amend_revised(NULL)
+      showNotification(
+        "Amendment applied. Responses were cleared, since the instrument changed; reload them on Upload Responses. Export the .sframe to save this amendment to disk.",
+        type = "message", duration = 8)
+    }, error = function(e) {
+      showNotification(paste("Error:", conditionMessage(e)), type = "error")
+    })
+  })
+
+  output$amendment_log_table <- shiny::renderTable({
+    req(rv$instrument)
+    log <- surveyframe::amendment_log(rv$instrument)
+    if (nrow(log) == 0) {
+      return(data.frame(Status = "No amendments disclosed yet."))
+    }
+    data.frame(
+      Timestamp = log$timestamp,
+      Tier = log$tier,
+      Reason = log$reason_code,
+      Explanation = log$reason_text,
+      Author = ifelse(is.na(log$author), "", log$author),
+      `Sign-off` = log$signoff,
+      check.names = FALSE
+    )
   })
 
   observeEvent(input$load_responses_btn, {
@@ -3513,6 +3661,60 @@ server <- function(input, output, session) {
     }
   )
 
+  # sframe_analysis_qmd() writes 3 files (qmd, sframe, csv) whose names must
+  # match for the notebook's own read_sframe()/read_responses() calls to
+  # find them. A downloadHandler can only serve 1 file per button, so rather
+  # than 3 independent handlers each re-deriving a file name (which could
+  # drift out of sync), write the bundle once into its own directory on
+  # demand and have every download button just copy out of it.
+  qmd_bundle <- reactiveValues(paths = NULL)
+
+  output$qmd_prepare_ui <- renderUI({
+    if (!is.null(rv$instrument) && !is.null(rv$responses)) {
+      actionButton("qmd_prepare_btn", "Prepare analysis notebook", class = "btn-outline")
+    } else {
+      export_disabled_btn(
+        "Prepare analysis notebook",
+        "Open or build a valid instrument and load responses first.")
+    }
+  })
+
+  observeEvent(input$qmd_prepare_btn, {
+    req(rv$instrument, rv$responses)
+    tryCatch({
+      dir <- tempfile("qmd-")
+      qmd_bundle$paths <- surveyframe::sframe_analysis_qmd(
+        rv$instrument, rv$responses, dir = dir, overwrite = TRUE)
+      showNotification("Analysis notebook prepared. Download all 3 files below into the same folder.",
+                       type = "message")
+    }, error = function(e) {
+      showNotification(paste("Error:", conditionMessage(e)), type = "error")
+    })
+  })
+
+  output$qmd_downloads_ui <- renderUI({
+    p <- qmd_bundle$paths
+    if (is.null(p)) return(NULL)
+    tagList(
+      downloadButton("qmd_dl_qmd", "Download notebook (.qmd)", class = "btn-primary"),
+      downloadButton("qmd_dl_sframe", "Download instrument (.sframe)", class = "btn-outline"),
+      downloadButton("qmd_dl_csv", "Download responses (.csv)", class = "btn-outline")
+    )
+  })
+
+  output$qmd_dl_qmd <- downloadHandler(
+    filename = function() basename(qmd_bundle$paths$qmd),
+    content = function(file) file.copy(qmd_bundle$paths$qmd, file, overwrite = TRUE)
+  )
+  output$qmd_dl_sframe <- downloadHandler(
+    filename = function() basename(qmd_bundle$paths$sframe),
+    content = function(file) file.copy(qmd_bundle$paths$sframe, file, overwrite = TRUE)
+  )
+  output$qmd_dl_csv <- downloadHandler(
+    filename = function() basename(qmd_bundle$paths$csv),
+    content = function(file) file.copy(qmd_bundle$paths$csv, file, overwrite = TRUE)
+  )
+
   # The Interpretations card is a JASP/JAMOVI-style output canvas: every
   # research question is one self-contained block in reading order (badges,
   # the APA line, the numbers table, the chart), the planned decision rule
@@ -3647,7 +3849,10 @@ server <- function(input, output, session) {
     "analysis_left_panel", "analysis_middle_panel", "analysis_right_panel",
     "analysis_results_output", "studio_dashboard_content",
     "export_sframe_ui", "export_report_ui", "export_interpretations_ui",
-    "download_sframe_btn", "download_report_btn"
+    "download_sframe_btn", "download_report_btn",
+    "qmd_prepare_ui", "qmd_downloads_ui",
+    "qmd_dl_qmd", "qmd_dl_sframe", "qmd_dl_csv",
+    "amend_gate", "amend_revised_status", "amend_deviation_ui", "amendment_log_table"
   )) {
     shiny::outputOptions(output, .oid, suspendWhenHidden = FALSE)
   }

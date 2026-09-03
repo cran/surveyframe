@@ -15,7 +15,7 @@
 # Per-criterion preference degree P_j(a, b) in [0, 1], one of Brans' six
 # standard preference functions. Only the three the harvested source
 # implemented are ported (usual, linear/V-shape, level); "usual" (type I,
-# the step function with no thresholds) is the default per todo_0.5.md
+# the step function with no thresholds) is the default per todo_text_analysis.md
 # section 3, not "linear" as the harvested mcdm source defaulted to (that
 # source also derived its thresholds from the data range, a hidden
 # researcher degree of freedom the harvest audit flagged as a defect to

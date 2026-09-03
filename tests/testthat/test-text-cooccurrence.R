@@ -1,5 +1,5 @@
 # tests/testthat/test-text-cooccurrence.R
-# Pairwise within-response term co-occurrence (todo_0.5.md). Covers
+# Pairwise within-response term co-occurrence (todo_text_analysis.md). Covers
 # .sframe_cooccurrence() pair-counting correctness, sframe_run_co_occurrence()'s
 # 2 guards (minimum-response floor and zero-edges), and
 # sframe_plot_cooccurrence(). This id is not yet wired into

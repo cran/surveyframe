@@ -9,7 +9,7 @@
 sframe_expanded_comparison_types <- c("pairwise_comparison", "criteria_weight")
 
 # ---------------------------------------------------------------------------
-# Column encoding (the export contract, todo_0.5.md section 1c)
+# Column encoding (the export contract, todo_text_analysis.md section 1c)
 # ---------------------------------------------------------------------------
 
 # The unordered (saaty) or ordered (influence) pairs an item renders, in the
@@ -551,7 +551,7 @@ sframe_rated_matrix <- function(data, instrument, items,
 }
 
 # ---------------------------------------------------------------------------
-# Serialisation of matrix-valued options (todo_0.5.md section 1e)
+# Serialisation of matrix-valued options (todo_text_analysis.md section 1e)
 # ---------------------------------------------------------------------------
 
 #' Normalise the decision options of an analysis-plan block

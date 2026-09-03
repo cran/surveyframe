@@ -1,0 +1,119 @@
+{
+  "sframe_format": "1.0",
+  "hash": {
+    "algo": "sha256",
+    "value": "4c72e829b88eaa26b70c387de74a5ff0c6da22769cee35500d43b4e0078c34a9"
+  },
+  "version": "1.0.0",
+  "meta": {
+    "title": "Event feedback, one question at a time",
+    "version": "1.0.0",
+    "description": "The same instrument in conversational mode, for comparison with 18.",
+    "authors": null,
+    "languages": "en",
+    "validated": true,
+    "created_at": "2026-08-28T10:20:56Z"
+  },
+  "items": [
+    {
+      "id": "attendee_type",
+      "label": "Have you attended this event before?",
+      "type": "single_choice",
+      "required": true,
+      "choice_set": "attendee",
+      "reverse": false
+    },
+    {
+      "id": "age",
+      "label": "How old are you?",
+      "type": "numeric",
+      "required": false,
+      "reverse": false
+    },
+    {
+      "id": "attended_on",
+      "label": "Which day did you attend?",
+      "type": "date",
+      "required": false,
+      "reverse": false,
+      "date_min": "2026-06-01",
+      "date_max": "2026-06-03"
+    },
+    {
+      "id": "optional_intro",
+      "label": "A few optional questions",
+      "type": "section_break",
+      "required": false,
+      "reverse": false,
+      "section_intro": "These help us plan next year. Skip any you prefer to."
+    },
+    {
+      "id": "why_ask",
+      "label": "We ask so we can improve the programme.",
+      "type": "text_block",
+      "required": false,
+      "reverse": false
+    },
+    {
+      "id": "suggestion",
+      "label": "What should we do differently next year?",
+      "type": "text",
+      "required": false,
+      "reverse": false
+    }
+  ],
+  "choices": [
+    {
+      "id": "attendee",
+      "values": ["first_time", "returning"],
+      "labels": ["This is my first time", "I have attended before"],
+      "allow_other": false,
+      "randomise": false
+    }
+  ],
+  "scales": [],
+  "branching": [],
+  "checks": [],
+  "analysis_plan": [
+    {
+      "id": "RQ1",
+      "research_question": "Who came to the event?",
+      "family": "descriptive",
+      "method": "frequency",
+      "roles": {
+        "variable": "attendee_type"
+      },
+      "options": [],
+      "decision_rule": "",
+      "reporting_references": [],
+      "status": "draft",
+      "requires_data": true,
+      "test": "frequency",
+      "interpretation": "",
+      "citations": []
+    }
+  ],
+  "models": [],
+  "render": {
+    "mode": "conversational",
+    "theme": "#2563eb",
+    "submit_label": "Send my feedback",
+    "welcome": {
+      "title": "Thank you for coming",
+      "intro_text": "This takes about 3 minutes. Your answers help us plan next year's event.",
+      "consent_text": "I am happy for my answers to be used in the event report.",
+      "consent_required": true,
+      "start_label": "Start"
+    },
+    "thankyou": {
+      "message": "Thank you. Your feedback has been recorded.",
+      "redirect_url": "",
+      "show_download": true
+    },
+    "header": {
+      "institution": "Riverside Conference Centre",
+      "logo_base64": "",
+      "show_progress": true
+    }
+  }
+}

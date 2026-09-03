@@ -1,5 +1,5 @@
 # tests/testthat/test-text-topics.R
-# Topic modelling (todo_0.5.md): sframe_run_topic_model_lda() (topicmodels),
+# Topic modelling (todo_text_analysis.md): sframe_run_topic_model_lda() (topicmodels),
 # sframe_run_stm_topics() (stm), extract_quotes(), and sframe_plot_topics().
 # Every test needing an optional package skips cleanly when it is missing
 # rather than failing (skip_if_not_installed()).

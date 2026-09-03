@@ -16,6 +16,7 @@ sframe_validation_checks <- c(
   "comparison_scale",
   "scale_membership",
   "branching_refs",
+  "branching_values",
   "check_refs",
   "analysis_plan_models",
   "analysis_plan_variables",
@@ -43,6 +44,7 @@ sframe_validation_checks <- c(
 #' - Choice sets referenced by items but not present in the instrument
 #' - Scale `items` vectors containing IDs not present in the instrument
 #' - Branching rules referencing item IDs not present in the instrument
+#' - `%in%` branching rules whose `value` no evaluator can consume
 #' - Attention checks referencing item IDs not present in the instrument
 #' - Analysis plan roles referencing missing variables or models
 #' - Model specifications referencing missing indicators or constructs
@@ -240,6 +242,24 @@ validate_sframe <- function(instrument, strict = TRUE) {
       add("branching_refs",
         paste0("Branch rule depends_on unknown item '",
                rule$depends_on, "'."))
+    }
+    # A `%in%` rule whose value no evaluator can consume is a rule that can
+    # never fire, and a rule that never fires hides its target for good. That
+    # went unsaid from 0.3.0 to 0.4.0 while multi-value rules were dead in
+    # every exported survey, so it is named here rather than left to be found
+    # by a respondent who cannot reach the questions.
+    if (identical(rule$operator, "%in%")) {
+      if (!is.null(rule$value) && !is.atomic(rule$value)) {
+        add("branching_values",
+          paste0("Branch rule on item '", rule$item_id, "' uses %in% with a ",
+                 "non-atomic value. Supply a character or numeric vector."))
+      } else if (length(sframe_branch_in_values(rule$value)) == 0) {
+        add("branching_values",
+          paste0("Branch rule on item '", rule$item_id, "' uses %in% with no ",
+                 "values to match, so the rule can never be satisfied and the ",
+                 "item would stay hidden. Supply a character or numeric ",
+                 "vector."))
+      }
     }
   }
 

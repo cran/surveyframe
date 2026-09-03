@@ -1,0 +1,395 @@
+{
+  "sframe_format": "1.0",
+  "hash": {
+    "algo": "sha256",
+    "value": "9c1497d5940ab11bbd93e21eab472cb5e48ea0a54e1ffcc9cb3f5344e7c35746"
+  },
+  "version": "1.0.0",
+  "meta": {
+    "title": "Does content quality bring people back?",
+    "version": "1.0.0",
+    "description": "Three constructs, a declared path model, and the syntax it generates.",
+    "authors": null,
+    "languages": "en",
+    "validated": true,
+    "created_at": "2026-08-28T10:20:49Z"
+  },
+  "items": [
+    {
+      "id": "cq_1",
+      "label": "The sessions were relevant.",
+      "type": "likert",
+      "required": false,
+      "choice_set": "agree5",
+      "scale_id": "content_quality",
+      "reverse": false
+    },
+    {
+      "id": "cq_2",
+      "label": "The material went deep enough.",
+      "type": "likert",
+      "required": false,
+      "choice_set": "agree5",
+      "scale_id": "content_quality",
+      "reverse": false
+    },
+    {
+      "id": "cq_3",
+      "label": "The speakers knew their subject.",
+      "type": "likert",
+      "required": false,
+      "choice_set": "agree5",
+      "scale_id": "content_quality",
+      "reverse": false
+    },
+    {
+      "id": "sa_1",
+      "label": "I was satisfied with the event.",
+      "type": "likert",
+      "required": false,
+      "choice_set": "agree5",
+      "scale_id": "satisfaction",
+      "reverse": false
+    },
+    {
+      "id": "sa_2",
+      "label": "The event met my expectations.",
+      "type": "likert",
+      "required": false,
+      "choice_set": "agree5",
+      "scale_id": "satisfaction",
+      "reverse": false
+    },
+    {
+      "id": "sa_3",
+      "label": "It was a good use of my time.",
+      "type": "likert",
+      "required": false,
+      "choice_set": "agree5",
+      "scale_id": "satisfaction",
+      "reverse": false
+    },
+    {
+      "id": "it_1",
+      "label": "I will attend next year.",
+      "type": "likert",
+      "required": false,
+      "choice_set": "agree5",
+      "scale_id": "intention",
+      "reverse": false
+    },
+    {
+      "id": "it_2",
+      "label": "I would recommend it to a colleague.",
+      "type": "likert",
+      "required": false,
+      "choice_set": "agree5",
+      "scale_id": "intention",
+      "reverse": false
+    },
+    {
+      "id": "it_3",
+      "label": "I would pay to attend again.",
+      "type": "likert",
+      "required": false,
+      "choice_set": "agree5",
+      "scale_id": "intention",
+      "reverse": false
+    }
+  ],
+  "choices": [
+    {
+      "id": "agree5",
+      "values": [1, 2, 3, 4, 5],
+      "labels": ["Strongly disagree", "Disagree", "Neither agree nor disagree", "Agree", "Strongly agree"],
+      "allow_other": false,
+      "randomise": false
+    }
+  ],
+  "scales": [
+    {
+      "id": "content_quality",
+      "label": "Content quality",
+      "items": ["cq_1", "cq_2", "cq_3"],
+      "method": "mean",
+      "min_valid": null
+    },
+    {
+      "id": "satisfaction",
+      "label": "Satisfaction",
+      "items": ["sa_1", "sa_2", "sa_3"],
+      "method": "mean",
+      "min_valid": null
+    },
+    {
+      "id": "intention",
+      "label": "Intention to return",
+      "items": ["it_1", "it_2", "it_3"],
+      "method": "mean",
+      "min_valid": null
+    }
+  ],
+  "branching": [],
+  "checks": [],
+  "analysis_plan": [
+    {
+      "id": "RQ1",
+      "research_question": "What lavaan syntax does this model generate?",
+      "family": "measurement",
+      "method": "sem_lavaan_syntax",
+      "roles": {
+        "model": "m1"
+      },
+      "options": [],
+      "decision_rule": "",
+      "reporting_references": [],
+      "status": "draft",
+      "requires_data": true,
+      "test": "sem_lavaan_syntax",
+      "interpretation": "",
+      "citations": []
+    },
+    {
+      "id": "RQ2",
+      "research_question": "And the seminr syntax for a PLS estimate?",
+      "family": "measurement",
+      "method": "seminr_syntax",
+      "roles": {
+        "model": "m2"
+      },
+      "options": [],
+      "decision_rule": "",
+      "reporting_references": [],
+      "status": "draft",
+      "requires_data": true,
+      "test": "seminr_syntax",
+      "interpretation": "",
+      "citations": []
+    },
+    {
+      "id": "RQ3",
+      "research_question": "Does satisfaction carry content quality through to intention?",
+      "family": "regression",
+      "method": "mediation",
+      "roles": {
+        "predictor": "content_quality",
+        "mediator": "satisfaction",
+        "outcome": "intention"
+      },
+      "options": [],
+      "decision_rule": "",
+      "reporting_references": [],
+      "status": "draft",
+      "requires_data": true,
+      "test": "mediation",
+      "interpretation": "",
+      "citations": []
+    },
+    {
+      "id": "RQ4",
+      "research_question": "What CFA syntax does the measurement model generate?",
+      "family": "measurement",
+      "method": "cfa_lavaan_syntax",
+      "roles": {
+        "model": "m3"
+      },
+      "options": [],
+      "decision_rule": "",
+      "reporting_references": [],
+      "status": "draft",
+      "requires_data": true,
+      "test": "cfa_lavaan_syntax",
+      "interpretation": "",
+      "citations": []
+    },
+    {
+      "id": "RQ5",
+      "research_question": "And what does a PLS estimate give?",
+      "family": "measurement",
+      "method": "pls_sem",
+      "roles": {
+        "model": "m2"
+      },
+      "options": [],
+      "decision_rule": "",
+      "reporting_references": [],
+      "status": "draft",
+      "requires_data": true,
+      "test": "pls_sem",
+      "interpretation": "",
+      "citations": []
+    },
+    {
+      "id": "RQ6",
+      "research_question": "Does content quality matter more to some attendees than others?",
+      "family": "regression",
+      "method": "moderation",
+      "roles": {
+        "predictor": "content_quality",
+        "moderator": "satisfaction",
+        "outcome": "intention"
+      },
+      "options": [],
+      "decision_rule": "",
+      "reporting_references": [],
+      "status": "draft",
+      "requires_data": true,
+      "test": "moderation",
+      "interpretation": "",
+      "citations": []
+    }
+  ],
+  "models": [
+    {
+      "id": "m1",
+      "label": "Content quality to intention",
+      "type": "cb_sem",
+      "engine": "lavaan",
+      "measurement": {
+        "constructs": [
+          {
+            "id": "content_quality",
+            "label": "content_quality",
+            "mode": "reflective",
+            "items": ["cq_1", "cq_2", "cq_3"],
+            "weights": null
+          },
+          {
+            "id": "satisfaction",
+            "label": "satisfaction",
+            "mode": "reflective",
+            "items": ["sa_1", "sa_2", "sa_3"],
+            "weights": null
+          },
+          {
+            "id": "intention",
+            "label": "intention",
+            "mode": "reflective",
+            "items": ["it_1", "it_2", "it_3"],
+            "weights": null
+          }
+        ]
+      },
+      "structural": {
+        "paths": [
+          {
+            "from": "content_quality",
+            "to": "satisfaction",
+            "label": null
+          },
+          {
+            "from": "satisfaction",
+            "to": "intention",
+            "label": null
+          },
+          {
+            "from": "content_quality",
+            "to": "intention",
+            "label": null
+          }
+        ],
+        "covariances": [],
+        "indirect": [
+          {
+            "from": "content_quality",
+            "through": "satisfaction",
+            "to": "intention",
+            "label": null
+          }
+        ]
+      },
+      "options": []
+    },
+    {
+      "id": "m2",
+      "label": "The same paths, estimated by PLS",
+      "type": "pls_sem",
+      "engine": "seminr",
+      "measurement": {
+        "constructs": [
+          {
+            "id": "content_quality",
+            "label": "content_quality",
+            "mode": "composite",
+            "items": ["cq_1", "cq_2", "cq_3"],
+            "weights": null
+          },
+          {
+            "id": "satisfaction",
+            "label": "satisfaction",
+            "mode": "composite",
+            "items": ["sa_1", "sa_2", "sa_3"],
+            "weights": null
+          },
+          {
+            "id": "intention",
+            "label": "intention",
+            "mode": "composite",
+            "items": ["it_1", "it_2", "it_3"],
+            "weights": null
+          }
+        ]
+      },
+      "structural": {
+        "paths": [
+          {
+            "from": "content_quality",
+            "to": "satisfaction",
+            "label": null
+          },
+          {
+            "from": "satisfaction",
+            "to": "intention",
+            "label": null
+          },
+          {
+            "from": "content_quality",
+            "to": "intention",
+            "label": null
+          }
+        ],
+        "covariances": [],
+        "indirect": []
+      },
+      "options": []
+    },
+    {
+      "id": "m3",
+      "label": "Measurement model only",
+      "type": "cfa",
+      "engine": "lavaan",
+      "measurement": {
+        "constructs": [
+          {
+            "id": "content_quality",
+            "label": "content_quality",
+            "mode": "reflective",
+            "items": ["cq_1", "cq_2", "cq_3"],
+            "weights": null
+          },
+          {
+            "id": "satisfaction",
+            "label": "satisfaction",
+            "mode": "reflective",
+            "items": ["sa_1", "sa_2", "sa_3"],
+            "weights": null
+          },
+          {
+            "id": "intention",
+            "label": "intention",
+            "mode": "reflective",
+            "items": ["it_1", "it_2", "it_3"],
+            "weights": null
+          }
+        ]
+      },
+      "structural": {
+        "paths": [],
+        "covariances": [],
+        "indirect": []
+      },
+      "options": []
+    }
+  ],
+  "render": []
+}

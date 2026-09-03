@@ -1,0 +1,146 @@
+{
+  "sframe_format": "1.0",
+  "hash": {
+    "algo": "sha256",
+    "value": "af1ed49de1f4fa9fe434725058e7751091979796ac8353058c01f4cd23d888a9"
+  },
+  "version": "1.0.0",
+  "meta": {
+    "title": "Who attends the most?",
+    "version": "1.0.0",
+    "description": "Three groups, a second factor, and a covariate.",
+    "authors": null,
+    "languages": "en",
+    "validated": true,
+    "created_at": "2026-08-28T10:20:44Z"
+  },
+  "items": [
+    {
+      "id": "attendee_role",
+      "label": "Which best describes you?",
+      "type": "single_choice",
+      "required": true,
+      "choice_set": "role",
+      "reverse": false
+    },
+    {
+      "id": "format",
+      "label": "How did you attend?",
+      "type": "single_choice",
+      "required": true,
+      "choice_set": "fmt",
+      "reverse": false
+    },
+    {
+      "id": "age",
+      "label": "How old are you?",
+      "type": "numeric",
+      "required": false,
+      "reverse": false
+    },
+    {
+      "id": "sessions_attended",
+      "label": "How many sessions did you attend?",
+      "type": "numeric",
+      "required": true,
+      "reverse": false
+    }
+  ],
+  "choices": [
+    {
+      "id": "role",
+      "values": ["student", "practitioner", "academic"],
+      "labels": ["Student", "Practitioner", "Academic"],
+      "allow_other": false,
+      "randomise": false
+    },
+    {
+      "id": "fmt",
+      "values": ["in_person", "online"],
+      "labels": ["In person", "Online"],
+      "allow_other": false,
+      "randomise": false
+    }
+  ],
+  "scales": [],
+  "branching": [],
+  "checks": [],
+  "analysis_plan": [
+    {
+      "id": "RQ1",
+      "research_question": "Do the 3 attendee roles differ in sessions attended?",
+      "family": "group_comparison",
+      "method": "anova_one",
+      "roles": {
+        "group": "attendee_role",
+        "outcome": "sessions_attended"
+      },
+      "options": [],
+      "decision_rule": "",
+      "reporting_references": [],
+      "status": "draft",
+      "requires_data": true,
+      "test": "anova_one",
+      "interpretation": "",
+      "citations": []
+    },
+    {
+      "id": "RQ2",
+      "research_question": "The same question without assuming normality.",
+      "family": "group_comparison",
+      "method": "kruskal_wallis",
+      "roles": {
+        "group": "attendee_role",
+        "outcome": "sessions_attended"
+      },
+      "options": [],
+      "decision_rule": "",
+      "reporting_references": [],
+      "status": "draft",
+      "requires_data": true,
+      "test": "kruskal_wallis",
+      "interpretation": "",
+      "citations": []
+    },
+    {
+      "id": "RQ3",
+      "research_question": "Do role and format both matter?",
+      "family": "group_comparison",
+      "method": "anova_two",
+      "roles": {
+        "factor1": "attendee_role",
+        "factor2": "format",
+        "outcome": "sessions_attended"
+      },
+      "options": [],
+      "decision_rule": "",
+      "reporting_references": [],
+      "status": "draft",
+      "requires_data": true,
+      "test": "anova_two",
+      "interpretation": "",
+      "citations": []
+    },
+    {
+      "id": "RQ4",
+      "research_question": "Does the role difference survive adjusting for age?",
+      "family": "group_comparison",
+      "method": "ancova",
+      "roles": {
+        "group": "attendee_role",
+        "covariates": "age",
+        "outcome": "sessions_attended"
+      },
+      "options": [],
+      "decision_rule": "",
+      "reporting_references": [],
+      "status": "draft",
+      "requires_data": true,
+      "test": "ancova",
+      "interpretation": "",
+      "citations": []
+    }
+  ],
+  "models": [],
+  "render": []
+}

@@ -50,7 +50,11 @@ tbody tr:last-child td { border-bottom: 2px solid #1a1a2e; }
 code span.at { color: #576419; }
 code span.dv, code span.fl, code span.bn { color: #276245; }
 code span.co { color: #396a80; }
-pre, pre code { white-space: pre-wrap; word-break: break-word; }
+/* Pandoc emits `pre > code.sourceCode { white-space: pre }` for screen, which
+   outranks a bare `pre code` rule on specificity, so source chunks have to be
+   named explicitly or they scroll sideways instead of wrapping. */
+pre, pre code, pre > code.sourceCode { white-space: pre-wrap; word-break: break-word; }
+pre > code.sourceCode > span { text-indent: -2em; padding-left: 2em; }
 div.sourceCode { overflow: visible; }
 pre.sourceCode a:empty { display: none; }
 #TOC a { display: inline-block; min-height: 24px; }
@@ -430,10 +434,11 @@ identical(sf_meta(study)$title, sf_meta(study2)$title)
 
 ### What the SHA-256 hash proves, and what it does not
 
-The hash [write_sframe()] embeds confirms one thing: the `.sframe` file on
-disk is byte-identical to what was written. If any byte changes -- an item's
-wording, a scale's membership, a plan's variables -- [read_sframe()] detects
-the mismatch and refuses to load the file rather than silently accepting it.
+The hash `write_sframe()` embeds confirms one thing: the `.sframe` file on
+disk is byte-identical to what was written. If any byte changes, whether an
+item's wording, a scale's membership, or a plan's variables, `read_sframe()`
+detects the mismatch and refuses to load the file rather than silently
+accepting it.
 
 That is a narrow, specific guarantee. It proves file identity. It does not
 prove the survey has good questions, an unbiased sample, or a sound
@@ -442,13 +447,13 @@ package's actual defence against those two is a separate mechanism: the
 `analysis_plan` slot is bound to the instrument at design time, before data
 arrive, and `run_analysis_plan()` executes that pre-declared plan in one
 pass rather than letting a plan be assembled after looking at results. Keep
-the two claims distinct -- "this file wasn't edited after the fact" and
+the two claims distinct: "this file wasn't edited after the fact" and
 "this analysis was decided before seeing the data" are different guarantees
 from different mechanisms, and neither substitutes for the other.
 
 ### `.sframe` is plain JSON, not a proprietary format
 
-A `.sframe` file is ordinary, git-diffable, UTF-8 JSON -- not a binary or
+A `.sframe` file is ordinary, git-diffable, UTF-8 JSON, not a binary or
 R-specific object. Any tool that reads JSON can open one, and the format
 is documented independently of this package in
 `system.file("schema", "sframe_schema.json", package = "surveyframe")`, a
@@ -463,20 +468,20 @@ jsonlite::fromJSON(schema_path, simplifyVector = FALSE)$required
 Because the file is plain text, two versions of it diff the same way any
 source file does. If `tourism_services_v1.sframe` were committed to a Git
 repository, revising it and running `git diff` on the file would show
-exactly which lines -- which item, which choice, which plan block --
-changed, alongside Git's own commit history for who changed it and when.
-That diff is Git's job, not this package's; see the next section for how
-the two connect.
+exactly which lines, which item, which choice, which plan block, changed,
+alongside Git's own commit history for who changed it and when. That diff
+is Git's job, not this package's. See the next section for how the two
+connect.
 
 ### Disclosed revision: `amend_sframe()`
 
 A hash mismatch alone can't distinguish a legitimate correction (fixing a
 data-entry error, removing bot responses, correcting a misspecified model)
-from an undisclosed change -- both break the hash identically.
+from an undisclosed change: both break the hash identically.
 `amend_sframe()` gives legitimate revision a structured, disclosed path
 instead: it compares the instrument before and after a change, and appends
-a record -- never overwrites -- of what changed and why, directly inside the
-`.sframe` file next to the content it explains.
+a record of what changed and why, directly inside the `.sframe` file next
+to the content it explains, never overwriting an earlier entry.
 
 Amendments come in two tiers, because not every change carries the same
 risk to the plan's design-time-binding logic:
@@ -485,11 +490,11 @@ risk to the plan's design-time-binding logic:
   expected researcher hygiene and stay low-friction: a reason code and a
   short explanation are enough.
 - **`"design"`** amendments (anything touching the analysis plan or a
-  model -- `model_respecification`, or `instrument_revision`/`other` by
+  model, `model_respecification`, or `instrument_revision`/`other` by
   default) are exactly the kind of post-hoc change the design-time plan
   binding exists to guard against. They require a `deviation_report`
   describing what changed in the research question, method, or model and
-  why, and record `signoff` explicitly -- as a reviewer's name, or the
+  why, and record `signoff` explicitly, as a reviewer's name or the
   literal value `"none"` when no second sign-off was given, so an
   unreviewed design change stays visible to an auditor rather than looking
   identical to a signed-off one.
@@ -515,7 +520,7 @@ study_amended <- amend_sframe(
 amendment_log(study_amended)
 ```
 
-`amendment_log()` returns the full history as a data frame -- one row per
+`amendment_log()` returns the full history as a data frame, one row per
 disclosed change, printable or exported with `write.csv()` for an external
 audit trail. `write_sframe()` on the amended instrument persists the log in
 the file; a reviewer who later loads it with `read_sframe()` sees both the
@@ -525,24 +530,24 @@ weaken the hash check: an edit made directly to the file, bypassing
 before.
 
 Be clear about what this does and does not guarantee. `amend_sframe()`
-records a disclosed change -- it cannot compel disclosure, the same way a
+records a disclosed change. It cannot compel disclosure, the same way a
 preregistration deviation report can't be forced. Nothing prevents a
 researcher from reconstructing an instrument from scratch and calling
 `write_sframe()` on it directly, skipping the amendment log entirely. What
 the mechanism actually guarantees is narrower and still useful: *if* a
 change is disclosed through `amend_sframe()`, the record is structured,
-timestamped, and permanent inside the file -- not that every change will
-be.
+timestamped, and permanent inside the file. It does not guarantee that
+every change is disclosed in the first place.
 
 ### Linking a saved instrument to its Git commit
 
-A bare hash gives no diff, author, or explanation for a change -- Git
+A bare hash gives no diff, author, or explanation for a change. Git
 already provides all three. `link_git_commit()` points the instrument at
 Git rather than duplicating it: it records the current commit's SHA and
 subject line, so the SHA-256 hash's role narrows to confirming that the
 file on disk matches what that specific, already-explained commit
 produced. It degrades gracefully with no error when Git isn't installed or
-the path isn't a repository -- Git is optional, never a dependency of the
+the path isn't a repository. Git is optional, never a dependency of the
 rest of the package.
 
 ```{r git-link}
@@ -960,7 +965,7 @@ linearity for regression pairs.
 
 ```{r assumptions}
 if (requireNamespace("psych", quietly = TRUE)) {
-  ar <- assumption_report(scored, study)
+  ar <- assumption_report(scored, variables = scale_cols)
   print(ar)
 }
 ```

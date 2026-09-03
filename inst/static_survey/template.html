@@ -384,7 +384,14 @@ function evaluate(op,actual,value){
   switch(op){
     case'==':return String(actual)===String(value);
     case'!=':return String(actual)!==String(value);
-    case'%in%':return value.split(',').map(function(s){return s.trim();}).includes(String(actual));
+    // `value` is a JSON array whenever sf_branch() was given a vector, which is
+    // the documented shape for %in%, and a comma-separated string when it came
+    // from a hand-written file or an older builder. Arrays have no .split, so
+    // assuming the string form threw and left the gated item hidden for good.
+    case'%in%':{
+      var vals=Array.isArray(value)?value:String(value).split(',');
+      return vals.map(function(s){return String(s).trim();}).includes(String(actual).trim());
+    }
     case'>': return !isNaN(an)&&!isNaN(vn)&&an>vn;
     case'>=':return !isNaN(an)&&!isNaN(vn)&&an>=vn;
     case'<': return !isNaN(an)&&!isNaN(vn)&&an<vn;

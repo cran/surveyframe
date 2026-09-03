@@ -1,0 +1,93 @@
+{
+  "sframe_format": "1.0",
+  "hash": {
+    "algo": "sha256",
+    "value": "4baa05494eb72c53f219cb2627395f02ec606c35110096fe7e409646a31e20f8"
+  },
+  "version": "1.0.0",
+  "meta": {
+    "title": "A 3-day event",
+    "version": "1.0.0",
+    "description": "The same people rating 3 times, which needs a repeated-measures test.",
+    "authors": null,
+    "languages": "en",
+    "validated": true,
+    "created_at": "2026-08-28T10:20:46Z"
+  },
+  "items": [
+    {
+      "id": "day1_rating",
+      "label": "How was day 1?",
+      "type": "rating",
+      "required": false,
+      "reverse": false,
+      "rating_max": 5
+    },
+    {
+      "id": "day2_rating",
+      "label": "How was day 2?",
+      "type": "rating",
+      "required": false,
+      "reverse": false,
+      "rating_max": 5
+    },
+    {
+      "id": "day3_rating",
+      "label": "How was day 3?",
+      "type": "rating",
+      "required": false,
+      "reverse": false,
+      "rating_max": 5
+    }
+  ],
+  "choices": [],
+  "scales": [],
+  "branching": [],
+  "checks": [],
+  "analysis_plan": [
+    {
+      "id": "RQ1",
+      "research_question": "Did ratings change across the 3 days?",
+      "family": "group_comparison",
+      "method": "repeated_anova",
+      "roles": {
+        "measures": [
+          "day1_rating",
+          "day2_rating",
+          "day3_rating"
+        ]
+      },
+      "options": [],
+      "decision_rule": "",
+      "reporting_references": [],
+      "status": "draft",
+      "requires_data": true,
+      "test": "repeated_anova",
+      "interpretation": "",
+      "citations": []
+    },
+    {
+      "id": "RQ2",
+      "research_question": "The same question without assuming normality.",
+      "family": "group_comparison",
+      "method": "friedman",
+      "roles": {
+        "measures": [
+          "day1_rating",
+          "day2_rating",
+          "day3_rating"
+        ]
+      },
+      "options": [],
+      "decision_rule": "",
+      "reporting_references": [],
+      "status": "draft",
+      "requires_data": true,
+      "test": "friedman",
+      "interpretation": "",
+      "citations": []
+    }
+  ],
+  "models": [],
+  "render": []
+}

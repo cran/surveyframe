@@ -1,0 +1,86 @@
+{
+  "sframe_format": "1.0",
+  "hash": {
+    "algo": "sha256",
+    "value": "bf86bd1596e7043345d3256ba9f33b5300109fd56a74c1485d62303cdacb4b4b"
+  },
+  "version": "1.0.0",
+  "meta": {
+    "title": "In person or online?",
+    "version": "1.0.0",
+    "description": "One numeric outcome and one 2-level group: the commonest comparison there is.",
+    "authors": null,
+    "languages": "en",
+    "validated": true,
+    "created_at": "2026-08-28T10:20:42Z"
+  },
+  "items": [
+    {
+      "id": "format",
+      "label": "How did you attend?",
+      "type": "single_choice",
+      "required": true,
+      "choice_set": "fmt",
+      "reverse": false
+    },
+    {
+      "id": "sessions_attended",
+      "label": "How many sessions did you attend?",
+      "type": "numeric",
+      "required": true,
+      "reverse": false
+    }
+  ],
+  "choices": [
+    {
+      "id": "fmt",
+      "values": ["in_person", "online"],
+      "labels": ["In person", "Online"],
+      "allow_other": false,
+      "randomise": false
+    }
+  ],
+  "scales": [],
+  "branching": [],
+  "checks": [],
+  "analysis_plan": [
+    {
+      "id": "RQ1",
+      "research_question": "Do in-person and online attendees reach a different number of sessions?",
+      "family": "group_comparison",
+      "method": "t_test_ind",
+      "roles": {
+        "group": "format",
+        "outcome": "sessions_attended"
+      },
+      "options": [],
+      "decision_rule": "",
+      "reporting_references": [],
+      "status": "draft",
+      "requires_data": true,
+      "test": "t_test_ind",
+      "interpretation": "",
+      "citations": []
+    },
+    {
+      "id": "RQ2",
+      "research_question": "The same question without assuming normality.",
+      "family": "group_comparison",
+      "method": "mann_whitney",
+      "roles": {
+        "group": "format",
+        "outcome": "sessions_attended"
+      },
+      "options": [],
+      "decision_rule": "",
+      "reporting_references": [],
+      "status": "draft",
+      "requires_data": true,
+      "test": "mann_whitney",
+      "interpretation": "",
+      "citations": []
+    }
+  ],
+  "models": [],
+  "render": []
+}

@@ -1,0 +1,4 @@
+"block","method","quantity","value"
+"RQ1","regression_logistic_binary","apa","χ²(1) = 40.18, p < .001, McFadden R² = 0.362"
+"RQ2","regression_logistic_ordinal","apa","Ordinal logistic regression was estimated with 80 complete cases."
+"RQ3","regression_logistic_multinomial","apa","Multinomial logistic regression was estimated with 80 complete cases."

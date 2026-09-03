@@ -1,0 +1,8 @@
+"item_id","item_label","type","scale_id","value","value_label"
+"session","How would you rate each session?","matrix",,"1","Poor"
+"session","How would you rate each session?","matrix",,"2","Fair"
+"session","How would you rate each session?","matrix",,"3","Good"
+"session","How would you rate each session?","matrix",,"4","Very good"
+"session","How would you rate each session?","matrix",,"5","Excellent"
+"format","How did you attend?","single_choice",,"in_person","In person"
+"format","How did you attend?","single_choice",,"online","Online"

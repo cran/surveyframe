@@ -1,0 +1,116 @@
+{
+  "sframe_format": "1.0",
+  "hash": {
+    "algo": "sha256",
+    "value": "3e76952b9715837d25b7462df950a29c164be70478fe0586981bae17d25ac76a"
+  },
+  "version": "1.0.0",
+  "meta": {
+    "title": "Rate each session",
+    "version": "1.0.0",
+    "description": "One matrix item, and the columns it expands into.",
+    "authors": null,
+    "languages": "en",
+    "validated": true,
+    "created_at": "2026-08-28T10:20:41Z"
+  },
+  "items": [
+    {
+      "id": "session",
+      "label": "How would you rate each session?",
+      "type": "matrix",
+      "required": true,
+      "choice_set": "rate5",
+      "reverse": false,
+      "matrix_items": ["Opening keynote", "Workshop A", "Workshop B", "Closing panel"]
+    },
+    {
+      "id": "format",
+      "label": "How did you attend?",
+      "type": "single_choice",
+      "required": false,
+      "choice_set": "fmt",
+      "reverse": false
+    }
+  ],
+  "choices": [
+    {
+      "id": "rate5",
+      "values": [1, 2, 3, 4, 5],
+      "labels": ["Poor", "Fair", "Good", "Very good", "Excellent"],
+      "allow_other": false,
+      "randomise": false
+    },
+    {
+      "id": "fmt",
+      "values": ["in_person", "online"],
+      "labels": ["In person", "Online"],
+      "allow_other": false,
+      "randomise": false
+    }
+  ],
+  "scales": [],
+  "branching": [],
+  "checks": [],
+  "analysis_plan": [
+    {
+      "id": "RQ1",
+      "research_question": "How was each session rated?",
+      "family": "descriptive",
+      "method": "descriptives",
+      "roles": {
+        "variables": [
+          "session__Opening keynote",
+          "session__Workshop A",
+          "session__Workshop B",
+          "session__Closing panel"
+        ]
+      },
+      "options": [],
+      "decision_rule": "",
+      "reporting_references": [],
+      "status": "draft",
+      "requires_data": true,
+      "test": "descriptives",
+      "interpretation": "",
+      "citations": []
+    },
+    {
+      "id": "RQ2",
+      "research_question": "How were keynote ratings distributed?",
+      "family": "descriptive",
+      "method": "frequency",
+      "roles": {
+        "variable": "session__Opening keynote"
+      },
+      "options": [],
+      "decision_rule": "",
+      "reporting_references": [],
+      "status": "draft",
+      "requires_data": true,
+      "test": "frequency",
+      "interpretation": "",
+      "citations": []
+    },
+    {
+      "id": "RQ3",
+      "research_question": "Did in-person and online attendees rate the keynote differently?",
+      "family": "categorical",
+      "method": "crosstab",
+      "roles": {
+        "row": "format",
+        "column": "session__Opening keynote"
+      },
+      "options": [],
+      "decision_rule": "",
+      "reporting_references": [],
+      "status": "draft",
+      "requires_data": true,
+      "test": "crosstab",
+      "interpretation": "",
+      "citations": []
+    }
+  ],
+  "models": [],
+  "render": []
+}

@@ -42,7 +42,11 @@ tbody tr:last-child td { border-bottom: 2px solid #1a1a2e; }
 code span.at { color: #576419; }
 code span.dv, code span.fl, code span.bn { color: #276245; }
 code span.co { color: #396a80; }
-pre, pre code { white-space: pre-wrap; word-break: break-word; }
+/* Pandoc emits `pre > code.sourceCode { white-space: pre }` for screen, which
+   outranks a bare `pre code` rule on specificity, so source chunks have to be
+   named explicitly or they scroll sideways instead of wrapping. */
+pre, pre code, pre > code.sourceCode { white-space: pre-wrap; word-break: break-word; }
+pre > code.sourceCode > span { text-indent: -2em; padding-left: 2em; }
 div.sourceCode { overflow: visible; }
 pre.sourceCode a:empty { display: none; }
 #TOC a { display: inline-block; min-height: 24px; }
@@ -396,15 +400,15 @@ cat("_quanteda is not installed in this environment, so this section did not run
 
 `stm_topics` fits a structural topic model via the optional `stm` package
 (tokenising uses `tidytext`, so both are needed). A small `k` keeps this
-example fast; a real study would try several values of `k` and compare
-fit -- `k = 3` (or `topic_model_lda`'s default `k = 4`) is a demonstration
-value, not a recommendation, and neither default was chosen from any
-fit criterion. The accepted way to choose `k` is to fit a range of
+example fast. A real study would try three to six values of `k` and
+compare fit. `k = 3` (or `topic_model_lda`'s default `k = 4`) is a
+demonstration value, not a recommendation, and neither default was chosen
+from any fit criterion. The accepted way to choose `k` is to fit a range of
 candidate values and compare them on held-out likelihood or a coherence
 metric: `stm::searchK()` does this directly for `stm_topics`'s underlying
 model (pass it the same `documents`/`vocab` `stm::prepDocuments()` would
 produce), and `topicmodels::perplexity()` on a held-out split serves the
-same purpose for `topic_model_lda`. Neither is wrapped by surveyframe --
+same purpose for `topic_model_lda`. Neither is wrapped by surveyframe.
 `k` selection is a modelling decision for the researcher to make and
 report, not a default to trust unexamined.
 
@@ -460,7 +464,7 @@ render_report(instr, responses, output_file = "hospitality-feedback.html")
 ## What surveyframe does not do here
 
 This is algorithmic counting and clustering, not interpretation. Term
-frequency, co-occurrence, and topic modelling surface *candidate* themes; a
+frequency, co-occurrence, and topic modelling surface *candidate* themes. A
 human reader still decides what they mean and whether they answer the
 research question.
 

@@ -1,7 +1,8 @@
 {
+  "sframe_format": "1.0",
   "hash": {
     "algo": "sha256",
-    "value": "c3df10ecd42713431378ed472d5f53d05294d48bc7f34256c12e017244603f69"
+    "value": "c53f5af068d494bd34ca7c77770d2aacd16899be3cc0b37c6a116919bb673fdd"
   },
   "version": "0.3.0",
   "meta": {
