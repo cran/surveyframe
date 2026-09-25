@@ -40,6 +40,14 @@ suggested number of factors from parallel analysis is returned in
 prepares the researcher to estimate an EFA solution with a separate package
 such as \code{psych} or \code{lavaan}.
 }
+\section{Fitting the solution}{
+
+This report says whether the data suit a factor analysis and how many
+factors to extract. \code{\link[=efa_solution]{efa_solution()}} then fits that solution and returns
+the loadings, so the whole route stays in surveyframe. Take the result to
+another package when you want a method surveyframe leaves out.
+}
+
 \examples{
 \donttest{
 if (requireNamespace("psych", quietly = TRUE)) {
@@ -50,5 +58,5 @@ if (requireNamespace("psych", quietly = TRUE)) {
 }
 }
 \seealso{
-\code{\link[=reliability_report]{reliability_report()}}, \code{\link[=cfa_syntax]{cfa_syntax()}}
+\code{\link[=efa_solution]{efa_solution()}}, \code{\link[=reliability_report]{reliability_report()}}, \code{\link[=cfa_syntax]{cfa_syntax()}}
 }

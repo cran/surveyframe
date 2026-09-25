@@ -1,3 +1,632 @@
+# surveyframe 0.4.2
+
+A defect-fix release. An external review of 0.4.1 found defects that
+silently alter or lose data, and this release corrects them. Collection
+defects come first, because an answer recorded wrongly is lost for good.
+This section grows as each group of fixes lands.
+
+## What you need to change
+
+* **A Shiny-collected response now carries a `respondent_id`**, as the first
+  column, holding a generated identifier such as `RK3P8QX2A`. The static
+  survey has written one since the first release, so the two collection
+  routes produced different column sets for the same instrument, leaving the
+  duplicate check and a retry to work from whatever they could find.
+  **If you are collecting to a CSV written by 0.4.1 or earlier**, that file
+  predates the column: `render_survey()` keeps appending to it and says once
+  that the response went in unidentified. Collect into a new file to record an
+  identifier for every response. Anything reading these files by column
+  position needs updating to read by name.
+* **`survey_module_server()` returns a different response shape.** The
+  response is now the collection row, as a list: `response_id`,
+  `started_at`, `submitted_at`, then one element per response column, named
+  as `read_responses()` expects. A multiple-choice question becomes one
+  element per option holding `"1"` or `"0"`, and a matrix, ranking or
+  decision question becomes one element per row, option, pair or criterion.
+  Values are character. An item hidden by branching, or left unanswered, is
+  `NA`. The module previously returned one raw input value per item, and
+  lacked controls for matrix, ranking, rating and decision questions.
+* **Untouched sliders, rankings and dates are now unanswered** in
+  `render_survey()` and the survey module. A slider counts once the
+  respondent moves it, and a ranking once it is reordered or confirmed with
+  "Keep this order". Previously a slider stored its starting position, a
+  ranking stored the declared order, and a date question in the module
+  stored today's date, for anyone who moved past them.
+* **`render_survey(save_responses = "csv")` refuses a response file written
+  for different questions**, when the app starts and on each submission.
+  Collect a changed instrument into a new file. A file with the same columns
+  in another order is still accepted, and rows are aligned by column name.
+* **Google Sheets collection now needs the Sheets advanced service.** The
+  generated collector stores an answer through the Sheets API's `RAW` option,
+  which is the documented way to store a value without the spreadsheet parsing
+  it. Regenerate and redeploy the collector with `export_google_sheet()`, and
+  in the Apps Script editor add Services > Google Sheets API with the
+  identifier `Sheets`. **A collector lacking it refuses each response** and
+  replies with an error, in place of storing an answer it would have to alter.
+  Code that reads the sheet directly, bypassing `read_sheet_responses()`,
+  should expect text cells where numbers appeared before.
+
+* **Scale scores and reliability can change.** Re-run analyses of scales
+  that reverse-code items, share items with other scales, or had an absent
+  item column. Reverse coding now applies within the scale that declares it,
+  a scale with an absent item column counts that item as unanswered, and
+  report figures now show the scores `score_scales()` computes.
+* **Some instruments that validated before are now rejected.** An item and a
+  scale sharing an ID, an ID equal to a response column or to `respondent_id`,
+  `response_id`, `started_at` or `submitted_at`, reverse coding for an item
+  outside the scale declaring it, repeated scale items, a `min_valid` outside
+  1 to the number of items, and weights that are zero, negative or infinite
+  are all reported by `validate_sframe()`, and `sf_scale()` refuses the scale
+  parameters directly. Rename or correct the declaration.
+* **A reverse-coded item needs declared response bounds**: a numeric choice
+  set, `slider_min` and `slider_max`, or a rating maximum. Scoring reports an
+  error for a reversed item that has none.
+* **A factor column is scored through its labels.** A factor whose labels are
+  text is an error. Convert it to numeric codes first.
+
+* **Some statistics change.** Re-run analyses using Cochran's Q with missing
+  answers, ANCOVA, partial correlation, a Firth likelihood ratio, PLS-SEM
+  constructs with non-consecutive indicators, or a Mann-Whitney or Wilcoxon
+  signed-rank test. The rank tests now use the normal approximation without
+  continuity correction for z, p, r and its interval alike, so their p
+  values move slightly, and z is now signed by the direction of the
+  difference.
+* **Repeated-measures ANOVA now uses complete respondents.** A respondent
+  missing any repeated measure is excluded as a unit before fitting the
+  classical balanced model. Results report the retained `n` and
+  `n_excluded_incomplete`. This replaces a singular fit on incomplete rows.
+* **ANCOVA tables hold adjusted tests**, each term tested after all others,
+  with columns `effect`, `df`, `sum_sq`, `mean_sq`, `F` and `p`.
+* **`sample_size_plan()` now calculates power** for t tests, ANOVA and, with
+  the new `f2`, regression. The new `d` and `f` arguments give the expected
+  effect, and a medium effect is assumed, with a warning, when they are
+  left out. Estimates now depend on `alpha` and `power`.
+* **`run_analysis_plan()` refuses repeated block IDs** and gains `strict`.
+  Its results carry a `status` attribute counting failed blocks, so check
+  it, or set `strict = TRUE`, before treating a returned object as success.
+* **Bootstrap intervals can be withheld.** `bootstrap_ci()`, `cohens_d_ci()`,
+  `cramers_v_ci()` and `eta_sq_ci()` return `NA` bounds with a `reason`
+  attribute when fewer than 90% of resamples give a value or all give the
+  same value, and every result records its resample counts.
+
+* **Decision rankings can change.** Re-run TOPSIS, VIKOR, MOORA, SMART,
+  WASPAS, PROMETHEE and ELECTRE analyses whose weights or criterion types
+  were named in a different order from the performance matrix, AHP and ANP
+  analyses given a data frame, and aggregations of judgement matrices named
+  in different orders. Weights, criterion types and judgement matrices are
+  now matched by criterion name.
+* **Some decision inputs that ran before are now refused**: weights naming
+  different criteria from the matrix, supplied AHP matrices that are not
+  positive, unit-diagonal and reciprocal, WASPAS values of zero or below,
+  infinite values, a VIKOR `v` or WASPAS `lambda` outside 0 to 1, ELECTRE
+  cutoffs outside 0 to 1, and PROMETHEE thresholds that are negative or out
+  of order. ANP refuses a reducible network, and DEMATEL a matrix whose total
+  relation does not exist.
+* **ELECTRE's kernel follows Roy's definition**, so it can hold more
+  alternatives than before, and is reported as undefined when the
+  outranking relation has a cycle.
+* **`sensitivity_analysis()` results gain `n_perturbations`, `n_effective`
+  and `n_failed`**, and `stable` is `FALSE` when no perturbation moved the
+  weights. A requested sensitivity run that could not be made is recorded
+  in the result's `sensitivity_error`.
+
+* **`write_sframe()` refuses an undisclosed revision.** An instrument read
+  with `read_sframe()` and then changed must record the change with
+  `amend_sframe()` before it is written, and its amendment log must stay
+  complete and in order. To publish changed content as a separate instrument,
+  clear its amendment log and pass `new_instrument = TRUE`. SurveyStudio
+  offers the same choice when exporting an edited file.
+* **`amend_sframe()` sets the tier from what changed.** An amendment that
+  changes the analysis plan, a model or a conjoint design is design tier and
+  needs a `deviation_report`, whatever `reason_code` or `tier` says.
+* **`.sframe` files write one-member collections as arrays**, as the
+  published instrument profile and the builder already did. Reading an older
+  file and writing it again gives it a new hash where it held such a
+  collection. Older files still read and verify as they are.
+* **`read_responses()` reads a CSV file as text** and converts only columns
+  of items with numeric responses. Identifiers such as `001` and metadata
+  columns now arrive as text, and numeric answers as doubles. A response file
+  with 2 columns of the same name is refused.
+* **`link_git_commit()` gains `path` and returns `verified`**, which is `TRUE`
+  only when the instrument matches that file as committed. `linked` alone
+  confirms a repository and a commit.
+* **Some shipped demo results changed** to match the corrected statistics:
+  `likert_scale`, `two_group`, `paired`, `multi_group`, `sem_pls`,
+  `mcdm_choice` and `small_sample`.
+
+## Collection fixes
+
+* **The Shiny survey erased every answer.** In `render_survey()`, each answer
+  re-drew the survey page, and the re-drawn questions reported themselves
+  empty, so every answer was wiped about a second after it was given. A
+  submitted response came back blank. This affected every standard-mode
+  survey run with `render_survey()` in 0.4.1 and earlier. Answers now stay
+  put, and the page stays as it is when a question is
+  answered.
+* **The Google Sheets collector could turn an answer into a formula.** An
+  answer beginning with `=` was evaluated by the spreadsheet, so `=1+1` was
+  stored as `2`, and a code such as `007` lost its leading zeros. A stored
+  answer is now written through the Sheets API's `RAW` option, which stores it
+  as submitted. A deployment lacking that option refuses the response and says
+  so, in place of altering it. The same fix applies to collectors generated
+  from the survey builder. See the setup note above.
+* **The exported survey said a response had been recorded when it could not
+  know.** The page posts with `no-cors`, which leaves the collector's reply
+  unreadable, so the browser can establish that a request left and nothing
+  further. The thank-you screen claimed the response had been recorded, hid the
+  download, offered a restart that discarded the page's only copy, and could
+  auto-redirect away from it. It now reports that the answers were sent and
+  that receipt is unconfirmed, keeps the download available, withholds the
+  restart that would clear the response, and leaves any redirect for the
+  participant to choose.
+* **A custom thank-you message no longer shows on a survey with a collector.**
+  A message set through `render$thankyou$message` is fixed text, written before
+  anyone knew how delivery would go, so a wording such as "your response has
+  been recorded" put a claim on screen beside the page's own statement that
+  receipt was unconfirmed. The package's own status is shown instead. A custom message still
+  shows on a download-only survey, where nothing is being claimed about a
+  collector. Put debrief text, contact details or payment instructions on a
+  final display item or in the redirect target, where they always reach the
+  participant.
+* **The exported survey changed typed numbers.** Clearing a number field with
+  a minimum wrote the minimum in, a number outside the range was replaced
+  with the nearest limit, and in a points allocation `2.5` became `25`. What
+  the respondent types is now kept, and the survey asks for a correction.
+* **An option coded 0 was recorded as a blank** in the exported survey, so
+  a respondent choosing it on a required question was blocked from
+  continuing, and 0 looked identical to a blank. Affected 0/1 codings and 0 to 10
+  scales.
+* **A ranking could show one order and submit another** in the exported
+  survey after dragging, and an untouched ranking was submitted as if the
+  respondent had chosen the order shown.
+* **Shiny matrix and ranking questions showed codes in place of labels.** A
+  five-point agreement scale appeared as `1 2 3 4 5`. Shiny rankings also
+  stored labels, so every rank came out empty wherever labels and codes
+  differed.
+* **Shiny rankings needed a mouse.** Each option now
+  has move up and move down buttons, and the new position is announced.
+* **Shiny decision questions started with an answer selected**, "Equally
+  important" or "No influence", and points allocations started at 0, so an
+  untouched question submitted an invented judgement. They
+  now start empty. Every Shiny date question was also pre-filled with
+  today's date, and now starts empty.
+* **Appending to a Shiny response file ignored its header**, so a changed
+  instrument wrote answers under another question's heading. An existing
+  empty file also received headerless rows.
+* **The survey module lacked 5 item types.** Matrix, rating,
+  ranking, pairwise comparison and criteria weight showed only a
+  placeholder, and a required one made the survey impossible to finish. The
+  module now uses the same questions as `render_survey()`.
+* **The survey module submitted answers the respondent had removed.** A
+  cleared answer, and an answer to a question branching later hid, were both
+  submitted. A multiple-choice answer lost all but its first selection when
+  the page was revisited.
+* **A failed save in the survey module showed the thank-you screen.** The
+  survey was marked complete before `on_submit` ran, and an error there
+  ended the session. The respondent now sees a message, stays on the page
+  and can try again.
+* Changing a reactive instrument now resets the survey module, as its help
+  said it did, and starts every answer blank. Moving between pages
+  scrolls the module into view, where it scrolled the whole host page.
+* **The static survey said a response had been recorded before it knew.** A
+  failed send was discarded and the thank-you screen appeared anyway, and a
+  configured redirect then carried the participant away with the answers in
+  nobody's hands. A failure now says so, keeps the CSV download reachable,
+  offers a retry, and withholds the redirect. The submission is a `no-cors`
+  POST, so the collector's reply is unreadable and acceptance cannot be
+  confirmed from the page. The screen claims only that the request was sent.
+* **A completed comparison or points allocation counted as unanswered** in
+  the progress display, because progress read the question's own answer
+  where these types store one answer per pair or per criterion. Progress and
+  the required-question check now share one rule.
+* **A rating left the question that depends on it hidden** until another
+  control was touched, while the required check still demanded an answer to
+  it.
+* **A comparison answered on a phone could show the wrong selection on a
+  wider screen**, and the reverse. Each question renders a button strip and
+  a dropdown, shown by screen width, and each recorded the answer while
+  leaving the other as it was. The stored judgement was always the one given.
+* **Long rating scales now stack on a phone.** An 11-point scale needed 550
+  pixels, so a participant on a 390-pixel screen saw part of it with both
+  ends off screen. Below 600 pixels each point becomes a full-width row.
+* **Choice groups, rating scales and validation errors now read correctly to
+  a screen reader.** A group carries its question as its name, each rating
+  star reports whether it is the one chosen, and an error is announced with
+  the control that has it. Validation and a page change move focus to the
+  task instead of only scrolling.
+
+* **A multi-select answer failed a branching rule that allowed any of its
+  options.** Selecting two options stored them together, and the static
+  survey compared the pair as one value, so a rule showing a follow-up for
+  either option stayed closed. Any selected option the rule allows now
+  satisfies it, which is what the Shiny survey already did.
+* **A second branching rule on the same question replaced the first** in the
+  Shiny survey, so a question gated on two conditions ran on one. Every rule
+  is kept and they combine, and a question controlled by one that is itself
+  hidden now counts as unanswered, so a stale answer behind a closed branch
+  keeps the questions below it closed too. The static survey already worked this way.
+* **One-question-at-a-time mode ignored branching**, so a participant could
+  be required to answer a question the rules exclude, which was then blanked
+  on submission. Navigation follows the same visible sequence the rest of
+  the survey uses.
+* **A failed callback after a saved response invited a duplicate.** The save
+  and the `on_submit` callback shared one error handler, so a callback
+  failure reported that nothing was saved and submitting again wrote the
+  answers a second time. The two steps are tracked separately, a retry
+  repeats only what failed, and the two failures now read differently.
+
+## Researcher interface fixes
+
+* **SurveyStudio's preview could send test answers to the live collector.**
+  It exported the real instrument and the export fell back to the
+  instrument's configured Google Sheets endpoint, so a test response could
+  land in a running study's sheet beside real participants'. The preview now
+  exports with `preview = TRUE`, a new `export_static_survey()` argument that
+  removes the collector and the completion redirect. **If you previewed a
+  configured instrument in Studio on 0.4.1 or earlier, check the collecting
+  sheet for test rows.**
+* **The SurveyBuilder question list can be worked from the keyboard.**
+  A question row takes focus, opens on Enter or Space, and moves with Alt and
+  an arrow key, and named move-up and move-down buttons sit beside duplicate
+  and delete. Ordering was previously drag-only.
+* **An autosaved builder session is offered however old it is.** Recovery
+  refused anything older than two hours while the session sat in storage, so
+  returning the next day showed an empty builder. The banner reports the age
+  and clears the session only when dismissed. Where the browser refuses to
+  store anything, the builder now says so, where it used to appear to save.
+* Opening a builder dialog moves focus into it, and closing one returns focus
+  where it was.
+* **The builder's Preview is labelled a layout preview**, which is what it
+  is: it shows wording, order and branding and leaves out answering, required
+  checks and branching. Export the survey, or use Studio's preview, to test
+  the respondent's path.
+* **The RStudio add-ins are renamed after what they do**, all under a
+  `surveyframe:` prefix: Design an instrument, Open analysis workspace,
+  Analyse an existing instrument, and Insert starter instrument.
+  SurveyBuilder was described as a Shiny app, and it is a client-side HTML
+  page.
+* **"Analyse an existing instrument", formerly "Open Dashboard", opens
+  SurveyStudio on Upload Responses** with the chosen instrument loaded, ready
+  for a response file. It used to open an empty dashboard.
+* **Every add-in stops with one message saying what to do** when RStudio is
+  closed, the console has focus during an insert, the file dialog fails, or
+  the chosen `.sframe` fails to load. It used to handle a missing rstudioapi
+  alone. The exported launchers keep raising their errors.
+* The starter instrument keeps its validation result as `validation`, and
+  ends with a commented `write_sframe()` line for saving it.
+* **`library(surveyframe)` now says where to start.** In an interactive
+  session it prints a short note: 3 commands that load a branded demo and
+  show it as a respondent sees it and inside SurveyStudio, the functions to
+  start your own study with, `citation("surveyframe")`, and the website.
+  Scripts, Quarto renders and `R CMD check` stay silent, and
+  `suppressPackageStartupMessages()` removes it.
+* SurveyStudio's preview points at the builder, where it used to name a
+  "Build Survey" screen of its own.
+
+## Scoring fixes
+
+* **A scale could overwrite a question's answers.** A scale's score is stored
+  in a column named by its ID, and an item and a scale were allowed the same
+  ID, so `score_scales()` replaced the item's answers with the score, and an
+  analysis of that item read the score. Shared names are now rejected at
+  validation, and `score_scales()` refuses to overwrite data.
+* **One scale could reverse another scale's item.** A scale listing an item in
+  `reverse_items` reversed it everywhere, which changed the scores and the
+  alpha of any other scale using that item.
+* **Reports published a different scale score from the instrument's.** The
+  report figures and the Quarto report template took a plain row mean,
+  ignoring the declared method, reverse coding, weights and `min_valid`, so a
+  declared sum of 2 and 4 was shown as 3.
+* **A missing item column lowered the scoring threshold.** With `min_valid =
+  NULL`, meaning every item, a 3-item scale with 1 absent column was scored on
+  2 items. The absent item now counts as unanswered, with a warning.
+* **Reversal used the sample's own range** for an item with no numeric choice
+  set, so the same answer received a different reversed value as respondents
+  were added. Slider and rating items now reverse on their declared limits.
+* **A factor was scored on its level positions**, so a factor holding 10 and
+  20 was scored as 1 and 2.
+* **`item_report()` diagnostics now match the scale's scoring.** Item-rest
+  correlations use the reversed orientation, where a reverse-keyed item used
+  to come out strongly negative beside a high alpha. They use respondents who
+  answered every item, where a missing item counted as 0. Floor and ceiling
+  use the item's declared lowest and highest response, where they used the
+  sample's extremes, and are `NA` for an item that declares no bounds.
+* `sf_scale()` now checks its parameters, and refuses a constructed item
+  passed inside a scale's `items`, which was silently dropped from the
+  instrument.
+
+## Statistics fixes
+
+* **Cochran's Q counted a missing answer as an observed 0**, changing both Q
+  and the analysed N, and read any unrecognised code as 0. Missing answers
+  now remove the respondent, and codes other than 1/0, TRUE/FALSE and yes/no
+  are reported.
+* **PLS-SEM syntax could add an indicator the model left out.** A construct
+  over `Q1` and `Q3` was written as the range `Q1` to `Q3`, adding `Q2`.
+* **Indirect effects could use a path the model never declared**, and a
+  model with parallel mediators wrote its total effect twice, each copy
+  holding one route. Both are now caught or corrected.
+* **ANCOVA reported an unadjusted group test as adjusted.** The group was
+  tested before the covariates. The slope check also left out every
+  covariate after the first.
+* **Partial correlation p values used the wrong degrees of freedom**, and
+  partial Spearman ranked the residuals where it must rank the variables.
+* **`sample_size_plan()` returned 64 or 50 per group for t tests and ANOVA**
+  whatever alpha and power were requested, while printing both.
+* **The Firth likelihood-ratio statistic was half its true value.**
+* **Two-way ANOVA gave the residual row a partial eta squared of 0.5.**
+* **Results tables rounded p values to 2 decimals**, showing .004 as 0.
+  They now show 3 decimals, or <.001.
+* **Every `render_results()` table put a whole row in a single cell**,
+  headers included. Each value now has its own cell.
+* **Rank-test effect sizes and their intervals described different
+  statistics.** A signed-rank r also divided by pairs the test had dropped.
+* **Bootstrap intervals hid failed resamples**, and a collapsed distribution
+  gave a zero-width interval. A Kruskal-Wallis resample with every value
+  tied gave an effect of 0.
+* **An analysis plan whose blocks all failed returned as if it had
+  succeeded**, and a scale-scoring failure before analysis went unrecorded.
+* **The t test ignored `var_equal`**, and t tests and one-way ANOVA judged
+  significance at .05 whatever `alpha` the block declared. Options a method
+  never reads are now listed in `options_ignored`.
+* **Reliability, item and EFA blocks analysed every scale** whatever the
+  block selected. The quality block ran its duplicate check only when given
+  a respondent ID it was never passed, and reported 0 duplicates. It now
+  reads the collected ID column, and says when a check did not run.
+* **Statistics read a factor on its level positions**, and linear regression
+  turned a text predictor into a number. Factors are read through their
+  labels, and text predictors stay categorical.
+
+## Decision analysis fixes
+
+* **Weights could be applied to the wrong criteria.** They were matched to
+  the performance matrix by count and applied by position, so a weight item
+  listing quality before price gave price the weight meant for quality.
+  Rated items paired with a differently named weight item still pair in
+  declared order, and the result now lists each pairing.
+* **Aggregating judgements combined them by position**, so the same
+  judgement from 2 respondents whose matrices listed criteria in different
+  orders averaged to indifference.
+* **AHP and ANP read a data-frame matrix transposed**, reversing every
+  judgement while keeping perfect consistency.
+* **Factor judgements were read as level positions**, so a judgement of -9
+  became 1.
+* **A supplied AHP matrix got a consistency verdict without being
+  reciprocal**, so rows (1, 9) and (9, 1) received a consistency ratio of 0.
+* **Unavailable consistency ratios**, past 10 criteria, produced infinite
+  and undefined summaries, and filtering called them too inconsistent.
+* **ANP could report a limit that does not exist.** A periodic network now
+  gets its stationary priorities, and a reducible one is refused.
+* **DEMATEL could fail on an undefined inverse**, and named the first
+  criterion the strongest cause when every net relation was 0. It now
+  explains the undefined case and names a cause only when one exists.
+* **WASPAS reversed its normalisation for negative values.**
+* **ELECTRE's kernel could exclude an alternative nothing in it outranked.**
+* **ELECTRE sensitivity re-ranked at the default cutoffs** in place of the
+  cutoffs the result used.
+* **Sensitivity called a ranking stable when no weight had moved**, as
+  happens with weights such as (1, 0).
+* **Conjoint balance rewarded leaving out an attribute level**, scoring a
+  design that never showed one as perfectly balanced. Balance now counts
+  every declared level, and the design lists any level it never shows.
+
+## Text analysis fixes
+
+* **Words with accents and text in other scripts were being cut up.** The
+  tokeniser kept ASCII letters alone, so "café" was counted as "caf",
+  "naïve" became two fragments, and a response written in a non-Latin script
+  could come out empty. Every Unicode letter and digit is now kept, in term
+  frequency, n-grams, co-occurrence, topic models and sentiment.
+  **Term counts and topic models over non-English text will change.**
+* **N-grams reported phrases nobody wrote.** Stop words were removed before
+  the window slid over what was left, so "clean but not comfortable" produced
+  the bigram "clean comfortable". An n-gram is now built only from words that
+  were next to each other, which is what makes it a phrase a respondent used.
+  **Bigram and trigram tables will change, and some will be smaller.**
+* **A respondent with no group value was counted into every group** in
+  grouped sentiment. With twelve responses per group, both groups reported
+  thirteen, the extra one scored as neutral. Grouped term frequency had the
+  same mismatch between the text and the rows it came from.
+* **A response of punctuation alone counted as a usable response.** Rows were
+  chosen before punctuation and numbers were stripped, so such a response
+  survived as an empty string, counted towards the minimum corpus, and scored
+  as a neutral observation in sentiment.
+* **`term_context(window = 0)` copied the match into its own context.** A zero
+  window now gives empty context, and a negative one is refused, as is
+  `max_matches` below 1 and an n-gram size below 2.
+
+## New: the R code behind each result
+
+* **A report now shows the statistical call that produced each number.** Every
+  result carries a folded "Show R code" block with the call, the variables and
+  the options resolved, so a reader sees `cor.test(x, y, method = "pearson")`
+  where the wrapper call was all that showed before. Both
+  report engines show it, and `render_report(show_code = FALSE)` leaves it
+  out.
+* **`analysis_syntax()` returns that code**, for one result or a whole set.
+  `header = TRUE` prepends the lines that load the instrument, read the
+  responses and score the scales, giving a script that runs on its own.
+* The code is built from the same resolved specification the analysis ran, and
+  the package's tests run the generated code and compare its statistic and p
+  against the package's own result. Where a method falls outside its coverage
+  the block is omitted, which keeps the report honest about what it can show. The model families already carried their
+  syntax, through `cfa_syntax()` and its neighbours.
+
+## Figure fixes
+
+* **Grouped rating charts drew two segments over each other.** The negative
+  block started at zero while the neutral block straddled zero, so with five
+  equally frequent options ten percentage points of the bar were drawn twice
+  and the bar was ten points short. This affected the matrix and scale charts
+  in every report. The single-item chart was always correct.
+* **A repeated-measures figure described more respondents than its test.** The
+  test drops anyone missing a measure, where the figure dropped missing
+  values measure by measure, so an excluded respondent could move the plotted
+  medians. The figure now uses the same respondents and says how many.
+* **A Q-Q plot compared raw values against the wrong line.** The reference was
+  y = x, so a normal variable with a mean of 100 looked severely non-normal.
+  The line now follows the sample's own quartiles.
+* **A network figure renumbered its clusters.** Clusters were relabelled by
+  size while the legend said "Cluster", so the cluster a table called 2 could
+  appear as Cluster 1. The figure now uses the same numbers as the table.
+
+## Report fixes
+
+* **A report could not render into a folder whose name contains a space.**
+  The Quarto renderer's arguments were passed to the shell unquoted, so such
+  a path split into several arguments and the render failed, falling back to
+  the built-in HTML engine with no explanation. Each argument is now quoted.
+* **Distributions disappeared when ggplot2 was absent.** A scale's rating
+  items are grouped into one chart, and every item in such a scale was skipped
+  whether or not that chart could be drawn, though the built-in charts draw
+  each one. A missing optional package now costs the grouping and keeps the
+  information.
+* **A print-palette report mixed monochrome and colour figures**, because the
+  single-item diverging chart was drawn with the default palette.
+* **Collected multiple-choice answers were missing from the distributions.**
+  A multiple-choice question is collected as one column per option, and the
+  section looked for a single column under the question's own name, so every
+  such question was skipped. Both report engines now count the options, label
+  them from the choice set, and state how many respondents answered, since one
+  respondent can pick several.
+* **A quanteda result's leading features never reached the report**, though its
+  own prompt asked a reader to review them. A moderation's conditional slopes
+  at the moderator's own values were missing in the same way. Both now render
+  as a second table under the result.
+* **A mediation table did not say which model produced it.** It gave Direct,
+  Indirect and Total with no variable names and no a or b path, so two
+  negative paths looked the same as two positive ones: both give a positive
+  indirect effect. The table now names the predictor, mediator and outcome and
+  reports a and b with their signs.
+* **APA numbers follow APA 7 more closely.** `p` loses its leading zero,
+  as `p = .032`, and an interval says its level, as `95% CI [0.12, 0.48]`.
+  The sentence is plain text, so italicising the symbols stays the author's
+  step, and `?sf_apa` now says so.
+* **A report claimed an analysis seed when analysis was switched off.**
+  `render_report(include_analysis = FALSE)` still printed a seed beside the
+  instrument hash, which reads as provenance for an analysis that never ran.
+
+## Provenance and file fixes
+
+* **A revised instrument could be written with its change undisclosed.**
+  Reading a file, editing it in memory and writing it produced a consistent
+  file with nothing in its amendment log, and a log with entries removed or
+  reordered was written as readily.
+* **An amendment could record a fingerprint of content that was never
+  written**, because the fingerprint was taken before validation updated the
+  instrument.
+* **A plan or model change could be recorded as a routine pipeline
+  amendment**, skipping its deviation report.
+* **A one-item scale was written as a single value** where the published
+  instrument profile requires an array, so a valid instrument failed the
+  profile, and the builder and R hashed the same instrument differently.
+* **The file reader, the bundled schema and the published profile disagreed**
+  on required fields. They now share one core, `hash`, `meta` and `items`, and
+  the reader refuses a file from a newer major format version.
+* **`read_responses()` changed values on the way in.** A respondent ID of `001`
+  became `1`, a text answer of `NA` became missing, a matrix missing a row
+  column raised no warning, and a duplicated column was silently dropped.
+* **The Google Sheets collector could mis-file answers under a duplicate or
+  blank heading**, and 2 submissions could interleave while the header was
+  being extended. Submissions now run inside a lock, and an ambiguous header
+  sends the raw submission to an "Unmapped submissions" sheet.
+* **`sframe_export_labelled()` left matrix cells, option columns and text-held
+  codes unlabelled.** Every response column now carries its row, option or
+  criterion wording, and every column of choice codes carries value labels.
+* **Generated notebooks hid failed analyses**, never ran their report step,
+  and broke on a title containing a quote. Each failed block now shows its
+  error, the report renders when at least one analysis succeeded, and titles
+  are escaped.
+* **Shipped demo results could fall out of step with the package.** A test
+  now holds every demo's results file equal to what the package computes.
+
+## SurveyStudio round-trip fixes
+
+* **A rebuild in SurveyStudio dropped item-level reverse coding.** Studio
+  replaces the instrument it holds with a rebuild from its editor whenever
+  the draft is valid, and that rebuild cleared every item's `reverse` flag,
+  keeping only the reversal declared on a scale. An item marked
+  `reverse = TRUE` was scored as though answered in the same direction as
+  the rest, moving every composite and alpha built on it.
+* **A rebuild dropped conjoint designs**, so a declared design was lost as
+  soon as the instrument passed through Studio.
+* **An item held as a plain list lost its settings**: date limits, matrix
+  rows, slider and rating settings, comparison items and the comparison
+  scale. Every field the item constructor accepts is now carried.
+* **Studio's item-save handler replaced an item wholesale**, which would
+  have cleared reverse coding, scale membership, page and type settings on
+  any edit. Studio ships no item form, so the handler is unreachable from
+  the interface today and no released version could reach it. It now applies
+  an edit to the item already there, and drops settings belonging to the
+  previous type only when the type itself changes.
+* Reverse coding stays where it was declared. A scale's `reverse_items` stay
+  on the scale, where a rebuild used to copy them onto each item, which
+  changed a loaded instrument's content simply by opening it.
+
+## Documentation
+
+* **`export_google_sheet()` told researchers to let anyone with the link edit
+  the response sheet**, which exposes participant data to anyone holding the
+  URL. The collector writes through the sheet it is attached to, so link
+  sharing was always unnecessary. The help now says to keep the sheet private. If you
+  followed the old advice, review the sheet's sharing settings.
+* **The cross-check claim made for the decision methods is narrowed to what
+  the suite holds.** 0.4.0 said an independent computation had to agree
+  before a method was accepted. The suite calls RMCDA for 5 of the 10
+  methods, and 4 of those compare numbers: AHP weights, VIKOR's S, R and Q,
+  MOORA's ratio system and WASPAS scores. The ELECTRE call compares the
+  ordering of one concordance pair. ANP, DEMATEL, SMART, PROMETHEE and
+  TOPSIS are checked against hand-derived values and published worked
+  examples, with no second implementation. Both kinds of evidence are
+  recorded per method in `vignette("mcdm-analysis")`.
+* The `survey_module_ui()` and `survey_module_server()` help is rewritten,
+  covering supported item types, what is submitted, a failed save, and
+  changing the instrument, with a complete example that stores responses.
+* The `item_report()` help describes item-rest correlations, where it said
+  item-total, and the nested result it returns, with both ways to extract it.
+  The `sf_scale()` help states the rules for `min_valid`, `weights` and
+  `reverse_items`.
+* The `sample_size_plan()` help separates power calculations from precision
+  targets and rules of thumb, and states which arguments each one uses.
+* The `sensitivity_analysis()`, `sframe_dematel_compute()` and
+  `sframe_rated_matrix()` help describe the new counts, the undefined
+  total relation, and how rated items pair with a weight item.
+* The provenance help for `amend_sframe()`, `link_git_commit()`,
+  `read_sframe()` and `write_sframe()` states what the hashes establish: a
+  canonical content check, local and unsigned. They identify content, and
+  who wrote an instrument or when needs other evidence. The bundled schema
+  says the same.
+* The `read_responses()` help describes one contract for undeclared columns
+  and documents expansion columns and value conversion.
+* **`vignette("scale-reliability-validity")` said that supplying construct
+  scores returns the HTMT matrix.** It returns the absolute inter-construct
+  correlations, and records `htmt_method = "correlation_fallback"` to say which
+  it computed. The Henseler heterotrait-monotrait ratio needs
+  `items_by_construct`, which records `htmt_method = "henseler"`.
+  `validity_report()`'s own help was already accurate, and the vignette
+  overstated it in an unevaluated chunk. The section now names what each
+  argument gives, and its examples run, so a build would contradict the claim
+  if it drifted again.
+* **`citation("surveyframe")` abbreviated the author as "Sharafuddin M".**
+  The given names Mohammed Ali were passed to `person()` as one string, which
+  R shortens to a single initial. They are now 2 given names, so the text
+  citation reads "Sharafuddin MA". The BibTeX entry keeps its correct form. The citation year now comes from the release date, where it
+  followed the date the citation was run.
+* **The PDF reference manual kept its text inside the page margins.** Long
+  function names in running text, 2 tables in `?sframe_plots` and
+  `?sframe_as_data_frame`, and the Usage of `sf_item()` and
+  `sample_size_plan()` ran past the right margin in 83 places. The tables are
+  now lists, the Usage lines wrap, and the manual lets a line stretch
+  its spaces before letting a name overflow.
+* **The APA citations attached to results carried a fixed year of 2026.**
+  surveyframe's own citation now takes its year from the installed release,
+  and R Core Team's from the running version of R.
+
+## Dependencies
+
+`callr`, `chromote`, `httpuv` and `pkgload` join Suggests. They are used only
+by tests that drive a survey in a real browser, which are skipped on CRAN.
+
 # surveyframe 0.4.1
 
 ## New
@@ -96,10 +725,12 @@ concept of a decision method at all.
   and the static HTML survey, the Shiny module, and the builder preview
   render all 3 judgement-collection structures identically.
 * RMCDA joins Suggests as a test-time cross-check oracle: an independent
-  computation of the same method on the same matrix is required to agree
-  with the package's own result before a method's implementation is
-  accepted. This practice caught a real defect during development, a
-  WASPAS runner that had inherited SMART's normalisation step by mistake.
+  computation of the same method on the same matrix is compared with the
+  package's own result. This practice caught a real defect during
+  development, a WASPAS runner that had inherited SMART's normalisation
+  step by mistake. (Corrected in 0.4.2: this bullet first said independent
+  agreement was required before any method was accepted, which was wider
+  than the suite. See 0.4.2's note for the coverage each method has.)
 
 ## New: small-sample statistics
 

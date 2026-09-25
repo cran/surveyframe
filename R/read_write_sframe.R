@@ -16,6 +16,26 @@ sframe_normalise_component <- function(component, restore) {
   sframe_strip_component_class(restore(sframe_strip_component_class(component)))
 }
 
+# Fields that are always collections, per the published instrument profile and
+# the builder. Marked with I() so jsonlite writes a one-member vector as a
+# JSON array. auto_unbox wrote a one-item scale as "items": "sat_1", which
+# fails the profile, and the builder, writing true arrays, hashed the same
+# instrument differently.
+sframe_collection_fields <- list(
+  items   = c("matrix_items", "comparison_items"),
+  choices = c("values", "labels"),
+  scales  = c("items", "reverse_items", "weights"),
+  amendments = "changed_fields"
+)
+
+sframe_box_collections <- function(component, fields) {
+  for (f in fields) {
+    v <- component[[f]]
+    if (!is.null(v) && is.atomic(v)) component[[f]] <- I(unname(v))
+  }
+  component
+}
+
 #' The `.sframe` format version, written into every file as `sframe_format`.
 #'
 #' Tracks the shape of the serialised object, not the package version and not
@@ -25,7 +45,12 @@ sframe_normalise_component <- function(component, restore) {
 #' @keywords internal
 SFRAME_FORMAT_VERSION <- "1.0"
 
-sframe_serialization_payload <- function(instrument, hash_value = "") {
+sframe_serialization_payload <- function(instrument, hash_value = "", box = TRUE) {
+  # box = FALSE reproduces the pre-0.4.2 scalar form, used only to recognise
+  # content fingerprints recorded by older versions.
+  boxer <- function(components, fields) {
+    if (isTRUE(box)) lapply(components, sframe_box_collections, fields) else components
+  }
   # Strip list-level names before serialisation so items, choices, scales,
   # branching, and checks are always written as JSON arrays. Without unname(),
   # instruments built with Map() (which attaches item IDs as list names) produce
@@ -43,12 +68,15 @@ sframe_serialization_payload <- function(instrument, hash_value = "") {
     hash = list(algo = "sha256", value = hash_value),
     version = instrument$meta$version,
     meta = instrument$meta,
-    items    = unname(lapply(instrument$items,
-                             sframe_normalise_component, sframe_restore_item)),
-    choices  = unname(lapply(instrument$choices,
-                             sframe_normalise_component, sframe_restore_choices)),
-    scales   = unname(lapply(instrument$scales,
-                             sframe_normalise_component, sframe_restore_scale)),
+    items    = unname(boxer(lapply(instrument$items,
+                                   sframe_normalise_component, sframe_restore_item),
+                            sframe_collection_fields$items)),
+    choices  = unname(boxer(lapply(instrument$choices,
+                                   sframe_normalise_component, sframe_restore_choices),
+                            sframe_collection_fields$choices)),
+    scales   = unname(boxer(lapply(instrument$scales,
+                                   sframe_normalise_component, sframe_restore_scale),
+                            sframe_collection_fields$scales)),
     branching = unname(lapply(instrument$branching,
                               sframe_normalise_component, sframe_restore_branch)),
     checks   = unname(lapply(instrument$checks,
@@ -101,7 +129,8 @@ sframe_serialization_payload <- function(instrument, hash_value = "") {
   # must hash identically before and after this feature existed.
   amendments <- instrument$amendments %||% list()
   if (length(amendments) > 0) {
-    payload$amendments <- unname(lapply(amendments, sframe_amendment_plain))
+    payload$amendments <- unname(boxer(lapply(amendments, sframe_amendment_plain),
+                                       sframe_collection_fields$amendments))
   }
 
   payload
@@ -171,9 +200,24 @@ sframe_hash_value <- function(instrument) {
 #' Write an instrument to a .sframe file
 #'
 #' Serialises an `sframe` instrument object to a UTF-8 JSON file with a
-#' SHA-256 integrity hash. The instrument is validated before writing unless
-#' the object already carries a valid status. The hash is computed over the
-#' full serialised content with the `hash.value` field set to an empty string.
+#' SHA-256 integrity hash. The instrument is always validated before writing,
+#' and an invalid instrument is refused. The hash is computed over a canonical
+#' serialisation of the content with `hash.value` set to an empty string: object
+#' keys are sorted, so it identifies content, not the exact bytes.
+#'
+#' # Revisions and the amendment log
+#'
+#' Writing checks the amendment log recorded by [amend_sframe()]. Each entry must
+#' follow the one before it, the instrument must still match its last recorded
+#' amendment, and an instrument read with [read_sframe()] must keep every
+#' amendment it was read with. Content changed since it was read is refused
+#' unless the change was recorded with [amend_sframe()]. To publish changed
+#' content as a different instrument, remove its amendment log and set
+#' `new_instrument = TRUE`.
+#'
+#' These are checks on the content in hand. The hash is unsigned and can be
+#' recomputed by anyone who edits a file, so it does not establish who wrote an
+#' instrument or when.
 #'
 #' @param instrument An `sframe` object created by [sf_instrument()].
 #' @param path Character. The file path to write to. The `.sframe` extension
@@ -182,6 +226,9 @@ sframe_hash_value <- function(instrument) {
 #'   Defaults to `TRUE`. Set to `FALSE` for compact files.
 #' @param overwrite Logical. Whether to overwrite an existing file. Defaults
 #'   to `FALSE`.
+#' @param new_instrument Logical. `TRUE` declares that the content is a new
+#'   instrument, not a revision of the one it was read from, so no amendment is
+#'   required. The instrument must carry no amendment log. Defaults to `FALSE`.
 #'
 #' @return The file path, invisibly.
 #' @export
@@ -194,7 +241,8 @@ sframe_hash_value <- function(instrument) {
 #' )
 #' out <- write_sframe(instr, tempfile(fileext = ".sframe"))
 #' file.exists(out)
-write_sframe <- function(instrument, path, pretty = TRUE, overwrite = FALSE) {
+write_sframe <- function(instrument, path, pretty = TRUE, overwrite = FALSE,
+                         new_instrument = FALSE) {
   sframe_check_instrument(instrument)
 
   if (!endsWith(path, ".sframe")) {
@@ -213,6 +261,7 @@ write_sframe <- function(instrument, path, pretty = TRUE, overwrite = FALSE) {
   # returns a diagnostic since 0.4.0, so the instrument comes back through
   # as_sframe().
   instrument <- as_sframe(validate_sframe(instrument, strict = TRUE))
+  sframe_check_amendment_boundary(instrument, new_instrument)
 
   # Build the full JSON payload with an empty hash placeholder
   payload <- sframe_serialization_payload(instrument)
@@ -462,8 +511,29 @@ sframe_restore_model <- function(model) {
   model
 }
 
+# The fields every .sframe profile shares. version, choices and scales are
+# optional, and default when absent, so a minimal file conforming to the
+# published instrument profile reads. A file with no sframe_format predates the
+# field (2026-08-22) and is read as a legacy file. A newer major format version
+# is refused, since its shape may have changed in ways this reader cannot see.
 sframe_validate_parsed_payload <- function(parsed, path) {
-  required <- c("hash", "version", "meta", "items", "choices", "scales")
+  if (!is.null(parsed$sframe_format)) {
+    fmt <- as.character(parsed$sframe_format)[1]
+    if (!grepl("^[0-9]+\\.[0-9]+$", fmt)) {
+      sframe_abort_import(
+        paste0("Invalid .sframe file: sframe_format '", fmt,
+               "' is not a version number."), path = path)
+    }
+    major <- as.integer(sub("\\..*$", "", fmt))
+    supported <- as.integer(sub("\\..*$", "", SFRAME_FORMAT_VERSION))
+    if (major > supported) {
+      sframe_abort_import(
+        paste0("This .sframe file uses format ", fmt, ", newer than the ",
+               SFRAME_FORMAT_VERSION, " this version of surveyframe reads. ",
+               "Update surveyframe to read it."), path = path)
+    }
+  }
+  required <- c("hash", "meta", "items")
   missing <- setdiff(required, names(parsed))
   if (length(missing) > 0) {
     sframe_abort_import(
@@ -488,8 +558,8 @@ sframe_validate_parsed_payload <- function(parsed, path) {
   if (!is.list(parsed$meta) ||
       is.null(parsed$meta$title) ||
       !is.list(parsed$items) ||
-      !is.list(parsed$choices) ||
-      !is.list(parsed$scales)) {
+      !(is.null(parsed$choices) || is.list(parsed$choices)) ||
+      !(is.null(parsed$scales) || is.list(parsed$scales))) {
     sframe_abort_import(
       "Invalid .sframe file: expected a recognised payload structure.",
       path = path
@@ -500,11 +570,19 @@ sframe_validate_parsed_payload <- function(parsed, path) {
 #' Read an instrument from a .sframe file
 #'
 #' Reads a `.sframe` JSON file and reconstructs an `sframe` instrument object.
-#' The SHA-256 integrity hash is verified on load unless `validate = FALSE`.
+#' The SHA-256 integrity hash is always verified, and a file whose content does
+#' not match its hash is refused. The hash covers a canonical form of the
+#' content, so it detects a change to the content of a written file, and it
+#' ignores whitespace and key order. It is unsigned, so anyone who edits a file
+#' can also recompute it.
+#'
+#' The instrument remembers the content and amendment log it was read with, so
+#' [write_sframe()] can refuse an undisclosed revision.
 #'
 #' @param path Character. The path to a `.sframe` file.
 #' @param validate Logical. Whether to validate the loaded instrument with
-#'   [validate_sframe()]. Defaults to `TRUE`.
+#'   [validate_sframe()]. Defaults to `TRUE`. This controls structural
+#'   validation only. The integrity hash is verified either way.
 #'
 #' @return An `sframe` object.
 #' @export
@@ -570,15 +648,18 @@ read_sframe <- function(path, validate = TRUE) {
   # Reconstruct the sframe object
   instrument <- structure(
     list(
-      meta      = within(parsed$meta, {
-        authors <- sframe_as_vector(authors, "character")
-        languages <- sframe_as_vector(languages, "character")
+      # Read by name, since a minimal file need not list authors or languages.
+      meta      = local({
+        m <- parsed$meta
+        if (!is.null(m$authors)) m$authors <- sframe_as_vector(m$authors, "character")
+        if (!is.null(m$languages)) m$languages <- sframe_as_vector(m$languages, "character")
+        m
       }),
       items     = lapply(parsed$items, sframe_restore_item),
-      choices   = lapply(parsed$choices, sframe_restore_choices),
-      scales    = lapply(parsed$scales, sframe_restore_scale),
-      branching = lapply(parsed$branching, sframe_restore_branch),
-      checks    = lapply(parsed$checks, sframe_restore_check),
+      choices   = lapply(parsed$choices %||% list(), sframe_restore_choices),
+      scales    = lapply(parsed$scales %||% list(), sframe_restore_scale),
+      branching = lapply(parsed$branching %||% list(), sframe_restore_branch),
+      checks    = lapply(parsed$checks %||% list(), sframe_restore_check),
       # Absent in every file written before conjoint designs existed, so this
       # stays an empty list rather than failing on an older instrument.
       designs   = lapply(parsed$designs %||% list(), sframe_restore_conjoint),
@@ -599,6 +680,19 @@ read_sframe <- function(path, validate = TRUE) {
   if (validate) {
     instrument <- as_sframe(validate_sframe(instrument, strict = TRUE))
   }
+
+  # What the instrument was when read, kept on the object and never written,
+  # so write_sframe() can tell a disclosed revision from an undisclosed one.
+  attr(instrument, "sframe_origin") <- list(
+    path = path,
+    content_hash = sframe_content_hash(instrument),
+    amendment_new_hashes = vapply(instrument$amendments %||% list(),
+                                  function(a) a$new_hash %||% "", character(1)),
+    # Every field of every recorded entry, so an edit to a disclosure is as
+    # detectable as an edit to the content it describes.
+    amendment_entry_hashes = sframe_amendment_entry_hashes(
+      instrument$amendments %||% list())
+  )
 
   instrument
 }

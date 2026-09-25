@@ -5,6 +5,11 @@ library(surveyframe)
 ## ----index--------------------------------------------------------------------
 head(sframe_demos()[, c("name", "teaches")], 5)
 
+## ----five-minute-start, eval = FALSE------------------------------------------
+# demo <- sframe_demo("first_survey")
+# results <- run_analysis_plan(demo$responses, demo$instrument)
+# sframe_demo_qmd("first_survey") # write an editable Quarto notebook
+
 ## ----first-survey-------------------------------------------------------------
 demo <- sframe_demo("first_survey")
 demo$instrument

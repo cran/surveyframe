@@ -41,8 +41,10 @@ test_that("a header rewritten by read.csv() is explained, not just rejected", {
 
   expect_equal(names(mangled), c("q1__Row.one", "q1__Row.two"))
 
-  err <- tryCatch(read_responses(mangled, inst, strict = TRUE),
-                  error = function(e) conditionMessage(e))
+  expect_no_warning(
+    err <- tryCatch(read_responses(mangled, inst, strict = TRUE),
+                    error = function(e) conditionMessage(e))
+  )
   expect_match(err, "name repair")
   expect_match(err, "check.names = FALSE", fixed = TRUE)
   expect_match(err, "q1__Row one", fixed = TRUE)

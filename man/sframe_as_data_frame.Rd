@@ -2,72 +2,53 @@
 % Please edit documentation in R/as_data_frame.R
 \name{sframe_as_data_frame}
 \alias{sframe_as_data_frame}
-\alias{as.data.frame.sframe}
-\alias{as.data.frame.sf_choices}
-\alias{as.data.frame.sframe_codebook}
-\alias{as.data.frame.sframe_reliability_report}
-\alias{as.data.frame.sframe_item_report}
-\alias{as.data.frame.sframe_efa_report}
-\alias{as.data.frame.sframe_efa_solution}
-\alias{as.data.frame.sframe_descriptives_report}
-\alias{as.data.frame.sframe_missing_data_report}
-\alias{as.data.frame.sframe_validity_report}
-\alias{as.data.frame.sframe_assumption_report}
-\alias{as.data.frame.sframe_sample_size_plan}
-\alias{as.data.frame.sframe_quality_report}
-\alias{as.data.frame.sframe_sensitivity}
-\alias{as.data.frame.sframe_analysis_results}
 \title{Coerce a surveyframe object to a data frame}
-\usage{
-\method{as.data.frame}{sframe}(x, row.names = NULL, optional = FALSE, ...)
-
-\method{as.data.frame}{sf_choices}(x, row.names = NULL, optional = FALSE, ...)
-
-\method{as.data.frame}{sframe_codebook}(x, row.names = NULL, optional = FALSE, ...)
-
-\method{as.data.frame}{sframe_reliability_report}(x, row.names = NULL, optional = FALSE, ...)
-
-\method{as.data.frame}{sframe_item_report}(x, row.names = NULL, optional = FALSE, ...)
-
-\method{as.data.frame}{sframe_efa_report}(x, row.names = NULL, optional = FALSE, ...)
-
-\method{as.data.frame}{sframe_efa_solution}(x, row.names = NULL, optional = FALSE, ...)
-
-\method{as.data.frame}{sframe_descriptives_report}(x, row.names = NULL, optional = FALSE, ...)
-
-\method{as.data.frame}{sframe_missing_data_report}(x, row.names = NULL, optional = FALSE, ...)
-
-\method{as.data.frame}{sframe_validity_report}(x, row.names = NULL, optional = FALSE, ...)
-
-\method{as.data.frame}{sframe_assumption_report}(x, row.names = NULL, optional = FALSE, ...)
-
-\method{as.data.frame}{sframe_sample_size_plan}(x, row.names = NULL, optional = FALSE, ...)
-
-\method{as.data.frame}{sframe_quality_report}(x, row.names = NULL, optional = FALSE, ...)
-
-\method{as.data.frame}{sframe_sensitivity}(x, row.names = NULL, optional = FALSE, ...)
-
-\method{as.data.frame}{sframe_analysis_results}(x, row.names = NULL, optional = FALSE, ...)
-}
-\arguments{
-\item{x}{A surveyframe object.}
-
-\item{row.names}{Passed to \code{\link[base:as.data.frame]{base::as.data.frame()}}.}
-
-\item{optional}{Passed to \code{\link[base:as.data.frame]{base::as.data.frame()}}.}
-
-\item{...}{Ignored. Present for S3 consistency.}
-}
 \value{
-A data frame.
+A data frame, with the columns listed above for the class given.
 }
 \description{
-Every surveyframe class returns its primary table. For an instrument that
-is the item table, for a validation result the problems, for a report the
-table it is mainly about. Where an object holds more than one table, the
-others are reachable through the named accessors in \link{sf_accessors} or,
-for a full tabular record of an instrument, through \code{\link[=codebook_report]{codebook_report()}}.
+Every surveyframe class returns its primary table, and each class has its
+own columns. Where an object holds more than one table, the others are
+reachable through the named accessors in \link{sf_accessors}, or, for a full
+tabular record of an instrument, through \code{\link[=codebook_report]{codebook_report()}}.
 }
+\section{What each class gives}{
+\itemize{
+\item \code{sframe}: one row per item, with \code{id}, \code{label}, \code{type}, \code{choice_set},
+\code{scale_id}, \code{reverse} and \code{required}.
+\item \code{sframe_codebook}: one row per item, the codebook's item table.
+\item \code{sframe_validation}: one row per problem, with \code{check} and \code{problem}.
+\item \code{sframe_analysis_results}: one row per block, with \code{block},
+\code{research_question}, \code{method} and \code{apa}.
+\item \code{sframe_reliability_report}: one row per scale, with \code{scale_id}, \code{label},
+\code{n_items}, \code{n}, \code{alpha} and \code{omega}.
+\item \code{sframe_item_report}: one row per item, with \code{scale_id} and the item
+diagnostics.
+\item \code{sframe_quality_report}: one row per check, the flattened quality checks.
+\item \code{sframe_efa_report}: one row per measure, the readiness measures.
+\item \code{sframe_sensitivity}: one row per perturbation, with \code{criterion},
+\code{direction}, \code{weight}, \code{rho}, \code{rank_changed} and \code{top_changed}.
+}
+}
+
+\section{A summary, and where the full record is}{
+These tables are a summary of the columns a reader scans first. The item
+table leaves out help text, placeholder, matrix rows, comparison items and
+scale, slider and rating settings, date bounds, section introduction and
+page; the scale table leaves out \code{min_valid}, the reverse key and the
+weights. Read the stored declaration in full through \code{\link[=sf_items]{sf_items()}},
+\code{\link[=sf_scales]{sf_scales()}} and the rest of \link{sf_accessors}, each of which returns the
+component objects themselves, or through \code{\link[=write_sframe]{write_sframe()}} for the
+interchange record.
+
+A class holding one table returns it directly, so it keeps that table's own
+row names and \code{row.names} has no effect. Pass \code{row.names} to
+\code{\link[base:as.data.frame]{base::as.data.frame()}} on the returned frame where you need to set them.
+The coercion gives one view of an object. An instrument, for example,
+returns its items, and its choice sets and scales come from
+\code{\link[=sf_choice_sets]{sf_choice_sets()}}, \code{\link[=sf_scales]{sf_scales()}} or \code{\link[=codebook_report]{codebook_report()}}.
+}
+
 \examples{
 cs    <- sf_choices("ag5", 1:5,
            c("Strongly disagree", "Disagree", "Neutral",

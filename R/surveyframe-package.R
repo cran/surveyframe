@@ -1,6 +1,13 @@
+# The \if{latex} line in @description is for the PDF manual. Inline code is
+# set in a typewriter font that cannot be hyphenated, so a long function name
+# near the end of a line ran past the right margin, 83 times in 0.4.2's
+# manual. This page is typeset first, which is why it is no longer marked
+# internal, and \global carries the looser line breaking to every page after
+# it. HTML help and pkgdown ignore the line.
 #' surveyframe: Survey Instrument Workflows for R
 #'
 #' @description
+#' \if{latex}{\out{\global\emergencystretch=3em\global\tolerance=3000\global\hbadness=10000}}
 #' surveyframe defines a survey instrument as a first-class R object and
 #' supports a complete workflow from questionnaire design through data
 #' collection, quality checking, scoring, psychometric diagnostics, and
@@ -34,19 +41,47 @@
 #'
 #' ## The instrument object
 #'
-#' Every function in the package operates on an `sframe` object. The object
-#' is the single source of truth for item definitions, scale structure,
-#' reverse-coding keys, branching rules, check specifications, analysis plans,
-#' and optional model specifications. Accessors such as [sf_meta()],
-#' [sf_items()], [sf_scales()], [sf_plan()], and [sf_models()] read its parts
-#' without reaching into the object directly.
+#' The workflow runs on an `sframe` object. It is the single source of truth
+#' for item definitions, scale structure, reverse-coding keys, branching
+#' rules, check specifications, analysis plans, and optional model
+#' specifications. Accessors such as [sf_meta()], [sf_items()], [sf_scales()],
+#' [sf_plan()], and [sf_models()] read its parts without reaching into the
+#' object directly.
+#'
+#' Some helpers work on plain vectors, for use beside that workflow or on
+#' their own: the text helpers such as [term_frequency()], and the interval
+#' helpers [bootstrap_ci()], [cohens_d_ci()], [cramers_v_ci()] and
+#' [eta_sq_ci()].
+#'
+#' ## A first session
+#'
+#' [sframe_demos()] lists 22 worked demos, each one instrument, its responses
+#' and the results surveyframe produced. `sframe_demo("two_group")` loads one,
+#' and `sframe_demo_qmd("two_group")` writes a notebook to edit.
+#' `vignette("learn-by-example")` teaches from the same library.
+#'
+#' ## How functions are named
+#'
+#' Three families, which the prefix tells apart.
+#'
+#' * `sf_` builds or reads the instrument object model: the constructors
+#'   [sf_item()] and [sf_scale()], the accessors [sf_items()] and [sf_plan()],
+#'   and the replacement forms such as `sf_plan<-`.
+#' * `sframe_` covers everything the package adds around that object: the
+#'   plots such as [sframe_plot_reliability()], the demo library through
+#'   [sframe_demos()], the decision helpers, and the builder's own state.
+#' * The workflow verbs carry no prefix, because they name the step a
+#'   researcher is taking: [validate_sframe()], [score_scales()],
+#'   [run_analysis_plan()], [render_report()], and the `_report()` family.
+#'
+#' The prefixes group functions; they do not pair them. No name stem appears
+#' under both, so there is no `sframe_` twin of an `sf_` function to look for.
 #'
 #' ## File format
 #'
 #' Instruments are stored as UTF-8 JSON files with the `.sframe` extension.
 #' Each file includes a SHA-256 integrity hash for reproducibility auditing.
 #'
-#' @keywords internal
 "_PACKAGE"
 
 ## usethis namespace: start

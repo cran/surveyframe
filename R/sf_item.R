@@ -1,5 +1,108 @@
 # sf_item.R
 
+# The 15 item types, named once so the constructor and validate_sframe()
+# agree. The enum used to live in the constructor's formals alone, so a type
+# replaced after construction revalidated clean.
+sframe_item_types <- c(
+  "likert", "single_choice", "multiple_choice",
+  "numeric", "text", "textarea", "date",
+  "matrix", "slider", "ranking", "rating",
+  "pairwise_comparison", "criteria_weight",
+  "section_break", "text_block"
+)
+
+# Item types that answer from a declared choice set.
+sframe_choice_item_types <- c("likert", "single_choice", "multiple_choice",
+                              "ranking", "matrix")
+
+# What each type has to carry beyond its id, label and type. The constructor
+# checks some of this on the way in; this runs again at validation, where a
+# mutated item used to pass with reversed slider bounds or no rows at all.
+sframe_item_config_problems <- function(item) {
+  out <- character(0)
+  keep <- function(...) out <<- c(out, paste0(...))
+  id <- as.character(item$id %||% "(unnamed)")[1]
+  type <- as.character(item$type %||% "")[1]
+  if (!type %in% sframe_item_types) {
+    keep("Item '", id, "' has the unknown type '", type, "'. The types are: ",
+         paste(sframe_item_types, collapse = ", "), ".")
+    return(out)
+  }
+  for (flag in c("required", "reverse")) {
+    value <- item[[flag]]
+    if (!is.null(value) && !is.logical(value)) {
+      keep("Item '", id, "'s `", flag, "` is ", class(value)[1],
+           ", and has to be TRUE or FALSE. A string there reads as FALSE.")
+    }
+  }
+  if (type %in% sframe_choice_item_types) {
+    cs <- as.character(item$choice_set %||% "")[1]
+    if (!nzchar(cs) || is.na(cs)) {
+      keep("Item '", id, "' is of type '", type,
+           "', which answers from a choice set, and names none.")
+    }
+  }
+  if (identical(type, "matrix")) {
+    rows <- as.character(item$matrix_items %||% character(0))
+    rows <- rows[!is.na(rows) & nzchar(trimws(rows))]
+    if (length(rows) == 0) {
+      keep("Item '", id, "' is a matrix with no rows in `matrix_items`.")
+    } else if (anyDuplicated(rows) > 0) {
+      keep("Item '", id, "' repeats a matrix row: ",
+           paste(unique(rows[duplicated(rows)]), collapse = ", "), ".")
+    }
+  }
+  # Slider and rating settings are optional, and each renderer supplies its
+  # own default. What is declared has to make sense.
+  if (identical(type, "slider")) {
+    if (!is.null(item$slider_min) && !is.null(item$slider_max)) {
+      lo <- suppressWarnings(as.numeric(item$slider_min)[1])
+      hi <- suppressWarnings(as.numeric(item$slider_max)[1])
+      if (is.na(lo) || is.na(hi) || lo >= hi) {
+        keep("Item '", id, "'s slider runs from ", lo, " to ", hi,
+             ". The minimum has to be below the maximum.")
+      }
+    }
+    if (!is.null(item$slider_step)) {
+      step <- suppressWarnings(as.numeric(item$slider_step)[1])
+      if (is.na(step) || step <= 0) {
+        keep("Item '", id, "'s slider step is ", step,
+             ", and has to be above 0.")
+      }
+    }
+  }
+  if (identical(type, "rating") && !is.null(item$rating_max)) {
+    max_rating <- suppressWarnings(as.numeric(item$rating_max)[1])
+    if (is.na(max_rating) || max_rating < 1 ||
+        max_rating != round(max_rating)) {
+      keep("Item '", id, "'s rating maximum is ", max_rating,
+           ", and has to be a whole number of 1 or more.")
+    }
+  }
+  if (identical(type, "date")) {
+    lo <- item$date_min
+    hi <- item$date_max
+    if (!is.null(lo) && !is.null(hi)) {
+      lo <- suppressWarnings(as.Date(lo))
+      hi <- suppressWarnings(as.Date(hi))
+      if (is.na(lo) || is.na(hi)) {
+        keep("Item '", id, "' has a date bound that is no date.")
+      } else if (lo > hi) {
+        keep("Item '", id, "'s earliest date ", lo, " is after its latest ",
+             hi, ".")
+      }
+    }
+  }
+  if (type %in% c("pairwise_comparison", "criteria_weight")) {
+    items <- as.character(item$comparison_items %||% character(0))
+    blank <- items[is.na(items) | !nzchar(trimws(items))]
+    if (length(blank) > 0) {
+      keep("Item '", id, "' has a blank entry in `comparison_items`.")
+    }
+  }
+  out
+}
+
 #' Define a survey item
 #'
 #' Creates a single survey item object for inclusion in an `sframe` instrument.
@@ -47,6 +150,33 @@
 #' @param page Integer or NULL. Page number for multi-page surveys.
 #'
 #' @return An object of class `sf_item` (a named list).
+#' @usage
+#' sf_item(
+#'   id,
+#'   label,
+#'   type = c("likert", "single_choice", "multiple_choice", "numeric",
+#'     "text", "textarea", "date", "matrix", "slider", "ranking", "rating",
+#'     "pairwise_comparison", "criteria_weight", "section_break",
+#'     "text_block"),
+#'   required = FALSE,
+#'   choice_set = NULL,
+#'   scale_id = NULL,
+#'   reverse = FALSE,
+#'   help = NULL,
+#'   placeholder = NULL,
+#'   matrix_items = NULL,
+#'   comparison_items = NULL,
+#'   comparison_scale = NULL,
+#'   slider_min = NULL,
+#'   slider_max = NULL,
+#'   slider_step = NULL,
+#'   rating_max = NULL,
+#'   rating_icon = NULL,
+#'   date_min = NULL,
+#'   date_max = NULL,
+#'   section_intro = NULL,
+#'   page = NULL
+#' )
 #' @export
 #' @seealso [sf_instrument()], [sf_choices()], [sf_scale()]
 #'

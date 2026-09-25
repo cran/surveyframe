@@ -10,28 +10,62 @@ survey_module_server(id, instrument, on_submit = NULL)
 \item{id}{A character string matching the \code{id} passed to
 \code{\link[=survey_module_ui]{survey_module_ui()}}.}
 
-\item{instrument}{An \code{sframe} object, or a \code{reactive} that returns one.
-Changing the reactive value resets the survey.}
+\item{instrument}{An \code{sframe} object, or a \code{reactive} that returns one.}
 
-\item{on_submit}{Optional function of one argument. Called immediately
-after submission with the response list. Useful for writing to a
-database or sending an email without waiting for an
-\code{\link[shiny:observeEvent]{shiny::observeEvent()}} elsewhere in the app.}
+\item{on_submit}{Optional function of one argument, called with the
+response list before the survey is marked complete. Use it to store the
+response. An error it raises is shown to the respondent, and the survey
+stays open for another attempt.}
 }
 \value{
-A \code{reactive} that returns \code{NULL} before submission and the
-response list after.
+A \code{reactive} that returns \code{NULL} until a response is submitted and
+\code{on_submit}, when supplied, has returned. After that it returns the
+response list.
 }
 \description{
-Renders the survey instrument and collects the respondent's answers.
-Returns a \code{reactive} that holds \code{NULL} until the form is submitted, then
-returns the response as a named list (one element per visible item).
+Draws the survey and collects the respondent's answers. Returns a
+\code{reactive} holding \code{NULL} until the survey has been submitted and saved.
 }
+\section{Supported item types}{
+Every item type is supported, with the same controls \code{\link[=render_survey]{render_survey()}}
+uses: likert, single choice, multiple choice, numeric, text, text area,
+date, slider, rating, ranking, matrix, pairwise comparison and criteria
+weight, plus section breaks and text blocks.
+}
+
+\section{What is submitted}{
+The response is a named list. It starts with \code{response_id}, \code{started_at}
+and \code{submitted_at}, followed by one element per response column, named as
+\code{\link[=read_responses]{read_responses()}} expects. A multi-column item contributes one element per
+column: \code{item__row} for a matrix, \code{item__option} for ranking and multiple
+choice, and one element per pair or criterion for decision items. Values
+are character.
+
+An item hidden by branching is \code{NA}, so an answer given before branching
+hid its item is never submitted. An unanswered item is \code{NA} too. A slider
+counts as answered once the respondent moves it, and a ranking once the
+respondent reorders it or chooses "Keep this order". Date questions start
+empty.
+}
+
+\section{Saving, and a failed save}{
+\code{on_submit} is called with the response before the survey is marked
+complete. If it raises an error, the respondent sees a message and stays on
+the last page, can submit again, and the returned reactive stays \code{NULL}.
+The thank-you screen appears only after \code{on_submit} returns.
+}
+
+\section{Changing the instrument}{
+When \code{instrument} is a reactive and its value changes, the survey returns
+to the welcome screen, the returned reactive goes back to \code{NULL}, and no
+answer given to the previous instrument carries into the new one.
+}
+
 \examples{
 \donttest{
-# See survey_module_ui() for a complete example.
+# survey_module_ui() has a complete example, including on_submit.
 }
 }
 \seealso{
-\code{\link[=survey_module_ui]{survey_module_ui()}}
+\code{\link[=survey_module_ui]{survey_module_ui()}}, \code{\link[=render_survey]{render_survey()}}, \code{\link[=read_responses]{read_responses()}}
 }

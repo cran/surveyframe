@@ -22,6 +22,16 @@ scale-location, residuals vs leverage), built from the plain data frame
 \code{\link[=run_analysis_plan]{run_analysis_plan()}} attaches to a \code{regression_linear} result rather than
 the \code{lm} object itself, so the result stays JSON-serialisable.
 }
+\examples{
+\donttest{
+if (requireNamespace("ggplot2", quietly = TRUE)) {
+  demo <- sframe_demo_data()
+  res <- run_analysis_plan(demo$responses, demo$instrument)
+  panels <- sframe_plot_regression_diagnostics(res$rq_predict_sat)
+  panels$residuals_fitted
+}
+}
+}
 \seealso{
 \code{\link[=run_analysis_plan]{run_analysis_plan()}}
 }

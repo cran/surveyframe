@@ -7,6 +7,32 @@
 # eta_sq_ci(), and now also used by run_analysis_plan() to make a whole plan
 # run reproducible in one place rather than by threading a seed through every
 # helper signature.
+# The percentile interval of bootstrap replicates, recording how many were
+# usable. The interval is withheld, with a reason, when fewer than 90% of
+# replicates gave a finite value or every usable replicate gave the same
+# value. Dropping failed replicates silently, and returning a zero-width
+# interval from a collapsed distribution, both looked like a precise result.
+sframe_percentile_ci <- function(boots, obs, conf.level) {
+  finite <- boots[is.finite(boots)]
+  out <- c(estimate = unname(obs), lower = NA_real_, upper = NA_real_)
+  reason <- NULL
+  if (length(finite) < 0.9 * length(boots)) {
+    reason <- sprintf("%d of %d resamples gave no value",
+                      length(boots) - length(finite), length(boots))
+  } else if (length(unique(finite)) < 2) {
+    reason <- "every resample gave the same value"
+  } else {
+    a <- (1 - conf.level) / 2
+    ci <- stats::quantile(finite, c(a, 1 - a), names = FALSE)
+    out[["lower"]] <- ci[[1]]
+    out[["upper"]] <- ci[[2]]
+  }
+  attr(out, "resamples") <- length(boots)
+  attr(out, "valid_resamples") <- length(finite)
+  attr(out, "reason") <- reason
+  out
+}
+
 sframe_with_seed <- function(seed, expr) {
   if (is.null(seed)) {
     return(force(expr))
@@ -56,7 +82,11 @@ sframe_with_seed <- function(seed, expr) {
 #' @param seed Integer or NULL. When supplied, sets the random seed so the
 #'   interval is reproducible.
 #'
-#' @return A named numeric vector: `estimate`, `lower`, `upper`. The bounds
+#' @return A named numeric vector: `estimate`, `lower`, `upper`, with
+#'   attributes `resamples`, `valid_resamples` and, when the interval is
+#'   withheld, `reason`. The bounds are `NA` when fewer than 90% of resamples
+#'   give a value, or when every resample gives the same value, since neither
+#'   leaves a sampling distribution to read. The bounds
 #'   are `NA` when `x` has fewer than 3 finite values.
 #' @export
 #' @seealso [cohens_d_ci()], [cramers_v_ci()], [eta_sq_ci()]
@@ -87,9 +117,7 @@ bootstrap_ci <- function(x, FUN = stats::median, R = 2000,
     return(c(estimate = unname(obs), lower = NA_real_, upper = NA_real_))
   }
   boots <- replicate(R, FUN(sample(x, replace = TRUE)))
-  a <- (1 - conf.level) / 2
-  ci <- stats::quantile(boots, c(a, 1 - a), names = FALSE, na.rm = TRUE)
-  c(estimate = unname(obs), lower = ci[[1]], upper = ci[[2]])
+  sframe_percentile_ci(boots, obs, conf.level)
 }
 
 #' Bootstrap confidence interval for Cohen's d
@@ -103,7 +131,11 @@ bootstrap_ci <- function(x, FUN = stats::median, R = 2000,
 #' @param conf.level Confidence level. Defaults to 0.95.
 #' @param seed Integer or NULL. When supplied, sets the random seed.
 #'
-#' @return A named numeric vector: `estimate`, `lower`, `upper`. The bounds
+#' @return A named numeric vector: `estimate`, `lower`, `upper`, with
+#'   attributes `resamples`, `valid_resamples` and, when the interval is
+#'   withheld, `reason`. The bounds are `NA` when fewer than 90% of resamples
+#'   give a value, or when every resample gives the same value, since neither
+#'   leaves a sampling distribution to read. The bounds
 #'   are `NA` when either group has fewer than 3 finite values.
 #' @export
 #' @seealso [bootstrap_ci()]
@@ -135,9 +167,7 @@ cohens_d_ci <- function(x, y, R = 2000, conf.level = 0.95, seed = NULL) {
   }
   boots <- replicate(R, sframe_cohens_d(sample(x, replace = TRUE),
                                         sample(y, replace = TRUE)))
-  a <- (1 - conf.level) / 2
-  ci <- stats::quantile(boots, c(a, 1 - a), names = FALSE, na.rm = TRUE)
-  c(estimate = unname(obs), lower = ci[[1]], upper = ci[[2]])
+  sframe_percentile_ci(boots, obs, conf.level)
 }
 
 #' Bootstrap confidence interval for Cramer's V
@@ -151,7 +181,11 @@ cohens_d_ci <- function(x, y, R = 2000, conf.level = 0.95, seed = NULL) {
 #' @param conf.level Confidence level. Defaults to 0.95.
 #' @param seed Integer or NULL. When supplied, sets the random seed.
 #'
-#' @return A named numeric vector: `estimate`, `lower`, `upper`. The bounds
+#' @return A named numeric vector: `estimate`, `lower`, `upper`, with
+#'   attributes `resamples`, `valid_resamples` and, when the interval is
+#'   withheld, `reason`. The bounds are `NA` when fewer than 90% of resamples
+#'   give a value, or when every resample gives the same value, since neither
+#'   leaves a sampling distribution to read. The bounds
 #'   are `NA` when the table holds fewer than 3 observations.
 #' @export
 #' @seealso [bootstrap_ci()]
@@ -186,9 +220,7 @@ cramers_v_ci <- function(tab, R = 2000, conf.level = 0.95, seed = NULL) {
     idx <- sample.int(n, replace = TRUE)
     sframe_cramers_v(table(cases[[1]][idx], cases[[2]][idx]))
   })
-  a <- (1 - conf.level) / 2
-  ci <- stats::quantile(boots, c(a, 1 - a), names = FALSE, na.rm = TRUE)
-  c(estimate = unname(obs), lower = ci[[1]], upper = ci[[2]])
+  sframe_percentile_ci(boots, obs, conf.level)
 }
 
 # Cramer's V (phi for 2 by 2) from a contingency table, NA when degenerate.
@@ -216,7 +248,11 @@ sframe_cramers_v <- function(tbl) {
 #' @param conf.level Confidence level. Defaults to 0.95.
 #' @param seed Integer or NULL. When supplied, sets the random seed.
 #'
-#' @return A named numeric vector: `estimate`, `lower`, `upper`. The bounds
+#' @return A named numeric vector: `estimate`, `lower`, `upper`, with
+#'   attributes `resamples`, `valid_resamples` and, when the interval is
+#'   withheld, `reason`. The bounds are `NA` when fewer than 90% of resamples
+#'   give a value, or when every resample gives the same value, since neither
+#'   leaves a sampling distribution to read. The bounds
 #'   are `NA` with fewer than 3 complete observations or fewer than 2 groups.
 #' @export
 #' @seealso [bootstrap_ci()]
@@ -252,9 +288,7 @@ eta_sq_ci <- function(outcome, group, R = 2000, conf.level = 0.95,
     idx <- sample.int(n, replace = TRUE)
     sframe_eta_sq(outcome[idx], group[idx])
   })
-  a <- (1 - conf.level) / 2
-  ci <- stats::quantile(boots, c(a, 1 - a), names = FALSE, na.rm = TRUE)
-  c(estimate = unname(obs), lower = ci[[1]], upper = ci[[2]])
+  sframe_percentile_ci(boots, obs, conf.level)
 }
 
 # Eta squared as between-group over total sum of squares, NA when degenerate
@@ -286,8 +320,16 @@ sframe_fisher_z_ci <- function(r, n, conf.level = 0.95) {
 # " [lower, upper]" for an apa string, or "" when the interval is missing,
 # so runners on degenerate data keep their 0.3.3 output.
 sframe_ci_string <- function(ci) {
+  if (!is.null(ci) && !is.null(attr(ci, "reason"))) {
+    return(sprintf(", no bootstrap interval: %s", attr(ci, "reason")))
+  }
   if (is.null(ci) || anyNA(ci[c("lower", "upper")])) return("")
-  sprintf(" [%.2f, %.2f]", ci[["lower"]], ci[["upper"]])
+  # A bare bracketed pair says nothing about what it covers, and APA asks for
+  # the level. The level travels on the interval where a caller set one.
+  level <- attr(ci, "level") %||% 0.95
+  # ", 95% CI [a, b]" reads as APA writes it: the estimate, a comma, then the
+  # labelled interval. A bare bracketed pair said nothing about the level.
+  sprintf(", %g%% CI [%.2f, %.2f]", 100 * level, ci[["lower"]], ci[["upper"]])
 }
 
 # --- Internal helpers backing the runners' CI keys ------------------------
@@ -296,8 +338,10 @@ sframe_ci_string <- function(ci) {
 # on every draw. Each mirrors the normal approximation the corresponding
 # test uses (tie-corrected).
 
-# Rank effect r = |z| / sqrt(n) for two independent groups (Mann-Whitney).
-sframe_rank_r <- function(g1, g2) {
+# Signed z for 2 independent groups (Mann-Whitney), tie-corrected and without
+# continuity correction, positive when g1 ranks higher. The runner, its point
+# estimate and every bootstrap resample use this one definition.
+sframe_rank_z <- function(g1, g2) {
   n1 <- length(g1); n2 <- length(g2); n <- n1 + n2
   if (n1 < 1 || n2 < 1) return(NA_real_)
   r_all <- rank(c(g1, g2))
@@ -306,7 +350,12 @@ sframe_rank_r <- function(g1, g2) {
   ties <- table(r_all)
   sig2 <- n1 * n2 / 12 * ((n + 1) - sum(ties^3 - ties) / (n * (n - 1)))
   if (!is.finite(sig2) || sig2 <= 0) return(NA_real_)
-  abs((U - mu) / sqrt(sig2)) / sqrt(n)
+  (U - mu) / sqrt(sig2)
+}
+
+# Rank effect r = |z| / sqrt(n) for two independent groups (Mann-Whitney).
+sframe_rank_r <- function(g1, g2) {
+  abs(sframe_rank_z(g1, g2)) / sqrt(length(g1) + length(g2))
 }
 
 sframe_rank_r_ci <- function(g1, g2, R = 2000, conf.level = 0.95) {
@@ -316,13 +365,14 @@ sframe_rank_r_ci <- function(g1, g2, R = 2000, conf.level = 0.95) {
   }
   boots <- replicate(R, sframe_rank_r(sample(g1, replace = TRUE),
                                       sample(g2, replace = TRUE)))
-  a <- (1 - conf.level) / 2
-  ci <- stats::quantile(boots, c(a, 1 - a), names = FALSE, na.rm = TRUE)
-  c(estimate = unname(obs), lower = ci[[1]], upper = ci[[2]])
+  sframe_percentile_ci(boots, obs, conf.level)
 }
 
-# Signed-rank effect r = |z| / sqrt(n) for paired differences (Wilcoxon).
-sframe_signed_rank_r <- function(d) {
+# Signed z for paired differences (Wilcoxon signed rank), tie-corrected and
+# without continuity correction, positive when differences are mostly
+# positive. Zero differences are dropped, as the test drops them, and r
+# divides by the pairs that remain.
+sframe_signed_rank_z <- function(d) {
   d <- d[is.finite(d) & d != 0]
   n <- length(d)
   if (n < 2) return(NA_real_)
@@ -332,7 +382,12 @@ sframe_signed_rank_r <- function(d) {
   ties <- table(r)
   sig2 <- n * (n + 1) * (2 * n + 1) / 24 - sum(ties^3 - ties) / 48
   if (!is.finite(sig2) || sig2 <= 0) return(NA_real_)
-  abs((V - mu) / sqrt(sig2)) / sqrt(n)
+  (V - mu) / sqrt(sig2)
+}
+
+# Signed-rank effect r = |z| / sqrt(n), n being the non-zero differences.
+sframe_signed_rank_r <- function(d) {
+  abs(sframe_signed_rank_z(d)) / sqrt(sum(is.finite(d) & d != 0))
 }
 
 sframe_signed_rank_r_ci <- function(d, R = 2000, conf.level = 0.95) {
@@ -341,9 +396,7 @@ sframe_signed_rank_r_ci <- function(d, R = 2000, conf.level = 0.95) {
     return(c(estimate = unname(obs), lower = NA_real_, upper = NA_real_))
   }
   boots <- replicate(R, sframe_signed_rank_r(sample(d, replace = TRUE)))
-  a <- (1 - conf.level) / 2
-  ci <- stats::quantile(boots, c(a, 1 - a), names = FALSE, na.rm = TRUE)
-  c(estimate = unname(obs), lower = ci[[1]], upper = ci[[2]])
+  sframe_percentile_ci(boots, obs, conf.level)
 }
 
 # The H-based eta squared the Kruskal-Wallis runner reports, recomputed
@@ -359,7 +412,9 @@ sframe_kw_eta_sq <- function(outcome, group) {
   H <- 12 / (n * (n + 1)) * sum(Rj^2 / nj) - 3 * (n + 1)
   ties <- table(r)
   corr <- 1 - sum(ties^3 - ties) / (n^3 - n)
-  if (is.finite(corr) && corr > 0) H <- H / corr
+  # With every value tied there is no rank variation, so H is undefined.
+  if (!is.finite(corr) || corr <= 0) return(NA_real_)
+  H <- H / corr
   max(0, (H - k + 1) / (n - k))
 }
 
@@ -379,9 +434,7 @@ sframe_kw_eta_sq_ci <- function(outcome, group, R = 2000, conf.level = 0.95,
     idx <- sample.int(n, replace = TRUE)
     sframe_kw_eta_sq(outcome[idx], group[idx])
   })
-  a <- (1 - conf.level) / 2
-  ci <- stats::quantile(boots, c(a, 1 - a), names = FALSE, na.rm = TRUE)
-  c(estimate = unname(obs), lower = ci[[1]], upper = ci[[2]])
+  sframe_percentile_ci(boots, obs, conf.level)
 }
 
 # Bootstrap CI for Spearman and Kendall correlations by resampling pairs.
@@ -395,7 +448,5 @@ sframe_cor_boot_ci <- function(x, y, method, R = 2000, conf.level = 0.95) {
     idx <- sample.int(n, replace = TRUE)
     suppressWarnings(stats::cor(x[idx], y[idx], method = method))
   })
-  a <- (1 - conf.level) / 2
-  ci <- stats::quantile(boots, c(a, 1 - a), names = FALSE, na.rm = TRUE)
-  c(estimate = unname(obs), lower = ci[[1]], upper = ci[[2]])
+  sframe_percentile_ci(boots, obs, conf.level)
 }

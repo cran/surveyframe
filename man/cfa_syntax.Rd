@@ -25,6 +25,16 @@ scale structure in the instrument. The syntax can be passed directly to
 transformed in the syntax. Recoding should be applied to the data before
 fitting the model.
 }
+\section{Which of the two to use}{
+
+This is the instrument-only convenience wrapper: one call, constructs taken
+from the instrument's scales. \code{\link[=cfa_lavaan_syntax]{cfa_lavaan_syntax()}} is the general entry
+point, and takes those same arguments plus a declared \code{\link[=sf_model]{sf_model()}},
+correlated residuals and latent covariances. Reach for it where the
+constructs differ from the scales. This wrapper stays supported, so a script
+calling it keeps working.
+}
+
 \examples{
 cs    <- sf_choices("ag5", 1:5,
            c("Strongly disagree", "Disagree", "Neutral",
@@ -51,5 +61,5 @@ summary(fit, fit.measures = TRUE)
 }
 }
 \seealso{
-\code{\link[=efa_report]{efa_report()}}, \code{\link[=reliability_report]{reliability_report()}}
+\code{\link[=cfa_lavaan_syntax]{cfa_lavaan_syntax()}}, \code{\link[=efa_report]{efa_report()}}, \code{\link[=reliability_report]{reliability_report()}}
 }

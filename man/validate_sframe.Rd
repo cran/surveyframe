@@ -31,12 +31,18 @@ The following checks are performed:
 \item Invalid item IDs
 \item Duplicate choice-set IDs
 \item Duplicate scale IDs
+\item Item IDs, scale IDs and response columns that share a name, or take a
+reserved metadata name such as \code{submitted_at}. A scale's score is stored
+in a column named by its ID, so a shared name would overwrite data
 \item Items with missing labels
 \item Items referencing a missing \code{choice_set} in the instrument
 \item Items referencing a missing \code{scale_id} in the instrument
 \item Items marked \code{reverse = TRUE} without a \code{scale_id}
 \item Choice sets referenced by items but not present in the instrument
 \item Scale \code{items} vectors containing IDs not present in the instrument
+\item Scale scoring parameters: repeated items, a \code{min_valid} outside 1 to the
+number of items, and weights that are not positive finite numbers
+\item Reverse coding declared for an item outside the scale that declares it
 \item Branching rules referencing item IDs not present in the instrument
 \item \code{\%in\%} branching rules whose \code{value} no evaluator can consume
 \item Attention checks referencing item IDs not present in the instrument

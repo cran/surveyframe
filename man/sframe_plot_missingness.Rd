@@ -19,6 +19,15 @@ short "no missing responses" message rather than an empty bar chart.
 \description{
 Missing-data report plot: missingness rate by item
 }
+\examples{
+\donttest{
+if (requireNamespace("ggplot2", quietly = TRUE)) {
+  demo <- sframe_demo_data()
+  mr <- missing_data_report(demo$responses, demo$instrument)
+  sframe_plot_missingness(mr)
+}
+}
+}
 \seealso{
 \code{\link[=missing_data_report]{missing_data_report()}}
 }

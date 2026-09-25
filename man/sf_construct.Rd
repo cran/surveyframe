@@ -31,3 +31,9 @@ An object of class \code{sf_construct}.
 \description{
 Define a latent or composite construct
 }
+\examples{
+sq <- sf_construct("sq", "Service Quality",
+                    items = c("sq_1", "sq_2", "sq_3"))
+sq$mode
+sq$items
+}

@@ -1,3 +1,44 @@
+#' Choosing a report
+#'
+#' The 12 report functions split into 2 shapes, and the split is what tells
+#' them apart.
+#'
+#' # Data in, object out
+#'
+#' These compute and return an object you can read, coerce with
+#' [as.data.frame()] and often plot.
+#'
+#' | Function | Answers |
+#' | --- | --- |
+#' | [codebook_report()] | what the instrument declares, as tables |
+#' | [descriptives_report()] | the distribution of each variable |
+#' | [missing_data_report()] | what is missing, and in what pattern |
+#' | [quality_report()] | which responses the declared checks flagged |
+#' | [reliability_report()] | alpha and omega per scale |
+#' | [item_report()] | how each item behaves inside its scale |
+#' | [efa_report()] | whether the data suit a factor analysis |
+#' | [validity_report()] | convergent and discriminant validity |
+#' | [assumption_report()] | whether a planned test's assumptions hold |
+#' | [posthoc_report()] | which pairs differ after an omnibus test |
+#'
+#' Each returns its primary table through [as.data.frame()], with the rest
+#' reachable through the accessors in [sf_accessors]. A failure is carried in
+#' the object as an error field, so a report keeps rendering around it.
+#'
+#' # Object or data in, file out
+#'
+#' | Function | Writes |
+#' | --- | --- |
+#' | [render_report()] | a whole document, computing its sections from the data |
+#' | [render_results()] | a document from analysis results you already have |
+#'
+#' Reach for [render_results()] where [run_analysis_plan()] has already run,
+#' and [render_report()] to go from responses to a document in one call.
+#'
+#' @name sframe_reports
+#' @seealso [run_analysis_plan()], [sframe_plots]
+NULL
+
 # codebook_report.R
 
 # Remove the scratch directories Chrome leaves in tempdir() after a
@@ -106,6 +147,10 @@ codebook_report <- function(instrument, format = c("html", "md")) {
 #'   replaced by display text.
 #' @export
 #' @seealso [codebook_report()]
+#' @examples
+#' demo <- sframe_demo_data()
+#' cb <- codebook_report(demo$instrument)
+#' head(sframe_codebook_items_display(cb))
 sframe_codebook_items_display <- function(cb) {
   stopifnot(inherits(cb, "sframe_codebook"))
   items_d <- cb$items_table
@@ -178,6 +223,11 @@ print.sframe_codebook <- function(x, ...) {
 #'   or `"print"` (black, grey, and white, for a journal-ready or
 #'   print-friendly report). Applied to every chart the report embeds.
 #'   See `sframe_brand()`.
+#' @param show_code Logical. Whether each result carries a folded "Show R code"
+#'   block with the statistical call that produced it, built by
+#'   [analysis_syntax()] from the same resolved specification the analysis ran.
+#'   Defaults to `TRUE`. A method [analysis_syntax()] does not cover shows no
+#'   block, rather than a guess at the call.
 #' @param interpretations Named list or NULL. Written interpretations keyed
 #'   by analysis-plan block id, added after the results are known. When a
 #'   block has an entry, its report section shows the pre-declared decision
@@ -231,7 +281,8 @@ render_report <- function(
     include_analysis  = TRUE,
     include_models    = TRUE,
     plot_palette      = c("web", "print"),
-    interpretations   = NULL
+    interpretations   = NULL,
+    show_code         = TRUE
 ) {
   sframe_check_instrument(instrument)
   plot_palette <- rlang::arg_match(plot_palette)
@@ -254,18 +305,27 @@ render_report <- function(
     }
     html_tmp <- tempfile(fileext = ".html")
     on.exit(unlink(html_tmp, force = TRUE), add = TRUE)
-    render_report(
-      instrument, data = data, output_file = html_tmp, format = "html",
-      include_quality = include_quality,
-      include_reliability = include_reliability,
-      include_codebook = include_codebook,
-      include_missing = include_missing,
-      include_descriptives = include_descriptives,
-      include_analysis = include_analysis,
-      include_models = include_models,
-      plot_palette = plot_palette,
-      interpretations = interpretations
+    # The HTML render's return carries which engine built the content, and it
+    # used to be discarded, so a PDF said nothing about how it was produced.
+    # Its own message named the intermediate HTML file too, which is a path the
+    # caller never asked for and which is deleted on the way out.
+    html_res <- withCallingHandlers(
+      render_report(
+        instrument, data = data, output_file = html_tmp, format = "html",
+        include_quality = include_quality,
+        include_reliability = include_reliability,
+        include_codebook = include_codebook,
+        include_missing = include_missing,
+        include_descriptives = include_descriptives,
+        include_analysis = include_analysis,
+        include_models = include_models,
+        plot_palette = plot_palette,
+        interpretations = interpretations,
+        show_code = show_code
+      ),
+      sframe_report_engine = function(m) invokeRestart("muffleMessage")
     )
+    content_engine <- attr(html_res, "engine") %||% "html"
     # Chrome writes its own scratch directories into tempdir() and does not
     # remove them, which R CMD check reports as detritus in the temp
     # directory. Only entries that appear during this call and match Chrome's
@@ -282,6 +342,14 @@ render_report <- function(
           class = "sframe_error"
         )
       }
+    )
+    attr(dest, "engine") <- content_engine
+    attr(dest, "converter") <- "pagedown"
+    rlang::inform(
+      paste0("Report rendered with the ",
+             if (identical(content_engine, "quarto")) "Quarto" else "built-in HTML",
+             " engine and printed to PDF with pagedown: ", dest),
+      class = "sframe_report_engine"
     )
     return(invisible(dest))
   }
@@ -340,24 +408,17 @@ render_report <- function(
       include_descriptives = include_descriptives && !is.null(data),
       include_analysis    = include_analysis,
       include_models      = include_models,
+      show_code           = show_code,
       plot_palette        = plot_palette,
       instrument_hash     = sframe_hash_value(instrument),
       # Passed rather than looked up inside the template: Quarto renders in a
       # separate R session against the installed package, which is not
       # necessarily the build doing the rendering.
-      analysis_seed       = as.character(sframe_report_seed(data, instrument))
+      analysis_seed       = as.character(
+        sframe_report_seed(data, instrument, include_analysis))
     )
 
-    param_args <- unlist(lapply(names(params), function(name) {
-      value <- params[[name]]
-      if (is.logical(value)) {
-        value <- tolower(as.character(value))
-      }
-      if (is.character(value)) {
-        value <- normalizePath(value, winslash = "/", mustWork = FALSE)
-      }
-      c("-P", paste0(name, ":", value))
-    }), use.names = FALSE)
+    param_args <- sframe_quarto_param_args(params)
     # Render with the working directory set to the render dir so Quarto creates
     # its intermediate `*_files/libs` there and can inline them for
     # embed-resources. Output next to the input, then copy to the destination.
@@ -402,10 +463,37 @@ render_report <- function(
     include_analysis    = include_analysis,
     include_models      = include_models,
     plot_palette        = plot_palette,
-    interpretations     = interpretations
+    interpretations     = interpretations,
+    show_code           = show_code
   )
 
   sframe_report_result(dest, "html")
+}
+
+# The "-P name:value" arguments for a Quarto render.
+#
+# system2() joins its args into one command line, so a value containing a space
+# used to split into several shell arguments. Each value is quoted here, which
+# keeps it whole whatever it holds.
+#
+# Only the parameters that name a file are normalised. normalizePath() used to
+# run over every character value, so the seed text "not applicable, no analysis
+# plan run" was rewritten as an absolute path under the working directory.
+sframe_quarto_param_names_path <- c("instrument_path", "data_path",
+                                    "interpretations_path")
+
+sframe_quarto_param_args <- function(params) {
+  unlist(lapply(names(params), function(name) {
+    value <- params[[name]]
+    if (is.logical(value)) {
+      value <- tolower(as.character(value))
+    }
+    if (is.character(value) && name %in% sframe_quarto_param_names_path &&
+        nzchar(value)) {
+      value <- normalizePath(value, winslash = "/", mustWork = FALSE)
+    }
+    c("-P", shQuote(paste0(name, ":", value)))
+  }), use.names = FALSE)
 }
 
 # The 2 engines produce different documents from identical inputs, so a caller
@@ -416,8 +504,13 @@ render_report <- function(
 # it on its result; when there is no plan to run there is nothing random to
 # reproduce, so the field says so rather than printing a seed that governed
 # nothing.
-sframe_report_seed <- function(data, instrument) {
-  if (is.null(data) || length(instrument$analysis_plan %||% list()) == 0) {
+# The seed the report's analysis ran under, or a statement that none did.
+# Asking only whether data and a plan existed meant a report rendered with
+# include_analysis = FALSE printed a seed beside the instrument hash, which
+# reads as provenance for an analysis that never ran.
+sframe_report_seed <- function(data, instrument, include_analysis = TRUE) {
+  if (!isTRUE(include_analysis) || is.null(data) ||
+      length(instrument$analysis_plan %||% list()) == 0) {
     return("not applicable, no analysis plan run")
   }
   formals(run_analysis_plan)$seed %||% "unseeded"
@@ -472,7 +565,8 @@ sframe_clean_interpretations <- function(interpretations) {
     include_analysis = TRUE,
     include_models = TRUE,
     plot_palette = "web",
-    interpretations = list()
+    interpretations = list(),
+    show_code = TRUE
 ) {
   meta <- instrument$meta %||% list()
   sections <- character(0)
@@ -619,7 +713,8 @@ sframe_clean_interpretations <- function(interpretations) {
   if (isTRUE(include_analysis) && length(instrument$analysis_plan %||% list()) > 0) {
     analysis_html <- .render_report_analysis_section(instrument, data,
                                                      plot_palette = plot_palette,
-                                                     interpretations = interpretations)
+                                                     interpretations = interpretations,
+                                                     show_code = show_code)
     sections <- c(sections, sprintf("<section>%s</section>", analysis_html))
   }
 
@@ -640,7 +735,7 @@ sframe_clean_interpretations <- function(interpretations) {
     Value = c(
       sframe_hash_value(instrument),
       "built-in HTML",
-      as.character(sframe_report_seed(data, instrument)),
+      as.character(sframe_report_seed(data, instrument, include_analysis)),
       format(Sys.time(), "%Y-%m-%d %H:%M %Z")
     ),
     stringsAsFactors = FALSE
@@ -730,7 +825,8 @@ sframe_clean_interpretations <- function(interpretations) {
 
 .render_report_analysis_section <- function(instrument, data = NULL,
                                             plot_palette = "web",
-                                            interpretations = list()) {
+                                            interpretations = list(),
+                                            show_code = TRUE) {
   plan <- instrument$analysis_plan %||% list()
   if (length(plan) == 0) {
     return("")
@@ -833,6 +929,24 @@ sframe_clean_interpretations <- function(interpretations) {
       quotes_html <- if (is.data.frame(result$quotes) && nrow(result$quotes) > 0) {
         .render_report_table(result$quotes, "Representative quotes")
       } else ""
+      # A second table the result carries: the quanteda runner's leading
+      # features, or a moderation's conditional slopes at the moderator's own
+      # values. Both were retained by their runner, asked for by its prompt,
+      # and rendered by neither engine. Same pattern as $quotes and $syntax.
+      supplement <- sframe_result_supplement(result)
+      features_html <- if (!is.null(supplement)) {
+        .render_report_table(supplement$table, supplement$caption)
+      } else ""
+      # The statistical call behind the numbers, folded away so it is there for
+      # a reader who wants it and out of the way for one who does not. Showing
+      # the run_analysis_plan() wrapper instead would say nothing about which
+      # test ran with which options.
+      code_html <- if (isTRUE(show_code)) {
+        code <- analysis_syntax(result)
+        if (is.null(code)) "" else sprintf(
+          "<details class=\"sf-code\"><summary>Show R code</summary><pre><code>%s</code></pre></details>",
+          htmltools_escape(paste(code, collapse = "\n")))
+      } else ""
       paste(
         c(
           "<div class=\"rq-block\">",
@@ -843,7 +957,9 @@ sframe_clean_interpretations <- function(interpretations) {
           table_html,
           plot_html,
           syntax_html,
+          features_html,
           quotes_html,
+          code_html,
           if (nzchar(extra)) extra,
           "</div>"
         ),
@@ -961,17 +1077,24 @@ sframe_clean_interpretations <- function(interpretations) {
     img <- NULL
     if (item$id %in% names(group_of)) {
       gid <- group_of[[item$id]]
-      if (!gid %in% rendered_groups && has_ggplot) {
-        rendered_groups <- c(rendered_groups, gid)
-        g <- scale_groups[[gid]]
-        gg <- sframe_plot_likert_scale(g$items, data, g$choice_set, g$title,
-                                       palette = plot_palette)
-        img <- .render_report_ggplot_png(gg, alt = paste("Distribution of", g$title))
-        if (!is.null(img)) {
-          blocks <- c(blocks, sprintf("<h3>%s</h3>%s", htmltools_escape(g$title), img))
+      if (has_ggplot) {
+        if (!gid %in% rendered_groups) {
+          rendered_groups <- c(rendered_groups, gid)
+          g <- scale_groups[[gid]]
+          gg <- sframe_plot_likert_scale(g$items, data, g$choice_set, g$title,
+                                         palette = plot_palette)
+          img <- .render_report_ggplot_png(gg, alt = paste("Distribution of", g$title))
+          if (!is.null(img)) {
+            blocks <- c(blocks, sprintf("<h3>%s</h3>%s", htmltools_escape(g$title), img))
+          }
         }
+        # The group's one chart covers every member item.
+        next
       }
-      next
+      # Without ggplot2 there is no grouped chart, and skipping here removed
+      # these items' distributions altogether, though the base-graphics
+      # single-item chart below can draw every one of them. A missing optional
+      # package should cost the grouping, not the information.
     }
     if (identical(t, "matrix")) {
       # A matrix question has no base response column, only one expanded
@@ -985,6 +1108,40 @@ sframe_clean_interpretations <- function(interpretations) {
       if (!is.null(img)) {
         blocks <- c(blocks, sprintf("<h3>%s</h3>%s",
           htmltools_escape(item$label %||% item$id), img))
+      }
+      next
+    }
+    # A multiple-choice question posts one indicator column per option, named
+    # item__option, and never a column of its own, so requiring the parent
+    # column dropped every collected multi-select from this section. The
+    # indicators are counted here and the denominator is stated, since each
+    # respondent may pick several.
+    if (identical(t, "multiple_choice") && !item$id %in% names(data)) {
+      cs <- choice_by(item$choice_set %||% "")
+      cols <- sframe_item_expansion_columns(instrument, list(item))
+      present <- intersect(cols, names(data))
+      if (length(present) == 0) next
+      picked <- vapply(present, function(cn) {
+        sum(as.character(data[[cn]]) %in% c("1", "TRUE", "true", "yes"),
+            na.rm = TRUE)
+      }, numeric(1))
+      labels <- sub(paste0("^", item$id, "__"), "", present)
+      if (!is.null(cs)) {
+        hit <- match(labels, as.character(cs$values))
+        labels[!is.na(hit)] <- cs$labels[hit[!is.na(hit)]]
+      }
+      names(picked) <- labels
+      if (!sum(picked)) next
+      n_resp <- nrow(data)
+      img <- .render_report_plot_png(function() {
+        op <- graphics::par(mar = c(4, 9, 1, 1)); on.exit(graphics::par(op))
+        graphics::barplot(rev(picked), horiz = TRUE, las = 1, col = theme,
+                          border = "white", xlab = "Respondents")
+      })
+      if (!is.null(img)) {
+        blocks <- c(blocks, sprintf(
+          "<h3>%s</h3><p class=\"hint\">%d respondents, who could pick more than one.</p>%s",
+          htmltools_escape(item$label %||% item$id), n_resp, img))
       }
       next
     }
@@ -1004,7 +1161,11 @@ sframe_clean_interpretations <- function(interpretations) {
         # A Likert item is an ordered agree/disagree scale: a diverging bar
         # shows which way opinion leans, unlike a plain frequency bar.
         img <- .render_report_plot_png(
-          function() sframe_draw_likert_diverging(freq, theme),
+          # plot_palette was dropped here, so a report asked for the print
+          # palette mixed monochrome grouped charts with colour single-item
+          # ones.
+          function() sframe_draw_likert_diverging(freq, theme,
+                                                  palette = plot_palette),
           height = if (length(freq) <= 5) 320 else 320 + 22 * length(freq)
         )
       } else if (has_ggplot) {
@@ -1040,11 +1201,24 @@ sframe_clean_interpretations <- function(interpretations) {
     }
   }
 
+  # Scale figures plot the scores score_scales() computes, so the method,
+  # reversal, weights and min_valid the instrument declares all apply. A row
+  # mean of the item columns ignored every one of them, so a declared sum of
+  # 2 and 4 was published as 3.
+  scale_scores <- NULL
+  if (length(instrument$scales %||% list()) > 0) {
+    scale_scores <- tryCatch(
+      score_scales(data, instrument, keep_items = FALSE, keep_meta = FALSE),
+      error = function(e) {
+        blocks <<- c(blocks, sprintf(
+          "<p><em>Scale scores could not be computed: %s</em></p>",
+          htmltools_escape(conditionMessage(e))))
+        NULL
+      })
+  }
   for (sc in instrument$scales %||% list()) {
-    cols <- intersect(sc$items, names(data))
-    if (!length(cols)) next
-    nums <- lapply(data[cols], function(x) suppressWarnings(as.numeric(x)))
-    scores <- rowMeans(do.call(cbind, nums), na.rm = TRUE)
+    if (is.null(scale_scores) || !sc$id %in% names(scale_scores)) next
+    scores <- scale_scores[[sc$id]]
     scores <- scores[!is.na(scores)]
     if (!length(scores)) next
     if (has_ggplot) {

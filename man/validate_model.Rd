@@ -32,6 +32,19 @@ bare unclassed list when \code{strict = FALSE}. Both paths now return an
 console. Code that read \verb{$valid} and \verb{$problems} keeps working.
 }
 
+\examples{
+demo <- sframe_demo_data()
+m <- sf_model(
+  "cb1", type = "cb_sem",
+  constructs = list(
+    sf_construct("sq", items = c("sq_1", "sq_2", "sq_3")),
+    sf_construct("sat", items = c("sat_1", "sat_2"))
+  ),
+  paths = list(sf_path("sq", "sat"))
+)
+diag <- validate_model(m, instrument = demo$instrument)
+diag
+}
 \seealso{
 \link{sframe_validation}, \code{\link[=sf_problems]{sf_problems()}}, \code{\link[=sf_is_valid]{sf_is_valid()}}
 }

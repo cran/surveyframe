@@ -64,10 +64,14 @@ test_that("seeding does not disturb the caller's RNG stream", {
   # run does not silently reset randomness for unrelated code afterwards.
   instr <- plan_instrument()
   dat <- plan_data()
-  set.seed(99); before <- runif(3)
+  # The draws that follow set.seed(99) with nothing in between.
+  set.seed(99); expected <- runif(3)
+  # The same start, with a seeded plan run before drawing. Reseeding after the
+  # run, as this test once did, passed whatever the run did to the stream.
+  set.seed(99)
   invisible(run_analysis_plan(dat, instr))
-  set.seed(99); after <- runif(3)
-  expect_identical(before, after)
+  after <- runif(3)
+  expect_identical(after, expected)
 })
 
 test_that("seeding leaves mc.cores as it found it", {

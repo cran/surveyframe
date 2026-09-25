@@ -1,13 +1,10 @@
 # git_link.R
 #
-# A bare SHA-256 hash proves a file is byte-identical to what produced it; it
-# gives no diff, author, timestamp, or reason for a change. Git already
-# solves that -- commit messages, authorship, and history -- so rather than
-# have surveyframe compete with git, link_git_commit() has the manifest point
-# at it. The SHA-256 hash still confirms the file on disk matches what a
-# named, already-explained commit produced; it is not a substitute for the
-# commit history, only a check that nothing was edited outside version
-# control after that commit.
+# A content hash identifies an instrument's content. It gives no diff, author,
+# timestamp or reason for a change. Git records those, so link_git_commit()
+# points at Git. Given the tracked file's path, it also compares the instrument
+# with the file as committed, and reports that comparison as `verified`.
+# Without a path it is a pointer to HEAD and nothing more.
 #
 # Git is optional. No package here depends on it existing, and it is not a
 # hard or Suggests dependency -- link_git_commit() shells out with system2()
@@ -39,12 +36,15 @@ sframe_git_run <- function(args, repo_path) {
 
 #' Link an instrument to its current Git commit
 #'
-#' Records the current Git commit SHA and subject line for `repo_path`
-#' alongside the instrument. This does not replace Git history -- it is a
-#' pointer into it. The SHA-256 hash [write_sframe()] embeds in the
-#' `.sframe` file confirms the file on disk matches what this specific,
-#' already-explained commit produced; a reviewer reads the commit itself
-#' for the "what changed and why."
+#' Records the current Git commit SHA and subject line for `repo_path`. It is
+#' a pointer into Git history, where a reviewer reads what changed and why.
+#'
+#' Given `path`, the tracked `.sframe` file, it also compares the instrument
+#' with that file as committed at HEAD, and sets `verified = TRUE` only when
+#' their content hashes match. Without `path`, nothing is compared and
+#' `verified` is `FALSE`. A verified link shows the instrument matches a
+#' committed file. It does not show who wrote the instrument or when, beyond
+#' what the commit itself records.
 #'
 #' Git is entirely optional. When `repo_path` is not inside a Git
 #' repository, or the `git` executable is not on the `PATH`, this returns a
@@ -54,11 +54,14 @@ sframe_git_run <- function(args, repo_path) {
 #' @param instrument An `sframe` object.
 #' @param repo_path Character. Path to check for a Git repository. Defaults
 #'   to the current working directory.
+#' @param path Character or `NULL`. The instrument's `.sframe` file, relative
+#'   to `repo_path`. When given, the instrument is compared with the file as
+#'   committed at HEAD.
 #'
 #' @return A list with `linked` (logical), and when `linked` is `TRUE`,
-#'   `commit` (the full commit SHA) and `message` (the commit's subject
-#'   line); when `linked` is `FALSE`, `reason` (a human-readable explanation:
-#'   `"git not found"` or `"not a git repository"`).
+#'   `commit` (the full commit SHA), `message` (the commit's subject line),
+#'   `path`, and `verified` (logical). `reason` explains an unlinked result
+#'   (`"git not found"` or `"not a git repository"`) or an unverified one.
 #' @export
 #' @seealso [amend_sframe()], [write_sframe()]
 #'
@@ -66,7 +69,7 @@ sframe_git_run <- function(args, repo_path) {
 #' item  <- sf_item("q1", "How satisfied are you?", type = "text")
 #' instr <- sf_instrument("Demo", components = list(item))
 #' link_git_commit(instr, repo_path = tempdir())
-link_git_commit <- function(instrument, repo_path = ".") {
+link_git_commit <- function(instrument, repo_path = ".", path = NULL) {
   sframe_check_instrument(instrument)
 
   if (!sframe_git_available()) {
@@ -85,9 +88,30 @@ link_git_commit <- function(instrument, repo_path = ".") {
 
   msg <- sframe_git_run(c("log", "-1", "--format=%s"), repo_path)
 
-  list(
+  out <- list(
     linked = TRUE,
     commit = trimws(sha$output),
-    message = trimws(msg$output)
+    message = trimws(msg$output),
+    path = path,
+    verified = FALSE
   )
+  if (is.null(path)) {
+    out$reason <- "no path given, so the instrument was not compared with the repository"
+    return(out)
+  }
+  committed <- sframe_git_run(c("show", paste0("HEAD:./", path)), repo_path)
+  if (!identical(committed$status, 0L)) {
+    out$reason <- sprintf("'%s' is not committed at HEAD", path)
+    return(out)
+  }
+  stored <- tryCatch(
+    jsonlite::fromJSON(committed$output, simplifyVector = FALSE)$hash$value,
+    error = function(e) NULL)
+  current <- sframe_hash_value(as_sframe(validate_sframe(instrument, strict = TRUE)))
+  if (identical(stored, current)) {
+    out$verified <- TRUE
+  } else {
+    out$reason <- sprintf("the instrument differs from '%s' as committed at HEAD", path)
+  }
+  out
 }

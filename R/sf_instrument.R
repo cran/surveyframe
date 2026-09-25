@@ -17,8 +17,8 @@
 #'   Defaults to `"en"`. Multi-language support is planned for a later release.
 #' @param components List. A list of component objects created by the
 #'   constructor family: [sf_item()], [sf_choices()], [sf_scale()],
-#'   [sf_branch()], and [sf_check()]. Components are sorted by class
-#'   automatically. Supply components created by the surveyframe constructors.
+#'   [sf_branch()], [sf_check()], and [sf_conjoint_design()]. Components are
+#'   sorted by class automatically, so they can be supplied in any order.
 #' @param render List or NULL. Optional rendering hints passed to
 #'   [render_survey()], such as theme colour or progress bar visibility.
 #' @param analysis_plan List. Optional pre-planned analysis blocks created in

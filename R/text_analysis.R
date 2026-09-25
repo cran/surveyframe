@@ -73,20 +73,34 @@
 # built-in list above; `stop_words = character(0)` disables filtering.
 #
 # @return A list, one character vector of tokens per element of `text`.
-.sframe_tokenise <- function(text, stop_words = NULL) {
+.sframe_tokenise <- function(text, stop_words = NULL, keep_gaps = FALSE) {
   if (is.null(stop_words)) stop_words <- .sframe_text_stopwords_en
   text <- as.character(text)
   lapply(text, function(one) {
     if (is.na(one) || !nzchar(trimws(one))) return(character(0))
     one <- tolower(one)
-    one <- gsub("[^a-z0-9' ]+", " ", one)
+    # (*UCP) makes PCRE read [:alnum:] as every Unicode letter and digit. The
+    # old class was [^a-z0-9' ], which deleted every non-ASCII letter:
+    # "café" became "caf", "naïve" became 2 fragments, and a response in
+    # another script could come out empty. Without (*UCP) the POSIX class
+    # stays ASCII-only even under perl = TRUE.
+    one <- gsub("(*UCP)[^[:alnum:]' ]+", " ", one, perl = TRUE)
     toks <- strsplit(one, "\\s+")[[1]]
     toks <- toks[nzchar(toks)]
     # Strip stray leading/trailing apostrophes left by quoting punctuation
     # ("'great'" -> "great") without touching an internal one ("don't").
     toks <- gsub("^'+|'+$", "", toks)
     toks <- toks[nzchar(toks)]
-    if (length(stop_words) > 0) toks <- toks[!(toks %in% stop_words)]
+    if (length(stop_words) > 0) {
+      dropped <- toks %in% stop_words
+      if (isTRUE(keep_gaps)) {
+        # NA marks where a word was removed, so a caller building phrases can
+        # tell that 2 kept words were never next to each other.
+        toks[dropped] <- NA_character_
+      } else {
+        toks <- toks[!dropped]
+      }
+    }
     toks
   })
 }
@@ -111,6 +125,11 @@
 #'   `"respondent"` attribute giving each entry's original row index in
 #'   `data`, so quotes extracted later can cite a respondent.
 #' @export
+#' @examples
+#' demo <- sframe_demo_data()
+#' cleaned <- clean_text_responses(demo$responses, "comments")
+#' head(cleaned)
+#' attr(cleaned, "respondent")[1:5]
 clean_text_responses <- function(data, item_id, lowercase = TRUE,
                                   remove_punct = TRUE, strip_numbers = FALSE,
                                   instrument = NULL) {
@@ -139,8 +158,17 @@ clean_text_responses <- function(data, item_id, lowercase = TRUE,
   txt <- raw[keep]
   if (isTRUE(lowercase)) txt <- tolower(txt)
   if (isTRUE(strip_numbers)) txt <- gsub("[0-9]+", "", txt)
-  if (isTRUE(remove_punct)) txt <- gsub("[^[:alnum:][:space:]']+", " ", txt)
+  # (*UCP) again, so cleaning keeps the same letters the tokeniser does.
+  if (isTRUE(remove_punct)) {
+    txt <- gsub("(*UCP)[^[:alnum:][:space:]']+", " ", txt, perl = TRUE)
+  }
   txt <- trimws(gsub("\\s+", " ", txt))
+  # Rows were chosen before cleaning, so a response of punctuation alone
+  # survived as an empty string: it counted towards the usable total and, in
+  # sentiment, scored as a neutral observation. Cleaning decides what is left.
+  still <- nzchar(txt)
+  txt <- txt[still]
+  respondent <- respondent[still]
   structure(txt, respondent = respondent)
 }
 
@@ -161,6 +189,10 @@ clean_text_responses <- function(data, item_id, lowercase = TRUE,
 #'
 #' @return A data.frame with columns `term`, `n`, and `pct`.
 #' @export
+#' @examples
+#' demo <- sframe_demo_data()
+#' cleaned <- clean_text_responses(demo$responses, "comments")
+#' head(term_frequency(cleaned, top_n = 10))
 term_frequency <- function(text, stop_words = NULL, top_n = 30L) {
   toks <- unlist(.sframe_tokenise(text, stop_words), use.names = FALSE)
   if (!length(toks)) {
@@ -231,8 +263,14 @@ sframe_run_term_freq <- function(data, roles, options, instrument) {
   respondent_of_cleaned <- attr(cleaned_all, "respondent")
   levels_present <- sort(unique(stats::na.omit(group_vals[respondent_of_cleaned])))
   blocks <- lapply(levels_present, function(lv) {
-    idx <- respondent_of_cleaned[group_vals[respondent_of_cleaned] == lv]
-    subset_txt <- structure(cleaned_all[respondent_of_cleaned %in% idx], respondent = idx)
+    # A respondent with no group value gives NA from the comparison, and
+    # subsetting by NA returns an NA element, so the row map came out longer
+    # than the text it labels and the two could no longer be paired. The
+    # selection drops a missing group before either is built.
+    in_group <- !is.na(group_vals[respondent_of_cleaned]) &
+      group_vals[respondent_of_cleaned] == lv
+    idx <- respondent_of_cleaned[in_group]
+    subset_txt <- structure(cleaned_all[in_group], respondent = idx)
     built <- build_one(subset_txt)
     if (!is.null(built$error)) {
       return(data.frame(group = lv, term = NA_character_, n = NA_integer_,
@@ -249,9 +287,16 @@ sframe_run_term_freq <- function(data, roles, options, instrument) {
   combined <- if (length(blocks)) do.call(rbind, blocks) else
     data.frame(group = character(0), term = character(0), n = integer(0),
                pct = numeric(0), note = character(0), stringsAsFactors = FALSE)
+  # Overall counts, taken over every response before any per-group cutoff.
+  # A word cloud built by summing the group tables sums rows that were already
+  # truncated to top_n, so a term ranked just below the cutoff in every group
+  # vanished even where it led the corpus, and a term that survived lost the
+  # counts from groups where it fell short.
+  overall <- build_one(cleaned_all)
   list(
     test = "term_freq", variable = item_id, group = group_id,
     n = length(cleaned_all), table = combined,
+    overall_table = if (is.null(overall$error)) overall$table else NULL,
     apa = sprintf("Term frequency for %s by %s (N = %d responses, %d groups).",
                   item_id, group_id, length(cleaned_all), length(levels_present)),
     prompt = "Compare the leading terms across groups for coherence with the research question."
@@ -628,6 +673,21 @@ sframe_run_stm_topics <- function(data, roles, options, instrument) {
 #'   original row index in the data the model's `text` argument came from,
 #'   not a document-matrix or corpus row index), and `quote`.
 #' @export
+#' @examples
+#' \donttest{
+#' if (requireNamespace("stm", quietly = TRUE) &&
+#'     requireNamespace("tidytext", quietly = TRUE)) {
+#'   demo <- sframe_demo_data()
+#'   sf_plan(demo$instrument) <- list(list(
+#'     id = "RQ1", research_question = "What themes appear in the comments?",
+#'     family = "text_analysis", method = "stm_topics",
+#'     roles = list(item = "comments"), options = list(k = 3, seed = 42)
+#'   ))
+#'   res <- run_analysis_plan(demo$responses, demo$instrument)
+#'   quotes <- extract_quotes(res$RQ1, demo$responses$comments, n_quotes = 2)
+#'   quotes
+#' }
+#' }
 extract_quotes <- function(model, text, n_quotes = 3L) {
   sframe_require_stm(reason = "to extract representative quotes.")
   if (!is.list(model) || is.null(model$fit) || is.null(model$fit$model) ||
@@ -689,10 +749,12 @@ extract_quotes <- function(model, text, n_quotes = 3L) {
 #' splitting, lower-casing, punctuation stripping, and stop-word removal),
 #' then slides a window of `n` tokens across each response's token vector
 #' and counts how often each resulting n-gram occurs. `n = 2` (the default)
-#' gives bigrams; `n = 3` gives trigrams. Because stop words are already
-#' removed by the shared tokeniser, an n-gram never straddles a dropped
-#' word; it is built only from tokens that survive filtering, in their
-#' original order within each response.
+#' gives bigrams, and `n = 3` gives trigrams.
+#'
+#' An n-gram never straddles a removed stop word. Where "but" and "not" are
+#' filtered, "clean but not comfortable" yields no bigram at all, because
+#' "clean" and "comfortable" were never next to each other. This is what makes
+#' the output phrases respondents actually wrote.
 #'
 #' @param text Character vector of responses (raw or already cleaned by
 #'   [clean_text_responses()]).
@@ -705,15 +767,32 @@ extract_quotes <- function(model, text, n_quotes = 3L) {
 #' @return A data.frame with columns `term` (the space-joined n-gram), `n`,
 #'   and `pct`.
 #' @export
+#' @examples
+#' demo <- sframe_demo_data()
+#' cleaned <- clean_text_responses(demo$responses, "comments")
+#' head(ngram_frequency(cleaned, n = 2, top_n = 10))
 ngram_frequency <- function(text, n = 2L, stop_words = NULL, top_n = 30L) {
   n <- as.integer(n)
-  toks_list <- .sframe_tokenise(text, stop_words)
+  if (length(n) != 1L || is.na(n) || n < 2L) {
+    rlang::abort(
+      paste0("`n` must be 2 or more. An n-gram of 1 word is a term, which ",
+             "term_frequency() counts."),
+      class = "sframe_error")
+  }
+  # keep_gaps marks a removed stop word with NA, so a window spanning one is
+  # dropped. Sliding over the survivors alone produced "clean comfortable"
+  # from "clean but not comfortable", a phrase nobody wrote.
+  toks_list <- .sframe_tokenise(text, stop_words, keep_gaps = TRUE)
   grams <- unlist(lapply(toks_list, function(toks) {
     len <- length(toks)
     if (len < n) return(character(0))
     starts <- seq_len(len - n + 1L)
-    vapply(starts, function(i) paste(toks[i:(i + n - 1L)], collapse = " "),
-           character(1))
+    out <- vapply(starts, function(i) {
+      window <- toks[i:(i + n - 1L)]
+      if (anyNA(window)) return(NA_character_)
+      paste(window, collapse = " ")
+    }, character(1))
+    out[!is.na(out)]
   }), use.names = FALSE)
   if (!length(grams)) {
     return(data.frame(term = character(0), n = integer(0), pct = numeric(0),
@@ -755,6 +834,10 @@ ngram_frequency <- function(text, n = 2L, stop_words = NULL, top_n = 30L) {
 #' @return A data.frame with columns `respondent`, `before`, `match`, and
 #'   `after`.
 #' @export
+#' @examples
+#' demo <- sframe_demo_data()
+#' cleaned <- clean_text_responses(demo$responses, "comments")
+#' term_context(cleaned, "service", window = 4)
 term_context <- function(text, term, window = 6L, max_matches = 20L) {
   if (!is.character(term) || length(term) != 1L || is.na(term) || !nzchar(term)) {
     rlang::abort("`term` must be a single non-empty string.", class = "sframe_error")
@@ -762,7 +845,13 @@ term_context <- function(text, term, window = 6L, max_matches = 20L) {
   respondent <- attr(text, "respondent")
   if (is.null(respondent)) respondent <- seq_along(text)
   window <- as.integer(window)
+  if (length(window) != 1L || is.na(window) || window < 0L) {
+    rlang::abort("`window` must be 0 or more words.", class = "sframe_error")
+  }
   max_matches <- as.integer(max_matches)
+  if (length(max_matches) != 1L || is.na(max_matches) || max_matches < 1L) {
+    rlang::abort("`max_matches` must be 1 or more.", class = "sframe_error")
+  }
   term_lower <- tolower(term)
 
   out_resp <- integer(0)
@@ -780,8 +869,14 @@ term_context <- function(text, term, window = 6L, max_matches = 20L) {
     if (!length(hits)) next
     for (h in hits) {
       if (length(out_resp) >= max_matches) break
-      before_idx <- if (h > 1L) seq(max(1L, h - window), h - 1L) else integer(0)
-      after_idx  <- if (h < length(toks)) seq(h + 1L, min(length(toks), h + window)) else integer(0)
+      # seq() counts down when its start passes its end, so a window of 0
+      # produced c(h, h - 1) and copied the match into its own context.
+      before_idx <- if (window > 0L && h > 1L) {
+        seq(max(1L, h - window), h - 1L)
+      } else integer(0)
+      after_idx <- if (window > 0L && h < length(toks)) {
+        seq(h + 1L, min(length(toks), h + window))
+      } else integer(0)
       out_resp   <- c(out_resp, respondent[i])
       out_before <- c(out_before, if (length(before_idx)) paste(toks[before_idx], collapse = " ") else "")
       out_match  <- c(out_match, toks[h])
@@ -1154,8 +1249,14 @@ sframe_run_tidy_sentiment <- function(data, roles, options, instrument) {
   respondent_of_cleaned <- attr(cleaned_all, "respondent")
   levels_present <- sort(unique(stats::na.omit(group_vals[respondent_of_cleaned])))
   blocks <- lapply(levels_present, function(lv) {
-    idx <- respondent_of_cleaned[group_vals[respondent_of_cleaned] == lv]
-    subset_txt <- structure(cleaned_all[respondent_of_cleaned %in% idx], respondent = idx)
+    # A respondent with no group value gives NA from the comparison, and
+    # subsetting by NA returns an NA element, so the row map came out longer
+    # than the text it labels and the two could no longer be paired. The
+    # selection drops a missing group before either is built.
+    in_group <- !is.na(group_vals[respondent_of_cleaned]) &
+      group_vals[respondent_of_cleaned] == lv
+    idx <- respondent_of_cleaned[in_group]
+    subset_txt <- structure(cleaned_all[in_group], respondent = idx)
     built <- build_one(subset_txt)
     if (!is.null(built$error)) {
       return(list(

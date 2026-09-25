@@ -17,6 +17,15 @@ A ggplot2 object.
 \description{
 Quality report plot: straight-lining flag rate by scale
 }
+\examples{
+\donttest{
+if (requireNamespace("ggplot2", quietly = TRUE)) {
+  demo <- sframe_demo("likert_scale")
+  qr <- quality_report(demo$responses, demo$instrument)
+  sframe_plot_quality(qr)
+}
+}
+}
 \seealso{
 \code{\link[=quality_report]{quality_report()}}
 }

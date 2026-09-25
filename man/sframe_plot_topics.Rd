@@ -23,6 +23,17 @@ with the same \code{topic}/\code{term}/\code{beta} columns (LDA's beta from
 \code{tidytext::tidy()}, STM's from its fitted word-topic distribution), so
 this function reads that shared shape directly.
 }
+\examples{
+\donttest{
+if (requireNamespace("ggplot2", quietly = TRUE) &&
+    requireNamespace("stm", quietly = TRUE) &&
+    requireNamespace("tidytext", quietly = TRUE)) {
+  demo <- sframe_demo("open_text")
+  res <- run_analysis_plan(demo$responses, demo$instrument)
+  sframe_plot_topics(res$RQ10)
+}
+}
+}
 \seealso{
 \code{\link[=sframe_run_topic_model_lda]{sframe_run_topic_model_lda()}}, \code{\link[=sframe_run_stm_topics]{sframe_run_stm_topics()}}
 }

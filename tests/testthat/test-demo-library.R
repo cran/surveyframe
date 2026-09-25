@@ -24,12 +24,26 @@ test_that("every demo in the index is on disk and loads", {
 })
 
 test_that("every demo validates, reads back, and runs its plan without an error block", {
+  skip_on_cran()  # renders a report or runs a full plan: slow on CRAN's machines
   for (nm in demo_names()) {
     d <- sframe_demo(nm)
     v <- validate_sframe(d$instrument, strict = FALSE)
     expect_true(v$valid)
 
-    res <- run_analysis_plan(d$responses, d$instrument)
+    if (identical(nm, "open_text")) {
+      # cmdscale() correctly warns that its two-dimensional request is
+      # equivalent to a one-dimensional model for this two-category fixture.
+      # Keep that diagnostic visible and pin it to the demo that elicits it.
+      expect_warning(
+        res <- run_analysis_plan(d$responses, d$instrument),
+        "K=2 is equivalent to a unidimensional scaling model",
+        fixed = TRUE
+      )
+    } else {
+      expect_no_warning(
+        res <- run_analysis_plan(d$responses, d$instrument)
+      )
+    }
     errs <- Filter(function(b) !is.null(b$error), res)
     # A method whose optional package is absent on this machine is a
     # legitimate skip. The package guards those deliberately, and the demo
@@ -101,6 +115,15 @@ test_that("sframe_demo_qmd() writes a runnable notebook with no placeholders lef
   txt <- readLines(p, warn = FALSE)
   expect_false(any(grepl("{{", txt, fixed = TRUE)))
   expect_true(any(grepl('sframe_demo("two_group")', txt, fixed = TRUE)))
+  expect_true(any(grepl("plan_table(instrument)", txt, fixed = TRUE)))
+  expect_true(any(grepl("wanted_order", txt, fixed = TRUE)))
+  expect_true(any(grepl("missing_data_report", txt, fixed = TRUE)))
+  expect_true(any(grepl("quality_report", txt, fixed = TRUE)))
+  expect_true(any(grepl("strict = TRUE", txt, fixed = TRUE)))
+  expect_true(any(grepl("analysis_syntax", txt, fixed = TRUE)))
+  expect_true(any(grepl("demo$results_path", txt, fixed = TRUE)))
+  expect_true(any(grepl("render_results", txt, fixed = TRUE)))
+  expect_true(any(grepl("render_report", txt, fixed = TRUE)))
   # and it refuses to clobber by default
   expect_error(sframe_demo_qmd("two_group", dir = dir), "already exists")
   expect_no_error(sframe_demo_qmd("two_group", dir = dir, overwrite = TRUE))
@@ -138,6 +161,10 @@ test_that("sframe_analysis_qmd() writes a runnable notebook for any instrument, 
   expect_false(any(grepl("{{", txt, fixed = TRUE)))
   expect_true(any(grepl("read_sframe(", txt, fixed = TRUE)))
   expect_true(any(grepl("read_responses(", txt, fixed = TRUE)))
+  expect_true(any(grepl("plan_table(instrument)", txt, fixed = TRUE)))
+  expect_true(any(grepl("quality_report", txt, fixed = TRUE)))
+  expect_true(any(grepl("analysis_syntax", txt, fixed = TRUE)))
+  expect_true(any(grepl("render_results", txt, fixed = TRUE)))
 
   # The notebook's own load/run chunks actually work against the files
   # sframe_analysis_qmd() wrote, not just parse: this is the exact defect

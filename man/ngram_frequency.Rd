@@ -27,8 +27,16 @@ Tokenises \code{text} via the same tokeniser as \code{\link[=term_frequency]{ter
 splitting, lower-casing, punctuation stripping, and stop-word removal),
 then slides a window of \code{n} tokens across each response's token vector
 and counts how often each resulting n-gram occurs. \code{n = 2} (the default)
-gives bigrams; \code{n = 3} gives trigrams. Because stop words are already
-removed by the shared tokeniser, an n-gram never straddles a dropped
-word; it is built only from tokens that survive filtering, in their
-original order within each response.
+gives bigrams, and \code{n = 3} gives trigrams.
+}
+\details{
+An n-gram never straddles a removed stop word. Where "but" and "not" are
+filtered, "clean but not comfortable" yields no bigram at all, because
+"clean" and "comfortable" were never next to each other. This is what makes
+the output phrases respondents actually wrote.
+}
+\examples{
+demo <- sframe_demo_data()
+cleaned <- clean_text_responses(demo$responses, "comments")
+head(ngram_frequency(cleaned, n = 2, top_n = 10))
 }

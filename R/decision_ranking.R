@@ -196,10 +196,9 @@ sframe_waspas_compute <- function(x, weights, criteria_types, lambda = 0.5) {
   normalised <- sframe_waspas_normalise(x, criteria_types)
 
   wsm <- rowSums(sweep(normalised, 2, weights, "*"))
-
-  positive <- normalised
-  positive[positive == 0] <- 1e-10
-  wpm <- exp(rowSums(sweep(log(positive), 2, weights, "*")))
+  # Performance values are strictly positive (checked by the runner), so every
+  # normalised value is positive and its log is defined.
+  wpm <- exp(rowSums(sweep(log(normalised), 2, weights, "*")))
 
   scores <- lambda * wsm + (1 - lambda) * wpm
   names(scores) <- rownames(x)
@@ -224,6 +223,8 @@ sframe_run_vikor <- function(data, roles, options, instrument, v = 0.5) {
   if (!is.null(checked$error)) {
     return(list(test = "vikor", error = checked$error))
   }
+  tuning <- sframe_check_decision_tuning("vikor", resolved$options, ncol(checked$matrix))
+  if (!is.null(tuning)) return(list(test = "vikor", error = tuning))
   v <- resolved$options[["v"]] %||% v
   fit <- sframe_vikor_compute(checked$matrix, checked$weights,
                               checked$criteria_types, v = v)
@@ -425,6 +426,17 @@ sframe_run_waspas <- function(data, roles, options, instrument, lambda = 0.5) {
   if (!is.null(checked$error)) {
     return(list(test = "waspas", error = checked$error))
   }
+  # WASPAS divides by column extremes and takes logs, so it needs strictly
+  # positive values. Negative values reversed the ratio normalisation, and a
+  # zero was nudged to 1e-10.
+  if (any(checked$matrix <= 0)) {
+    return(list(test = "waspas", error = paste0(
+      "WASPAS needs strictly positive performance values, since its ratio ",
+      "normalisation and weighted product are undefined for zero or ",
+      "negative values. Rescale the criterion, or use another method.")))
+  }
+  tuning <- sframe_check_decision_tuning("waspas", resolved$options, ncol(checked$matrix))
+  if (!is.null(tuning)) return(list(test = "waspas", error = tuning))
   lambda <- resolved$options[["lambda"]] %||% lambda
   fit <- sframe_waspas_compute(checked$matrix, checked$weights,
                                checked$criteria_types, lambda = lambda)

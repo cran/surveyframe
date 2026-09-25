@@ -13,3 +13,8 @@ and check collections suitable for SurveyStudio.
 \description{
 Create an empty SurveyStudio builder state
 }
+\examples{
+state <- sframe_builder_empty_state()
+state$meta$title
+length(state$items)
+}

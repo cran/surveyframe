@@ -18,7 +18,8 @@ render_report(
   include_analysis = TRUE,
   include_models = TRUE,
   plot_palette = c("web", "print"),
-  interpretations = NULL
+  interpretations = NULL,
+  show_code = TRUE
 )
 }
 \arguments{
@@ -72,6 +73,12 @@ rule under a "Planned decision rule" label followed by the written
 text under an "Interpretation" label. Blocks without an entry render
 exactly as they do when this argument is NULL. Interpretations are
 report content only and are never written into the instrument.}
+
+\item{show_code}{Logical. Whether each result carries a folded "Show R code"
+block with the statistical call that produced it, built by
+\code{\link[=analysis_syntax]{analysis_syntax()}} from the same resolved specification the analysis ran.
+Defaults to \code{TRUE}. A method \code{\link[=analysis_syntax]{analysis_syntax()}} does not cover shows no
+block, rather than a guess at the call.}
 }
 \value{
 The output file path, invisibly.

@@ -19,7 +19,14 @@ sframe_items_table <- function(instrument) {
     type       = vapply(instrument$items, function(i) i$type,  character(1)),
     choice_set = vapply(instrument$items, function(i) i$choice_set %||% "", character(1)),
     scale_id   = vapply(instrument$items, function(i) i$scale_id %||% "", character(1)),
-    reverse    = vapply(instrument$items, function(i) isTRUE(i$reverse), logical(1)),
+    # Reversal is declared either on the item or in its scale's reverse_items,
+    # and both are scored. Reading the item flag alone showed an item its scale
+    # reverses as though it were scored in the same direction as the rest.
+    reverse    = vapply(instrument$items, function(i) {
+      isTRUE(i$reverse) || any(vapply(instrument$scales %||% list(), function(s) {
+        i$id %in% sframe_scale_reverse_ids(instrument, s)
+      }, logical(1)))
+    }, logical(1)),
     required   = vapply(instrument$items, function(i) isTRUE(i$required), logical(1)),
     stringsAsFactors = FALSE,
     check.names = FALSE
@@ -113,18 +120,50 @@ sframe_models_table <- function(instrument) {
 
 #' Coerce a surveyframe object to a data frame
 #'
-#' Every surveyframe class returns its primary table. For an instrument that
-#' is the item table, for a validation result the problems, for a report the
-#' table it is mainly about. Where an object holds more than one table, the
-#' others are reachable through the named accessors in [sf_accessors] or,
-#' for a full tabular record of an instrument, through [codebook_report()].
+#' Every surveyframe class returns its primary table, and each class has its
+#' own columns. Where an object holds more than one table, the others are
+#' reachable through the named accessors in [sf_accessors], or, for a full
+#' tabular record of an instrument, through [codebook_report()].
 #'
-#' @param x A surveyframe object.
-#' @param row.names Passed to [base::as.data.frame()].
-#' @param optional Passed to [base::as.data.frame()].
-#' @param ... Ignored. Present for S3 consistency.
+#' # What each class gives
 #'
-#' @return A data frame.
+#' * `sframe`: one row per item, with `id`, `label`, `type`, `choice_set`,
+#'   `scale_id`, `reverse` and `required`.
+#' * `sframe_codebook`: one row per item, the codebook's item table.
+#' * `sframe_validation`: one row per problem, with `check` and `problem`.
+#' * `sframe_analysis_results`: one row per block, with `block`,
+#'   `research_question`, `method` and `apa`.
+#' * `sframe_reliability_report`: one row per scale, with `scale_id`, `label`,
+#'   `n_items`, `n`, `alpha` and `omega`.
+#' * `sframe_item_report`: one row per item, with `scale_id` and the item
+#'   diagnostics.
+#' * `sframe_quality_report`: one row per check, the flattened quality checks.
+#' * `sframe_efa_report`: one row per measure, the readiness measures.
+#' * `sframe_sensitivity`: one row per perturbation, with `criterion`,
+#'   `direction`, `weight`, `rho`, `rank_changed` and `top_changed`.
+#'
+# The item and scale tables are a summary, and say so on the page, since an
+# integration reading one as the full declaration loses the type settings.
+#' # A summary, and where the full record is
+#'
+#' These tables are a summary of the columns a reader scans first. The item
+#' table leaves out help text, placeholder, matrix rows, comparison items and
+#' scale, slider and rating settings, date bounds, section introduction and
+#' page; the scale table leaves out `min_valid`, the reverse key and the
+#' weights. Read the stored declaration in full through [sf_items()],
+#' [sf_scales()] and the rest of [sf_accessors], each of which returns the
+#' component objects themselves, or through [write_sframe()] for the
+#' interchange record.
+#'
+#' A class holding one table returns it directly, so it keeps that table's own
+#' row names and `row.names` has no effect. Pass `row.names` to
+#' [base::as.data.frame()] on the returned frame where you need to set them.
+#' The coercion gives one view of an object. An instrument, for example,
+#' returns its items, and its choice sets and scales come from
+#' [sf_choice_sets()], [sf_scales()] or [codebook_report()].
+#'
+#'
+#' @return A data frame, with the columns listed above for the class given.
 #' @name sframe_as_data_frame
 #' @seealso [sf_accessors], [codebook_report()]
 #'
@@ -141,7 +180,17 @@ sframe_models_table <- function(instrument) {
 #' as.data.frame(cs)
 NULL
 
-#' @rdname sframe_as_data_frame
+#' Coerce an instrument to its item summary
+#'
+#' Returns one row per item in a surveyframe instrument.
+#'
+#' @param x A surveyframe object.
+#' @param row.names Passed to [base::as.data.frame()] by the methods that
+#'   build a frame. Ignored by the methods that return a stored table.
+#' @param optional Passed to [base::as.data.frame()].
+#' @param ... Ignored. Present for S3 consistency.
+#' @return A data frame summarising the instrument's items.
+#' @seealso [sframe_as_data_frame], [sf_items()], [codebook_report()]
 #' @exportS3Method as.data.frame sframe
 as.data.frame.sframe <- function(x, row.names = NULL, optional = FALSE, ...) {
   out <- sframe_items_table(x)
@@ -149,7 +198,13 @@ as.data.frame.sframe <- function(x, row.names = NULL, optional = FALSE, ...) {
   out
 }
 
-#' @rdname sframe_as_data_frame
+#' Coerce a choice set to a data frame
+#'
+#' Returns the stored values and respondent-facing labels in a choice set.
+#'
+#' @inheritParams as.data.frame.sframe
+#' @return A data frame with `value` and `label` columns.
+#' @seealso [sframe_as_data_frame], [sf_choices()]
 #' @exportS3Method as.data.frame sf_choices
 as.data.frame.sf_choices <- function(x, row.names = NULL, optional = FALSE, ...) {
   data.frame(
@@ -160,7 +215,11 @@ as.data.frame.sf_choices <- function(x, row.names = NULL, optional = FALSE, ...)
   )
 }
 
-#' @rdname sframe_as_data_frame
+#' Extract the item table from a codebook report
+#'
+#' @inheritParams as.data.frame.sframe
+#' @return The codebook report's item table as a data frame.
+#' @seealso [sframe_as_data_frame], [codebook_report()]
 #' @exportS3Method as.data.frame sframe_codebook
 as.data.frame.sframe_codebook <- function(x, row.names = NULL, optional = FALSE, ...) {
   x$items_table
@@ -178,7 +237,13 @@ sframe_num_or_na <- function(x, field) {
   as.numeric(value)[1]
 }
 
-#' @rdname sframe_as_data_frame
+#' Coerce a reliability report to a data frame
+#'
+#' Returns one row per scale with alpha and omega estimates.
+#'
+#' @inheritParams as.data.frame.sframe
+#' @return A data frame of scale reliability statistics.
+#' @seealso [sframe_as_data_frame], [reliability_report()]
 #' @exportS3Method as.data.frame sframe_reliability_report
 as.data.frame.sframe_reliability_report <- function(x, row.names = NULL,
                                                     optional = FALSE, ...) {
@@ -204,7 +269,13 @@ as.data.frame.sframe_reliability_report <- function(x, row.names = NULL,
   )
 }
 
-#' @rdname sframe_as_data_frame
+#' Coerce an item report to a data frame
+#'
+#' Stacks item diagnostics from every reported scale into one table.
+#'
+#' @inheritParams as.data.frame.sframe
+#' @return A data frame of item-level diagnostics.
+#' @seealso [sframe_as_data_frame], [item_report()]
 #' @exportS3Method as.data.frame sframe_item_report
 as.data.frame.sframe_item_report <- function(x, row.names = NULL,
                                              optional = FALSE, ...) {
@@ -226,7 +297,12 @@ as.data.frame.sframe_item_report <- function(x, row.names = NULL,
   out
 }
 
-#' @rdname sframe_as_data_frame
+#' Coerce an EFA readiness report to a data frame
+#'
+#' @inheritParams as.data.frame.sframe
+#' @return A one-row data frame containing readiness measures and the suggested
+#'   number of factors.
+#' @seealso [sframe_as_data_frame], [efa_report()]
 #' @exportS3Method as.data.frame sframe_efa_report
 as.data.frame.sframe_efa_report <- function(x, row.names = NULL,
                                             optional = FALSE, ...) {
@@ -244,7 +320,11 @@ as.data.frame.sframe_efa_report <- function(x, row.names = NULL,
   )
 }
 
-#' @rdname sframe_as_data_frame
+#' Extract the loading table from an EFA solution
+#'
+#' @inheritParams as.data.frame.sframe
+#' @return The solution's long-form factor-loading data frame.
+#' @seealso [sframe_as_data_frame], [efa_solution()]
 #' @exportS3Method as.data.frame sframe_efa_solution
 as.data.frame.sframe_efa_solution <- function(x, row.names = NULL,
                                               optional = FALSE, ...) {
@@ -255,28 +335,47 @@ as.data.frame.sframe_efa_solution <- function(x, row.names = NULL,
 # Statistics reports
 # ---------------------------------------------------------------------------
 
-#' @rdname sframe_as_data_frame
+#' Extract the descriptives results table
+#'
+#' @inheritParams as.data.frame.sframe
+#' @return The primary table from a descriptives report.
+#' @seealso [sframe_as_data_frame], [descriptives_report()]
 #' @exportS3Method as.data.frame sframe_descriptives_report
 as.data.frame.sframe_descriptives_report <- function(x, row.names = NULL,
                                                      optional = FALSE, ...) {
   x$table
 }
 
-#' @rdname sframe_as_data_frame
+#' Extract item missingness results
+#'
+#' @inheritParams as.data.frame.sframe
+#' @return The item-level missingness table from a missing-data report.
+#' @seealso [sframe_as_data_frame], [missing_data_report()]
 #' @exportS3Method as.data.frame sframe_missing_data_report
 as.data.frame.sframe_missing_data_report <- function(x, row.names = NULL,
                                                      optional = FALSE, ...) {
   x$item_missing
 }
 
-#' @rdname sframe_as_data_frame
+#' Extract reliability evidence from a validity report
+#'
+#' @inheritParams as.data.frame.sframe
+#' @return The reliability table stored in a validity report.
+#' @seealso [sframe_as_data_frame], [validity_report()]
 #' @exportS3Method as.data.frame sframe_validity_report
 as.data.frame.sframe_validity_report <- function(x, row.names = NULL,
                                                  optional = FALSE, ...) {
   x$reliability
 }
 
-#' @rdname sframe_as_data_frame
+#' Coerce an assumption report to a data frame
+#'
+#' Combines the available normality, homogeneity, and regression checks into a
+#' long-form summary.
+#'
+#' @inheritParams as.data.frame.sframe
+#' @return A data frame naming each assumption family, variable, and statistic.
+#' @seealso [sframe_as_data_frame], [assumption_report()]
 #' @exportS3Method as.data.frame sframe_assumption_report
 as.data.frame.sframe_assumption_report <- function(x, row.names = NULL,
                                                    optional = FALSE, ...) {
@@ -309,7 +408,12 @@ as.data.frame.sframe_assumption_report <- function(x, row.names = NULL,
   out
 }
 
-#' @rdname sframe_as_data_frame
+#' Coerce a sample-size plan to a data frame
+#'
+#' @inheritParams as.data.frame.sframe
+#' @return A one-row data frame containing the analysis type, estimated sample
+#'   size, alpha, and power.
+#' @seealso [sframe_as_data_frame], [sample_size_plan()]
 #' @exportS3Method as.data.frame sframe_sample_size_plan
 as.data.frame.sframe_sample_size_plan <- function(x, row.names = NULL,
                                                   optional = FALSE, ...) {
@@ -323,7 +427,12 @@ as.data.frame.sframe_sample_size_plan <- function(x, row.names = NULL,
   )
 }
 
-#' @rdname sframe_as_data_frame
+#' Coerce a response-quality report to a data frame
+#'
+#' @inheritParams as.data.frame.sframe
+#' @return A one-row data frame summarising respondents, items, and quality
+#'   flags.
+#' @seealso [sframe_as_data_frame], [quality_report()]
 #' @exportS3Method as.data.frame sframe_quality_report
 as.data.frame.sframe_quality_report <- function(x, row.names = NULL,
                                                 optional = FALSE, ...) {
@@ -337,14 +446,25 @@ as.data.frame.sframe_quality_report <- function(x, row.names = NULL,
   )
 }
 
-#' @rdname sframe_as_data_frame
+#' Extract a sensitivity-analysis results table
+#'
+#' @inheritParams as.data.frame.sframe
+#' @return The primary results table from a sensitivity analysis.
+#' @seealso [sframe_as_data_frame]
 #' @exportS3Method as.data.frame sframe_sensitivity
 as.data.frame.sframe_sensitivity <- function(x, row.names = NULL,
                                              optional = FALSE, ...) {
   x$table
 }
 
-#' @rdname sframe_as_data_frame
+#' Summarise analysis-plan results as a data frame
+#'
+#' Returns one row per analysis block, including its research question, method,
+#' APA summary, and any error.
+#'
+#' @inheritParams as.data.frame.sframe
+#' @return A data frame with one row per analysis block.
+#' @seealso [sframe_as_data_frame], [run_analysis_plan()]
 #' @exportS3Method as.data.frame sframe_analysis_results
 as.data.frame.sframe_analysis_results <- function(x, row.names = NULL,
                                                   optional = FALSE, ...) {
@@ -382,28 +502,24 @@ as.data.frame.sframe_analysis_results <- function(x, row.names = NULL,
 #' Keeps the report class, so a subset still prints as a report and still
 #' answers `as.data.frame()`.
 #'
-#' @param x An `sframe_analysis_results`, `sframe_reliability_report`, or
-#'   `sframe_item_report` object.
-#' @param i Index, name, or logical vector.
-#' @param ... Ignored. Present for S3 consistency.
 #'
 #' @return An object of the same class as `x`.
 #' @name sframe_subset
 NULL
 
-#' @rdname sframe_subset
+#' @noRd
 #' @exportS3Method `[` sframe_analysis_results
 `[.sframe_analysis_results` <- function(x, i, ...) {
   structure(NextMethod(), class = "sframe_analysis_results")
 }
 
-#' @rdname sframe_subset
+#' @noRd
 #' @exportS3Method `[` sframe_reliability_report
 `[.sframe_reliability_report` <- function(x, i, ...) {
   structure(NextMethod(), class = "sframe_reliability_report")
 }
 
-#' @rdname sframe_subset
+#' @noRd
 #' @exportS3Method `[` sframe_item_report
 `[.sframe_item_report` <- function(x, i, ...) {
   structure(NextMethod(), class = "sframe_item_report")

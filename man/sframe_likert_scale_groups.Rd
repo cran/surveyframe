@@ -25,6 +25,11 @@ to fewer than 2 qualifying items, or whose choice set cannot be found are
 left out and fall back to one chart per item in the report's Response
 distributions section.
 }
+\examples{
+demo <- sframe_demo("likert_scale")
+groups <- sframe_likert_scale_groups(demo$instrument)
+names(groups)
+}
 \seealso{
 \code{\link[=sframe_plot_likert_scale]{sframe_plot_likert_scale()}}, \code{\link[=sf_scale]{sf_scale()}}
 }

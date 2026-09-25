@@ -35,3 +35,8 @@ whitespace split, not the internal stop-word-stripping tokeniser behind
 \code{\link[=term_frequency]{term_frequency()}}: stop words are part of a match's context and
 stripping them would corrupt the very thing a concordance is for.
 }
+\examples{
+demo <- sframe_demo_data()
+cleaned <- clean_text_responses(demo$responses, "comments")
+term_context(cleaned, "service", window = 4)
+}

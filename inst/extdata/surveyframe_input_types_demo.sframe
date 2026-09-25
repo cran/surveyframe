@@ -2,7 +2,7 @@
   "sframe_format": "1.0",
   "hash": {
     "algo": "sha256",
-    "value": "5c9adea82af99a00868627fe10079098fbf119d9acd79e1605bb8475c5dc716f"
+    "value": "57fd602f5b850d9794322bb6054dae892f19d0733471d27aeff295a77e7fb396"
   },
   "version": "0.3.0",
   "meta": {
@@ -284,7 +284,7 @@
       "items": ["digital_ease", "digital_trust", "digital_confusion"],
       "method": "mean",
       "min_valid": 2,
-      "reverse_items": "digital_confusion"
+      "reverse_items": ["digital_confusion"]
     },
     {
       "id": "behavioural_intention",

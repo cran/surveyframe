@@ -8,6 +8,10 @@
 #' @return A list with `instrument`, `responses`, `instrument_path`, and
 #'   `responses_path`.
 #' @export
+#' @examples
+#' demo <- sframe_demo_data()
+#' sf_meta(demo$instrument)$title
+#' nrow(demo$responses)
 sframe_demo_data <- function() {
   instrument_path <- system.file(
     "extdata", "tourism_services_demo.sframe",
@@ -66,6 +70,10 @@ sframe_demo_data <- function() {
 #'   `responses_path`.
 #' @export
 #' @seealso [sframe_demo()] for the 22-item teaching library instead.
+#' @examples
+#' demo <- sframe_input_types_demo_data()
+#' sf_meta(demo$instrument)$title
+#' nrow(demo$responses)
 sframe_input_types_demo_data <- function() {
   instrument_path <- system.file(
     "extdata", "surveyframe_input_types_demo.sframe",
@@ -123,6 +131,12 @@ sframe_input_types_demo_data <- function() {
 #' @return Invisibly returns a list with `builder_path`, `demo_file`, and
 #'   `responses_path`.
 #' @export
+#' @examples
+#' demo <- sframe_input_types_demo_data()
+#' nrow(demo$responses)
+#' \dontrun{
+#' launch_builder_demo()
+#' }
 launch_builder_demo <- function(open = TRUE) {
   demo <- sframe_input_types_demo_data()
 
@@ -245,6 +259,12 @@ launch_builder_demo <- function(open = TRUE) {
 #'
 #' @return Called for its side effect.
 #' @export
+#' @examples
+#' demo <- sframe_input_types_demo_data()
+#' nrow(demo$responses)
+#' \dontrun{
+#' launch_studio_demo()
+#' }
 launch_studio_demo <- function(
     screen = "preview",
     port = NULL,
@@ -276,6 +296,12 @@ launch_studio_demo <- function(
 #'
 #' @return Called for its side effect.
 #' @export
+#' @examples
+#' demo <- sframe_input_types_demo_data()
+#' nrow(demo$responses)
+#' \dontrun{
+#' launch_dashboard_demo()
+#' }
 launch_dashboard_demo <- function(
     port = NULL,
     host = "127.0.0.1",

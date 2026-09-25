@@ -14,3 +14,8 @@ A list with \code{instrument}, \code{responses}, \code{instrument_path}, and
 Loads the bundled tourism-services \code{.sframe} instrument and simulated
 response dataset used in package examples and statistical workflow demos.
 }
+\examples{
+demo <- sframe_demo_data()
+sf_meta(demo$instrument)$title
+nrow(demo$responses)
+}

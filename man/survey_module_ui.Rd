@@ -17,14 +17,18 @@ to \code{\link[=survey_module_server]{survey_module_server()}}.}
 A \code{shiny.tag} object.
 }
 \description{
-Places a survey rendered by surveyframe inside a larger Shiny application.
-Pair with \code{\link[=survey_module_server]{survey_module_server()}} in the server function. The module
-renders the full instrument including welcome page, all item types,
-branching logic, required-field validation, and a thank-you screen.
+Places a survey inside a larger Shiny application. Pair with
+\code{\link[=survey_module_server]{survey_module_server()}} in the server function. The module shows a
+welcome screen, the instrument's pages with branching and required-item
+checks, and a thank-you screen.
+}
+\details{
+Every item type is drawn with the same controls \code{\link[=render_survey]{render_survey()}} uses, so
+a response collected through the module has the same columns as one
+collected there. \code{\link[=survey_module_server]{survey_module_server()}} describes what is returned.
 }
 \examples{
 \dontrun{
-# Minimal embedding example:
 library(shiny)
 library(surveyframe)
 
@@ -32,6 +36,7 @@ cs    <- sf_choices("ag5", 1:5, c("SD", "D", "N", "A", "SA"))
 item  <- sf_item("q1", "Rate your experience.", type = "likert",
                  choice_set = "ag5", required = TRUE)
 instr <- sf_instrument("Quick Survey", components = list(cs, item))
+store <- file.path(tempdir(), "responses.csv")
 
 ui <- fluidPage(
   survey_module_ui("demo"),
@@ -39,7 +44,17 @@ ui <- fluidPage(
 )
 
 server <- function(input, output, session) {
-  resp <- survey_module_server("demo", instrument = instr)
+  resp <- survey_module_server(
+    "demo", instrument = instr,
+    # Called before the survey is marked complete. An error here keeps the
+    # respondent on the last page with a message, so nothing is lost.
+    on_submit = function(response) {
+      row <- as.data.frame(response, check.names = FALSE)
+      utils::write.table(row, store, sep = ",", row.names = FALSE,
+                         col.names = !file.exists(store),
+                         append = file.exists(store))
+    }
+  )
   output$result <- renderPrint({
     req(resp())
     resp()
@@ -50,6 +65,6 @@ shinyApp(ui, server)
 }
 }
 \seealso{
-\code{\link[=survey_module_server]{survey_module_server()}}, \code{\link[=launch_studio]{launch_studio()}},
+\code{\link[=survey_module_server]{survey_module_server()}}, \code{\link[=render_survey]{render_survey()}},
 \code{\link[=export_static_survey]{export_static_survey()}}
 }

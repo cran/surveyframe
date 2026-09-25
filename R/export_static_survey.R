@@ -3,19 +3,30 @@
 #' Export a self-contained static HTML survey
 #'
 #' Generates a single HTML file that presents the survey instrument in a
-#' browser without requiring a Shiny server or any internet connection. All
-#' thirteen item types, branching logic, required-field validation, and
-#' multi-page navigation are handled entirely in client-side JavaScript.
+#' browser, with no Shiny server and no internet connection. Every item type,
+#' branching, required-item checks and multi-page navigation run in the
+#' browser's own JavaScript.
 #'
 #' When `output_path` is `NULL`, the file is written to [tempdir()]. Supply
 #' an explicit `output_path` for any production export that should be kept.
 #'
-#' When a respondent clicks the submit button, the browser downloads a
-#' one-row CSV file named `<survey_title>_response_<id>.csv`. If
-#' `endpoint_url` is supplied, the same payload is also sent as a JSON
-#' POST request to that URL (for example a Google Apps Script web app or a
-#' serverless function). The two mechanisms are independent: the download
-#' happens regardless, so responses are never lost if the POST fails.
+#' # How a response reaches you
+#'
+#' On submission the survey builds a one-row CSV in the browser's memory and
+#' shows the thank-you screen. When `endpoint_url` is supplied, it also sends
+#' the response as a POST request to that URL, for example a Google Apps
+#' Script web app. The browser reports nothing back from that request, so the
+#' survey treats it as sent and the respondent sees the thank-you screen
+#' either way.
+#'
+#' The thank-you screen offers the CSV as a download button, which the
+#' respondent chooses to use. It appears when the instrument's thank-you
+#' settings ask for it, and whenever there is no `endpoint_url`, where that
+#' file is the only copy of the response.
+#'
+#' Plan for both parts. Test the endpoint with a pilot submission and confirm
+#' the row arrives before collecting, and treat the download as a route a
+#' respondent may decline.
 #'
 #' The exported file works offline. It can be hosted on GitHub Pages,
 #' Netlify, any static file server, or e-mailed as an attachment for
@@ -31,6 +42,11 @@
 #'   collection mechanism.
 #' @param overwrite Logical. Whether to overwrite an existing file at
 #'   `output_path`. Defaults to `FALSE`.
+#' @param preview Logical. `TRUE` exports a survey that collects nothing: the
+#'   collector endpoint and the completion redirect are both removed, and the
+#'   thank-you screen says the response went nowhere. This is what SurveyStudio's
+#'   preview uses, so a test answer cannot reach a live study's collector.
+#'   Supplying `endpoint_url` alongside it is an error. Defaults to `FALSE`.
 #'
 #' @return The output path, invisibly.
 #' @export
@@ -72,10 +88,30 @@ export_static_survey <- function(
     output_path  = NULL,
     open         = interactive(),
     endpoint_url = NULL,
-    overwrite    = FALSE
+    overwrite    = FALSE,
+    preview      = FALSE
 ) {
   sframe_check_instrument(instrument)
   rlang::check_installed("jsonlite", reason = "to serialise the instrument as JSON.")
+
+  # A preview has to be unable to collect, rather than merely expected not to.
+  # SurveyStudio's preview exported the real instrument and the endpoint fell
+  # back to its configured collector below, so test answers could land in a
+  # live study's sheet beside real participants'.
+  if (isTRUE(preview) && !is.null(endpoint_url)) {
+    rlang::abort(
+      paste0("A preview export collects nothing, so `endpoint_url` cannot be ",
+             "supplied with `preview = TRUE`. Drop one of the two."),
+      class = "sframe_error")
+  }
+  if (isTRUE(preview)) {
+    instrument$render$google_sheets_endpoint <- NULL
+    # A redirect would carry the researcher out of the preview to whatever the
+    # study points at on completion.
+    instrument$render$thankyou$redirect_url <- NULL
+    instrument$render$thankyou$message <-
+      "Preview only. Nothing was sent, and no response was recorded."
+  }
 
   # Fix B: fall back to endpoint stored by the builder if no argument supplied
   endpoint_url <- endpoint_url %||%

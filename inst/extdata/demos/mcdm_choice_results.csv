@@ -100,7 +100,7 @@
 "RQ9","promethee","Rank [3]","3"
 "RQ9","promethee","Rank [4]","4"
 "RQ9","promethee","Rank [5]","5"
-"RQ10","electre","apa","ELECTRE I built the outranking relation for 5 alternatives on 4 criteria (concordance threshold 0.70, discordance threshold 0.30). The kernel (non-dominated) set contains 4 alternative(s): Old Mill, Civic Hall, Parkview, Harbour Suite."
+"RQ10","electre","apa","ELECTRE I built the outranking relation for 5 alternatives on 4 criteria (concordance threshold 0.70, discordance threshold 0.30). The kernel contains 4 alternative(s): Old Mill, Civic Hall, Parkview, Harbour Suite."
 "RQ10","electre","Harbour Suite: Outranks","1"
 "RQ10","electre","Old Mill: Outranks","0"
 "RQ10","electre","Civic Hall: Outranks","0"

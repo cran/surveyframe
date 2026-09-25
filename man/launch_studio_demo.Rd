@@ -30,3 +30,10 @@ Opens SurveyStudio with the bundled input-types questionnaire and simulated
 response data already loaded. The browser is opened automatically by
 default.
 }
+\examples{
+demo <- sframe_input_types_demo_data()
+nrow(demo$responses)
+\dontrun{
+launch_studio_demo()
+}
+}

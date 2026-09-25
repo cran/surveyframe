@@ -69,7 +69,7 @@
 "RQ2","frequency","Percent [2]","32"
 "RQ2","frequency","Percent [3]","14"
 "RQ2","frequency","Percent [4]","8"
-"RQ3","crosstab","apa","χ²(3, N = 50) = 2.90, p = 0.407, V = 0.24 [0.11, 0.50]"
+"RQ3","crosstab","apa","χ²(3, N = 50) = 2.90, p = .407, V = 0.24, 95% CI [0.11, 0.50]"
 "RQ3","crosstab","In person: Fair","3"
 "RQ3","crosstab","Online: Fair","1"
 "RQ3","crosstab","In person: Good","6"

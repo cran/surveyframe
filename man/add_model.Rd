@@ -23,3 +23,10 @@ The updated \code{sframe} object.
 \description{
 Add a model specification to an instrument
 }
+\examples{
+demo <- sframe_demo_data()
+m <- sf_model("cb1", type = "cb_sem",
+              constructs = list(sf_construct("sat", items = c("sat_1", "sat_2"))))
+instr <- add_model(demo$instrument, m)
+length(instr$models)
+}

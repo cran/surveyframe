@@ -410,6 +410,10 @@ holding its rank.</p>
 <li>Click Extensions, then Apps Script.</li>
 <li>Paste the contents of <code>surveyframe_collector.gs</code>,
 replacing any existing code, and save.</li>
+<li>In the Apps Script editor, click <strong>Services</strong>, add
+<strong>Google Sheets API</strong>, and keep its identifier as
+<code>Sheets</code>. The collector refuses a response rather than risk
+changing its values when this service is unavailable.</li>
 <li>Click Deploy, then New deployment. Set the type to Web app.</li>
 <li>Set “Who has access” to Anyone.</li>
 <li>Authorise the script when Google prompts you.</li>
@@ -433,10 +437,14 @@ and call <code>export_static_survey()</code>.</p>
 <span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a>  <span class="at">output_path =</span> <span class="st">&quot;index.html&quot;</span>,</span>
 <span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a>  <span class="at">open        =</span> <span class="cn">FALSE</span></span>
 <span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a>)</span></code></pre></div>
-<p>The result is a single HTML file. Each respondent who submits gets a
-CSV copy downloaded to their own device, and the same row is posted to
-the Google Sheet. The two paths are independent, so a failed post never
-loses a response.</p>
+<p>The result is a single HTML file. When an endpoint is configured, the
+browser sends the row to Google Sheets. Because this is a cross-origin
+<code>no-cors</code> request, the page can confirm only that it sent the
+request. Google’s acceptance stays unconfirmed from the page’s side.
+Depending on the instrument’s thank-you settings, the page also offers
+the respondent a CSV download, which becomes a real backup once the
+respondent actually saves it. Pilot the complete route and check the
+stored row before inviting participants.</p>
 <p>Name the file <code>index.html</code> if you plan to host it at the
 root of a site, because most hosts serve <code>index.html</code> as the
 default page.</p>
@@ -495,24 +503,35 @@ ready for <code>quality_report()</code>, <code>score_scales()</code>,
 </div>
 <div id="updating-a-live-survey" class="section level2">
 <h2>Updating a live survey</h2>
-<p>Editing the instrument changes the questions, so the column set can
-change too. When you add, remove, or rename questions:</p>
+<p>Editing the instrument changes what respondents see and may change
+the column set. Keep one instrument version per study: record the change
+with <code>amend_sframe()</code>, retain the earlier instrument, and
+identify which version each respondent received. Prefer a new response
+tab or Sheet for a materially changed instrument. When you add, remove,
+or rename questions:</p>
 <ol style="list-style-type: decimal">
 <li>Re-export and re-deploy the collector so the headers match.</li>
 <li>Re-export the survey HTML and upload it over the hosted file.</li>
 </ol>
-<p>Existing rows in the Sheet stay in place. New submissions use the new
-columns.</p>
+<p>Existing rows remain, but they were collected under the earlier
+instrument, so treat a comparison across the change as needing its own
+justification. Pilot the revised survey and confirm its headers and
+stored values before reopening it.</p>
 </div>
 <div id="checklist" class="section level2">
 <h2>Checklist</h2>
 <ul>
 <li>Sheet created and collector deployed as a web app set to
 Anyone.</li>
+<li>Google Sheets API advanced service enabled with the identifier
+<code>Sheets</code>.</li>
 <li>Web App URL copied and stored on the instrument.</li>
 <li>Survey exported with the endpoint embedded.</li>
 <li>HTML uploaded to a static host and confirmed live.</li>
 <li>A test submission appears as a new row in the Sheet.</li>
+<li>The stored test values match what was entered, including values
+beginning with <code>=</code>, <code>+</code>, <code>-</code>, or
+<code>@</code>.</li>
 <li><code>read_sheet_responses()</code> returns that row in R.</li>
 </ul>
 </div>

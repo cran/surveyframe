@@ -165,6 +165,7 @@ test_that("sf_flagged() returns the flagged rows the summary counted", {
 })
 
 test_that("as.data.frame() and sf_apa() work on analysis results", {
+  skip_on_cran()  # renders a report or runs a full plan: slow on CRAN's machines
   demo <- sframe_demo_data()
   res <- run_analysis_plan(demo$responses, demo$instrument)
   df <- as.data.frame(res)
@@ -178,6 +179,7 @@ test_that("as.data.frame() and sf_apa() work on analysis results", {
 })
 
 test_that("subsetting a report keeps its class", {
+  skip_on_cran()  # renders a report or runs a full plan: slow on CRAN's machines
   demo <- sframe_demo_data()
   res <- run_analysis_plan(demo$responses, demo$instrument)
   skip_if(length(res) < 2)

@@ -1,19 +1,19 @@
-Name: Open SurveyBuilder
-Description: Launch the SurveyBuilder Shiny HTML app in the default browser.
+Name: surveyframe: Design an instrument
+Description: Open the client-side SurveyBuilder to design a questionnaire and analysis plan.
 Binding: addin_launch_builder
 Interactive: true
 
-Name: Open SurveyStudio
-Description: Launch the SurveyStudio Shiny app in the default browser.
+Name: surveyframe: Open analysis workspace
+Description: Open SurveyStudio to preview an instrument, load responses, run analyses, and export reports.
 Binding: addin_launch_studio
 Interactive: true
 
-Name: Open Dashboard
-Description: Launch the surveyframe results dashboard in the default browser.
+Name: surveyframe: Analyse an existing instrument
+Description: Choose an .sframe file and open SurveyStudio at the response-loading step.
 Binding: addin_launch_dashboard
 Interactive: true
 
-Name: Insert sframe skeleton
-Description: Insert a minimal sf_instrument() call at the cursor position.
+Name: surveyframe: Insert starter instrument
+Description: Insert a valid questionnaire, scale, and reliability-plan template in the active R script.
 Binding: addin_insert_skeleton
 Interactive: false

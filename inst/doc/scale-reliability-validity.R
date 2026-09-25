@@ -54,6 +54,27 @@ validity <- validity_report(published_loadings)
 kable(as.data.frame(validity), digits = 2,
       caption = "Composite reliability and average variance extracted")
 
-## ----validity-scores, eval = FALSE--------------------------------------------
-# validity_report(published_loadings, construct_scores = scored_constructs)
+## ----validity-scores----------------------------------------------------------
+demo <- sframe_demo_data()
+scored <- score_scales(demo$responses, demo$instrument)
+scale_ids <- vapply(sf_scales(demo$instrument), sf_id, character(1))
+construct_scores <- scored[, scale_ids, drop = FALSE]
+
+loadings <- lapply(sf_scales(demo$instrument), function(s) {
+  stats::setNames(rep(0.8, length(s$items)), s$items)
+})
+names(loadings) <- scale_ids
+
+from_scores <- validity_report(loadings, construct_scores = construct_scores)
+from_scores$htmt_method
+
+## ----validity-htmt------------------------------------------------------------
+items_by_construct <- lapply(sf_scales(demo$instrument), function(s) {
+  scored[, s$items, drop = FALSE]
+})
+names(items_by_construct) <- scale_ids
+
+real_htmt <- validity_report(loadings, construct_scores = construct_scores,
+                             items_by_construct = items_by_construct)
+real_htmt$htmt_method
 

@@ -32,6 +32,15 @@ Computes and plots a full pairwise correlation matrix, independent of
 \code{sframe_plot_correlation()}). Useful directly, and as the visual
 companion to \code{\link[=validity_report]{validity_report()}}'s discriminant-validity checks.
 }
+\examples{
+\donttest{
+if (requireNamespace("ggplot2", quietly = TRUE)) {
+  demo <- sframe_demo_data()
+  sframe_plot_correlation_matrix(demo$responses,
+                                 c("sq_1", "sq_2", "sq_3", "sat_1", "sat_2"))
+}
+}
+}
 \seealso{
 \code{\link[=validity_report]{validity_report()}}
 }

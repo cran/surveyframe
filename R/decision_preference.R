@@ -110,6 +110,34 @@ sframe_promethee_compute <- function(x, weights, criteria_types,
 # normalised to 0 when a is at least as good as b everywhere. a outranks b
 # when C(a,b) exceeds the concordance threshold and D(a,b) is below the
 # discordance threshold.
+# Roy's kernel of an outranking graph: a set of alternatives none of which
+# outranks another, such that every alternative outside it is outranked by one
+# inside it. On an acyclic graph the kernel exists and is unique, and is built
+# by taking the alternatives with no remaining incoming edge, removing what
+# they outrank, and repeating. The set with no incoming edge alone, used
+# before, can exclude an alternative that nothing in the set outranks. A graph
+# with a cycle may have no kernel or several, so none is reported, and
+# `defined` is FALSE.
+sframe_electre_kernel <- function(outranking) {
+  alts <- rownames(outranking) %||% paste0("A", seq_len(nrow(outranking)))
+  n <- nrow(outranking)
+  status <- rep("open", n)
+  repeat {
+    open <- which(status == "open")
+    if (length(open) == 0) break
+    sources <- open[vapply(open, function(j) {
+      !any(outranking[open, j] & open != j)
+    }, logical(1))]
+    if (length(sources) == 0) {
+      return(list(kernel = stats::setNames(rep(FALSE, n), alts), defined = FALSE))
+    }
+    status[sources] <- "in"
+    beaten <- open[vapply(open, function(j) any(outranking[sources, j]), logical(1))]
+    status[setdiff(beaten, sources)] <- "out"
+  }
+  list(kernel = stats::setNames(status == "in", alts), defined = TRUE)
+}
+
 sframe_electre_compute <- function(x, weights, criteria_types,
                                    concordance_threshold = 0.7,
                                    discordance_threshold = 0.3) {
@@ -158,12 +186,8 @@ sframe_electre_compute <- function(x, weights, criteria_types,
   scores <- outrank_count - outranked_count
   names(scores) <- alt_names
 
-  # Kernel: alternatives no other alternative outranks (no incoming edge in
-  # the outranking graph). This is a simplified, commonly used reading of
-  # ELECTRE I's kernel (a dominant, stable subset); it does not implement
-  # graph-cycle resolution for the general non-acyclic case.
-  kernel <- outranked_count == 0
-  names(kernel) <- alt_names
+  kernel_fit <- sframe_electre_kernel(outranking)
+  kernel <- kernel_fit$kernel
 
   list(
     scores                 = scores,
@@ -174,6 +198,7 @@ sframe_electre_compute <- function(x, weights, criteria_types,
     outrank_count          = outrank_count,
     outranked_count        = outranked_count,
     kernel                 = kernel,
+    kernel_defined         = kernel_fit$defined,
     concordance_threshold  = concordance_threshold,
     discordance_threshold  = discordance_threshold
   )
@@ -195,6 +220,8 @@ sframe_run_promethee <- function(data, roles, options, instrument) {
     return(list(test = "promethee", error = checked$error))
   }
 
+  tuning <- sframe_check_decision_tuning("promethee", resolved$options, ncol(checked$matrix))
+  if (!is.null(tuning)) return(list(test = "promethee", error = tuning))
   preference_function <- resolved$options[["preference_function"]] %||% "usual"
   thresholds <- resolved$options[["thresholds"]]
 
@@ -275,6 +302,8 @@ sframe_run_electre <- function(data, roles, options, instrument) {
   # 0.7 / 0.3 is the commonly taught textbook convention for the
   # concordance/discordance cutoff pair and is used here as an explicit,
   # overridable default.
+  tuning <- sframe_check_decision_tuning("electre", resolved$options, ncol(checked$matrix))
+  if (!is.null(tuning)) return(list(test = "electre", error = tuning))
   concordance_threshold <- resolved$options[["concordance_threshold"]] %||% 0.7
   discordance_threshold <- resolved$options[["discordance_threshold"]] %||% 0.3
 
@@ -289,13 +318,19 @@ sframe_run_electre <- function(data, roles, options, instrument) {
     Alternative = alternatives[order_by_rank],
     Outranks    = as.integer(fit$outrank_count)[order_by_rank],
     OutrankedBy = as.integer(fit$outranked_count)[order_by_rank],
-    Kernel      = ifelse(fit$kernel[order_by_rank], "Yes", "No"),
+    Kernel      = if (isTRUE(fit$kernel_defined)) ifelse(fit$kernel[order_by_rank], "Yes", "No") else "Undefined",
     Score       = as.integer(fit$scores)[order_by_rank],
     Rank        = as.integer(fit$ranks)[order_by_rank],
     stringsAsFactors = FALSE
   )
   kernel_members <- alternatives[fit$kernel]
   notes <- c(resolved$notes, checked$note)
+  if (!isTRUE(fit$kernel_defined)) {
+    notes <- c(notes, paste0(
+      "The outranking relation contains a cycle, so ELECTRE I defines no ",
+      "unique kernel for these alternatives, and none is reported. Adjusting ",
+      "the thresholds can break the cycle."))
+  }
 
   # An empty outranking relation is a non-result, not a tie for first place.
   # It happens when no alternative clears the concordance threshold against
@@ -319,15 +354,20 @@ sframe_run_electre <- function(data, roles, options, instrument) {
 
   list(
     test           = "electre",
-    apa            = sprintf(
-      paste0("ELECTRE I built the outranking relation for %d alternatives ",
-             "on %d criteria (concordance threshold %.2f, discordance ",
-             "threshold %.2f). The kernel (non-dominated) set contains %d ",
-             "alternative(s): %s."),
-      length(alternatives), ncol(checked$matrix), concordance_threshold,
-      discordance_threshold, length(kernel_members),
-      paste(kernel_members, collapse = ", ")
+    apa            = paste0(
+      sprintf(paste0("ELECTRE I built the outranking relation for %d alternatives ",
+                     "on %d criteria (concordance threshold %.2f, discordance ",
+                     "threshold %.2f). "),
+              length(alternatives), ncol(checked$matrix), concordance_threshold,
+              discordance_threshold),
+      if (isTRUE(fit$kernel_defined)) {
+        sprintf("The kernel contains %d alternative(s): %s.",
+                length(kernel_members), paste(kernel_members, collapse = ", "))
+      } else {
+        "The relation contains a cycle, so no unique kernel is defined."
+      }
     ),
+    kernel_defined = isTRUE(fit$kernel_defined),
     prompt         = paste0(
       "ELECTRE I does not always produce a strict total ranking: two ",
       "alternatives can be genuinely incomparable rather than tied, so ",

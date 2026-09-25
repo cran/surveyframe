@@ -23,6 +23,7 @@ params:
   include_missing:     true
   include_descriptives: true
   include_models:      true
+  show_code:           true
   plot_palette:        "web"
   interpretations_path: ""
   instrument_hash:     ""
@@ -235,6 +236,7 @@ q_items <- Filter(function(i) !(i$type %in% c("section_break", "text_block")),
 
 has_ggplot <- requireNamespace("ggplot2", quietly = TRUE)
 plot_palette <- params$plot_palette %||% "web"
+show_code <- isTRUE(params$show_code %||% TRUE)
 
 # A scale's separate Likert items get one grouped diverging chart, the same
 # way a matrix question's rows do, instead of scattering a related batch of
@@ -253,9 +255,9 @@ rendered_groups <- character(0)
 # consistent chart family rather than a mix of base-R and ggplot styling.
 for (item in q_items) {
   t <- item$type
-  if (item$id %in% names(group_of)) {
+  if (item$id %in% names(group_of) && has_ggplot) {
     gid <- group_of[[item$id]]
-    if (gid %in% rendered_groups || !has_ggplot) next
+    if (gid %in% rendered_groups) next
     rendered_groups <- c(rendered_groups, gid)
     g <- scale_groups[[gid]]
     gg <- sframe_plot_likert_scale(g$items, responses, g$choice_set, g$title,
@@ -266,6 +268,10 @@ for (item in q_items) {
     cat("\n\n")
     next
   }
+  # Without ggplot2 a grouped item falls through to the base-graphics
+  # single-item chart below. Skipping here removed those distributions
+  # altogether, though the package can draw every one of them without the
+  # optional package. The R engine does the same, so the 2 agree.
   if (identical(t, "matrix")) {
     # A matrix question has no base response column of its own, only one
     # expanded <id>__<row> column per row, so it needs its own existence
@@ -277,6 +283,40 @@ for (item in q_items) {
     if (is.null(gg)) next
     cat(sprintf("\n**%s**\n\n", item$label %||% item$id))
     print(gg)
+    cat("\n\n")
+    next
+  }
+  # A multiple-choice question posts one indicator column per option, named
+  # item__option, and never a column under its own id, so requiring the parent
+  # column dropped every collected multi-select from this section. The R engine
+  # does the same, so the 2 agree.
+  if (identical(t, "multiple_choice") && !item$id %in% names(responses)) {
+    cs <- choice_by(item$choice_set %||% "")
+    # Matched by prefix rather than through sframe_item_expansion_columns(),
+    # which is internal: this template runs in a separate session against the
+    # installed package, so it can call exported functions only. The indicator
+    # columns are item__option by construction, and matching the names the
+    # collector actually wrote also covers an option outside the choice set.
+    present <- grep(paste0("^", item$id, "__"), names(responses), value = TRUE)
+    if (length(present) == 0) next
+    picked <- vapply(present, function(cn) {
+      sum(as.character(responses[[cn]]) %in% c("1", "TRUE", "true", "yes"),
+          na.rm = TRUE)
+    }, numeric(1))
+    labels <- sub(paste0("^", item$id, "__"), "", present)
+    if (!is.null(cs)) {
+      hit <- match(labels, as.character(cs$values))
+      labels[!is.na(hit)] <- cs$labels[hit[!is.na(hit)]]
+    }
+    names(picked) <- labels
+    if (!sum(picked)) next
+    cat(sprintf("\n**%s**\n\n", item$label %||% item$id))
+    cat(sprintf("%d respondents, who could pick more than one.\n\n",
+                nrow(responses)))
+    op <- par(mar = c(4, 9, 1, 1))
+    barplot(rev(picked), horiz = TRUE, las = 1, col = THEME,
+            border = "white", xlab = "Respondents")
+    par(op)
     cat("\n\n")
     next
   }
@@ -294,7 +334,7 @@ for (item in q_items) {
       # A Likert item is an ordered agree/disagree scale: a diverging bar
       # shows which way opinion leans in one glance, unlike a plain
       # frequency bar that does not distinguish "agree" from "disagree".
-      sframe_draw_likert_diverging(freq, THEME)
+      sframe_draw_likert_diverging(freq, THEME, palette = plot_palette)
     } else if (has_ggplot) {
       print(sframe_plot_item_chart(item, col, cs, palette = plot_palette))
     } else {
@@ -316,12 +356,20 @@ for (item in q_items) {
   }
 }
 
-# One histogram per scale score
+# One histogram per scale score, from score_scales(), so the declared method,
+# reversal, weights and min_valid all apply
+scale_scores <- NULL
+if (length(instrument$scales %||% list()) > 0) {
+  scale_scores <- tryCatch(
+    score_scales(responses, instrument, keep_items = FALSE, keep_meta = FALSE),
+    error = function(e) {
+      cat(sprintf("\n*Scale scores could not be computed: %s*\n\n", conditionMessage(e)))
+      NULL
+    })
+}
 for (sc in instrument$scales %||% list()) {
-  cols <- intersect(sc$items, names(responses))
-  if (!length(cols)) next
-  nums <- lapply(responses[cols], function(x) suppressWarnings(as.numeric(x)))
-  scores <- rowMeans(do.call(cbind, nums), na.rm = TRUE); scores <- scores[!is.na(scores)]
+  if (is.null(scale_scores) || !sc$id %in% names(scale_scores)) next
+  scores <- scale_scores[[sc$id]]; scores <- scores[!is.na(scores)]
   if (!length(scores)) next
   cat(sprintf("\n**%s (scale score)**\n\n", sc$label %||% sc$id))
   if (has_ggplot) {
@@ -420,6 +468,29 @@ if (!has_data) {
           cat(sprintf("**Effect size:** %s\n\n", r$effect_label))
         if (!is.null(r$table) && is.data.frame(r$table))
           print(kable(format = "html", r$table, digits = 2))
+        # A second table the result carries: the quanteda runner's leading
+        # features, or a moderation's conditional slopes at the moderator's own
+        # values. Both were retained by their runner and rendered by neither
+        # engine. sframe_result_supplement() is shared with the
+        # built-in engine so the 2 agree on what a result shows.
+        sup <- sframe_result_supplement(r)
+        if (!is.null(sup)) {
+          cat("\n")
+          print(kable(format = "html", sup$table, digits = 2,
+                      caption = sup$caption, row.names = FALSE))
+          cat("\n")
+        }
+        # The statistical call behind the numbers, folded away. Showing this
+        # chunk's own code would display the dispatch loop instead, which says
+        # nothing about which test ran with which options.
+        if (show_code) {
+          code <- analysis_syntax(r)
+          if (!is.null(code)) {
+            cat("\n::: {.callout-note collapse=\"true\" title=\"Show R code\"}\n")
+            cat("```r\n", paste(code, collapse = "\n"), "\n```\n", sep = "")
+            cat(":::\n\n")
+          }
+        }
         # The chart for this result sits directly under its table, as one
         # unit per research question, rather than in a separate section.
         if (!is.null(r$plot)) {

@@ -10,14 +10,23 @@ read_sframe(path, validate = TRUE)
 \item{path}{Character. The path to a \code{.sframe} file.}
 
 \item{validate}{Logical. Whether to validate the loaded instrument with
-\code{\link[=validate_sframe]{validate_sframe()}}. Defaults to \code{TRUE}.}
+\code{\link[=validate_sframe]{validate_sframe()}}. Defaults to \code{TRUE}. This controls structural
+validation only. The integrity hash is verified either way.}
 }
 \value{
 An \code{sframe} object.
 }
 \description{
 Reads a \code{.sframe} JSON file and reconstructs an \code{sframe} instrument object.
-The SHA-256 integrity hash is verified on load unless \code{validate = FALSE}.
+The SHA-256 integrity hash is always verified, and a file whose content does
+not match its hash is refused. The hash covers a canonical form of the
+content, so it detects a change to the content of a written file, and it
+ignores whitespace and key order. It is unsigned, so anyone who edits a file
+can also recompute it.
+}
+\details{
+The instrument remembers the content and amendment log it was read with, so
+\code{\link[=write_sframe]{write_sframe()}} can refuse an undisclosed revision.
 }
 \examples{
 instr <- read_sframe(

@@ -47,7 +47,12 @@ test_that("render_report(format = 'pdf') leaves no Chrome detritus behind", {
   skip_on_cran()
   skip_if_not_installed("pagedown")
   chrome <- tryCatch(pagedown::find_chrome(), error = function(e) NULL)
-  skip_if(is.null(chrome), "No Chrome available for chrome_print()")
+  chrome_command <- if (length(chrome) == 1L && !is.na(chrome) && nzchar(chrome)) {
+    if (file.exists(chrome)) chrome else unname(Sys.which(chrome))
+  } else {
+    ""
+  }
+  skip_if(!nzchar(chrome_command), "No Chrome available for chrome_print()")
 
   instr <- sf_instrument("Detritus check", components = list(
     sf_choices("ag5", 1:5, c("SD", "D", "N", "A", "SA")),

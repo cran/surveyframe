@@ -36,3 +36,9 @@ possible: Shapiro-Wilk tests, skewness/kurtosis screening, Levene and
 Brown-Forsythe tests, regression residual checks, VIF, Cook's distance,
 expected-count checks, and sparse-cell warnings.
 }
+\examples{
+demo <- sframe_demo_data()
+ar <- assumption_report(demo$responses, variables = c("sat_1", "sat_2"),
+                         group = "visit_type")
+print(ar)
+}

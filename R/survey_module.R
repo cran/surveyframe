@@ -2,10 +2,14 @@
 
 #' Shiny module UI for an embedded survey
 #'
-#' Places a survey rendered by surveyframe inside a larger Shiny application.
-#' Pair with [survey_module_server()] in the server function. The module
-#' renders the full instrument including welcome page, all item types,
-#' branching logic, required-field validation, and a thank-you screen.
+#' Places a survey inside a larger Shiny application. Pair with
+#' [survey_module_server()] in the server function. The module shows a
+#' welcome screen, the instrument's pages with branching and required-item
+#' checks, and a thank-you screen.
+#'
+#' Every item type is drawn with the same controls [render_survey()] uses, so
+#' a response collected through the module has the same columns as one
+#' collected there. [survey_module_server()] describes what is returned.
 #'
 #' @param id A character string. The module namespace ID, passed identically
 #'   to [survey_module_server()].
@@ -14,12 +18,11 @@
 #'
 #' @return A `shiny.tag` object.
 #' @export
-#' @seealso [survey_module_server()], [launch_studio()],
+#' @seealso [survey_module_server()], [render_survey()],
 #'   [export_static_survey()]
 #'
 #' @examples
 #' \dontrun{
-#' # Minimal embedding example:
 #' library(shiny)
 #' library(surveyframe)
 #'
@@ -27,6 +30,7 @@
 #' item  <- sf_item("q1", "Rate your experience.", type = "likert",
 #'                  choice_set = "ag5", required = TRUE)
 #' instr <- sf_instrument("Quick Survey", components = list(cs, item))
+#' store <- file.path(tempdir(), "responses.csv")
 #'
 #' ui <- fluidPage(
 #'   survey_module_ui("demo"),
@@ -34,7 +38,17 @@
 #' )
 #'
 #' server <- function(input, output, session) {
-#'   resp <- survey_module_server("demo", instrument = instr)
+#'   resp <- survey_module_server(
+#'     "demo", instrument = instr,
+#'     # Called before the survey is marked complete. An error here keeps the
+#'     # respondent on the last page with a message, so nothing is lost.
+#'     on_submit = function(response) {
+#'       row <- as.data.frame(response, check.names = FALSE)
+#'       utils::write.table(row, store, sep = ",", row.names = FALSE,
+#'                          col.names = !file.exists(store),
+#'                          append = file.exists(store))
+#'     }
+#'   )
 #'   output$result <- renderPrint({
 #'     req(resp())
 #'     resp()
@@ -48,18 +62,23 @@ survey_module_ui <- function(id, width = "100%") {
   ns <- shiny::NS(id)
 
   shiny::div(
+    id = ns("sf_module"),
     style = paste0("max-width:", width, ";margin:0 auto;font-family:",
                    "system-ui,-apple-system,'Segoe UI',sans-serif;"),
+    shiny::tags$script(shiny::HTML(sframe_survey_js())),
     shiny::uiOutput(ns("survey_ui")),
+    # Page changes bring the module itself into view. Scrolling the window
+    # moved the whole host application.
     shiny::tags$script(
       shiny::HTML(
         sprintf(
-          "Shiny.addCustomMessageHandler('%s', function(msg) {
+          "Shiny.addCustomMessageHandler(%s, function(msg) {
              if (msg.action === 'scrollTop') {
-               window.scrollTo({top: 0, behavior: 'smooth'});
+               var el = document.getElementById(%s);
+               if (el) el.scrollIntoView({block: 'start', behavior: 'smooth'});
              }
            });",
-          ns("sfControl")
+          sframe_js_string(ns("sfControl")), sframe_js_string(ns("sf_module"))
         )
       )
     )
@@ -68,64 +87,140 @@ survey_module_ui <- function(id, width = "100%") {
 
 #' Shiny module server for an embedded survey
 #'
-#' Renders the survey instrument and collects the respondent's answers.
-#' Returns a `reactive` that holds `NULL` until the form is submitted, then
-#' returns the response as a named list (one element per visible item).
+#' Draws the survey and collects the respondent's answers. Returns a
+#' `reactive` holding `NULL` until the survey has been submitted and saved.
+#'
+#' # Supported item types
+#'
+#' Every item type is supported, with the same controls [render_survey()]
+#' uses: likert, single choice, multiple choice, numeric, text, text area,
+#' date, slider, rating, ranking, matrix, pairwise comparison and criteria
+#' weight, plus section breaks and text blocks.
+#'
+#' # What is submitted
+#'
+#' The response is a named list. It starts with `response_id`, `started_at`
+#' and `submitted_at`, followed by one element per response column, named as
+#' [read_responses()] expects. A multi-column item contributes one element per
+#' column: `item__row` for a matrix, `item__option` for ranking and multiple
+#' choice, and one element per pair or criterion for decision items. Values
+#' are character.
+#'
+#' An item hidden by branching is `NA`, so an answer given before branching
+#' hid its item is never submitted. An unanswered item is `NA` too. A slider
+#' counts as answered once the respondent moves it, and a ranking once the
+#' respondent reorders it or chooses "Keep this order". Date questions start
+#' empty.
+#'
+#' # Saving, and a failed save
+#'
+#' `on_submit` is called with the response before the survey is marked
+#' complete. If it raises an error, the respondent sees a message and stays on
+#' the last page, can submit again, and the returned reactive stays `NULL`.
+#' The thank-you screen appears only after `on_submit` returns.
+#'
+#' # Changing the instrument
+#'
+#' When `instrument` is a reactive and its value changes, the survey returns
+#' to the welcome screen, the returned reactive goes back to `NULL`, and no
+#' answer given to the previous instrument carries into the new one.
 #'
 #' @param id A character string matching the `id` passed to
 #'   [survey_module_ui()].
 #' @param instrument An `sframe` object, or a `reactive` that returns one.
-#'   Changing the reactive value resets the survey.
-#' @param on_submit Optional function of one argument. Called immediately
-#'   after submission with the response list. Useful for writing to a
-#'   database or sending an email without waiting for an
-#'   [shiny::observeEvent()] elsewhere in the app.
+#' @param on_submit Optional function of one argument, called with the
+#'   response list before the survey is marked complete. Use it to store the
+#'   response. An error it raises is shown to the respondent, and the survey
+#'   stays open for another attempt.
 #'
-#' @return A `reactive` that returns `NULL` before submission and the
-#'   response list after.
+#' @return A `reactive` that returns `NULL` until a response is submitted and
+#'   `on_submit`, when supplied, has returned. After that it returns the
+#'   response list.
 #' @export
-#' @seealso [survey_module_ui()]
+#' @seealso [survey_module_ui()], [render_survey()], [read_responses()]
 #'
 #' @examples
 #' \donttest{
-#' # See survey_module_ui() for a complete example.
+#' # survey_module_ui() has a complete example, including on_submit.
 #' }
 survey_module_server <- function(id, instrument, on_submit = NULL) {
   rlang::check_installed("shiny", reason = "to use the survey module.")
   rlang::check_installed("digest", reason = "to generate survey response IDs.")
+  if (!is.null(on_submit) && !is.function(on_submit))
+    rlang::abort("`on_submit` must be NULL or a function.", class = "sframe_error")
 
   shiny::moduleServer(id, function(input, output, session) {
     ns <- session$ns
 
-    # Resolve instrument (reactive or plain object)
     instr_rx <- if (shiny::is.reactive(instrument)) instrument
                 else shiny::reactive(instrument)
 
-    # Module state
     state <- shiny::reactiveValues(
-      screen      = "welcome",   # "welcome" | "survey" | "thankyou"
-      page        = 1L,
-      responses   = list(),
-      submitted   = NULL,
-      started_at  = NULL
+      screen     = "welcome",   # "welcome" | "survey" | "thankyou"
+      page       = 1L,
+      submitted  = NULL,
+      started_at = NULL,
+      # Each instrument gets fresh input ids, so an answer given to a previous
+      # instrument can never be read as an answer to the current one.
+      generation = 1L
     )
 
-    # Pages: a list of item-lists grouped by item$page
-    pages_rx <- shiny::reactive({
-      instr <- instr_rx()
-      sframe_module_build_pages(instr)
+    prefix_rx <- shiny::reactive(paste0("sf", state$generation, "_"))
+
+    # The answers to the current instrument, keyed by item and expansion id.
+    values_rx <- shiny::reactive({
+      prefix <- prefix_rx()
+      all <- shiny::reactiveValuesToList(input)
+      keep <- startsWith(names(all), prefix)
+      stats::setNames(all[keep], substring(names(all)[keep], nchar(prefix) + 1L))
     })
 
-    max_page_rx <- shiny::reactive(length(pages_rx()))
+    scroll_to_top <- function() {
+      session$sendCustomMessage(ns("sfControl"), list(action = "scrollTop"))
+    }
 
-    # ---- Welcome ----------------------------------------------------------
-    output$survey_ui <- shiny::renderUI(render_module_ui(
-      state, instr_rx(), pages_rx(), max_page_rx(), ns
-    ))
+    shiny::observeEvent(instr_rx(), {
+      state$generation <- state$generation + 1L
+      state$screen     <- "welcome"
+      state$page       <- 1L
+      state$submitted  <- NULL
+      state$started_at <- NULL
+    }, ignoreInit = TRUE)
 
-    # ---- Navigation observers --------------------------------------------
+    # The page is drawn from the answers held so far, read through isolate(),
+    # so an answer never draws the page again. Branching visibility moves with
+    # answers through the observer below.
+    output$survey_ui <- shiny::renderUI({
+      instr  <- instr_rx()
+      prefix <- prefix_rx()
+      values <- shiny::isolate(values_rx())
+      content <- switch(state$screen,
+        welcome  = sf_mod_welcome(instr, ns, prefix),
+        survey   = sf_mod_survey(instr, state$page, values, ns, prefix),
+        thankyou = sf_mod_thankyou(instr$render$thankyou %||% list())
+      )
+      shiny::tagList(sf_mod_css(instr), shiny::div(class = "sf-mod", content))
+    })
+
+    shiny::observe({
+      if (!identical(state$screen, "survey")) return()
+      instr  <- instr_rx()
+      values <- values_rx()
+      full   <- ns(prefix_rx())
+      bl     <- sframe_branch_lookup(instr)
+      ids    <- vapply(instr$items, function(i) i$id, character(1))
+      shown  <- vapply(instr$items, function(i) {
+        sframe_item_visible(i, values, bl)
+      }, logical(1))
+      session$sendCustomMessage("sf-visibility",
+        list(show = as.list(paste0(full, ids[shown])),
+             hide = as.list(paste0(full, ids[!shown]))))
+    })
+
     shiny::observeEvent(input$sf_start, {
-      if (!is.null(input$sf_consent) && isFALSE(input$sf_consent)) {
+      consent <- input[[paste0(prefix_rx(), "consent")]]
+      wl <- instr_rx()$render$welcome %||% list()
+      if (isTRUE(wl$consent_required) && !isTRUE(consent)) {
         shiny::showNotification("Please confirm your consent before continuing.",
                                 type = "warning")
         return()
@@ -133,56 +228,45 @@ survey_module_server <- function(id, instrument, on_submit = NULL) {
       state$screen     <- "survey"
       state$page       <- 1L
       state$started_at <- Sys.time()
-      session$sendCustomMessage(ns("sfControl"), list(action = "scrollTop"))
+      scroll_to_top()
     })
 
     shiny::observeEvent(input$sf_next, {
       instr  <- instr_rx()
-      items  <- pages_rx()[[state$page]]
-      errors <- sframe_module_validate(items, state$responses, instr)
+      values <- values_rx()
+      bl     <- sframe_branch_lookup(instr)
+      pages  <- sframe_module_build_pages(instr)
+      page_items <- pages[[state$page]]
 
-      if (length(errors) > 0) {
+      missing <- Filter(function(i) {
+        isTRUE(i$required) && sframe_item_visible(i, values, bl) &&
+          sframe_missing_value(i, sframe_item_input_value(i, values))
+      }, page_items)
+      if (length(missing) > 0) {
         shiny::showNotification(
-          paste0(length(errors), " required question(s) need an answer."),
-          type = "warning", duration = 4
+          paste("Please answer:",
+                paste(vapply(missing, function(i) i$label, character(1)),
+                      collapse = "; ")),
+          type = "warning", duration = 6
         )
         return()
       }
 
-      if (state$page >= max_page_rx()) {
-        sframe_module_do_submit(state, instr_rx(), on_submit)
+      if (state$page >= length(pages)) {
+        sframe_module_do_submit(state, instr, values, bl, on_submit)
       } else {
         state$page <- state$page + 1L
-        session$sendCustomMessage(ns("sfControl"), list(action = "scrollTop"))
+        scroll_to_top()
       }
     })
 
     shiny::observeEvent(input$sf_back, {
       if (state$page > 1L) {
         state$page <- state$page - 1L
-        session$sendCustomMessage(ns("sfControl"), list(action = "scrollTop"))
+        scroll_to_top()
       }
     })
 
-    # ---- Collect input values as they change ------------------------------
-    shiny::observe({
-      instr <- instr_rx()
-      responses <- shiny::isolate(state$responses)
-      changed <- FALSE
-      lapply(instr$items, function(item) {
-        inp_id <- paste0("sf_", item$id)
-        val    <- input[[inp_id]]
-        if (!is.null(val)) {
-          responses[[item$id]] <- val
-          changed <<- TRUE
-        }
-      })
-      if (changed) {
-        state$responses <- responses
-      }
-    })
-
-    # ---- Return submitted responses ---------------------------------------
     shiny::reactive(state$submitted)
   })
 }
@@ -206,104 +290,77 @@ sframe_module_build_pages <- function(instr) {
   lapply(uq, function(p) items[page_nums == p])
 }
 
-sframe_module_is_visible <- function(item_id, responses, branching) {
-  rule <- Filter(function(r) r$item_id == item_id, branching)
-  if (!length(rule)) return(TRUE)
-  rule <- rule[[1]]
-  actual <- responses[[rule$depends_on]]
-  if (is.null(actual)) return(rule$action != "show")
-  cond <- sframe_module_eval_op(rule$operator,
-                                 as.character(actual),
-                                 as.character(rule$value))
-  if (rule$action == "show") cond else !cond
-}
-
-sframe_module_eval_op <- function(op, actual, value) {
-  switch(op,
-    "==" = actual == value,
-    "!=" = actual != value,
-    "%in%" = trimws(actual) %in% sframe_branch_in_values(value),
-    ">"   = suppressWarnings(!is.na(as.numeric(actual)) &&
-               as.numeric(actual) > as.numeric(value)),
-    ">="  = suppressWarnings(!is.na(as.numeric(actual)) &&
-               as.numeric(actual) >= as.numeric(value)),
-    "<"   = suppressWarnings(!is.na(as.numeric(actual)) &&
-               as.numeric(actual) < as.numeric(value)),
-    "<="  = suppressWarnings(!is.na(as.numeric(actual)) &&
-               as.numeric(actual) <= as.numeric(value)),
-    FALSE
+# Builds the response with the same row builder render_survey() uses, so both
+# Shiny routes submit the same columns. on_submit runs first, and the survey
+# is marked complete only once it returns.
+sframe_module_do_submit <- function(state, instr, values, branch_lookup,
+                                    on_submit) {
+  row <- sframe_response_row(instr, values, branch_lookup,
+                             started_at = state$started_at %||% Sys.time())
+  resp <- c(
+    list(response_id = paste0("R", toupper(substr(
+      digest::digest(Sys.time()), 1, 8)))),
+    as.list(row)
   )
-}
-
-sframe_module_validate <- function(items, responses, instr) {
-  errors <- character(0)
-  for (item in items) {
-    if (!item$required) next
-    if (!sframe_module_is_visible(item$id, responses, instr$branching)) next
-    v <- responses[[item$id]]
-    if (is.null(v) || identical(v, "") || identical(v, character(0))) {
-      errors <- c(errors, item$id)
+  if (is.function(on_submit)) {
+    err <- tryCatch({ on_submit(resp); NULL }, error = function(e) e)
+    if (!is.null(err)) {
+      shiny::showNotification(
+        paste("Your response could not be saved:", conditionMessage(err),
+              "Please try submitting again."),
+        type = "error", duration = 8)
+      return(invisible(FALSE))
     }
   }
-  errors
-}
-
-sframe_module_do_submit <- function(state, instr, on_submit) {
-  resp <- c(
-    list(
-      response_id  = paste0("R", toupper(substr(
-        digest::digest(Sys.time()), 1, 8))),
-      started_at   = format(state$started_at, "%Y-%m-%dT%H:%M:%SZ",
-                            tz = "UTC"),
-      submitted_at = format(Sys.time(), "%Y-%m-%dT%H:%M:%SZ", tz = "UTC")
-    ),
-    state$responses
-  )
   state$submitted <- resp
   state$screen    <- "thankyou"
-  if (is.function(on_submit)) on_submit(resp)
+  invisible(TRUE)
 }
 
-render_module_ui <- function(state, instr, pages, max_page, ns) {
+sf_mod_css <- function(instr) {
   theme <- instr$render$theme %||% "#2563eb"
-  wl    <- instr$render$welcome   %||% list()
-  ty    <- instr$render$thankyou  %||% list()
-
-  css <- shiny::tags$style(shiny::HTML(sprintf(
+  shiny::tags$style(shiny::HTML(sprintf(
     ".sf-mod{--cp:%s;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;font-size:14px;color:#0f172a}
      .sf-mod .card{background:#fff;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.07);padding:28px;margin-bottom:12px}
-     .sf-mod .item{margin-bottom:22px}
-     .sf-mod .q-lbl{font-weight:600;margin-bottom:8px;font-size:14px}
-     .sf-mod .help-t{font-size:12px;color:#94a3b8;margin-bottom:6px;margin-top:-4px}
+     .sf-mod .sf-item-wrap{margin-bottom:22px}
+     .sf-mod .sf-label-row{display:flex;align-items:center;gap:6px;font-weight:600;font-size:14px}
+     .sf-mod .sf-required{color:#dc2626;font-size:11px}
+     .sf-mod .sf-help-text{font-size:12px;color:#64748b;margin:3px 0 0;font-weight:400}
      .sf-mod .btn-p{background:var(--cp);color:#fff;border:none;border-radius:8px;padding:10px 24px;font-size:14px;font-weight:600;cursor:pointer;width:100%%}
      .sf-mod .btn-p:hover{filter:brightness(.92)}
-     .sf-mod .btn-s{background:#f1f5f9;color:#0f172a;border:none;border-radius:8px;padding:10px 24px;font-size:14px;cursor:pointer}
-     .sf-mod .inp{width:100%%;border:1.5px solid #e2e8f0;border-radius:8px;padding:9px 12px;font-size:14px}
-     .sf-mod .inp:focus{outline:none;border-color:var(--cp);box-shadow:0 0 0 3px rgba(37,99,235,.1)}
-     .sf-mod .opt{display:flex;align-items:flex-start;gap:8px;padding:7px 10px;border-radius:6px;cursor:default;font-size:13px}
-     .sf-mod .opt:hover{background:#f1f5f9}
-     .sf-mod .opt input{accent-color:var(--cp);margin-top:2px;flex-shrink:0}
+     .sf-mod .btn-s,.sf-mod .btn-secondary{background:#f1f5f9;color:#0f172a;border:none;border-radius:8px;padding:10px 24px;font-size:14px;cursor:pointer}
      .sf-mod .nav{display:flex;gap:10px;margin-top:20px}
      .sf-mod .nav .sp{flex:1}
-     .sf-mod .sec{border-top:3px solid var(--cp);padding-top:16px;margin-bottom:16px}
-     .sf-mod .sec-t{font-size:17px;font-weight:700}
-     .sf-mod .pg-info{font-size:11px;color:#94a3b8;margin-bottom:14px}
+     .sf-mod .sf-section-break{border-top:3px solid var(--cp);padding-top:16px;margin-bottom:16px}
+     .sf-mod .sf-section-title{font-size:17px;font-weight:700}
+     .sf-mod .sf-text-block{background:#eff6ff;border-left:4px solid var(--cp);padding:12px;border-radius:0 8px 8px 0;font-size:13px;color:#1e40af;margin-bottom:14px}
+     .sf-mod .sf-matrix-scroll{overflow-x:auto}
+     .sf-mod .sf-matrix{border-collapse:collapse;width:100%%}
+     .sf-mod .sf-matrix th,.sf-mod .sf-matrix td{padding:8px 10px;border:1px solid #e2e8f0;text-align:center;font-size:13px}
+     .sf-mod .sf-matrix-row-label{text-align:left!important}
+     .sf-mod .sf-stars{display:flex;gap:6px;margin-top:8px}
+     .sf-mod .sf-star-btn{background:none;border:none;font-size:26px;cursor:pointer;color:#cbd5e1;padding:0}
+     .sf-mod .sf-star-btn.active{color:#f59e0b}
+     .sf-mod .sf-rank-list{border:1.5px solid #e2e8f0;border-radius:8px;padding:8px;margin-top:8px}
+     .sf-mod .sf-rank-item{display:flex;align-items:center;gap:10px;padding:8px 10px;background:#f8fafc;border-radius:6px;margin-bottom:5px;border:1px solid #e2e8f0;cursor:grab}
+     .sf-mod .sf-rank-label{flex:1}
+     .sf-mod .sf-rank-moves{display:flex;gap:4px}
+     .sf-mod .sf-rank-move{width:32px;height:32px;border:1px solid #cbd5e1;border-radius:6px;background:#fff;cursor:pointer}
+     .sf-mod .sf-rank-move:focus-visible,.sf-mod .sf-rank-keep:focus-visible{outline:3px solid var(--cp);outline-offset:2px}
+     .sf-mod .sf-rank-input{display:none}
+     .sf-mod .sf-rank-confirm{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:8px}
+     .sf-mod .sf-rank-status,.sf-mod .sf-slider-hint{font-size:13px;color:#475569;margin:4px 0 0}
+     .sf-mod .sf-decision-row{margin-bottom:10px}
+     .sf-mod .pg-info{font-size:11px;color:#64748b;margin-bottom:14px}
      .sf-mod .ty-ic{font-size:48px;text-align:center;margin-bottom:12px}
      .sf-mod .ty-t{font-size:20px;font-weight:700;text-align:center;margin-bottom:8px}
      .sf-mod .ty-m{color:#475569;text-align:center;font-size:13px}",
     theme
   )))
-
-  content <- switch(state$screen,
-    welcome  = sf_mod_welcome(instr, wl, ns),
-    survey   = sf_mod_survey(state, instr, pages, max_page, ns),
-    thankyou = sf_mod_thankyou(ty)
-  )
-
-  shiny::tagList(css, shiny::div(class = "sf-mod", content))
 }
 
-sf_mod_welcome <- function(instr, wl, ns) {
+sf_mod_welcome <- function(instr, ns, prefix) {
+  wl <- instr$render$welcome %||% list()
   shiny::div(class = "card",
     shiny::tags$h2(style = "margin-bottom:8px", wl$title %||% instr$meta$title),
     if (!is.null(wl$intro_text)) shiny::p(style = "white-space:pre-wrap", wl$intro_text),
@@ -311,7 +368,8 @@ sf_mod_welcome <- function(instr, wl, ns) {
       shiny::div(style = "background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:8px;padding:14px;font-size:13px;color:#1e40af;margin-bottom:14px;white-space:pre-wrap",
                  wl$consent_text),
     if (isTRUE(wl$consent_required))
-      shiny::checkboxInput(ns("sf_consent"), "I have read and I consent to participate."),
+      shiny::checkboxInput(ns(paste0(prefix, "consent")),
+                           "I have read and I consent to participate."),
     shiny::actionButton(ns("sf_start"),
                         wl$start_label %||% "Start Survey",
                         class = "btn-p",
@@ -319,33 +377,54 @@ sf_mod_welcome <- function(instr, wl, ns) {
   )
 }
 
-sf_mod_survey <- function(state, instr, pages, max_page, ns) {
-  items   <- pages[[state$page]]
-  choiceM <- stats::setNames(instr$choices,
-                              vapply(instr$choices, `[[`, character(1), "id"))
-  resp    <- state$responses
-  brch    <- instr$branching
+sf_mod_survey <- function(instr, page, values, ns, prefix) {
+  pages <- sframe_module_build_pages(instr)
+  max_page <- length(pages)
+  page_items <- pages[[page]]
+  choices_lookup <- sframe_choices_lookup(instr)
+  bl <- sframe_branch_lookup(instr)
 
-  item_uis <- lapply(items, function(item) {
-    visible <- sframe_module_is_visible(item$id, resp, brch)
-    if (!visible) return(NULL)
-    sf_mod_render_item(item, choiceM, ns, resp)
+  # The shared renderer uses an item's id as its input id, so each item is
+  # drawn under its namespaced id, with the answers keyed the same way.
+  full <- ns(prefix)
+  drawn_values <- if (length(values)) {
+    stats::setNames(values, paste0(full, names(values)))
+  } else {
+    list()
+  }
+
+  item_uis <- lapply(page_items, function(item) {
+    drawn <- item
+    drawn$id <- paste0(full, item$id)
+    shiny::div(class = "sf-item-wrap",
+      id = paste0("sf_item_", drawn$id),
+      style = if (!sframe_item_visible(item, values, bl)) "display:none",
+      sframe_render_input(drawn, choices_lookup, drawn_values))
   })
 
+  rank_init <- lapply(
+    Filter(function(i) identical(i$type, "ranking"), page_items),
+    function(i) {
+      shiny::tags$script(sprintf(
+        "setTimeout(function(){initRanking(%s);},200);",
+        sframe_js_string(paste0("rank_", full, i$id))))
+    }
+  )
+
   nav <- shiny::div(class = "nav",
-    if (state$page > 1L)
+    if (page > 1L)
       shiny::actionButton(ns("sf_back"), "\u2190 Back", class = "btn-s"),
     shiny::div(class = "sp"),
     shiny::actionButton(
       ns("sf_next"),
-      if (state$page < max_page) "Next \u2192"
+      if (page < max_page) "Next \u2192"
       else instr$render$submit_label %||% "Submit",
       class = "btn-p"
     )
   )
 
   shiny::div(class = "card",
-    if (state$page == 1L) {
+    if (page == 1L) {
       shiny::tagList(
         shiny::tags$h2(style = "margin-bottom:6px", instr$meta$title),
         if (!is.null(instr$meta$description))
@@ -355,8 +434,9 @@ sf_mod_survey <- function(state, instr, pages, max_page, ns) {
     },
     if (max_page > 1L)
       shiny::div(class = "pg-info",
-                 paste0("Page ", state$page, " of ", max_page)),
+                 paste0("Page ", page, " of ", max_page)),
     shiny::tagList(item_uis),
+    shiny::tagList(rank_init),
     nav
   )
 }
@@ -368,88 +448,4 @@ sf_mod_thankyou <- function(ty) {
     shiny::div(class = "ty-m",
                ty$message %||% "Your response has been recorded.")
   )
-}
-
-sf_mod_render_item <- function(item, choiceM, ns, resp) {
-  t  <- item$type
-  cs <- choiceM[[item$choice_set %||% ""]]
-
-  if (t == "section_break") {
-    return(shiny::div(class = "sec",
-      shiny::div(class = "sec-t", item$label),
-      if (!is.null(item$section_intro)) shiny::p(item$section_intro)
-    ))
-  }
-  if (t == "text_block") {
-    return(shiny::div(
-      style = "background:#eff6ff;border-left:4px solid var(--cp);padding:12px;border-radius:0 8px 8px 0;font-size:13px;color:#1e40af;margin-bottom:14px",
-      item$label
-    ))
-  }
-
-  lbl_tag <- shiny::div(class = "q-lbl",
-    item$label,
-    if (isTRUE(item$required))
-      shiny::span(style = "color:#dc2626;font-size:11px;margin-left:3px", "*")
-  )
-  help_tag <- if (!is.null(item$help))
-    shiny::div(class = "help-t", item$help)
-
-  ctrl <- switch(t,
-    likert         = sf_mod_likert(item, cs, ns, resp),
-    single_choice  = sf_mod_single(item, cs, ns, resp),
-    multiple_choice= sf_mod_multi(item, cs, ns, resp),
-    numeric = shiny::numericInput(ns(paste0("sf_", item$id)), NULL,
-                                   value = resp[[item$id]] %||% NA),
-    text    = shiny::textInput(ns(paste0("sf_", item$id)), NULL,
-                                value    = resp[[item$id]] %||% "",
-                                placeholder = item$placeholder %||% ""),
-    textarea= shiny::textAreaInput(ns(paste0("sf_", item$id)), NULL,
-                                    value       = resp[[item$id]] %||% "",
-                                    placeholder = item$placeholder %||% "",
-                                    rows        = 4),
-    date    = shiny::dateInput(ns(paste0("sf_", item$id)), NULL,
-                                value = resp[[item$id]] %||% Sys.Date(),
-                                min = item$date_min %||% NULL,
-                                max = item$date_max %||% NULL),
-    slider  = shiny::sliderInput(ns(paste0("sf_", item$id)), NULL,
-                                  min   = item$slider_min %||% 0,
-                                  max   = item$slider_max %||% 100,
-                                  step  = item$slider_step %||% 1,
-                                  value = resp[[item$id]] %||%
-                                    round((item$slider_min %||% 0 +
-                                             item$slider_max %||% 100) / 2)),
-    shiny::p(style = "color:#94a3b8;font-size:12px",
-             paste0("Item type '", t, "' renders in the full studio."))
-  )
-
-  shiny::div(class = "item",
-    lbl_tag, help_tag, ctrl
-  )
-}
-
-sf_mod_likert <- function(item, cs, ns, resp) {
-  if (is.null(cs)) return(shiny::p("Choice set not found.", style = "color:#dc2626"))
-  saved <- resp[[item$id]] %||% character(0)
-  choices <- stats::setNames(as.character(cs$values), cs$labels)
-  shiny::radioButtons(ns(paste0("sf_", item$id)), NULL,
-                       choices = choices, selected = saved,
-                       inline  = TRUE)
-}
-
-sf_mod_single <- function(item, cs, ns, resp) {
-  if (is.null(cs)) return(shiny::p("Choice set not found.", style = "color:#dc2626"))
-  saved <- resp[[item$id]] %||% character(0)
-  choices <- stats::setNames(as.character(cs$values), cs$labels)
-  shiny::radioButtons(ns(paste0("sf_", item$id)), NULL,
-                       choices = choices, selected = saved)
-}
-
-sf_mod_multi <- function(item, cs, ns, resp) {
-  if (is.null(cs)) return(shiny::p("Choice set not found.", style = "color:#dc2626"))
-  saved_raw <- resp[[item$id]] %||% ""
-  saved     <- strsplit(as.character(saved_raw), ",")[[1]]
-  choices   <- stats::setNames(as.character(cs$values), cs$labels)
-  shiny::checkboxGroupInput(ns(paste0("sf_", item$id)), NULL,
-                             choices = choices, selected = saved)
 }

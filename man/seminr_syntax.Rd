@@ -21,3 +21,14 @@ An R syntax string for \code{seminr}.
 \description{
 Generate seminr PLS-SEM syntax
 }
+\examples{
+m <- sf_model(
+  "pls1", type = "pls_sem",
+  constructs = list(
+    sf_construct("sq", items = c("sq_1", "sq_2", "sq_3")),
+    sf_construct("sat", items = c("sat_1", "sat_2"))
+  ),
+  paths = list(sf_path("sq", "sat"))
+)
+cat(seminr_syntax(m))
+}

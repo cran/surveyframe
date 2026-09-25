@@ -166,12 +166,12 @@
   ),
   r_core = list(
     key  = "r_core",
-    apa  = "R Core Team. (2026). *R: A language and environment for statistical computing*. R Foundation for Statistical Computing.",
+    apa  = "R Core Team. ({r_year}). *R: A language and environment for statistical computing*. R Foundation for Statistical Computing.",
     use  = "all"
   ),
   surveyframe = list(
     key  = "surveyframe",
-    apa  = "Sharafuddin, M. A. (2026). *surveyframe: Survey Instrument Workflows* (Version %s) [Computer software]. https://github.com/MohammedAliSharafuddin/surveyframe",
+    apa  = "Sharafuddin, M. A. ({year}). *surveyframe: Survey Instrument Workflows* (Version {version}) [Computer software]. https://github.com/MohammedAliSharafuddin/surveyframe",
     use  = "all"
   )
 )
@@ -181,13 +181,30 @@ sframe_citations_for_test <- function(test) {
   matching <- Filter(function(cit) {
     "all" %in% cit$use || test %in% cit$use
   }, citations)
-  # Inject the live package version into any citation template (the surveyframe
-  # self-citation), so the version never goes stale on a release bump.
+  # Fill the templates from the installed package and the running R, so the
+  # version and the years never go stale on a release bump or a new year.
   ver <- tryCatch(as.character(utils::packageVersion("surveyframe")),
                   error = function(e) "0.3.2")
+  fill <- c("{version}" = ver, "{year}" = .sframe_release_year(),
+            "{r_year}" = R.version$year)
   lapply(matching, function(cit) {
-    if (grepl("%s", cit$apa, fixed = TRUE)) sprintf(cit$apa, ver) else cit$apa
+    apa <- cit$apa
+    for (k in names(fill)) apa <- gsub(k, fill[[k]], apa, fixed = TRUE)
+    apa
   })
+}
+
+# The year this build of surveyframe was released: CRAN's publication date,
+# else the date the tarball was built, else today for a source load.
+.sframe_release_year <- function() {
+  desc <- tryCatch(utils::packageDescription("surveyframe"),
+                   error = function(e) list())
+  for (field in c("Date/Publication", "Packaged", "Date")) {
+    value <- desc[[field]]
+    if (!is.null(value) && !is.na(value) &&
+        grepl("^[0-9]{4}-", value)) return(substr(value, 1L, 4L))
+  }
+  format(Sys.Date(), "%Y")
 }
 
 # ---------------------------------------------------------------------------
@@ -227,10 +244,20 @@ sframe_effect_label <- function(d, type = "d") {
   "unknown"
 }
 
+# A p value for a table cell: 3 decimals, <.001 below that, blank when missing.
+sframe_p_cell <- function(p) {
+  ifelse(is.na(p), "",
+         ifelse(p < .001, "<.001", formatC(p, digits = 3, format = "f")))
+}
+
+# APA 7 asks for no leading zero on a statistic that cannot exceed 1, and p is
+# one of those, so "= 0.032" becomes "= .032". 3 decimals for an exact p is
+# within the guide's 2-or-3. A p of exactly 1 keeps its digit, since there is
+# no leading zero to drop.
 sframe_p_string <- function(p) {
   if (is.na(p)) return("= NA")
   if (p < .001) return("< .001")
-  sprintf("= %s", formatC(p, digits = 3, format = "f"))
+  sprintf("= %s", sub("^0\\.", ".", formatC(p, digits = 3, format = "f")))
 }
 
 # ---------------------------------------------------------------------------
@@ -249,7 +276,7 @@ sframe_run_frequency <- function(data, vars, weights = NULL) {
   pct <- round(prop.table(tbl) * 100, 1)
   weighted <- NULL
   if (!is.null(weights) && nzchar(weights) && weights %in% colnames(data)) {
-    w <- suppressWarnings(as.numeric(data[[weights]]))
+    w <- sframe_num((data[[weights]]))
     weighted <- stats::aggregate(
       w,
       by = list(Value = ifelse(is.na(vals), NA, as.character(vals))),
@@ -315,7 +342,7 @@ sframe_run_crosstab <- function(data, vars, options = list()) {
   v_ci <- cramers_v_ci(tbl)
   weighted_table <- NULL
   if (!is.null(weights) && nzchar(weights) && weights %in% colnames(data)) {
-    w <- suppressWarnings(as.numeric(data[[weights]][complete]))
+    w <- sframe_num((data[[weights]][complete]))
     weighted_table <- stats::xtabs(w ~ r + c)
   }
   list(
@@ -362,16 +389,19 @@ sframe_run_mann_whitney <- function(data, vars) {
     return(list(test = "mann_whitney",
                 error = "Mann-Whitney requires exactly two groups."))
   }
-  g1 <- suppressWarnings(as.numeric(data[[outcome_col]][data[[group_col]] == groups[1]]))
-  g2 <- suppressWarnings(as.numeric(data[[outcome_col]][data[[group_col]] == groups[2]]))
+  g1 <- sframe_num((data[[outcome_col]][data[[group_col]] == groups[1]]))
+  g2 <- sframe_num((data[[outcome_col]][data[[group_col]] == groups[2]]))
   g1 <- g1[!is.na(g1)]; g2 <- g2[!is.na(g2)]
   wt <- tryCatch(
-    stats::wilcox.test(g1, g2, exact = FALSE, conf.int = TRUE),
+    stats::wilcox.test(g1, g2, exact = FALSE, correct = FALSE, conf.int = TRUE),
     error = function(e) NULL
   )
   if (is.null(wt)) return(list(test = "mann_whitney", error = "Test failed."))
+  # z, p, r and the r interval all use the tie-corrected normal approximation
+  # without continuity correction, and z is signed by group order. z rebuilt
+  # from p/2 was always negative, and the interval described a different r.
   n <- length(g1) + length(g2)
-  z <- stats::qnorm(wt$p.value / 2)
+  z <- sframe_rank_z(g1, g2)
   r <- abs(z) / sqrt(n)
   r_ci <- sframe_rank_r_ci(g1, g2)
   hl_shift <- unname(wt$estimate)
@@ -405,7 +435,9 @@ sframe_run_mann_whitney <- function(data, vars) {
   )
 }
 
-sframe_run_t_test <- function(data, vars) {
+sframe_run_t_test <- function(data, vars, options = list()) {
+  alpha <- options$alpha %||% 0.05
+  var_equal <- isTRUE(options$var_equal)
   group_col <- vars[1]
   outcome_col <- vars[2]
   groups <- unique(data[[group_col]][!is.na(data[[group_col]])])
@@ -413,16 +445,17 @@ sframe_run_t_test <- function(data, vars) {
     return(list(test = "t_test_ind",
                 error = "Independent t-test requires exactly two groups."))
   }
-  g1 <- suppressWarnings(as.numeric(data[[outcome_col]][data[[group_col]] == groups[1]]))
-  g2 <- suppressWarnings(as.numeric(data[[outcome_col]][data[[group_col]] == groups[2]]))
+  g1 <- sframe_num((data[[outcome_col]][data[[group_col]] == groups[1]]))
+  g2 <- sframe_num((data[[outcome_col]][data[[group_col]] == groups[2]]))
   g1 <- g1[!is.na(g1)]; g2 <- g2[!is.na(g2)]
-  tt <- tryCatch(stats::t.test(g1, g2), error = function(e) NULL)
+  tt <- tryCatch(stats::t.test(g1, g2, var.equal = var_equal), error = function(e) NULL)
   if (is.null(tt)) return(list(test = "t_test_ind", error = "Test failed."))
   d <- sframe_cohens_d(g1, g2)
   d_ci <- cohens_d_ci(g1, g2)
   list(
     test     = "t_test_ind",
     vars     = vars,
+    var_equal = var_equal,
     groups   = as.character(groups),
     n1       = length(g1), n2 = length(g2),
     mean1    = mean(g1), mean2 = mean(g2),
@@ -439,7 +472,7 @@ sframe_run_t_test <- function(data, vars) {
     ),
     prompt   = sprintf(
       "The independent-samples t-test %s a significant difference between %s (M = %.2f, SD = %.2f) and %s (M = %.2f, SD = %.2f), t(%.2f) = %.2f, p %s, d = %.2f%s (%s effect). Discuss the direction and magnitude.",
-      if (tt$p.value < .05) "revealed" else "did not reveal",
+      if (tt$p.value < alpha) "revealed" else "did not reveal",
       groups[1], mean(g1), stats::sd(g1),
       groups[2], mean(g2), stats::sd(g2),
       tt$parameter, tt$statistic,
@@ -449,10 +482,11 @@ sframe_run_t_test <- function(data, vars) {
   )
 }
 
-sframe_run_anova_one <- function(data, vars) {
+sframe_run_anova_one <- function(data, vars, options = list()) {
+  alpha <- options$alpha %||% 0.05
   group_col <- vars[1]
   outcome_col <- vars[2]
-  outcome <- suppressWarnings(as.numeric(data[[outcome_col]]))
+  outcome <- sframe_num((data[[outcome_col]]))
   group <- as.factor(data[[group_col]])
   complete <- !is.na(outcome) & !is.na(group)
   n <- sum(complete)
@@ -482,7 +516,7 @@ sframe_run_anova_one <- function(data, vars) {
     collapse = ", "
   )
 
-  tukey <- if (!is.na(p_val) && p_val < 0.05 && k > 2) {
+  tukey <- if (!is.na(p_val) && p_val < alpha && k > 2) {
     tryCatch(
       utils::capture.output(stats::TukeyHSD(fit)),
       error = function(e) NULL
@@ -512,7 +546,7 @@ sframe_run_anova_one <- function(data, vars) {
     ),
     prompt = sprintf(
       "The one-way ANOVA %s a significant effect of %s on %s, F(%d, %d) = %.2f, p %s, \u03b7\u00b2 = %.3f%s (%s effect). Group means: %s. %s",
-      if (!is.na(p_val) && p_val < .05) "revealed" else "did not reveal",
+      if (!is.na(p_val) && p_val < alpha) "revealed" else "did not reveal",
       vars[1], vars[2],
       k - 1, n - k, F_stat, sframe_p_string(p_val),
       eta2, sframe_ci_string(eta_ci), sframe_effect_label(eta2, "eta2"),
@@ -525,8 +559,8 @@ sframe_run_anova_one <- function(data, vars) {
 }
 
 sframe_run_t_test_pair <- function(data, vars) {
-  x <- suppressWarnings(as.numeric(data[[vars[1]]]))
-  y <- suppressWarnings(as.numeric(data[[vars[2]]]))
+  x <- sframe_num((data[[vars[1]]]))
+  y <- sframe_num((data[[vars[2]]]))
 
   complete <- !is.na(x) & !is.na(y)
   x <- x[complete]
@@ -579,8 +613,8 @@ sframe_run_t_test_pair <- function(data, vars) {
 }
 
 sframe_run_wilcoxon_pair <- function(data, vars) {
-  x <- suppressWarnings(as.numeric(data[[vars[1]]]))
-  y <- suppressWarnings(as.numeric(data[[vars[2]]]))
+  x <- sframe_num((data[[vars[1]]]))
+  y <- sframe_num((data[[vars[2]]]))
 
   complete <- !is.na(x) & !is.na(y)
   x <- x[complete]
@@ -593,14 +627,23 @@ sframe_run_wilcoxon_pair <- function(data, vars) {
   }
 
   wt <- tryCatch(
-    stats::wilcox.test(x, y, paired = TRUE, exact = FALSE, conf.int = TRUE),
+    stats::wilcox.test(x, y, paired = TRUE, exact = FALSE, correct = FALSE,
+                       conf.int = TRUE),
     error = function(e) NULL
   )
   if (is.null(wt)) return(list(test = "wilcoxon_pair", error = "Test failed."))
 
-  z <- stats::qnorm(wt$p.value / 2)
-  r <- abs(z) / sqrt(n)
-  r_ci <- sframe_signed_rank_r_ci(x - y)
+  # One definition for z, p, r and the interval, on the non-zero differences
+  # the test itself uses. r previously divided by every pair, zeros included.
+  n_nonzero <- sum((x - y) != 0)
+  differences <- x - y
+  nonzero_differences <- differences[is.finite(differences) & differences != 0]
+  signed_ranks <- rank(abs(nonzero_differences))
+  V <- sum(signed_ranks[nonzero_differences > 0])
+  z <- sframe_signed_rank_z(differences)
+  p <- 2 * stats::pnorm(-abs(z))
+  r <- abs(z) / sqrt(n_nonzero)
+  r_ci <- sframe_signed_rank_r_ci(differences)
   pseudomedian <- unname(wt$estimate)
   pseudomedian_conf_int <- as.numeric(wt$conf.int)
   pm_ci_named <- c(lower = pseudomedian_conf_int[1], upper = pseudomedian_conf_int[2])
@@ -609,11 +652,12 @@ sframe_run_wilcoxon_pair <- function(data, vars) {
     test = "wilcoxon_pair",
     vars = vars,
     n = n,
+    n_nonzero = n_nonzero,
     median_x = stats::median(x),
     median_y = stats::median(y),
-    V = unname(wt$statistic),
+    V = V,
     z = z,
-    p = wt$p.value,
+    p = p,
     r = r,
     r_ci = r_ci,
     pseudomedian = pseudomedian,
@@ -621,16 +665,16 @@ sframe_run_wilcoxon_pair <- function(data, vars) {
     effect_label = sframe_effect_label(r, "r"),
     apa = sprintf(
       "V = %.0f, z = %.2f, p %s, r = %.2f%s, pseudomedian = %.2f%s",
-      wt$statistic, z, sframe_p_string(wt$p.value), r,
+      V, z, sframe_p_string(p), r,
       sframe_ci_string(r_ci), pseudomedian, sframe_ci_string(pm_ci_named)
     ),
     prompt = sprintf(
       "The Wilcoxon signed-rank test %s a significant difference between %s (Mdn = %.2f) and %s (Mdn = %.2f), V = %.0f, z = %.2f, p %s, r = %.2f%s (%s effect). Discuss the direction and practical significance.",
-      if (wt$p.value < .05) "revealed" else "did not reveal",
+      if (p < .05) "revealed" else "did not reveal",
       vars[1], stats::median(x),
       vars[2], stats::median(y),
-      wt$statistic, z,
-      sframe_p_string(wt$p.value),
+      V, z,
+      sframe_p_string(p),
       r, sframe_ci_string(r_ci), sframe_effect_label(r, "r")
     )
   )
@@ -639,7 +683,7 @@ sframe_run_wilcoxon_pair <- function(data, vars) {
 sframe_run_kruskal <- function(data, vars) {
   group_col <- vars[1]
   outcome_col <- vars[2]
-  outcome <- suppressWarnings(as.numeric(data[[outcome_col]]))
+  outcome <- sframe_num((data[[outcome_col]]))
   group   <- data[[group_col]]
   complete <- !is.na(outcome) & !is.na(group)
   kt <- tryCatch(
@@ -676,8 +720,8 @@ sframe_run_kruskal <- function(data, vars) {
 }
 
 sframe_run_correlation <- function(data, vars, method = "pearson") {
-  x <- suppressWarnings(as.numeric(data[[vars[1]]]))
-  y <- suppressWarnings(as.numeric(data[[vars[2]]]))
+  x <- sframe_num((data[[vars[1]]]))
+  y <- sframe_num((data[[vars[2]]]))
   complete <- !is.na(x) & !is.na(y)
   n <- sum(complete)
   ct <- tryCatch(
@@ -719,11 +763,9 @@ sframe_run_correlation <- function(data, vars, method = "pearson") {
 }
 
 sframe_run_regression <- function(data, vars) {
-  outcome <- suppressWarnings(as.numeric(data[[vars[length(vars)]]]))
+  outcome <- sframe_num((data[[vars[length(vars)]]]))
   predictors <- vars[-length(vars)]
-  pred_data <- as.data.frame(lapply(data[predictors], function(x) {
-    suppressWarnings(as.numeric(x))
-  }))
+  pred_data <- sframe_predictor_frame(data, predictors)
   pred_data[[vars[length(vars)]]] <- outcome
   complete <- complete.cases(pred_data)
   n <- sum(complete)
@@ -785,9 +827,7 @@ sframe_run_logistic_binary <- function(data, vars) {
                                "' must have exactly two non-missing levels.")))
   }
 
-  pred_data <- as.data.frame(lapply(data[predictors], function(x) {
-    suppressWarnings(as.numeric(x))
-  }))
+  pred_data <- sframe_predictor_frame(data, predictors)
   pred_data[[outcome_col]] <- as.integer(outcome_fac) - 1L
   complete <- stats::complete.cases(pred_data)
   n <- sum(complete)
@@ -940,6 +980,78 @@ sframe_result_from_report <- function(report, test = report$method %||% "") {
   out
 }
 
+#' The second table a result carries, if it has one
+#'
+#' Some results hold a table beside their main one that a reader needs: a
+#' quanteda result's leading features, or a moderation's conditional slopes at
+#' the moderator's own values. Both report engines render whatever this returns,
+#' under its own caption, so the 2 cannot drift on what a result shows.
+#'
+#' This is exported because the Quarto report template runs in a separate R
+#' session against the installed package, so everything it calls has to be
+#' part of the public surface. A template calling an internal through `:::`
+#' fails there and the renderer falls back to the built-in HTML engine without
+#' saying why.
+#'
+#' @param result One analysis block's result from [run_analysis_plan()].
+#'
+#' @return A list with `table` and `caption`, or `NULL` where the result has no
+#'   second table.
+#' @export
+#' @seealso [run_analysis_plan()], [render_report()], [analysis_syntax()]
+#'
+#' @examples
+#' instr <- sf_instrument("Moderation demo", components = list(
+#'   sf_item("y", "Outcome", type = "numeric"),
+#'   sf_item("x", "Predictor", type = "numeric"),
+#'   sf_item("w", "Moderator", type = "numeric")
+#' ))
+#' sf_plan(instr) <- list(list(
+#'   id = "RQ1", research_question = "Does w moderate x?",
+#'   family = "inferential", method = "moderation",
+#'   roles = list(outcome = "y", predictor = "x", moderator = "w")
+#' ))
+#'
+#' set.seed(1)
+#' n <- 80
+#' responses <- data.frame(x = rnorm(n), w = rnorm(n))
+#' responses$y <- 0.4 * responses$x + 0.3 * responses$w +
+#'   0.35 * responses$x * responses$w + rnorm(n, sd = 0.6)
+#' results <- run_analysis_plan(responses, instr)
+#'
+#' # the conditional slopes, at the moderator's own values
+#' sframe_result_supplement(results$RQ1)
+sframe_result_supplement <- function(result) {
+  if (!is.list(result)) return(NULL)
+  test <- result$test %||% ""
+
+  if (identical(test, "moderation") &&
+      is.data.frame(result$conditional_effects) &&
+      nrow(result$conditional_effects) > 0) {
+    grid <- result$conditional_effects
+    vars <- result$vars %||% character(0)
+    mod_name <- if (length(vars) >= 3) vars[[3]] else "moderator"
+    x_name <- if (length(vars) >= 2) vars[[2]] else "predictor"
+    out <- data.frame(
+      Level = as.character(grid$level %||% seq_len(nrow(grid))),
+      check.names = FALSE, stringsAsFactors = FALSE
+    )
+    out[[sprintf("%s value", mod_name)]] <- sprintf("%.3f", grid$moderator_value)
+    out[[sprintf("Slope of %s", x_name)]] <- sprintf("%.3f", grid$simple_slope)
+    return(list(
+      table = out,
+      caption = sprintf("Conditional effect of %s at values of %s",
+                        x_name, mod_name)))
+  }
+
+  # The quanteda DFM runner's leading features, which its own prompt asks a
+  # reader to review.
+  if (is.data.frame(result$top_features) && nrow(result$top_features) > 0) {
+    return(list(table = result$top_features, caption = "Leading features"))
+  }
+  NULL
+}
+
 # v0.3.4: formatted result tables for the inferential runners, suitable for
 # knitr::kable(). Built centrally from each runner's existing fields so the
 # runners themselves stay untouched; results that already carry a table
@@ -1082,12 +1194,34 @@ sframe_result_table <- function(result) {
         check.names = FALSE, stringsAsFactors = FALSE, row.names = NULL
       )
     },
-    mediation = data.frame(
-      Effect = c("Direct (c')", "Indirect (a\u00D7b)", "Total (c)"),
-      Estimate = fmt(c(result$direct, result$indirect, result$total)),
-      `95% CI` = c("", sprintf("[%.3f, %.3f]", result$indirect_ci[[1]], result$indirect_ci[[2]]), ""),
-      check.names = FALSE, stringsAsFactors = FALSE
-    ),
+    mediation = {
+      # vars is outcome, predictor, mediator, as sframe_run_mediation() builds
+      # it. Naming them, and reporting a and b, is what lets a reader tell
+      # which model produced these effects and see the signs behind the
+      # product: 2 negatives give the same positive indirect effect as 2
+      # positives, and the table used to show neither.
+      y <- result$vars[[1]]; x <- result$vars[[2]]; m <- result$vars[[3]]
+      has_ci <- length(result$indirect_ci) >= 2 &&
+        all(is.finite(unlist(result$indirect_ci[1:2])))
+      data.frame(
+        Effect = c(
+          sprintf("a (%s \u2192 %s)", x, m),
+          sprintf("b (%s \u2192 %s)", m, y),
+          sprintf("Direct (c', %s \u2192 %s)", x, y),
+          sprintf("Indirect (a\u00D7b, %s \u2192 %s \u2192 %s)", x, m, y),
+          sprintf("Total (c, %s \u2192 %s)", x, y)
+        ),
+        Estimate = fmt(c(result$a_path, result$b_path, result$direct,
+                         result$indirect, result$total)),
+        `95% CI` = c("", "", "",
+                     if (has_ci) {
+                       sprintf("[%.3f, %.3f]", result$indirect_ci[[1]],
+                               result$indirect_ci[[2]])
+                     } else "",
+                     ""),
+        check.names = FALSE, stringsAsFactors = FALSE
+      )
+    },
     quality = {
       qr <- result$report_obj
       if (is.null(qr)) NULL else sframe_quality_checks_table(qr)
@@ -1200,7 +1334,11 @@ sframe_quality_checks_table <- function(qr) {
   }
   rows[[length(rows) + 1]] <- data.frame(
     Check = "duplicates", Type = "Duplicate rows",
-    Result = sprintf("%d flagged", qr$duplicates$n_duplicates %||% 0L),
+    Result = if (isFALSE(qr$duplicates$checked)) {
+      "not checked, no respondent ID column"
+    } else {
+      sprintf("%d flagged", qr$duplicates$n_duplicates %||% 0L)
+    },
     stringsAsFactors = FALSE
   )
   do.call(rbind, rows)
@@ -1239,12 +1377,12 @@ sframe_run_one_block <- function(block, data, instrument, plots = FALSE,
       frequency          = sframe_run_frequency(data, vars, weights = options$weights),
       descriptives       = sframe_run_descriptives_result(data, roles, options),
       missing_data       = sframe_run_missing_result(data, instrument, roles),
-      quality            = sframe_result_from_report(quality_report(data, instrument), "quality"),
+      quality            = sframe_result_from_report(sframe_run_quality(data, instrument, roles, options), "quality"),
       scale_descriptives = sframe_run_descriptives_result(data, list(variables = vapply(instrument$scales, function(s) s$id, character(1))), options),
-      reliability_alpha  = sframe_result_from_report(reliability_report(data, instrument, omega = FALSE), "reliability_alpha"),
-      reliability_omega  = sframe_result_from_report(reliability_report(data, instrument, alpha = FALSE, omega = TRUE), "reliability_omega"),
-      item_diagnostics   = sframe_result_from_report(item_report(data, instrument), "item_diagnostics"),
-      efa_readiness      = sframe_result_from_report(efa_report(data, instrument, nfactors = options$nfactors), "efa_readiness"),
+      reliability_alpha  = sframe_result_from_report(reliability_report(data, instrument, scales = sframe_block_scales(roles, instrument), omega = FALSE), "reliability_alpha"),
+      reliability_omega  = sframe_result_from_report(reliability_report(data, instrument, scales = sframe_block_scales(roles, instrument), alpha = FALSE, omega = TRUE), "reliability_omega"),
+      item_diagnostics   = sframe_result_from_report(item_report(data, instrument, scales = sframe_block_scales(roles, instrument)), "item_diagnostics"),
+      efa_readiness      = sframe_result_from_report(efa_report(data, instrument, scales = sframe_block_scales(roles, instrument), nfactors = options$nfactors), "efa_readiness"),
       efa_solution       = sframe_result_from_report(efa_solution(data, instrument, items = sframe_role_values(roles, c("items", "variables")), nfactors = options$nfactors %||% 1L), "efa_solution"),
       cfa_lavaan_syntax  = {
         model_id <- sframe_role_values(roles, "model", "")[1]
@@ -1273,10 +1411,10 @@ sframe_run_one_block <- function(block, data, instrument, plots = FALSE,
       mcnemar            = sframe_run_mcnemar(data, roles, options),
       cochran_q          = sframe_run_cochran_q(data, roles),
       mann_whitney       = sframe_run_mann_whitney(data, vars),
-      t_test_ind         = sframe_run_t_test(data, vars),
+      t_test_ind         = sframe_run_t_test(data, vars, options),
       t_test_pair        = sframe_run_t_test_pair(data, vars),
       kruskal_wallis     = sframe_run_kruskal(data, vars),
-      anova_one          = sframe_run_anova_one(data, vars),
+      anova_one          = sframe_run_anova_one(data, vars, options),
       anova_two          = sframe_run_anova_two(data, roles),
       ancova             = sframe_run_ancova(data, roles),
       repeated_anova     = sframe_run_repeated_anova(data, roles),
@@ -1331,6 +1469,7 @@ sframe_run_one_block <- function(block, data, instrument, plots = FALSE,
   result$family            <- block$family %||% ""
   result$roles             <- roles
   result$options           <- options
+  result$options_ignored   <- sframe_ignored_options(test, options)
   result$hypotheses        <- block$hypotheses %||% NULL
   result$decision_rule     <- block$decision_rule %||% block$interpretation %||% ""
   result$interpretation    <- block$interpretation %||% block$decision_rule %||% ""
@@ -1394,8 +1533,16 @@ sframe_run_one_block <- function(block, data, instrument, plots = FALSE,
 #'   `"print"` (black, grey, and white, for journal-ready print figures).
 #'   Applied to every plot attached when `plots = TRUE`. See `sframe_brand()`.
 #'
+#' @param strict Logical. When `TRUE`, an error is raised if any block fails
+#'   or scale scoring fails, listing each failure. When `FALSE`, the default,
+#'   failures are kept in the results and counted in their `status`.
+#'
 #' @return An object of class `sframe_analysis_results`, a list with one
-#'   element per analysis block. Each element contains the test result,
+#'   element per analysis block, named by block id. Its `status` attribute
+#'   holds `blocks`, `succeeded`, `failed`, `failed_blocks` and `scoring`, the
+#'   outcome of scoring scales before analysis. A normal return can hold
+#'   failed blocks, so check `attr(results, "status")$failed` or use
+#'   `strict = TRUE`. Each block element Each element contains the test result,
 #'   APA string, interpretation prompt, and reporting-reference metadata.
 #'   Inferential blocks also carry a `$table` data frame suitable for
 #'   `knitr::kable()`. Pass to [render_results()] to generate a formatted
@@ -1421,7 +1568,8 @@ sframe_run_one_block <- function(block, data, instrument, plots = FALSE,
 #' print(results)
 #' }
 run_analysis_plan <- function(data, instrument, scored = TRUE, plots = FALSE,
-                              plot_palette = c("web", "print"), seed = 20260828L) {
+                              plot_palette = c("web", "print"), seed = 20260828L,
+                              strict = FALSE) {
   plot_palette <- match.arg(plot_palette)
   sframe_check_instrument(instrument)
   stopifnot(is.data.frame(data))
@@ -1434,7 +1582,7 @@ run_analysis_plan <- function(data, instrument, scored = TRUE, plots = FALSE,
   if (!is.null(seed)) {
     out <- sframe_with_seed(seed, run_analysis_plan(
       data, instrument, scored = scored, plots = plots,
-      plot_palette = plot_palette, seed = NULL))
+      plot_palette = plot_palette, seed = NULL, strict = strict))
     # Recorded so render_report() can print it next to the instrument hash: a
     # report should state what reproducing it would take.
     attr(out, "seed") <- seed
@@ -1453,12 +1601,33 @@ run_analysis_plan <- function(data, instrument, scored = TRUE, plots = FALSE,
     )
   }
 
-  # Score scales first if requested
+  # Results are named by block id, so a repeated id makes a block impossible
+  # to retrieve by name.
+  ids <- vapply(plan, function(b) as.character(b$id %||% "")[1], character(1))
+  repeated <- unique(ids[nzchar(ids) & duplicated(ids)])
+  if (length(repeated) > 0) {
+    rlang::abort(
+      paste0("Analysis plan block id(s) used more than once: ",
+             paste0("'", repeated, "'", collapse = ", "),
+             ". Give every block its own id."),
+      class = "sframe_error"
+    )
+  }
+
+  # Score scales first if requested. The outcome is recorded in the results,
+  # so an analysis that ran on unscored data says so.
+  scoring <- if (!scored) "not requested"
+             else if (length(instrument$scales) == 0) "no scales declared"
+             else "scored"
   if (scored && length(instrument$scales) > 0) {
     data <- tryCatch(
       score_scales(data, instrument, keep_items = TRUE, keep_meta = TRUE),
       error = function(e) {
-        sframe_warn_scoring("Scale scoring failed before analysis: skipping.")
+        scoring <<- paste0("failed, so blocks ran on unscored data: ",
+                           conditionMessage(e))
+        sframe_warn_scoring(paste0("Scale scoring failed before analysis, so ",
+                                   "blocks run on unscored data: ",
+                                   conditionMessage(e)))
         data
       }
     )
@@ -1467,13 +1636,43 @@ run_analysis_plan <- function(data, instrument, scored = TRUE, plots = FALSE,
   results <- lapply(plan, sframe_run_one_block, data = data,
                     plot_palette = plot_palette,
                     instrument = instrument, plots = plots)
-  names(results) <- vapply(plan, function(b) b$id %||% "", character(1))
-  structure(results, class = "sframe_analysis_results")
+  names(results) <- ids
+  failed <- vapply(results, function(r) !is.null(r$error), logical(1))
+  status <- list(
+    blocks = length(results),
+    succeeded = sum(!failed),
+    failed = sum(failed),
+    failed_blocks = unname(ids[failed]),
+    scoring = scoring
+  )
+  if (isTRUE(strict) && (status$failed > 0 || startsWith(scoring, "failed"))) {
+    rlang::abort(
+      c(sprintf("%d of %d analysis blocks failed.", status$failed, status$blocks),
+        if (status$failed > 0)
+          stats::setNames(paste0("'", ids[failed], "': ",
+                                 vapply(results[failed], function(r) r$error, character(1))),
+                          rep("x", status$failed)),
+        if (startsWith(scoring, "failed")) c(x = paste("Scale scoring", scoring))),
+      class = "sframe_error"
+    )
+  }
+  structure(results, class = "sframe_analysis_results", status = status)
 }
 
 #' @exportS3Method print sframe_analysis_results
 print.sframe_analysis_results <- function(x, ...) {
-  cat(sprintf("Analysis Results: %d research question(s)\n\n", length(x)))
+  cat(sprintf("Analysis Results: %d research question(s)\n", length(x)))
+  status <- attr(x, "status")
+  if (!is.null(status)) {
+    if (status$failed > 0) {
+      cat(sprintf("  %d of %d blocks failed: %s\n", status$failed, status$blocks,
+                  paste(status$failed_blocks, collapse = ", ")))
+    }
+    if (!status$scoring %in% c("scored", "not requested", "no scales declared")) {
+      cat(sprintf("  Scale scoring %s\n", status$scoring))
+    }
+  }
+  cat("\n")
   for (i in seq_along(x)) {
     r <- x[[i]]
     cat(sprintf("RQ %d: %s\n", i, r$research_question %||% "(untitled)"))
@@ -1599,14 +1798,27 @@ render_results <- function(
     tbl_html <- ""
     if (!is.null(r$table) && is.data.frame(r$table)) {
       tbl <- r$table
+      # p values keep 3 decimals, or <.001, by column meaning. Rounding every
+      # numeric column to 2 showed p = .004 as 0.
+      p_cols <- grepl("^p$|^p\\.value$|^p_value$|^Pr\\(>", colnames(tbl),
+                      ignore.case = TRUE)
+      for (j in which(p_cols & vapply(tbl, is.numeric, logical(1)))) {
+        tbl[[j]] <- sframe_p_cell(tbl[[j]])
+      }
       num_cols <- vapply(tbl, is.numeric, logical(1))
       if (any(num_cols)) tbl[num_cols] <- lapply(tbl[num_cols], function(col) round(col, 2))
+      # Each value is escaped on its own. htmltools_escape() pastes a vector
+      # into one string, which put a whole row, and the whole header, in a
+      # single cell.
+      escape_each <- function(v) {
+        vapply(as.character(v), function(x) htmltools_escape(trimws(x)),
+               character(1), USE.NAMES = FALSE)
+      }
       rows <- paste(apply(tbl, 1, function(row) {
-        cells <- paste(sprintf("<td>%s</td>", htmltools_escape(as.character(row))),
-                      collapse = "")
+        cells <- paste(sprintf("<td>%s</td>", escape_each(row)), collapse = "")
         sprintf("<tr>%s</tr>", cells)
       }), collapse = "")
-      headers <- paste(sprintf("<th>%s</th>", htmltools_escape(colnames(tbl))),
+      headers <- paste(sprintf("<th>%s</th>", escape_each(colnames(tbl))),
                       collapse = "")
       has_pval <- any(grepl(
         "^p$|^p\\.value$|^p_value$|^Pr\\(>",

@@ -38,6 +38,16 @@ diverging bar per item, sharing an x scale and a legend. Applies only
 when every item in the scale shares the same choice set. Scales that mix
 response scales fall back to one chart per item.
 }
+\examples{
+\donttest{
+if (requireNamespace("ggplot2", quietly = TRUE)) {
+  demo <- sframe_demo("likert_scale")
+  groups <- sframe_likert_scale_groups(demo$instrument)
+  g <- groups[["organisation"]]
+  sframe_plot_likert_scale(g$items, demo$responses, g$choice_set, g$title)
+}
+}
+}
 \seealso{
 \code{\link[=sframe_plot_likert_matrix]{sframe_plot_likert_matrix()}}, \code{\link[=sf_scale]{sf_scale()}}
 }

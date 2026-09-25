@@ -10,7 +10,8 @@ run_analysis_plan(
   scored = TRUE,
   plots = FALSE,
   plot_palette = c("web", "print"),
-  seed = 20260828L
+  seed = 20260828L,
+  strict = FALSE
 )
 }
 \arguments{
@@ -40,10 +41,18 @@ the parallel analysis behind the EFA family, depend on it. Pass \code{NULL} for
 the unseeded behaviour of releases before 0.4.1. The caller's own random
 stream is restored afterwards, so seeding here does not affect anything
 that runs later.}
+
+\item{strict}{Logical. When \code{TRUE}, an error is raised if any block fails
+or scale scoring fails, listing each failure. When \code{FALSE}, the default,
+failures are kept in the results and counted in their \code{status}.}
 }
 \value{
 An object of class \code{sframe_analysis_results}, a list with one
-element per analysis block. Each element contains the test result,
+element per analysis block, named by block id. Its \code{status} attribute
+holds \code{blocks}, \code{succeeded}, \code{failed}, \code{failed_blocks} and \code{scoring}, the
+outcome of scoring scales before analysis. A normal return can hold
+failed blocks, so check \code{attr(results, "status")$failed} or use
+\code{strict = TRUE}. Each block element Each element contains the test result,
 APA string, interpretation prompt, and reporting-reference metadata.
 Inferential blocks also carry a \verb{$table} data frame suitable for
 \code{knitr::kable()}. Pass to \code{\link[=render_results]{render_results()}} to generate a formatted

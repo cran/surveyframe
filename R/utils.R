@@ -47,14 +47,49 @@ sframe_label_lookup <- function(instrument) {
   }
   for (i in instrument$items %||% list()) add(i$id, i$label)
   for (s in instrument$scales %||% list()) add(s$id, s$label)
+
+  # A choice code is scoped to its choice set, and this dictionary has no
+  # column context to scope by. A code meaning 2 different things in 2 sets
+  # used to take whichever label was read first, so "1" from a frequency item
+  # printed as "Strongly disagree". A code carrying one meaning across the
+  # whole instrument still relabels; an ambiguous one stays as its code, and
+  # sframe_item_value_labels() gives the labels where the item is known.
+  code_labels <- list()
   for (cs in instrument$choices %||% list()) {
     vals <- as.character(cs$values %||% character(0))
-    labs <- cs$labels %||% character(0)
-    if (length(vals) == length(labs)) {
-      for (k in seq_along(vals)) add(vals[k], labs[k])
+    labs <- as.character(cs$labels %||% character(0))
+    if (length(vals) != length(labs)) next
+    for (k in seq_along(vals)) {
+      code_labels[[vals[k]]] <- unique(c(code_labels[[vals[k]]], labs[k]))
     }
   }
+  for (code in names(code_labels)) {
+    if (length(code_labels[[code]]) == 1) add(code, code_labels[[code]])
+  }
   lookup
+}
+
+# The value labels for one item, read through the choice set it names. This is
+# the context-aware counterpart to sframe_label_lookup(), for a caller that
+# knows which item a column holds.
+sframe_item_value_labels <- function(instrument, item_id) {
+  if (is.null(instrument) || !inherits(instrument, "sframe")) {
+    return(character(0))
+  }
+  ids <- vapply(instrument$items %||% list(),
+                function(i) as.character(i$id %||% "")[1], character(1))
+  hit <- match(as.character(item_id)[1], ids)
+  if (is.na(hit)) return(character(0))
+  set_id <- as.character(instrument$items[[hit]]$choice_set %||% "")[1]
+  if (!nzchar(set_id)) return(character(0))
+  for (cs in instrument$choices %||% list()) {
+    if (!identical(as.character(cs$id %||% "")[1], set_id)) next
+    vals <- as.character(cs$values %||% character(0))
+    labs <- as.character(cs$labels %||% character(0))
+    if (length(vals) != length(labs)) return(character(0))
+    return(stats::setNames(labs, vals))
+  }
+  character(0)
 }
 
 # Replace ids and coded values with their labels wherever they appear in a
@@ -93,4 +128,11 @@ sframe_humanize_table <- function(tbl, lookup, exclude_cols = character(0)) {
   char_cols[orig_names %in% exclude_cols] <- FALSE
   tbl[char_cols] <- lapply(tbl[char_cols], relabel)
   tbl
+}
+
+# One seam for optional-package availability checks. Besides keeping runners
+# consistent, this lets their missing-dependency branches be tested on a
+# machine where the optional package happens to be installed.
+sframe_has_package <- function(package) {
+  requireNamespace(package, quietly = TRUE)
 }

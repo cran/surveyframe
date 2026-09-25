@@ -30,6 +30,15 @@ not change skewness. Each violin's subtitle-free panel keeps the
 variable's skewness value in its axis label. Grouped \code{descriptives_report()}
 output (one row per variable per \code{split_by} group) is faceted by group.
 }
+\examples{
+\donttest{
+if (requireNamespace("ggplot2", quietly = TRUE)) {
+  demo <- sframe_demo_data()
+  dr <- descriptives_report(demo$responses, variables = c("sat_1", "sat_2"))
+  sframe_plot_descriptives(dr, demo$responses)
+}
+}
+}
 \seealso{
 \code{\link[=descriptives_report]{descriptives_report()}}
 }

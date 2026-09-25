@@ -2,29 +2,7 @@
 % Please edit documentation in R/validation_result.R
 \name{sframe_validation}
 \alias{sframe_validation}
-\alias{print.sframe_validation}
-\alias{format.sframe_validation}
-\alias{summary.sframe_validation}
-\alias{as.data.frame.sframe_validation}
 \title{Report on a validation result}
-\usage{
-\method{print}{sframe_validation}(x, ...)
-
-\method{format}{sframe_validation}(x, ...)
-
-\method{summary}{sframe_validation}(object, ...)
-
-\method{as.data.frame}{sframe_validation}(x, row.names = NULL, optional = FALSE, ...)
-}
-\arguments{
-\item{x, object}{An \code{sframe_validation} object.}
-
-\item{...}{Ignored. Present for S3 consistency.}
-
-\item{row.names}{Passed to \code{\link[base:as.data.frame]{base::as.data.frame()}}.}
-
-\item{optional}{Passed to \code{\link[base:as.data.frame]{base::as.data.frame()}}.}
-}
 \value{
 \code{print()} returns \code{x} invisibly. \code{format()} returns a single
 character string. \code{summary()} returns the check table as a data frame.

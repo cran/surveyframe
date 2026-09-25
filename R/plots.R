@@ -1,3 +1,70 @@
+#' Choosing a plot
+#'
+#' surveyframe draws in 3 ways, and which one fits depends on what you already
+#' hold.
+#'
+#' # From a report or a set of results
+#'
+#' Every report that has a natural chart carries a `plot()` method, so a
+#' report draws without naming a helper:
+#'
+#' * `plot(reliability_report(...))` draws one report.
+#' * `plot(results)` draws each block of an analysis that has a chart.
+#' * `plot(results, which = "RQ1")` selects one block by its ID.
+#'
+#' This is the shortest route, and it is the one to reach for first.
+#'
+#' # From a helper, by what it takes
+#'
+#' The helpers exist for assembling a custom report, where you need one chart
+#' on its own terms. They differ in what they accept and in what comes back.
+#'
+#' * **A report object, giving 1 plot:**
+#'   * [sframe_plot_reliability()]
+#'   * [sframe_plot_validity()]
+#'   * [sframe_plot_quality()]
+#'   * [sframe_plot_missingness()]
+#'   * [sframe_plot_efa_scree()]
+#'   * [sframe_plot_efa_loadings()]
+#' * **Responses with the instrument, giving 1 plot:**
+#'   * [sframe_plot_item_chart()]
+#'   * [sframe_plot_scale_chart()]
+#'   * [sframe_plot_likert_matrix()]
+#'   * [sframe_plot_likert_scale()]
+#'   * [sframe_plot_correlation_matrix()]
+#'   * [sframe_plot_descriptives()]
+#' * **One block's result, giving 1 plot:**
+#'   * [sframe_plot_group_comparison()]
+#'   * [sframe_plot_paired_comparison()]
+#'   * [sframe_plot_decision_ranking()]
+#'   * [sframe_plot_dematel_influence()]
+#' * **A regression result, giving 4 panels as a list:**
+#'   * [sframe_plot_regression_diagnostics()]
+#' * **Responses and 1 column, giving 3 panels as a list:**
+#'   * [sframe_plot_variable_distribution()]
+#' * **A text result, giving 1 plot:**
+#'   * [sframe_plot_term_frequency()]
+#'   * [sframe_plot_ngram_frequency()]
+#'   * [sframe_plot_cooccurrence()]
+#'   * [sframe_plot_cooccurrence_network()]
+#'   * [sframe_plot_sentiment()]
+#'   * [sframe_plot_topics()]
+#'
+#' A helper that finds nothing to draw returns `NULL`, so guard the result
+#' where a report has to keep rendering.
+#'
+#' # Integration helpers
+#'
+#' [sframe_draw_mosaic()] and [sframe_draw_likert_diverging()] draw into an
+#' open device for the generated reports, and stay exported so those reports
+#' keep working. [sframe_likert_scale_groups()] finds the scales whose items
+#' share a choice set, which is how a report groups them. Take the results
+#' they draw from [run_analysis_plan()].
+#'
+#' @name sframe_plots
+#' @seealso [run_analysis_plan()], [render_report()]
+NULL
+
 # plots.R
 
 # Why sframe_plot_quality() has nothing to draw.
@@ -366,6 +433,14 @@ sframe_plot_frequency <- function(result, palette = c("web", "print")) {
 #' @return A ggplot2 object, or `NULL` when the result carries no table.
 #' @export
 #' @seealso [run_analysis_plan()], [term_frequency()]
+#' @examples
+#' \donttest{
+#' if (requireNamespace("ggplot2", quietly = TRUE)) {
+#'   demo <- sframe_demo("open_text")
+#'   res <- run_analysis_plan(demo$responses, demo$instrument)
+#'   sframe_plot_term_frequency(res$RQ1)
+#' }
+#' }
 sframe_plot_term_frequency <- function(result, palette = c("web", "print")) {
   rlang::check_installed("ggplot2", reason = "to plot term frequency.")
   palette <- match.arg(palette)
@@ -383,7 +458,13 @@ sframe_plot_term_frequency <- function(result, palette = c("web", "print")) {
     # and 40 already matches what other captions in this package call
     # "the top terms" for a word cloud.
     plot_tbl <- if (grouped) {
-      stats::aggregate(n ~ term, data = tbl, FUN = sum)
+      # The runner carries overall counts taken before any per-group cutoff.
+      # Summing the grouped table instead sums rows already truncated to
+      # top_n, so a term ranked just below the cutoff in every group vanished
+      # even where it led the corpus. Where the runner supplies none, the sum
+      # stands in and the caption says what it is.
+      result$overall_table %||% stats::aggregate(n ~ term, data = tbl,
+                                                 FUN = sum)
     } else {
       tbl
     }
@@ -488,6 +569,14 @@ sframe_plot_term_frequency <- function(result, palette = c("web", "print")) {
 #' @return A ggplot2 object, or `NULL` when the result carries no table.
 #' @export
 #' @seealso [run_analysis_plan()], [ngram_frequency()]
+#' @examples
+#' \donttest{
+#' if (requireNamespace("ggplot2", quietly = TRUE)) {
+#'   demo <- sframe_demo("open_text")
+#'   res <- run_analysis_plan(demo$responses, demo$instrument)
+#'   sframe_plot_ngram_frequency(res$RQ2)
+#' }
+#' }
 sframe_plot_ngram_frequency <- function(result, palette = c("web", "print")) {
   rlang::check_installed("ggplot2", reason = "to plot n-gram frequency.")
   palette <- match.arg(palette)
@@ -512,6 +601,14 @@ sframe_plot_ngram_frequency <- function(result, palette = c("web", "print")) {
 #' @return A ggplot2 object, or `NULL` when the result carries no table.
 #' @export
 #' @seealso [run_analysis_plan()], [term_frequency()]
+#' @examples
+#' \donttest{
+#' if (requireNamespace("ggplot2", quietly = TRUE)) {
+#'   demo <- sframe_demo("open_text")
+#'   res <- run_analysis_plan(demo$responses, demo$instrument)
+#'   sframe_plot_cooccurrence(res$RQ4)
+#' }
+#' }
 sframe_plot_cooccurrence <- function(result, palette = c("web", "print")) {
   rlang::check_installed("ggplot2", reason = "to plot term co-occurrence.")
   palette <- match.arg(palette)
@@ -668,6 +765,10 @@ sframe_plot_regression <- function(result, data, palette = c("web", "print")) {
 #' @export
 #' @keywords internal
 #' @seealso [sframe_plot_item_chart()]
+#' @examples
+#' counts <- c("Strongly disagree" = 5, "Disagree" = 10, "Neutral" = 15,
+#'             "Agree" = 40, "Strongly agree" = 30)
+#' sframe_draw_likert_diverging(counts)
 sframe_draw_likert_diverging <- function(counts, theme_color = "#16B3B1",
                                          palette = c("web", "print")) {
   palette <- match.arg(palette)
@@ -796,7 +897,13 @@ sframe_draw_likert_diverging <- function(counts, theme_color = "#16B3B1",
     if (sum(counts) == 0) next
     pct <- 100 * as.numeric(counts) / sum(counts)
 
-    x <- 0
+    # The negative stack starts where the neutral segment ends, which is half
+    # its width left of zero. Starting at 0 drew the negatives over the
+    # neutral segment: with 5 equally frequent categories the negatives ran
+    # -40 to 0 and neutral ran -10 to 10, so 10 percentage points of the bar
+    # were drawn twice and the bar came out 10 points short. The single-item
+    # chart already did this correctly.
+    x <- if (has_neutral) pct[neu_idx] / 2 else 0
     for (i in rev(neg_idx)) {
       w <- pct[i]
       segs[[length(segs) + 1]] <- data.frame(
@@ -896,6 +1003,15 @@ sframe_draw_likert_diverging <- function(counts, theme_color = "#16B3B1",
 #' @return A ggplot2 object, or `NULL` if no row has response data.
 #' @export
 #' @seealso [sframe_draw_likert_diverging()]
+#' @examples
+#' \donttest{
+#' if (requireNamespace("ggplot2", quietly = TRUE)) {
+#'   demo <- sframe_demo("matrix_likert")
+#'   item <- Filter(function(i) i$type == "matrix", demo$instrument$items)[[1]]
+#'   cs   <- Filter(function(c) c$id == item$choice_set, demo$instrument$choices)[[1]]
+#'   sframe_plot_likert_matrix(item, demo$responses, cs)
+#' }
+#' }
 sframe_plot_likert_matrix <- function(item, data, choice_set, palette = c("web", "print")) {
   rlang::check_installed("ggplot2", reason = "to plot a Likert matrix.")
   palette <- match.arg(palette)
@@ -936,6 +1052,15 @@ sframe_plot_likert_matrix <- function(item, data, choice_set, palette = c("web",
 #' @return A ggplot2 object, or `NULL` if no item has response data.
 #' @export
 #' @seealso [sframe_plot_likert_matrix()], [sf_scale()]
+#' @examples
+#' \donttest{
+#' if (requireNamespace("ggplot2", quietly = TRUE)) {
+#'   demo <- sframe_demo("likert_scale")
+#'   groups <- sframe_likert_scale_groups(demo$instrument)
+#'   g <- groups[["organisation"]]
+#'   sframe_plot_likert_scale(g$items, demo$responses, g$choice_set, g$title)
+#' }
+#' }
 sframe_plot_likert_scale <- function(items, data, choice_set, title, palette = c("web", "print")) {
   rlang::check_installed("ggplot2", reason = "to plot a scale's Likert items.")
   palette <- match.arg(palette)
@@ -972,6 +1097,10 @@ sframe_plot_likert_scale <- function(items, data, choice_set, title, palette = c
 #'   choice set object). Empty list if no scale qualifies.
 #' @export
 #' @seealso [sframe_plot_likert_scale()], [sf_scale()]
+#' @examples
+#' demo <- sframe_demo("likert_scale")
+#' groups <- sframe_likert_scale_groups(demo$instrument)
+#' names(groups)
 sframe_likert_scale_groups <- function(instrument) {
   choice_by <- function(id) {
     for (cs in instrument$choices %||% list()) if (identical(cs$id, id)) return(cs)
@@ -1087,6 +1216,14 @@ sframe_plot_for_result <- function(result, data, palette = c("web", "print")) {
 #' @return A ggplot2 object, or `NULL` when the result carries no ranking.
 #' @export
 #' @seealso [run_analysis_plan()]
+#' @examples
+#' \donttest{
+#' if (requireNamespace("ggplot2", quietly = TRUE)) {
+#'   demo <- sframe_demo("mcdm_choice")
+#'   res <- run_analysis_plan(demo$responses, demo$instrument)
+#'   sframe_plot_decision_ranking(res$RQ4)
+#' }
+#' }
 sframe_plot_decision_ranking <- function(result, palette = c("web", "print")) {
   rlang::check_installed("ggplot2", reason = "to plot a decision ranking.")
   palette <- match.arg(palette)
@@ -1187,6 +1324,15 @@ sframe_plot_sensitivity <- function(result, palette = c("web", "print")) {
 #'   `scale_location`, `leverage`), or `NULL` if diagnostics are unavailable.
 #' @export
 #' @seealso [run_analysis_plan()]
+#' @examples
+#' \donttest{
+#' if (requireNamespace("ggplot2", quietly = TRUE)) {
+#'   demo <- sframe_demo_data()
+#'   res <- run_analysis_plan(demo$responses, demo$instrument)
+#'   panels <- sframe_plot_regression_diagnostics(res$rq_predict_sat)
+#'   panels$residuals_fitted
+#' }
+#' }
 sframe_plot_regression_diagnostics <- function(result, palette = c("web", "print")) {
   rlang::check_installed("ggplot2", reason = "to plot regression diagnostics.")
   palette <- match.arg(palette)
@@ -1243,6 +1389,15 @@ sframe_plot_regression_diagnostics <- function(result, palette = c("web", "print
 #' @return A ggplot2 object.
 #' @export
 #' @seealso [efa_report()]
+#' @examples
+#' \donttest{
+#' if (requireNamespace("ggplot2", quietly = TRUE) &&
+#'     requireNamespace("psych", quietly = TRUE)) {
+#'   demo <- sframe_demo_data()
+#'   er <- efa_report(demo$responses, demo$instrument)
+#'   sframe_plot_efa_scree(er)
+#' }
+#' }
 sframe_plot_efa_scree <- function(x, palette = c("web", "print")) {
   rlang::check_installed("ggplot2", reason = "to plot an EFA scree plot.")
   palette <- match.arg(palette)
@@ -1281,6 +1436,16 @@ sframe_plot_efa_scree <- function(x, palette = c("web", "print")) {
 #' @return A ggplot2 object.
 #' @export
 #' @seealso [efa_solution()]
+#' @examples
+#' \donttest{
+#' if (requireNamespace("ggplot2", quietly = TRUE) &&
+#'     requireNamespace("psych", quietly = TRUE)) {
+#'   demo <- sframe_demo_data()
+#'   fit <- efa_solution(demo$responses, demo$instrument,
+#'                        scales = "service_quality", nfactors = 1)
+#'   sframe_plot_efa_loadings(fit)
+#' }
+#' }
 sframe_plot_efa_loadings <- function(x, palette = c("web", "print")) {
   rlang::check_installed("ggplot2", reason = "to plot an EFA loadings heatmap.")
   palette <- match.arg(palette)
@@ -1327,6 +1492,15 @@ sframe_plot_efa_loadings <- function(x, palette = c("web", "print")) {
 #' @return A ggplot2 object.
 #' @export
 #' @seealso [reliability_report()]
+#' @examples
+#' \donttest{
+#' if (requireNamespace("ggplot2", quietly = TRUE) &&
+#'     requireNamespace("psych", quietly = TRUE)) {
+#'   demo <- sframe_demo_data()
+#'   rr <- reliability_report(demo$responses, demo$instrument, omega = FALSE)
+#'   sframe_plot_reliability(rr)
+#' }
+#' }
 sframe_plot_reliability <- function(x, palette = c("web", "print")) {
   rlang::check_installed("ggplot2", reason = "to plot a reliability report.")
   palette <- match.arg(palette)
@@ -1384,6 +1558,23 @@ sframe_plot_reliability <- function(x, palette = c("web", "print")) {
 #' @export
 #' @keywords internal
 #' @seealso `sframe_plot_crosstab()`
+#' @examples
+#' instr <- sf_instrument("Crosstab demo", components = list(
+#'   sf_item("arm", "Arm", type = "text"),
+#'   sf_item("outcome", "Outcome", type = "text")
+#' ))
+#' sf_plan(instr) <- list(list(
+#'   id = "RQ1", research_question = "Does the outcome differ by arm?",
+#'   family = "categorical", method = "chi_square",
+#'   roles = list(row = "arm", column = "outcome")
+#' ))
+#'
+#' responses <- data.frame(
+#'   arm     = rep(c("control", "treatment"), each = 20),
+#'   outcome = c(rep(c("yes", "no"), c(6, 14)), rep(c("yes", "no"), c(15, 5)))
+#' )
+#' res <- run_analysis_plan(responses, instr)
+#' sframe_draw_mosaic(res$RQ1)
 sframe_draw_mosaic <- function(result, palette = c("web", "print")) {
   palette <- match.arg(palette)
   tbl <- result$table
@@ -1415,6 +1606,14 @@ sframe_draw_mosaic <- function(result, palette = c("web", "print")) {
 #' @return A ggplot2 object.
 #' @export
 #' @seealso [validity_report()]
+#' @examples
+#' \donttest{
+#' if (requireNamespace("ggplot2", quietly = TRUE)) {
+#'   demo <- sframe_demo_data()
+#'   sframe_plot_correlation_matrix(demo$responses,
+#'                                  c("sq_1", "sq_2", "sq_3", "sat_1", "sat_2"))
+#' }
+#' }
 sframe_plot_correlation_matrix <- function(data, vars, method = "pearson",
                                            palette = c("web", "print")) {
   rlang::check_installed("ggplot2", reason = "to plot a correlation matrix heatmap.")
@@ -1455,6 +1654,14 @@ sframe_plot_correlation_matrix <- function(data, vars, method = "pearson",
 #' @return A ggplot2 object.
 #' @export
 #' @seealso [quality_report()]
+#' @examples
+#' \donttest{
+#' if (requireNamespace("ggplot2", quietly = TRUE)) {
+#'   demo <- sframe_demo("likert_scale")
+#'   qr <- quality_report(demo$responses, demo$instrument)
+#'   sframe_plot_quality(qr)
+#' }
+#' }
 sframe_plot_quality <- function(x, palette = c("web", "print")) {
   rlang::check_installed("ggplot2", reason = "to plot a quality report.")
   palette <- match.arg(palette)
@@ -1522,6 +1729,17 @@ plot.sframe_efa_solution <- function(x, ..., palette = c("web", "print")) {
 #' @return A ggplot2 object.
 #' @export
 #' @seealso [validity_report()]
+#' @examples
+#' \donttest{
+#' if (requireNamespace("ggplot2", quietly = TRUE)) {
+#'   loadings <- list(
+#'     sq  = c(sq_1 = 0.80, sq_2 = 0.75, sq_3 = 0.78),
+#'     sat = c(sat_1 = 0.85, sat_2 = 0.82)
+#'   )
+#'   vr <- validity_report(loadings)
+#'   sframe_plot_validity(vr)
+#' }
+#' }
 sframe_plot_validity <- function(x, palette = c("web", "print")) {
   rlang::check_installed("ggplot2", reason = "to plot a validity report.")
   palette <- match.arg(palette)
@@ -1563,6 +1781,14 @@ plot.sframe_validity_report <- function(x, ..., palette = c("web", "print")) {
 #'   short "no missing responses" message rather than an empty bar chart.
 #' @export
 #' @seealso [missing_data_report()]
+#' @examples
+#' \donttest{
+#' if (requireNamespace("ggplot2", quietly = TRUE)) {
+#'   demo <- sframe_demo_data()
+#'   mr <- missing_data_report(demo$responses, demo$instrument)
+#'   sframe_plot_missingness(mr)
+#' }
+#' }
 sframe_plot_missingness <- function(x, palette = c("web", "print")) {
   rlang::check_installed("ggplot2", reason = "to plot a missing-data report.")
   palette <- match.arg(palette)
@@ -1657,7 +1883,11 @@ plot.sframe_analysis_results <- function(x, ..., which = NULL) {
   invisible(plots)
 }
 
-#' Item distribution chart, ggplot2 equivalent of the dashboard/studio panel
+#' Plot an item response distribution
+#'
+#' Draws how one item was answered, as the dashboard and SurveyStudio panels
+#' show it. It returns `NULL` where it has nothing to draw, so a caller can
+#' fall back to its own chart.
 #'
 #' Shared by `launch_dashboard()` (`inst/shiny/dashboard/app.R`) and the
 #' SurveyStudio dashboard tab (`inst/shiny/app.R`), which otherwise
@@ -1673,6 +1903,15 @@ plot.sframe_analysis_results <- function(x, ..., which = NULL) {
 #' @return A ggplot2 object, or `NULL` if this item type/data is unsupported.
 #' @keywords internal
 #' @export
+#' @examples
+#' \donttest{
+#' if (requireNamespace("ggplot2", quietly = TRUE)) {
+#'   demo <- sframe_demo_data()
+#'   item <- Filter(function(i) i$id == "sat_1", demo$instrument$items)[[1]]
+#'   cs   <- Filter(function(c) c$id == item$choice_set, demo$instrument$choices)[[1]]
+#'   sframe_plot_item_chart(item, demo$responses$sat_1, cs)
+#' }
+#' }
 sframe_plot_item_chart <- function(item, col_data, choice_set = NULL,
                                    palette = c("web", "print")) {
   if (!requireNamespace("ggplot2", quietly = TRUE)) return(NULL)
@@ -1717,6 +1956,14 @@ sframe_plot_item_chart <- function(item, col_data, choice_set = NULL,
 #'   is empty.
 #' @keywords internal
 #' @export
+#' @examples
+#' \donttest{
+#' if (requireNamespace("ggplot2", quietly = TRUE)) {
+#'   demo <- sframe_demo_data()
+#'   scored <- score_scales(demo$responses, demo$instrument)
+#'   sframe_plot_scale_chart(scored$satisfaction, "Satisfaction")
+#' }
+#' }
 sframe_plot_scale_chart <- function(scores, label, palette = c("web", "print")) {
   if (!requireNamespace("ggplot2", quietly = TRUE)) return(NULL)
   palette <- match.arg(palette)
@@ -1755,6 +2002,14 @@ sframe_plot_scale_chart <- function(scores, label, palette = c("web", "print")) 
 #'   enough data to draw.
 #' @export
 #' @seealso [descriptives_report()]
+#' @examples
+#' \donttest{
+#' if (requireNamespace("ggplot2", quietly = TRUE)) {
+#'   demo <- sframe_demo_data()
+#'   dr <- descriptives_report(demo$responses, variables = c("sat_1", "sat_2"))
+#'   sframe_plot_descriptives(dr, demo$responses)
+#' }
+#' }
 sframe_plot_descriptives <- function(x, data, palette = c("web", "print")) {
   rlang::check_installed("ggplot2", reason = "to plot distribution shape by variable.")
   palette <- match.arg(palette)
@@ -1844,6 +2099,14 @@ plot.sframe_descriptives_report <- function(x, data, ..., palette = c("web", "pr
 #'   unavailable.
 #' @export
 #' @seealso [run_analysis_plan()]
+#' @examples
+#' \donttest{
+#' if (requireNamespace("ggplot2", quietly = TRUE)) {
+#'   demo <- sframe_demo_data()
+#'   res <- run_analysis_plan(demo$responses, demo$instrument)
+#'   sframe_plot_group_comparison(res$rq_visit_bi, demo$responses)
+#' }
+#' }
 sframe_plot_group_comparison <- function(result, data, palette = c("web", "print")) {
   rlang::check_installed("ggplot2", reason = "to plot a group comparison.")
   palette <- match.arg(palette)
@@ -1894,6 +2157,14 @@ sframe_plot_group_comparison <- function(result, data, palette = c("web", "print
 #'   remain, or ggplot2 is unavailable.
 #' @export
 #' @seealso [run_analysis_plan()]
+#' @examples
+#' \donttest{
+#' if (requireNamespace("ggplot2", quietly = TRUE)) {
+#'   demo <- sframe_demo_data()
+#'   res <- run_analysis_plan(demo$responses, demo$instrument)
+#'   sframe_plot_paired_comparison(res$rq_ttest_pair, demo$responses)
+#' }
+#' }
 sframe_plot_paired_comparison <- function(result, data, palette = c("web", "print")) {
   rlang::check_installed("ggplot2", reason = "to plot a paired comparison.")
   palette <- match.arg(palette)
@@ -1932,8 +2203,18 @@ sframe_plot_repeated_measures <- function(result, data, palette = c("web", "prin
   vars <- result$vars
   if (length(vars) < 2 || !all(vars %in% colnames(data))) return(NULL)
   use_median <- identical(result$test, "friedman")
+  # The runner drops any respondent missing a measure, so the figure has to
+  # describe the same people. Dropping missing values within each measure
+  # separately let a respondent the test excluded move the plotted centres.
+  present <- intersect(vars, names(data))
+  complete <- if (length(present)) {
+    data[stats::complete.cases(data[, present, drop = FALSE]), , drop = FALSE]
+  } else {
+    data
+  }
+  n_complete <- nrow(complete)
   rows <- lapply(vars, function(v) {
-    x <- suppressWarnings(as.numeric(data[[v]]))
+    x <- suppressWarnings(as.numeric(complete[[v]]))
     x <- x[!is.na(x)]
     if (!length(x)) return(NULL)
     if (use_median) {
@@ -1961,7 +2242,10 @@ sframe_plot_repeated_measures <- function(result, data, palette = c("web", "prin
     ggplot2::scale_x_discrete(labels = .sframe_title_case_names) +
     ggplot2::labs(
       title = "Ratings across conditions", subtitle = result$apa %||% NULL,
-      x = NULL, y = if (use_median) "Median" else "Mean (\u00B1 SE)"
+      x = NULL, y = if (use_median) "Median" else "Mean (\u00B1 SE)",
+      caption = sprintf(
+        "%d respondents with a complete set of measures, as the test used.",
+        n_complete)
     ) +
     theme_surveyframe(palette = palette)
 }
@@ -2028,7 +2312,10 @@ sframe_plot_logistic_coefficients <- function(result, palette = c("web", "print"
   brand <- sframe_brand(palette)
   ggplot2::ggplot(df, ggplot2::aes(x = .data$or, y = .data$term)) +
     ggplot2::geom_vline(xintercept = 1, colour = brand$muted, linetype = "dashed") +
-    ggplot2::geom_errorbarh(ggplot2::aes(xmin = .data$lo, xmax = .data$hi), height = 0.18, colour = brand$ink) +
+    ggplot2::geom_errorbar(
+      ggplot2::aes(xmin = .data$lo, xmax = .data$hi),
+      orientation = "y", width = 0.18, colour = brand$ink
+    ) +
     ggplot2::geom_point(colour = brand$teal, size = 2.6) +
     ggplot2::scale_y_discrete(labels = .sframe_title_case_names) +
     ggplot2::labs(
@@ -2141,8 +2428,10 @@ sframe_plot_mediation <- function(result, palette = c("web", "print")) {
   ggplot2::ggplot(df, ggplot2::aes(x = .data$estimate, y = .data$effect)) +
     ggplot2::geom_vline(xintercept = 0, colour = brand$muted, linetype = "dashed") +
     ggplot2::geom_col(fill = brand$fill, colour = brand$ink, width = 0.55, linewidth = 0.3) +
-    ggplot2::geom_errorbarh(ggplot2::aes(xmin = .data$lo, xmax = .data$hi), height = 0.15,
-                            colour = brand$ink, na.rm = TRUE) +
+    ggplot2::geom_errorbar(
+      ggplot2::aes(xmin = .data$lo, xmax = .data$hi),
+      orientation = "y", width = 0.15, colour = brand$ink, na.rm = TRUE
+    ) +
     ggplot2::labs(
       title = "Direct, indirect, and total effects", subtitle = result$apa %||% NULL,
       x = "Estimate", y = NULL
@@ -2191,6 +2480,14 @@ sframe_plot_item_diagnostics <- function(result, palette = c("web", "print")) {
 #'   `qq`), or `NULL` if fewer than two complete values remain.
 #' @export
 #' @seealso [descriptives_report()], [sframe_plot_descriptives()]
+#' @examples
+#' \donttest{
+#' if (requireNamespace("ggplot2", quietly = TRUE)) {
+#'   demo <- sframe_demo_data()
+#'   panels <- sframe_plot_variable_distribution(demo$responses, "sat_1")
+#'   panels$histogram
+#' }
+#' }
 sframe_plot_variable_distribution <- function(data, variable, palette = c("web", "print")) {
   rlang::check_installed("ggplot2", reason = "to plot a variable's distribution.")
   palette <- match.arg(palette)
@@ -2216,13 +2513,23 @@ sframe_plot_variable_distribution <- function(data, variable, palette = c("web",
     theme_surveyframe(palette = palette)
 
   qq_theoretical <- stats::qqnorm(x, plot.it = FALSE)
+  # The reference line follows the sample's own location and scale, drawn
+  # through the first and third quartiles as qqline() does. A bare geom_abline()
+  # is y = x, so a normal variable centred on 100 sat far from it and read as
+  # a severe departure from normality when it was nothing of the kind.
+  qs <- stats::quantile(x, c(0.25, 0.75), names = FALSE, na.rm = TRUE)
+  ts <- stats::qnorm(c(0.25, 0.75))
+  qq_slope <- if (diff(ts) != 0) diff(qs) / diff(ts) else 1
+  qq_intercept <- qs[1] - qq_slope * ts[1]
   qq <- ggplot2::ggplot(
       data.frame(theoretical = qq_theoretical$x, sample = qq_theoretical$y),
       ggplot2::aes(x = .data$theoretical, y = .data$sample)) +
-    ggplot2::geom_abline(colour = brand$muted, linetype = "dashed") +
+    ggplot2::geom_abline(slope = qq_slope, intercept = qq_intercept,
+                         colour = brand$muted, linetype = "dashed") +
     ggplot2::geom_point(colour = brand$teal, alpha = 0.75, size = 2) +
     ggplot2::labs(title = paste("Normal Q-Q of", var_label),
-                 x = "Theoretical quantiles", y = "Sample quantiles") +
+                 x = "Theoretical quantiles", y = "Sample quantiles",
+                 caption = "Reference line through the sample's quartiles.") +
     theme_surveyframe(palette = palette)
 
   list(histogram = histogram, boxplot = boxplot, qq = qq)
@@ -2243,6 +2550,16 @@ sframe_plot_variable_distribution <- function(data, variable, palette = c("web",
 #'   table.
 #' @export
 #' @seealso [sframe_run_topic_model_lda()], [sframe_run_stm_topics()]
+#' @examples
+#' \donttest{
+#' if (requireNamespace("ggplot2", quietly = TRUE) &&
+#'     requireNamespace("stm", quietly = TRUE) &&
+#'     requireNamespace("tidytext", quietly = TRUE)) {
+#'   demo <- sframe_demo("open_text")
+#'   res <- run_analysis_plan(demo$responses, demo$instrument)
+#'   sframe_plot_topics(res$RQ10)
+#' }
+#' }
 sframe_plot_topics <- function(result, palette = c("web", "print")) {
   rlang::check_installed("ggplot2", reason = "to plot topic terms.")
   palette <- match.arg(palette)
@@ -2351,6 +2668,15 @@ sframe_plot_topics <- function(result, palette = c("web", "print")) {
 #' @return A ggplot2 object, or `NULL` when the result carries no table.
 #' @export
 #' @seealso [run_analysis_plan()]
+#' @examples
+#' \donttest{
+#' if (requireNamespace("ggplot2", quietly = TRUE) &&
+#'     requireNamespace("igraph", quietly = TRUE)) {
+#'   demo <- sframe_demo("open_text")
+#'   res <- run_analysis_plan(demo$responses, demo$instrument)
+#'   sframe_plot_cooccurrence_network(res$RQ6)
+#' }
+#' }
 sframe_plot_cooccurrence_network <- function(result, palette = c("web", "print")) {
   rlang::check_installed("ggplot2", reason = "to plot the co-occurrence network.")
   palette <- match.arg(palette)
@@ -2370,13 +2696,22 @@ sframe_plot_cooccurrence_network <- function(result, palette = c("web", "print")
   rank_of <- stats::setNames(seq_along(sizes), names(sizes))
   n_clusters <- length(sizes)
   tbl$cluster_rank <- as.integer(rank_of[as.character(tbl$cluster)])
+  # The label is the cluster's own id, so a cluster the table calls 2 is
+  # called 2 here. Numbering by size instead meant the figure and the table
+  # disagreed about which cluster was which, under a legend titled "Cluster".
+  # Size rank still decides the drawing order and which clusters are pooled.
   tbl$cluster_label <- if (n_clusters > 8) {
-    ifelse(tbl$cluster_rank <= 8, as.character(tbl$cluster_rank), "Other")
+    ifelse(tbl$cluster_rank <= 8, as.character(tbl$cluster), "Other")
   } else {
-    as.character(tbl$cluster_rank)
+    as.character(tbl$cluster)
   }
   pal <- .sframe_cluster_palette(n_clusters, palette)
-  level_order <- if (n_clusters > 8) c(as.character(1:8), "Other") else as.character(seq_len(n_clusters))
+  by_size <- names(sizes)
+  level_order <- if (n_clusters > 8) {
+    c(by_size[seq_len(8)], "Other")
+  } else {
+    by_size
+  }
   level_order <- level_order[level_order %in% unique(tbl$cluster_label)]
   tbl$cluster_label <- factor(tbl$cluster_label, levels = level_order)
 
@@ -2482,6 +2817,15 @@ sframe_plot_cooccurrence_network <- function(result, palette = c("web", "print")
 #' @return A ggplot2 object, or `NULL` when the result carries no table.
 #' @export
 #' @seealso [run_analysis_plan()], [sframe_draw_likert_diverging()]
+#' @examples
+#' \donttest{
+#' if (requireNamespace("ggplot2", quietly = TRUE) &&
+#'     requireNamespace("tidytext", quietly = TRUE)) {
+#'   demo <- sframe_demo("open_text")
+#'   res <- run_analysis_plan(demo$responses, demo$instrument)
+#'   sframe_plot_sentiment(res$RQ7)
+#' }
+#' }
 sframe_plot_sentiment <- function(result, palette = c("web", "print")) {
   rlang::check_installed("ggplot2", reason = "to plot sentiment.")
   palette <- match.arg(palette)
@@ -2532,7 +2876,7 @@ sframe_plot_sentiment <- function(result, palette = c("web", "print")) {
                             ggplot2::aes(x = .data$x, y = .data$y, label = .data$label),
                             inherit.aes = FALSE,
                             fill = brand$grid, colour = brand$ink, fontface = "bold",
-                            label.size = 0, size = 3.6) +
+                            linewidth = 0, size = 3.6) +
         ggplot2::scale_size_identity() +
         ggplot2::scale_colour_manual(values = fill_map, guide = "none") +
         ggplot2::scale_alpha_continuous(range = c(0.5, 1), guide = "none") +
@@ -2569,4 +2913,3 @@ sframe_plot_sentiment <- function(result, palette = c("web", "print")) {
   if (grouped) p <- p + ggplot2::facet_wrap(~ group, scales = "free_y")
   p
 }
-

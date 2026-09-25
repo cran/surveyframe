@@ -782,6 +782,7 @@ test_that("render_report() writes an HTML report with the fallback renderer", {
 })
 
 test_that("render_report() writes an HTML report through Quarto when available", {
+  skip_on_cran()  # renders a report or runs a full plan: slow on CRAN's machines
   skip_if_not_installed("quarto")
   skip_if_not(nzchar(Sys.which("quarto")), "Quarto CLI not installed")
 
@@ -828,8 +829,13 @@ test_that("builder helpers compose a valid instrument from draft components", {
   expect_true(draft$valid)
   expect_equal(vapply(draft$instrument$items, function(item) item$scale_id, character(1)),
                c("sat", "sat"))
-  expect_equal(vapply(draft$instrument$items, function(item) item$reverse, logical(1)),
-               c(FALSE, TRUE))
+  # Reversal stays where it was declared, on the scale. Copying it onto the
+  # item changed a loaded instrument's content just by opening it in Studio.
+  expect_equal(vapply(draft$instrument$items, function(item) isTRUE(item$reverse), logical(1)),
+               c(FALSE, FALSE))
+  expect_identical(draft$instrument$scales[[1]]$reverse_items, "sat_2")
+  scored <- score_scales(data.frame(sat_1 = c(5, 1), sat_2 = c(1, 5)), draft$instrument)
+  expect_equal(scored$sat, c(5, 1))
 })
 
 test_that("builder helpers reclassify components from a loaded sframe file", {
@@ -856,6 +862,14 @@ test_that("builder helpers reclassify components from a loaded sframe file", {
   )
 
   expect_true(rebuilt$valid)
+  # Valid is not enough: a rebuild once dropped item-level reverse coding and
+  # stayed valid. The reverse flags and the scores must survive too.
+  rev_flags <- function(ins) vapply(ins$items, function(i) isTRUE(i$reverse), logical(1))
+  expect_identical(rev_flags(rebuilt$instrument), rev_flags(loaded))
+  scale_items <- loaded$scales[[1]]$items
+  d <- as.data.frame(stats::setNames(lapply(seq_along(scale_items), function(k) c(1, 3, 5)), scale_items))
+  expect_equal(score_scales(d, rebuilt$instrument)[[loaded$scales[[1]]$id]],
+               score_scales(d, loaded)[[loaded$scales[[1]]$id]])
 })
 
 test_that("a builder draft round trip preserves an existing amendment log", {

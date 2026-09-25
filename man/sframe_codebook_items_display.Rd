@@ -23,6 +23,11 @@ enrichment is for the rendered document, where a reader should not need
 to cross-reference a separate table just to see what "1" means on a
 scale shared by many items.
 }
+\examples{
+demo <- sframe_demo_data()
+cb <- codebook_report(demo$instrument)
+head(sframe_codebook_items_display(cb))
+}
 \seealso{
 \code{\link[=codebook_report]{codebook_report()}}
 }

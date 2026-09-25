@@ -159,7 +159,9 @@ sframe_assemble_pairwise <- function(data, instrument, item_id) {
   }
 
   n <- length(items)
-  values <- lapply(cols, function(cl) suppressWarnings(as.numeric(data[[cl]])))
+  # sframe_num() reads a factor through its labels. as.numeric() gave level
+  # positions, turning a judgement of -9 into 1.
+  values <- lapply(cols, function(cl) sframe_num(data[[cl]]))
   names(values) <- cols
 
   matrices <- list()
@@ -246,20 +248,62 @@ sframe_consistency_ratio <- function(m) {
 
 # The per-respondent consistency distribution. Always computed for a saaty
 # item, whether or not it is used to filter, because reviewers ask for it.
+# A consistency ratio is unavailable past 10 criteria, where Saaty's random
+# index table ends. Unavailable ratios are counted apart, and the summaries are
+# NA when none is known. min() and max() over no known value gave Inf and
+# -Inf, and the share above threshold gave NaN.
 sframe_consistency_summary <- function(matrices) {
   if (length(matrices) == 0) {
     return(list(cr = numeric(0), min = NA_real_, median = NA_real_,
-                max = NA_real_, share_above = NA_real_, threshold = 0.10))
+                max = NA_real_, share_above = NA_real_, n_unavailable = 0L,
+                threshold = 0.10))
   }
   cr <- vapply(matrices, sframe_consistency_ratio, numeric(1))
+  known <- cr[!is.na(cr)]
   list(
-    cr          = cr,
-    min         = min(cr, na.rm = TRUE),
-    median      = stats::median(cr, na.rm = TRUE),
-    max         = max(cr, na.rm = TRUE),
-    share_above = mean(cr >= 0.10, na.rm = TRUE),
-    threshold   = 0.10
+    cr            = cr,
+    min           = if (length(known)) min(known) else NA_real_,
+    median        = if (length(known)) stats::median(known) else NA_real_,
+    max           = if (length(known)) max(known) else NA_real_,
+    share_above   = if (length(known)) mean(known >= 0.10) else NA_real_,
+    n_unavailable = sum(is.na(cr)),
+    threshold     = 0.10
   )
+}
+
+# Checks every judgement matrix is square, finite and, when named, names the
+# same criteria as the first on both axes, and returns them all in the first
+# matrix's order. Stacking by position combined different judgements: the
+# same A-over-B judgement from matrices ordered A,B and B,A averaged to
+# indifference.
+sframe_align_judgement_matrices <- function(matrices) {
+  for (m in matrices) {
+    if (!is.matrix(m) || !is.numeric(m) || nrow(m) != ncol(m)) {
+      sframe_abort_validation("Every comparison matrix must be a square numeric matrix.")
+    }
+    if (!all(is.finite(m))) {
+      sframe_abort_validation("The comparison matrices contain missing or infinite values.")
+    }
+  }
+  named <- vapply(matrices, function(m) {
+    !is.null(rownames(m)) && !is.null(colnames(m))
+  }, logical(1))
+  if (!any(named)) return(matrices)
+  if (!all(named)) {
+    sframe_abort_validation(paste0(
+      "Some comparison matrices name their criteria and some do not, so they ",
+      "cannot be matched. Name every matrix, or none."))
+  }
+  ref <- rownames(matrices[[1]])
+  lapply(matrices, function(m) {
+    if (!identical(sort(rownames(m)), sort(ref)) ||
+        !identical(sort(colnames(m)), sort(ref)) || anyDuplicated(rownames(m))) {
+      sframe_abort_validation(sprintf(
+        "A comparison matrix names %s where the first names %s.",
+        paste(rownames(m), collapse = ", "), paste(ref, collapse = ", ")))
+    }
+    m[ref, ref, drop = FALSE]
+  })
 }
 
 # ---------------------------------------------------------------------------
@@ -304,11 +348,28 @@ sframe_aggregate_judgements <- function(matrices,
       "No complete comparison matrices are available to aggregate."
     )
   }
+  matrices <- sframe_align_judgement_matrices(matrices)
   reciprocal <- identical(method, "geometric")
+  if (reciprocal) {
+    for (m in matrices) {
+      if (any(m <= 0) || max(abs(m * t(m) - 1)) > 1e-6) {
+        sframe_abort_validation(paste0(
+          "Geometric aggregation needs positive reciprocal matrices, with ",
+          "m[a, b] equal to 1 / m[b, a] and a unit diagonal."))
+      }
+    }
+  }
   consistency <- if (reciprocal) sframe_consistency_summary(matrices) else NULL
 
   n_dropped_consistency <- 0L
   if (isTRUE(cr_filter) && reciprocal) {
+    if (all(is.na(consistency$cr))) {
+      sframe_abort_validation(sprintf(
+        paste0("Consistency ratios are unavailable for all %d matrices, which ",
+               "compare more than 10 criteria, so `cr_filter = TRUE` cannot ",
+               "be applied."),
+        length(matrices)))
+    }
     keep <- !is.na(consistency$cr) & consistency$cr < consistency$threshold
     n_dropped_consistency <- sum(!keep)
     if (!any(keep)) {
@@ -323,7 +384,7 @@ sframe_aggregate_judgements <- function(matrices,
   }
 
   dims <- vapply(matrices, function(m) paste(dim(m), collapse = "x"),
-                 character(1))
+                 character(1))  # checked again after filtering
   if (length(unique(dims)) > 1) {
     sframe_abort_validation(
       "The comparison matrices do not all have the same dimensions."
@@ -429,7 +490,7 @@ sframe_collected_weights <- function(data, instrument, item_id,
     ))
   }
 
-  m <- vapply(cols, function(cl) suppressWarnings(as.numeric(data[[cl]])),
+  m <- vapply(cols, function(cl) sframe_num(data[[cl]]),
               numeric(nrow(data)))
   m <- matrix(m, nrow = nrow(data), ncol = length(cols),
               dimnames = list(NULL, criteria))
@@ -473,12 +534,25 @@ sframe_collected_weights <- function(data, instrument, item_id,
 #' @param instrument An `sframe` instrument declaring every id in `items`.
 #' @param items Character vector of `"matrix"` item ids, one per criterion, in
 #'   the intended criterion order. Every item must declare the same
-#'   `matrix_items` (the alternatives) in the same order.
+#'   `matrix_items` (the alternatives) in the same order. When a decision
+#'   block also collects weights through a `weights_item` whose criterion names
+#'   differ from these ids, the items pair with its criteria in this order, and
+#'   the result notes each pairing.
 #' @param statistic `"mean"` or `"median"`.
 #' @return A list with `matrix` (alternatives x criteria, with dimnames), `n`,
 #'   `sd`, `alternatives`, `criteria`, and `statistic`.
 #' @export
 #' @seealso [sframe_collected_weights()]
+#' @examples
+#' q5    <- sf_choices("q5", 1:5,
+#'            c("Very poor", "Poor", "Fair", "Good", "Excellent"))
+#' price <- sf_item("rate_price", "Rate each supplier: value",
+#'                  type = "matrix", matrix_items = c("Alpha", "Basilica"),
+#'                  choice_set = "q5")
+#' study <- sf_instrument("Supplier selection", components = list(q5, price))
+#' responses <- data.frame(rate_price__Alpha = c(3, 4), rate_price__Basilica = c(5, 5))
+#' rm <- sframe_rated_matrix(responses, study, "rate_price")
+#' rm$matrix
 sframe_rated_matrix <- function(data, instrument, items,
                                 statistic = c("mean", "median")) {
   statistic <- match.arg(statistic)
@@ -524,7 +598,7 @@ sframe_rated_matrix <- function(data, instrument, items,
           "Rated performance matrix needs column '%s', which is absent.", col
         ))
       }
-      x <- suppressWarnings(as.numeric(data[[col]]))
+      x <- sframe_num(data[[col]])
       x <- x[!is.na(x)]
       counts[i, j] <- length(x)
       if (length(x) == 0) next
@@ -662,6 +736,7 @@ sframe_decision_options <- function(options) {
   n_criteria <- if (!is.null(m)) ncol(m) else length(criteria)
 
   if (!is.null(options[["weights"]])) {
+    w_names <- names(options[["weights"]])
     w <- suppressWarnings(as.numeric(unlist(options[["weights"]],
                                             use.names = FALSE)))
     if (anyNA(w)) {
@@ -675,11 +750,12 @@ sframe_decision_options <- function(options) {
         length(w), n_criteria
       ))
     }
-    if (length(criteria) == length(w)) names(w) <- criteria
+    w <- sframe_align_to_criteria(w, w_names, criteria, "`options$weights`")
     options[["weights"]] <- w
   }
 
   if (!is.null(options[["criteria_types"]])) {
+    ct_names <- names(options[["criteria_types"]])
     ct <- as.character(unlist(options[["criteria_types"]], use.names = FALSE))
     bad <- setdiff(unique(ct), c("benefit", "cost"))
     if (length(bad) > 0) {
@@ -696,8 +772,31 @@ sframe_decision_options <- function(options) {
         length(ct), n_criteria
       ))
     }
+    ct <- sframe_align_to_criteria(ct, ct_names, criteria,
+                                   "`options$criteria_types`")
     options[["criteria_types"]] <- ct
   }
 
   options
+}
+
+# Orders a per-criterion vector by criterion name when it is named, and
+# refuses names that differ from the criteria. An unnamed vector is taken in
+# criterion order. Matching by count alone applied a weight to whichever
+# criterion held its position.
+sframe_align_to_criteria <- function(values, value_names, criteria, what) {
+  named <- !is.null(value_names) && length(value_names) == length(values) &&
+    all(nzchar(value_names))
+  if (!named) {
+    if (length(criteria) == length(values)) names(values) <- criteria
+    return(values)
+  }
+  names(values) <- value_names
+  if (length(criteria) == 0) return(values)
+  if (anyDuplicated(value_names) || !setequal(value_names, criteria)) {
+    sframe_abort_validation(sprintf(
+      "%s names %s, but the criteria are %s.",
+      what, paste(value_names, collapse = ", "), paste(criteria, collapse = ", ")))
+  }
+  values[criteria]
 }

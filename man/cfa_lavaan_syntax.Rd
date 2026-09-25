@@ -2,7 +2,7 @@
 % Please edit documentation in R/model_layer.R
 \name{cfa_lavaan_syntax}
 \alias{cfa_lavaan_syntax}
-\title{Generate lavaan CFA syntax}
+\title{Generate lavaan CFA syntax from an instrument or a declared model}
 \usage{
 cfa_lavaan_syntax(
   instrument = NULL,
@@ -36,5 +36,23 @@ covariances supplied in \code{model}.}
 A lavaan syntax string.
 }
 \description{
-Generate lavaan CFA syntax
+The general entry point for CFA syntax. It takes an instrument, and derives
+the constructs from its scales, or an \code{\link[=sf_model]{sf_model()}} declaring constructs that
+cut across them, and it accepts correlated residuals and latent
+covariances.
+}
+\details{
+\code{\link[=cfa_syntax]{cfa_syntax()}} is the instrument-only convenience wrapper, kept for the
+scripts that call it. Start here when a model is declared, when residual
+covariances are needed, or when the constructs differ from the scales.
+
+Each generator emits the language its engine reads, so they stay separate:
+this one and \code{\link[=sem_lavaan_syntax]{sem_lavaan_syntax()}} write lavaan, \code{\link[=seminr_syntax]{seminr_syntax()}} writes
+seminr, and \code{\link[=efa_syntax]{efa_syntax()}} writes an exploratory plan.
+}
+\examples{
+demo <- sframe_demo_data()
+syntax <- cfa_lavaan_syntax(demo$instrument,
+                             scales = c("satisfaction", "behavioural_intention"))
+cat(syntax)
 }

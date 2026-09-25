@@ -25,6 +25,15 @@ stores summary statistics, not the underlying vector), matching the
 pattern \code{\link[=sframe_plot_correlation_matrix]{sframe_plot_correlation_matrix()}} already uses for
 report-independent, data-driven plots.
 }
+\examples{
+\donttest{
+if (requireNamespace("ggplot2", quietly = TRUE)) {
+  demo <- sframe_demo_data()
+  panels <- sframe_plot_variable_distribution(demo$responses, "sat_1")
+  panels$histogram
+}
+}
+}
 \seealso{
 \code{\link[=descriptives_report]{descriptives_report()}}, \code{\link[=sframe_plot_descriptives]{sframe_plot_descriptives()}}
 }

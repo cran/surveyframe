@@ -2,31 +2,7 @@
 % Please edit documentation in R/accessors.R
 \name{sf_validation_accessors}
 \alias{sf_validation_accessors}
-\alias{sf_is_valid}
-\alias{sf_problems}
-\alias{sf_object}
-\alias{sf_is_valid.sframe_validation}
-\alias{sf_problems.sframe_validation}
-\alias{sf_object.sframe_validation}
 \title{Read a validation diagnostic}
-\usage{
-sf_is_valid(x, ...)
-
-sf_problems(x, ...)
-
-sf_object(x, ...)
-
-\method{sf_is_valid}{sframe_validation}(x, ...)
-
-\method{sf_problems}{sframe_validation}(x, ...)
-
-\method{sf_object}{sframe_validation}(x, ...)
-}
-\arguments{
-\item{x}{An \link{sframe_validation} object.}
-
-\item{...}{Passed to methods.}
-}
 \value{
 \code{sf_is_valid()} returns a single logical. \code{sf_problems()} returns a
 character vector, empty when the object is valid. \code{sf_object()} returns

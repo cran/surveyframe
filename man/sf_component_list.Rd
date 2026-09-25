@@ -2,21 +2,7 @@
 % Please edit documentation in R/accessors.R
 \name{sf_component_list}
 \alias{sf_component_list}
-\alias{print.sf_component_list}
-\alias{[.sf_component_list}
 \title{A list of instrument components}
-\usage{
-\method{print}{sf_component_list}(x, ...)
-
-\method{[}{sf_component_list}(x, i, ...)
-}
-\arguments{
-\item{x}{An \code{sf_component_list}.}
-
-\item{...}{Ignored. Present for S3 consistency.}
-
-\item{i}{Index, name, or logical vector selecting components.}
-}
 \value{
 \code{print()} returns \code{x} invisibly. \code{[} returns an \code{sf_component_list}.
 }

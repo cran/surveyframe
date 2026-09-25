@@ -22,23 +22,31 @@ sf_scale(
 reports and codebooks.}
 
 \item{items}{Character vector. The \code{id} values of items that belong to this
-scale. Order controls presentation in reports, while scoring uses the
-same item IDs regardless of order.}
+scale, each listed once. Order controls presentation in reports, while
+scoring uses the same item IDs regardless of order. Items themselves are
+passed to \code{\link[=sf_instrument]{sf_instrument()}} as separate components.}
 
 \item{method}{Character. Scoring method. Either \code{"mean"} (default) or
 \code{"sum"}.}
 
-\item{min_valid}{Integer or NULL. The minimum number of non-missing items
-required to compute a score for a respondent. When \code{NULL}, all items must
-be present. Used by \code{\link[=score_scales]{score_scales()}}.}
+\item{min_valid}{Integer or NULL. The minimum number of answered items
+required to compute a score for a respondent, a whole number from 1 to
+the number of items. When \code{NULL}, every item must be answered. An item
+whose column is absent from the data counts as unanswered. Used by
+\code{\link[=score_scales]{score_scales()}}.}
 
-\item{reverse_items}{Character vector or NULL. A subset of \code{items} that are
-reverse-coded. These can also be flagged at the item level with the
-\code{reverse} argument in \code{\link[=sf_item]{sf_item()}}. Both sources are respected.}
+\item{reverse_items}{Character vector or NULL. A subset of \code{items} that
+this scale reverse-codes. Reversal applies within this scale only, so the
+same item can be reversed in one scale and scored as answered in another.
+An item can also be flagged with \code{reverse = TRUE} in \code{\link[=sf_item]{sf_item()}}, which
+reverses it within the scale named by its \code{scale_id}. A reversed item
+needs declared response bounds, from a numeric choice set, slider limits
+or a rating maximum.}
 
-\item{weights}{Numeric vector or NULL. Item weights for weighted scoring.
-Must have the same length as \code{items} if supplied. \code{\link[=score_scales]{score_scales()}}
-applies the weights to either \code{method = "mean"} or \code{method = "sum"}.}
+\item{weights}{Numeric vector or NULL. Item weights for weighted scoring,
+one positive finite number per item, in the order of \code{items}.
+\code{\link[=score_scales]{score_scales()}} applies the weights to either \code{method = "mean"} or
+\code{method = "sum"}.}
 }
 \value{
 An object of class \code{sf_scale} (a named list).

@@ -59,8 +59,13 @@
 #' @return An object of class `sframe_sensitivity`, a list with `$table` (one
 #'   row per criterion and direction, carrying `criterion`, `direction`,
 #'   `rho`, `rank_changed`, and `top_changed`), `$base_ranks`, `$method`,
-#'   `$delta`, and `$stable`, a single logical that is `TRUE` when no
-#'   perturbation changed the ranking.
+#'   `$delta`, `$stable`, `$degenerate`, `$n_perturbations`, `$n_effective`
+#'   and `$n_failed`. `$stable` is `TRUE` when at least one perturbation moved
+#'   the weights and none of those that did changed the ranking. A
+#'   perturbation that leaves the renormalised weights unchanged, as every one
+#'   does for weights such as `c(1, 0)`, is not effective and tests nothing.
+#'   `$degenerate` marks a base ranking that places every alternative at the
+#'   same rank, which no perturbation can move.
 #' @export
 #' @seealso [run_analysis_plan()], [sframe_decision_options()]
 #' @examples
@@ -130,21 +135,37 @@ sensitivity_analysis <- function(x,
   alternatives <- alternatives %||% rownames(x) %||%
     paste0("alternative_", seq_len(nrow(x)))
 
+  tuning <- sframe_check_decision_tuning(method, list(...), n_criteria)
+  if (!is.null(tuning)) sframe_abort_validation(tuning)
+
   weights <- weights / sum(weights)
   base <- compute(x, weights, criteria_types, ...)
   base_ranks <- as.integer(base$ranks)
 
+  # Every perturbation is counted. One that leaves the renormalised weights
+  # where they were tests nothing, so it is ineffective, and one whose
+  # computation fails is counted as failed. Weights (1, 0) renormalise back to
+  # (1, 0) under every perturbation, and were reported as stable.
   rows <- list()
+  n_perturbations <- 0L
+  n_effective <- 0L
+  n_failed <- 0L
   for (j in seq_len(n_criteria)) {
     for (dir in c("up", "down")) {
+      n_perturbations <- n_perturbations + 1L
       w <- weights
       w[j] <- w[j] * if (identical(dir, "up")) (1 + delta) else (1 - delta)
       if (sum(w) <= 0) next
       w <- w / sum(w)
+      if (max(abs(w - weights)) < 1e-12) next
 
       perturbed <- tryCatch(compute(x, w, criteria_types, ...),
                             error = function(e) NULL)
-      if (is.null(perturbed)) next
+      if (is.null(perturbed)) {
+        n_failed <- n_failed + 1L
+        next
+      }
+      n_effective <- n_effective + 1L
       new_ranks <- as.integer(perturbed$ranks)
 
       # A constant rank vector has zero variance, so cor() would warn and
@@ -198,8 +219,11 @@ sensitivity_analysis <- function(x,
       base_ranks   = stats::setNames(base_ranks, alternatives),
       alternatives = alternatives,
       criteria     = criteria,
-      stable       = nrow(table) > 0 && !any(table$rank_changed),
+      stable       = n_effective > 0 && !any(table$rank_changed),
       degenerate   = degenerate,
+      n_perturbations = n_perturbations,
+      n_effective  = n_effective,
+      n_failed     = n_failed,
       n_changed    = sum(table$rank_changed),
       n_top_changed = sum(table$top_changed)
     ),
@@ -222,19 +246,25 @@ sframe_attach_sensitivity <- function(result, data, roles, options,
   if (!test %in% .sframe_sensitivity_methods) return(result)
   if (!is.null(result$error)) return(result)
 
+  # A requested sensitivity run that cannot be made is reported on the result.
+  # It used to leave no trace, which reads as a result nobody asked to test.
+  failed <- function(why) {
+    result$sensitivity_error <- paste("Sensitivity analysis was requested but not run:", why)
+    result
+  }
   resolved <- tryCatch(
     sframe_resolve_decision_inputs(data, roles, options, instrument,
                                    method = toupper(test)),
-    error = function(e) NULL
+    error = function(e) list(error = conditionMessage(e))
   )
-  if (is.null(resolved) || !is.null(resolved$error)) return(result)
+  if (!is.null(resolved$error)) return(failed(resolved$error))
 
   checked <- tryCatch(
     sframe_check_decision_input(resolved$matrix, resolved$weights,
                                 resolved$criteria_types),
-    error = function(e) NULL
+    error = function(e) list(error = conditionMessage(e))
   )
-  if (is.null(checked) || !is.null(checked$error)) return(result)
+  if (!is.null(checked$error)) return(failed(checked$error))
 
   # Method-specific tuning has to travel with the perturbation, or the
   # sensitivity run would silently rank under different settings from the
@@ -250,8 +280,15 @@ sframe_attach_sensitivity <- function(result, data, roles, options,
     extra$preference_function <- options$preference_function %||% "usual"
     if (!is.null(options$thresholds)) extra$thresholds <- options$thresholds
   }
-  if (identical(test, "electre") && !is.null(options$thresholds)) {
-    extra$thresholds <- options$thresholds
+  # ELECTRE reads its 2 cutoffs by these names. Forwarding a `thresholds`
+  # field it does not accept re-ranked the baseline at the default cutoffs.
+  if (identical(test, "electre")) {
+    if (!is.null(options$concordance_threshold)) {
+      extra$concordance_threshold <- options$concordance_threshold
+    }
+    if (!is.null(options$discordance_threshold)) {
+      extra$discordance_threshold <- options$discordance_threshold
+    }
   }
 
   sa <- tryCatch(
@@ -267,9 +304,15 @@ sframe_attach_sensitivity <- function(result, data, roles, options,
       ),
       extra
     )),
-    error = function(e) NULL
+    error = function(e) e
   )
-  if (is.null(sa)) return(result)
+  if (inherits(sa, "error")) return(failed(conditionMessage(sa)))
+  # The perturbations are only meaningful around the ranking actually
+  # published, so a baseline that differs is a failure, not a result.
+  if (!is.null(result$ranks) &&
+      !identical(unname(sa$base_ranks), unname(as.integer(result$ranks)))) {
+    return(failed("its baseline ranking differs from the published ranking."))
+  }
 
   result$sensitivity <- sa
   result

@@ -100,8 +100,9 @@ sframe_demo_dir <- function() {
 
 #' Load one bundled demo
 #'
-#' One of the 22-item teaching library, each demonstrating one analysis
-#' method end to end. For the demo that instead exercises every input type
+#' One of the 22-item teaching library: 17 analysis examples, three
+#' presentation examples, and two provenance examples. For the demo that
+#' instead exercises every input type
 #' SurveyBuilder and SurveyStudio support in a single instrument, see
 #' [sframe_input_types_demo_data()].
 #'
@@ -245,37 +246,52 @@ sframe_export_labelled <- function(data, instrument, path) {
   # `labels` sit side by side. sframe_choices_lookup() returns a named
   # character vector instead, which is a different shape.
   lookup <- sf_choice_sets(instrument)
+  # The option label for a code, or the code itself when the set lacks it.
+  option_label <- function(set, code) {
+    i <- match(as.character(code), as.character(set$values))
+    if (is.na(i)) as.character(code) else as.character(set$labels[i])
+  }
+  # A column of choice codes as a labelled vector. Numeric codes held as text,
+  # as read from Google Sheets, are read as the numbers the set declares.
+  with_value_labels <- function(x, set) {
+    vals <- set$values
+    labs <- as.character(set$labels)
+    v <- suppressWarnings(as.numeric(as.character(vals)))
+    if (!anyNA(v)) {
+      xn <- suppressWarnings(as.numeric(as.character(x)))
+      if (!all(is.na(x) | !is.na(xn))) return(x)
+      return(haven::labelled(xn, stats::setNames(v, labs)))
+    }
+    haven::labelled(as.character(x), stats::setNames(as.character(vals), labs))
+  }
   for (item in instrument$items) {
     if (item$type %in% c("section_break", "text_block")) next
-    # An expanding item writes one column per option, so every column starting
-    # with the item id takes the item's label.
-    cols <- intersect(
-      c(item$id, grep(paste0("^", item$id, "__"), names(data), value = TRUE)),
-      names(data))
-    if (!length(cols)) next
     set <- if (!is.null(item$choice_set)) lookup[[item$choice_set]] else NULL
+    expansions <- sframe_item_expansion_columns(instrument, list(item))
+    cols <- intersect(c(item$id, expansions), names(data))
     for (cn in cols) {
       x <- data[[cn]]
-      attr(x, "label") <- item$label
-      # Value labels apply where the column holds the choice codes themselves.
-      # A multi-select or ranking expansion holds an indicator or a rank, so it
-      # keeps the variable label and takes no value labels.
-      if (!is.null(set) && identical(cn, item$id) &&
-          !item$type %in% c("multiple_choice", "ranking")) {
-        vals <- set$values
-        labs <- as.character(set$labels)
-        if (is.numeric(x) || all(!is.na(suppressWarnings(as.numeric(vals))))) {
-          v <- suppressWarnings(as.numeric(vals))
-          if (!anyNA(v) && is.numeric(x)) {
-            x <- haven::labelled(as.numeric(x), stats::setNames(v, labs))
-            attr(x, "label") <- item$label
-          }
+      part <- if (identical(cn, item$id)) NULL else sub(paste0("^", item$id, "__"), "", cn)
+      # An expansion column names its row, option, pair or criterion, so each
+      # variable is distinguishable where every one used to carry the parent
+      # question alone.
+      label <- item$label
+      if (!is.null(part)) {
+        part_label <- if (item$type %in% c("multiple_choice", "ranking") && !is.null(set)) {
+          option_label(set, part)
         } else {
-          x <- haven::labelled(as.character(x),
-                               stats::setNames(as.character(vals), labs))
-          attr(x, "label") <- item$label
+          gsub("__", " ", part, fixed = TRUE)
         }
+        label <- paste0(item$label, ": ", part_label)
       }
+      # Value labels go wherever a column holds the choice codes: a base
+      # single-answer column and every matrix cell. Multiple-choice and ranking
+      # expansions hold an indicator or a rank.
+      holds_codes <- !is.null(set) &&
+        ((is.null(part) && !item$type %in% c("multiple_choice", "ranking")) ||
+           (!is.null(part) && identical(item$type, "matrix")))
+      if (holds_codes) x <- with_value_labels(x, set)
+      attr(x, "label") <- label
       data[[cn]] <- x
     }
   }
@@ -289,8 +305,11 @@ sframe_export_labelled <- function(data, instrument, path) {
 #'
 #' The code route through a demo is a notebook that renders to a report, which
 #' is what a research workflow looks like. This writes one for the named demo:
-#' load the instrument, read the responses, run the pre-declared plan, render
-#' the report, and export the data for checking elsewhere.
+#' load and validate the instrument and responses, inspect the complete ordered
+#' analysis plan, screen data quality, run the plan with status and plots,
+#' inspect each result and its reproducible syntax, compare the bundled expected
+#' results, render analysis and full reports, and export the data for checking
+#' elsewhere.
 #'
 #' @param name Character. A demo name, as listed by [sframe_demos()].
 #' @param dir Directory to write into. Defaults to the working directory.
@@ -328,7 +347,10 @@ sframe_demo_qmd <- function(name, dir = ".", overwrite = FALSE) {
   # One skeleton filled per demo rather than 22 near-identical files, so the
   # notebook a reader opens is theirs and there is 1 template to keep current.
   txt <- gsub("{{DEMO_NAME}}", name, txt, fixed = TRUE)
-  txt <- gsub("{{DEMO_TITLE}}", row$teaches, txt, fixed = TRUE)
+  demo_title <- gsub("[\r\n]+", " ", row$teaches)
+  demo_title <- gsub("\\", "\\\\", demo_title, fixed = TRUE)
+  demo_title <- gsub("\"", "\\\"", demo_title, fixed = TRUE)
+  txt <- gsub("{{DEMO_TITLE}}", demo_title, txt, fixed = TRUE)
   txt <- gsub("{{DEMO_TEACHES}}", row$teaches, txt, fixed = TRUE)
 
   if (!dir.exists(dir)) dir.create(dir, recursive = TRUE, showWarnings = FALSE)
@@ -347,8 +369,9 @@ sframe_demo_qmd <- function(name, dir = ".", overwrite = FALSE) {
 #'
 #' Unlike [sframe_demo_qmd()], which only works for one of the bundled demo
 #' instruments (it looks `name` up in [sframe_demos()]), this writes a
-#' runnable Quarto notebook for any instrument, using its own responses. The
-#' notebook reads the instrument and its responses back from 2 companion
+#' runnable Quarto notebook for any instrument, using its own responses. It
+#' exposes the complete ordered plan, screening, run status, detailed results,
+#' plots and reports. The notebook reads the instrument and its responses back from 2 companion
 #' files written alongside it, so all 3 files must stay together.
 #'
 #' @param instrument An `sframe` object.
@@ -393,7 +416,9 @@ sframe_analysis_qmd <- function(instrument, data, dir = ".", basename = NULL,
   }
 
   title <- sf_meta(instrument)$title %||% "survey"
-  slug  <- basename %||% gsub("[^A-Za-z0-9]+", "_", title)
+  # The slug becomes file names inside R strings in the notebook, so it is
+  # reduced to safe characters whether it came from the title or `basename`.
+  slug  <- gsub("[^A-Za-z0-9_.-]+", "_", basename %||% title)
   slug  <- gsub("^_+|_+$", "", slug)
   if (!nzchar(slug)) slug <- "survey"
 
@@ -417,7 +442,13 @@ sframe_analysis_qmd <- function(instrument, data, dir = ".", basename = NULL,
   # names are exactly these 2 suffixes on slug; built this way instead of via
   # base::basename() because the `basename` argument above shadows it.
   txt <- readLines(tpl, warn = FALSE)
-  txt <- gsub("{{TITLE}}", title, txt, fixed = TRUE)
+  # The title sits in a double-quoted YAML scalar, so backslashes and quotes
+  # are escaped and line breaks flattened. Unescaped, a title with a quote
+  # broke the notebook header.
+  yaml_title <- gsub("[\r\n]+", " ", title)
+  yaml_title <- gsub("\\", "\\\\", yaml_title, fixed = TRUE)
+  yaml_title <- gsub("\"", "\\\"", yaml_title, fixed = TRUE)
+  txt <- gsub("{{TITLE}}", yaml_title, txt, fixed = TRUE)
   txt <- gsub("{{SFRAME_FILE}}", paste0(slug, ".sframe"), txt, fixed = TRUE)
   txt <- gsub("{{CSV_FILE}}", paste0(slug, "_responses.csv"), txt, fixed = TRUE)
   writeLines(txt, qmd_path)
@@ -462,4 +493,52 @@ sframe_dispatch_methods <- function() {
   }
   walk(body(sframe_run_one_block))
   setdiff(unique(found), c("error", ""))
+}
+
+# The headline numbers a demo reports, in long form, one row per APA string or
+# numeric table cell. The shipped <demo>_results.csv files are this table, and
+# test-demo-results-parity.R holds them equal to what the package computes now,
+# so a changed computation cannot leave a stale reference result behind. The
+# demo generator in data-raw builds the same table.
+sframe_demo_results_table <- function(res) {
+  rows <- lapply(seq_along(res), function(i) {
+    b <- res[[i]]
+    blk <- b$block_id %||% names(res)[i] %||% as.character(i)
+    meth <- b$test %||% NA_character_
+    out <- list()
+    if (!is.null(b$apa) && nzchar(b$apa)) {
+      out[[length(out) + 1L]] <- data.frame(
+        block = blk, method = meth, quantity = "apa",
+        value = b$apa, stringsAsFactors = FALSE)
+    }
+    tb <- b$table
+    if (is.data.frame(tb) && nrow(tb) > 0) {
+      num <- names(tb)[vapply(tb, is.numeric, logical(1))]
+      # Force-directed coordinates are rendering state rather than analysis
+      # results. Even with a fixed seed, igraph may place the same graph at
+      # different coordinates across platforms, so they do not belong in a
+      # portable reference-results snapshot.
+      if (identical(meth, "co_occurrence_network")) {
+        num <- setdiff(num, c("x", "y"))
+      }
+      for (cn in num) {
+        for (r in seq_len(nrow(tb))) {
+          lab <- if (!is.null(rownames(tb)) && nzchar(rownames(tb)[r]) &&
+                     !identical(rownames(tb)[r], as.character(r))) {
+            paste0(rownames(tb)[r], ": ", cn)
+          } else if (nrow(tb) > 1) paste0(cn, " [", r, "]") else cn
+          out[[length(out) + 1L]] <- data.frame(
+            block = blk, method = meth, quantity = lab,
+            value = format(tb[[cn]][r], digits = 6), stringsAsFactors = FALSE)
+        }
+      }
+    }
+    if (!length(out)) {
+      out[[1]] <- data.frame(block = blk, method = meth,
+                             quantity = "no numeric output",
+                             value = NA_character_, stringsAsFactors = FALSE)
+    }
+    do.call(rbind, out)
+  })
+  do.call(rbind, rows)
 }

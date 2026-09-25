@@ -20,25 +20,44 @@ sframe_builder_as_item <- function(item) {
     return(item)
   }
 
-  sf_item(
-    id = item$id,
-    label = item$label,
-    type = item$type %||% "text",
-    required = isTRUE(item$required),
-    choice_set = item$choice_set %||% NULL,
-    scale_id = item$scale_id %||% NULL,
-    reverse = isTRUE(item$reverse),
-    help = item$help %||% NULL,
-    placeholder = item$placeholder %||% NULL,
-    matrix_items = item$matrix_items %||% NULL,
-    slider_min = item$slider_min %||% NULL,
-    slider_max = item$slider_max %||% NULL,
-    slider_step = item$slider_step %||% NULL,
-    rating_max = item$rating_max %||% NULL,
-    rating_icon = item$rating_icon %||% NULL,
-    section_intro = item$section_intro %||% NULL,
-    page = item$page %||% NULL
+  # Every field sf_item() accepts is forwarded. A hand-kept list of fields
+  # dropped date limits, comparison items and the comparison scale, and would
+  # drop any field added to sf_item() later.
+  fields <- intersect(names(item), names(formals(sf_item)))
+  args <- item[fields]
+  args <- args[!vapply(args, is.null, logical(1))]
+  args$type <- args$type %||% "text"
+  args$required <- isTRUE(item$required)
+  args$reverse <- isTRUE(item$reverse)
+  do.call(sf_item, args)
+}
+
+# Applies the fields SurveyStudio's item form holds to an existing item,
+# keeping everything the form does not show. Replacing the item with a fresh
+# one built from the form erased reverse coding, scale membership, the page
+# number and every type setting, so editing an item's wording silently
+# changed how it was scored. Settings belonging to the previous type are
+# dropped when the type changes, since they no longer apply.
+sframe_builder_update_item <- function(existing, edits) {
+  if (is.null(existing)) return(sframe_builder_as_item(edits))
+  type_fields <- list(
+    matrix = "matrix_items",
+    slider = c("slider_min", "slider_max", "slider_step"),
+    rating = c("rating_max", "rating_icon"),
+    date = c("date_min", "date_max"),
+    section_break = "section_intro",
+    pairwise_comparison = c("comparison_items", "comparison_scale"),
+    criteria_weight = c("comparison_items", "comparison_scale")
   )
+  merged <- unclass(existing)
+  old_type <- merged$type %||% "text"
+  new_type <- edits$type %||% old_type
+  if (!identical(old_type, new_type)) {
+    for (f in type_fields[[old_type]] %||% character(0)) merged[[f]] <- NULL
+  }
+  for (f in names(edits)) merged[f] <- list(edits[[f]])
+  merged$type <- new_type
+  sframe_builder_as_item(merged)
 }
 
 sframe_builder_as_scale <- function(scale) {
@@ -92,6 +111,10 @@ sframe_builder_as_check <- function(check) {
 #' @return A list containing empty metadata, choice, item, scale, branching,
 #'   and check collections suitable for SurveyStudio.
 #' @export
+#' @examples
+#' state <- sframe_builder_empty_state()
+#' state$meta$title
+#' length(state$items)
 sframe_builder_empty_state <- function() {
   list(
     meta = list(
@@ -108,7 +131,8 @@ sframe_builder_empty_state <- function() {
     checks = list(),
     analysis_plan = list(),
     models = list(),
-    render = list()
+    render = list(),
+    designs = list()
   )
 }
 
@@ -119,6 +143,11 @@ sframe_builder_empty_state <- function() {
 #' @return A builder state list. Component classes are restored so the state
 #'   can be edited or validated by SurveyStudio.
 #' @export
+#' @examples
+#' demo <- sframe_demo_data()
+#' state <- sframe_builder_state_from_instrument(demo$instrument)
+#' length(state$items)
+#' length(state$scales)
 sframe_builder_state_from_instrument <- function(instrument = NULL) {
   if (is.null(instrument)) {
     return(sframe_builder_empty_state())
@@ -132,7 +161,13 @@ sframe_builder_state_from_instrument <- function(instrument = NULL) {
       version = instrument$meta$version %||% "0.1.0",
       description = instrument$meta$description %||% NULL,
       authors = instrument$meta$authors %||% NULL,
-      languages = instrument$meta$languages %||% "en"
+      languages = instrument$meta$languages %||% "en",
+      # When the instrument was created is a fact about it, and the content
+      # hash covers it. Dropping it here made compose stamp the current time,
+      # so a rebuild changed the creation date and moved the hash the
+      # amendment boundary rests on. The 2 usually landed in the same second,
+      # which is why it showed as a 1-in-25 test failure.
+      created_at = instrument$meta$created_at %||% NULL
     ),
     choices = lapply(instrument$choices %||% list(), sframe_builder_as_choice),
     items = lapply(instrument$items %||% list(), sframe_builder_as_item),
@@ -148,7 +183,13 @@ sframe_builder_state_from_instrument <- function(instrument = NULL) {
     # disclosed amendment log. sf_instrument() itself takes no amendments
     # argument; it is reattached after composing, in
     # sframe_builder_compose_instrument().
-    amendments = instrument$amendments %||% list()
+    amendments = instrument$amendments %||% list(),
+    # Conjoint designs have no Studio editor, and are carried through untouched
+    # so a rebuild keeps them. They were dropped here.
+    designs = instrument$designs %||% list(),
+    # What the instrument was when read from a file, reattached on compose, so
+    # a Studio edit of a loaded file is still recognised as a revision.
+    origin = attr(instrument, "sframe_origin")
   )
 }
 
@@ -162,7 +203,9 @@ sframe_builder_compose_instrument <- function(
     analysis_plan = list(),
     models = list(),
     render = list(),
-    amendments = list()
+    amendments = list(),
+    designs = list(),
+    origin = NULL
 ) {
   choices <- lapply(choices, sframe_builder_as_choice)
   items <- lapply(items, sframe_builder_as_item)
@@ -170,27 +213,27 @@ sframe_builder_compose_instrument <- function(
   branching <- lapply(branching, sframe_builder_as_branch)
   checks <- lapply(checks, sframe_builder_as_check)
 
+  # Scale membership is edited on the scales, so each item's scale_id follows
+  # them: an item keeps its scale while that scale still lists it, and
+  # otherwise takes the first scale that does. Reverse coding is left where it
+  # was declared. An item-level reverse flag stays with its item while the item
+  # stays in the same scale, and a scale's reverse_items stay on the scale.
+  # Clearing every item's flag and rebuilding it from reverse_items silently
+  # un-reversed items declared reverse = TRUE.
   if (length(items) > 0) {
-    item_ids <- vapply(items, function(item) item$id, character(1))
-
     items <- lapply(items, function(item) {
-      item$scale_id <- NULL
-      item$reverse <- FALSE
+      listing <- Filter(function(s) item$id %in% (s$items %||% character(0)), scales)
+      listing_ids <- vapply(listing, function(s) s$id, character(1))
+      previous <- item$scale_id
+      item$scale_id <- if (!is.null(previous) && previous %in% listing_ids) {
+        previous
+      } else if (length(listing_ids) > 0) {
+        listing_ids[[1]]
+      }
+      item$reverse <- isTRUE(item$reverse) && identical(item$scale_id, previous)
       class(item) <- "sf_item"
       item
     })
-
-    for (scale in scales) {
-      reverse_ids <- scale$reverse_items %||% character(0)
-      for (item_id in scale$items %||% character(0)) {
-        idx <- match(item_id, item_ids)
-        if (is.na(idx)) {
-          next
-        }
-        items[[idx]]$scale_id <- scale$id
-        items[[idx]]$reverse <- item_id %in% reverse_ids
-      }
-    }
   }
 
   instrument <- sf_instrument(
@@ -199,11 +242,18 @@ sframe_builder_compose_instrument <- function(
     description = meta$description %||% NULL,
     authors = meta$authors %||% NULL,
     languages = meta$languages %||% "en",
-    components = c(choices, items, scales, branching, checks),
+    components = c(choices, items, scales, branching, checks,
+                   designs %||% list()),
     analysis_plan = analysis_plan,
     models = models,
     render = render %||% list()
   )
+
+  # sf_instrument() stamps a fresh created_at, which is right for a new
+  # instrument and wrong for one being rebuilt from an existing state.
+  if (!is.null(meta$created_at)) {
+    instrument$meta$created_at <- as.character(meta$created_at)[1]
+  }
 
   # sf_instrument() has no amendments argument (see its own definition); a
   # freshly built instrument legitimately has none, but one round-tripped
@@ -212,8 +262,23 @@ sframe_builder_compose_instrument <- function(
   if (length(amendments) > 0) {
     instrument$amendments <- amendments
   }
+  if (!is.null(origin)) {
+    attr(instrument, "sframe_origin") <- origin
+  }
 
   instrument
+}
+
+# The reason write_sframe() would refuse a valid draft as an undisclosed or
+# inconsistent revision, or NULL when it would write.
+sframe_builder_revision_problem <- function(instrument) {
+  checked <- tryCatch(as_sframe(validate_sframe(instrument, strict = TRUE)),
+                      error = function(e) NULL)
+  if (is.null(checked)) return(NULL)
+  tryCatch({
+    sframe_check_amendment_boundary(checked)
+    NULL
+  }, error = function(e) conditionMessage(e))
 }
 
 #' Validate a SurveyStudio draft state
@@ -226,9 +291,24 @@ sframe_builder_compose_instrument <- function(
 #'   theme) carried from the loaded instrument so previews and exports match.
 #' @param amendments List of previously disclosed amendment entries, carried
 #'   through unchanged so a draft round trip does not drop them.
+#' @param designs List of conjoint designs, carried through unchanged, since
+#'   Studio has no editor for them.
+#' @param origin The load record of an instrument read with [read_sframe()],
+#'   from the builder state, or `NULL`. Carried onto the draft so an edit of a
+#'   loaded file is recognised as a revision.
 #'
-#' @return A list with `valid`, `problems`, and `instrument`.
+#' @return A list with `valid`, `problems`, `instrument`, and
+#'   `revision_problem`: the reason [write_sframe()] would refuse the draft as
+#'   an undisclosed revision, or `NULL`.
 #' @export
+#' @examples
+#' demo  <- sframe_demo_data()
+#' state <- sframe_builder_state_from_instrument(demo$instrument)
+#' draft <- sframe_builder_validate_draft(
+#'   meta = state$meta, choices = state$choices, items = state$items,
+#'   scales = state$scales, branching = state$branching, checks = state$checks
+#' )
+#' draft$valid
 sframe_builder_validate_draft <- function(
     meta,
     choices = list(),
@@ -239,7 +319,9 @@ sframe_builder_validate_draft <- function(
     analysis_plan = list(),
     models = list(),
     render = list(),
-    amendments = list()
+    amendments = list(),
+    designs = list(),
+    origin = NULL
 ) {
   instrument <- sframe_builder_compose_instrument(
     meta = meta,
@@ -251,7 +333,9 @@ sframe_builder_validate_draft <- function(
     analysis_plan = analysis_plan,
     models = models,
     render = render,
-    amendments = amendments
+    amendments = amendments,
+    designs = designs,
+    origin = origin
   )
 
   validation <- validate_sframe(instrument, strict = FALSE)
@@ -318,6 +402,9 @@ sframe_builder_validate_draft <- function(
   list(
     valid = length(problems) == 0,
     problems = problems,
-    instrument = instrument
+    instrument = instrument,
+    revision_problem = if (length(problems) == 0) {
+      sframe_builder_revision_problem(instrument)
+    }
   )
 }

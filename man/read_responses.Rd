@@ -23,20 +23,28 @@ unique respondent identifiers. If NULL, no respondent ID column is
 expected.}
 
 \item{submitted_at}{Character or NULL. The name of the column containing
-submission timestamps.}
+submission timestamps.
+The metadata columns surveyframe's own collectors write, \code{respondent_id},
+\code{response_id}, \code{started_at} and \code{submitted_at}, are recognised without being
+declared: a file this package collected reads back without naming the columns
+it wrote. Anything else outside the instrument still has to be declared, or
+\code{strict = FALSE} used.}
 
 \item{meta_cols}{Character vector or NULL. Additional column names, outside
 the item IDs, to retain (for example, condition assignment or
 source URL).}
 
-\item{strict}{Logical. When \code{TRUE} (default), columns in the response data
-outside the declared item IDs and metadata columns raise an error.
-When \code{FALSE}, undeclared columns are retained with a warning.}
+\item{strict}{Logical. When \code{TRUE} (default), a column outside the declared
+item IDs, their expansion columns and the metadata columns is an error,
+naming the columns. When \code{FALSE}, such columns are kept, placed last, with
+a warning.}
 }
 \value{
 A \code{data.frame} with columns ordered as: metadata columns first, then
-item columns in instrument order. Unrecognised columns are dropped when
-\code{strict = TRUE} or appended with a warning when \code{strict = FALSE}.
+item columns in instrument order, each item followed by its expansion
+columns, then any undeclared columns kept under \code{strict = FALSE}. To keep
+an extra column under \code{strict = TRUE}, name it in \code{meta_cols}, or select
+the columns you need before reading.
 }
 \description{
 Loads survey response data and checks that it conforms to the instrument
@@ -44,6 +52,25 @@ specification. Column names in the response file must match item IDs defined
 in the instrument. Non-item columns are allowed only when declared through
 \code{respondent_id}, \code{submitted_at}, or \code{meta_cols}.
 }
+\section{Columns}{
+A single-answer item has one column named by its ID. A matrix, ranking,
+multiple-choice or decision item has one column per row, option, pair or
+criterion, named \code{item__sub}, and each is checked: a battery with some of its
+columns absent is reported by name. Two columns with the same name are
+refused, since one would otherwise be lost.
+}
+
+\section{Values}{
+A CSV file is read as text, so identifiers such as \code{001}, dates and text
+answers arrive exactly as written, a literal \code{NA} included. Columns of items
+with numeric responses (numeric, slider and rating items, choice items whose
+codes are all numbers, and ranking, multiple-choice and decision expansion
+columns) are then converted to numbers, with an empty cell or \code{NA} read as
+missing. A column that does not convert cleanly is kept as text. Data frames
+go through the same conversion, so a CSV file and a data frame holding the
+same responses read the same.
+}
+
 \examples{
 responses <- read_responses(
   x = system.file("extdata", "tourism_services_responses.csv",

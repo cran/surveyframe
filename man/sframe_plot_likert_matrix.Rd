@@ -33,6 +33,16 @@ grid). Same diverging-stack convention as the single-item chart: the
 middle category of an odd-length scale is neutral and split evenly
 across the zero line, and colour saturation increases toward each pole.
 }
+\examples{
+\donttest{
+if (requireNamespace("ggplot2", quietly = TRUE)) {
+  demo <- sframe_demo("matrix_likert")
+  item <- Filter(function(i) i$type == "matrix", demo$instrument$items)[[1]]
+  cs   <- Filter(function(c) c$id == item$choice_set, demo$instrument$choices)[[1]]
+  sframe_plot_likert_matrix(item, demo$responses, cs)
+}
+}
+}
 \seealso{
 \code{\link[=sframe_draw_likert_diverging]{sframe_draw_likert_diverging()}}
 }

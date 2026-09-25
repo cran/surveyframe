@@ -1,78 +1,144 @@
 # score_scales.R
 
-sframe_reverse_context <- function(instrument) {
+# Column names response data already carries, which an item or scale id must
+# never take, since score_scales() writes each score under its scale's id.
+sframe_reserved_response_columns <- c("respondent_id", "response_id",
+                                      "started_at", "submitted_at")
+
+# The ids of items reversed within `scale`. Reversal belongs to the scale that
+# declares it: the scale's own reverse_items, and items whose scale_id names
+# this scale with reverse = TRUE. One instrument-wide map let a scale reverse
+# an item that another scale owned and never asked to reverse, which moved
+# that scale's scores and its alpha.
+sframe_scale_reverse_ids <- function(instrument, scale) {
+  members <- as.character(scale$items)
+  declared <- intersect(as.character(scale$reverse_items %||% character(0)),
+                        members)
+  item_level <- vapply(instrument$items, function(i) {
+    isTRUE(i$reverse) && identical(i$scale_id, scale$id) && i$id %in% members
+  }, logical(1))
   item_ids <- vapply(instrument$items, function(i) i$id, character(1))
-
-  reverse_map <- stats::setNames(
-    vapply(instrument$items, function(i) isTRUE(i$reverse), logical(1)),
-    item_ids
-  )
-
-  for (scale in instrument$scales) {
-    if (is.null(scale$reverse_items)) {
-      next
-    }
-    for (rid in scale$reverse_items) {
-      if (rid %in% names(reverse_map)) {
-        reverse_map[rid] <- TRUE
-      }
-    }
-  }
-
-  choice_ranges <- stats::setNames(
-    lapply(instrument$choices, function(cs) {
-      vals <- suppressWarnings(as.numeric(cs$values))
-      vals <- vals[!is.na(vals)]
-      if (length(vals) == 0) {
-        return(NULL)
-      }
-      c(min(vals), max(vals))
-    }),
-    vapply(instrument$choices, function(cs) cs$id, character(1))
-  )
-
-  item_choice_sets <- stats::setNames(
-    vapply(instrument$items, function(i) i$choice_set %||% "", character(1)),
-    item_ids
-  )
-
-  list(
-    reverse_map = reverse_map,
-    choice_ranges = choice_ranges,
-    item_choice_sets = item_choice_sets
-  )
+  unique(c(declared, item_ids[item_level]))
 }
 
-sframe_numeric_scale_data <- function(data, item_ids, reverse_context = NULL) {
-  scale_num <- as.data.frame(lapply(data[, item_ids, drop = FALSE], function(col) {
-    suppressWarnings(as.numeric(col))
-  }))
-
-  if (is.null(reverse_context)) {
-    return(scale_num)
-  }
-
-  for (col in item_ids) {
-    if (!isTRUE(reverse_context$reverse_map[[col]])) {
-      next
+# The declared response bounds for an item, or NULL when it declares none:
+# the numeric range of its choice set, its slider limits, or 1 to rating_max.
+sframe_item_bounds <- function(instrument, item_id) {
+  item <- NULL
+  for (i in instrument$items) if (identical(i$id, item_id)) item <- i
+  if (is.null(item)) return(NULL)
+  if (!is.null(item$choice_set)) {
+    for (cs in instrument$choices) {
+      if (!identical(cs$id, item$choice_set)) next
+      vals <- suppressWarnings(as.numeric(cs$values))
+      vals <- vals[!is.na(vals)]
+      if (length(vals) > 0) return(c(min(vals), max(vals)))
     }
-
-    vals <- scale_num[[col]]
-    cs_id <- reverse_context$item_choice_sets[[col]]
-    rng <- if (nzchar(cs_id) && !is.null(reverse_context$choice_ranges[[cs_id]])) {
-      reverse_context$choice_ranges[[cs_id]]
-    } else {
-      observed <- vals[!is.na(vals)]
-      if (length(observed) == 0) {
-        next
-      }
-      c(min(observed), max(observed))
-    }
-
-    scale_num[[col]] <- (rng[1] + rng[2]) - vals
   }
+  if (identical(item$type, "slider") && !is.null(item$slider_min) &&
+      !is.null(item$slider_max)) {
+    return(c(as.numeric(item$slider_min), as.numeric(item$slider_max)))
+  }
+  if (identical(item$type, "rating")) {
+    return(c(1, as.numeric(item$rating_max %||% 5)))
+  }
+  NULL
+}
 
-  scale_num
+# A response column as numbers. A factor is read through its labels: as.numeric()
+# on a factor returns level positions, so a factor holding 10 and 20 scored as
+# 1 and 2. A factor whose labels are not numbers is refused, since its levels
+# have no measurement meaning. Character values that are not numbers become NA.
+sframe_as_measure <- function(x, column) {
+  if (is.factor(x)) {
+    labels <- as.character(x)
+    out <- suppressWarnings(as.numeric(labels))
+    bad <- unique(labels[!is.na(labels) & is.na(out)])
+    if (length(bad) > 0) {
+      rlang::abort(
+        c(paste0("Column '", column, "' is a factor with non-numeric levels, ",
+                 "so it cannot be scored."),
+          i = paste0("Levels that are not numbers: ",
+                     paste(utils::head(bad, 5), collapse = ", "), "."),
+          i = "Convert the column to its numeric codes before scoring."),
+        class = "sframe_error"
+      )
+    }
+    return(out)
+  }
+  suppressWarnings(as.numeric(x))
+}
+
+# The numeric item matrix for one scale, reversed within that scale on declared
+# bounds. Reversing on the sample's own minimum and maximum gave the same answer
+# a different reversed value as respondents were added, so an item with no
+# declared bounds cannot be reversed.
+sframe_scale_matrix <- function(data, instrument, scale, cols) {
+  out <- as.data.frame(
+    lapply(stats::setNames(cols, cols),
+           function(col) sframe_as_measure(data[[col]], col)),
+    check.names = FALSE
+  )
+  for (col in intersect(sframe_scale_reverse_ids(instrument, scale), cols)) {
+    rng <- sframe_item_bounds(instrument, col)
+    if (is.null(rng)) {
+      rlang::abort(
+        c(paste0("Item '", col, "' is reverse-coded in scale '", scale$id,
+                 "' but declares no response bounds."),
+          i = paste0("Reversal needs the scale's fixed endpoints. Give the ",
+                     "item a numeric choice set, or slider_min and slider_max.")),
+        class = "sframe_error"
+      )
+    }
+    out[[col]] <- (rng[1] + rng[2]) - out[[col]]
+  }
+  out
+}
+
+# Refuses scoring when a scale id names data score_scales() would overwrite: an
+# item, an expansion column, or response metadata. validate_sframe() reports the
+# same collision, and this guards instruments that were never validated.
+#
+# `data` matters as much as the declaration. The declared ids alone missed a
+# collision with a column the responses actually carry and the instrument never
+# mentions, so a scale called "site" replaced a collected "site" column with
+# its own scores and the metadata was gone.
+#
+# The rule is explicit: a scale's score column has to be a new column. Scoring
+# an already-scored frame is done by dropping those columns first, which says
+# what is being replaced instead of replacing it silently.
+sframe_check_score_columns <- function(instrument, data = NULL) {
+  scale_ids <- vapply(instrument$scales, function(s) s$id, character(1))
+  item_ids <- vapply(instrument$items, function(i) i$id, character(1))
+  taken <- c(item_ids, sframe_item_expansion_columns(instrument),
+             sframe_reserved_response_columns)
+  clash <- intersect(scale_ids, taken)
+  if (length(clash) > 0) {
+    rlang::abort(
+      c(paste0("Scale ID ", paste0("'", clash, "'", collapse = ", "),
+               " matches an item, response or metadata column."),
+        i = paste0("score_scales() stores each score in a column named by ",
+                   "its scale ID, so scoring would overwrite that data. ",
+                   "Rename the scale.")),
+      class = c("sframe_validation_error", "sframe_error")
+    )
+  }
+  if (!is.null(data)) {
+    in_data <- intersect(scale_ids, colnames(data))
+    if (length(in_data) > 0) {
+      rlang::abort(
+        c(paste0("The responses already hold a column named ",
+                 paste0("'", in_data, "'", collapse = ", "),
+                 ", which is also a scale ID."),
+          i = paste0("score_scales() stores each score in a column named by ",
+                     "its scale ID, so scoring would replace that data. ",
+                     "Rename the scale, or drop the column first where it ",
+                     "holds scores from an earlier run.")),
+        class = c("sframe_validation_error", "sframe_error")
+      )
+    }
+  }
+  invisible(TRUE)
 }
 
 sframe_scale_weights <- function(scale, scale_item_ids) {
@@ -152,7 +218,7 @@ score_scales <- function(data, instrument, keep_items = TRUE, keep_meta = TRUE) 
   stopifnot(is.data.frame(data))
 
   item_ids <- vapply(instrument$items, function(i) i$id, character(1))
-  reverse_context <- sframe_reverse_context(instrument)
+  sframe_check_score_columns(instrument, data)
 
   scored <- data
 
@@ -165,12 +231,23 @@ score_scales <- function(data, instrument, keep_items = TRUE, keep_meta = TRUE) 
       )
       next
     }
+    absent <- setdiff(scale$items, colnames(data))
+    if (length(absent) > 0) {
+      sframe_warn_scoring(
+        paste0("Scale '", scale$id, "' has no column for item(s) ",
+               paste0("'", absent, "'", collapse = ", "),
+               ". They count as unanswered toward min_valid."),
+        scale_id = scale$id
+      )
+    }
 
-    scale_num <- sframe_numeric_scale_data(data, scale_item_ids, reverse_context)
+    scale_num <- sframe_scale_matrix(data, instrument, scale, scale_item_ids)
 
-    # Minimum valid items
+    # Minimum valid items. The default is every declared item, whether or not
+    # its column is present: counting only the columns present let a 3-item
+    # scale with an absent column be scored on 2 items.
     valid_counts <- rowSums(!is.na(scale_num))
-    min_valid    <- scale$min_valid %||% length(scale_item_ids)
+    min_valid    <- scale$min_valid %||% length(scale$items)
 
     composite <- sframe_composite_score(scale_num, scale, scale_item_ids)
     composite[valid_counts < min_valid] <- NA

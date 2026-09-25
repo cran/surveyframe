@@ -1,13 +1,195 @@
 # validate_sframe.R
 
+# A field every check below reads as a length-1 string. Anything else has to
+# be reported, because the checks reach it through vapply(..., character(1))
+# and an ordinary R error there leaves no diagnostic at all.
+sframe_scalar_problem <- function(value, what, allow_empty = FALSE,
+                                  require_character = TRUE) {
+  if (is.null(value)) return(paste0(what, " is missing."))
+  if (!is.atomic(value)) {
+    return(paste0(what, " must be one value, and is ", class(value)[1], "."))
+  }
+  if (length(value) != 1) {
+    return(paste0(what, " must be one value, and has length ",
+                  length(value), "."))
+  }
+  if (is.na(value)) return(paste0(what, " is NA."))
+  # Every check downstream reads these through vapply(..., character(1)), so a
+  # numeric id passed the old length-and-NA test and then failed there with an
+  # ordinary R type error instead of a diagnostic.
+  if (require_character && !is.character(value)) {
+    return(paste0(what, " must be text, and is ", class(value)[1],
+                  ". Quote it."))
+  }
+  if (!allow_empty && !nzchar(as.character(value))) {
+    return(paste0(what, " is empty."))
+  }
+  NULL
+}
+
+sframe_field_shape_problems <- function(instrument) {
+  out <- character(0)
+  keep <- function(p) if (!is.null(p)) out <<- c(out, p)
+  # A component that is no list cannot be read with $ at all, so it is reported
+  # here and its fields are left alone.
+  component_problem <- function(x, what) {
+    if (!is.list(x)) {
+      return(paste0(what, " must be a list of fields, and is ",
+                    class(x)[1], "."))
+    }
+    NULL
+  }
+  for (i in seq_along(instrument$items)) {
+    it <- instrument$items[[i]]
+    bad <- component_problem(it, paste0("Item ", i))
+    if (!is.null(bad)) { keep(bad); next }
+    keep(sframe_scalar_problem(it$id, paste0("Item ", i, "'s id")))
+    keep(sframe_scalar_problem(it$label, paste0("Item ", i, "'s label"),
+                               allow_empty = TRUE))
+    keep(sframe_scalar_problem(it$type, paste0("Item ", i, "'s type")))
+  }
+  for (i in seq_along(instrument$choices)) {
+    bad <- component_problem(instrument$choices[[i]],
+                             paste0("Choice set ", i))
+    if (!is.null(bad)) { keep(bad); next }
+    keep(sframe_scalar_problem(instrument$choices[[i]]$id,
+                               paste0("Choice set ", i, "'s id")))
+  }
+  for (i in seq_along(instrument$scales)) {
+    bad <- component_problem(instrument$scales[[i]], paste0("Scale ", i))
+    if (!is.null(bad)) { keep(bad); next }
+    keep(sframe_scalar_problem(instrument$scales[[i]]$id,
+                               paste0("Scale ", i, "'s id")))
+  }
+  # A plan block that cannot be read, and a branch or check the same, belong
+  # here too: the reference walk below dereferences all of them.
+  for (i in seq_along(instrument$analysis_plan)) {
+    keep(component_problem(instrument$analysis_plan[[i]],
+                           paste0("Analysis plan block ", i)))
+  }
+  for (i in seq_along(instrument$branching)) {
+    keep(component_problem(instrument$branching[[i]],
+                           paste0("Branching rule ", i)))
+  }
+  for (i in seq_along(instrument$checks)) {
+    keep(component_problem(instrument$checks[[i]], paste0("Check ", i)))
+  }
+  for (i in seq_along(instrument$models)) {
+    keep(component_problem(instrument$models[[i]], paste0("Model ", i)))
+  }
+  keep(sframe_scalar_problem(instrument$meta$title, "The instrument title"))
+  # The format requires meta.title and leaves meta.version optional, so an
+  # absent version is a legal minimal file. A version that IS supplied still
+  # has to be one string: a vector one used to reach the diagnostic's own
+  # printing and fail there.
+  if (!is.null(instrument$meta$version)) {
+    keep(sframe_scalar_problem(instrument$meta$version,
+                               "The instrument version"))
+  }
+  out
+}
+
+# Title and version reach the diagnostic's own printing, which reads them as
+# single values. A malformed one is already reported, so a placeholder here
+# keeps the report readable.
+sframe_meta_display <- function(value, fallback) {
+  if (length(value) == 1 && !is.na(value) && nzchar(as.character(value))) {
+    return(as.character(value))
+  }
+  fallback
+}
+
+# Whether a method takes its variables from the block's roles at all. The
+# instrument-level methods read the whole instrument instead: a reliability or
+# quality block names no variable and is right not to. Probing the resolver
+# with every role name it knows separates the two without a hand-kept list
+# that would drift as methods are added.
+sframe_method_needs_variables <- function(method) {
+  bag <- list(
+    variables = "x", variable = "x", items = "x", scales = "x",
+    group = "g", outcome = "o", dependent = "o", x = "a", y = "b",
+    item = "i", row = "r", column = "c", predictors = "p",
+    before = "b", after = "a2", measures = c("m1", "m2"),
+    weights_item = "w", performance_items = "pi", mediator = "m",
+    moderator = "mo", controls = "c2", covariates = "c3"
+  )
+  resolved <- tryCatch(
+    sframe_vars_for_method(method, bag, list(method = method)),
+    error = function(e) character(0))
+  length(resolved) > 0
+}
+
+# The shape a plan block has to have before its references mean anything.
+# Reading references alone let analysis_plan = list(list()) validate clean,
+# and let roles = "q1" skip reference checking because it was no list.
+sframe_plan_block_problems <- function(plan, known_methods) {
+  out <- character(0)
+  keep <- function(p) out <<- c(out, p)
+  ids <- character(0)
+  for (i in seq_along(plan)) {
+    block <- plan[[i]]
+    where <- paste0("Analysis plan block ", i)
+    if (!is.list(block) || length(block) == 0) {
+      keep(paste0(where, " is empty or is no list of fields."))
+      next
+    }
+    id <- block$id %||% NULL
+    p <- sframe_scalar_problem(id, paste0(where, "'s id"))
+    if (is.null(p)) {
+      where <- paste0("Analysis plan '", as.character(id)[1], "'")
+      ids <- c(ids, as.character(id)[1])
+    } else {
+      keep(p)
+    }
+    method <- block$method %||% block$test %||% NULL
+    method_name <- ""
+    p <- sframe_scalar_problem(method, paste0(where, "'s method"))
+    if (is.null(p)) {
+      method <- as.character(method)[1]
+      method_name <- method
+      if (!method %in% known_methods) {
+        keep(paste0(where, " names the unknown method '", method,
+                    "'. See ?run_analysis_plan for the methods available."))
+      }
+    } else {
+      keep(p)
+    }
+    roles_ok <- is.list(block$roles) && length(unlist(block$roles)) > 0
+    vars_ok <- length(unlist(block$variables)) > 0
+    if (!is.null(block$roles) && !is.list(block$roles)) {
+      keep(paste0(where, "'s roles must be a named list of role assignments."))
+    }
+    # An empty roles list is no assignment, and it passed the old presence
+    # test. Only the methods that read variables from roles need one: a
+    # reliability, quality or item-diagnostics block works from the whole
+    # instrument and names no variable.
+    if (!roles_ok && !vars_ok && nzchar(method_name) &&
+        sframe_method_needs_variables(method_name)) {
+      keep(paste0(where, " assigns no variables. Give it roles, or the legacy ",
+                  "variables field."))
+    }
+  }
+  dup <- unique(ids[duplicated(ids)])
+  if (length(dup) > 0) {
+    keep(paste0("Duplicate analysis plan block IDs: ",
+                paste(dup, collapse = ", "), ". A block ID has to be unique, ",
+                "since results are keyed by it."))
+  }
+  out
+}
+
 # The full roster of checks, in the order they run. Every one appears in the
 # returned diagnostic whether or not it found anything, so a user can tell a
 # check that passed from a check that never ran.
 sframe_validation_checks <- c(
+  "field_shapes",
   "duplicate_item_ids",
   "item_id_format",
   "duplicate_choice_ids",
+  "choice_set_contents",
   "duplicate_scale_ids",
+  "id_namespace",
+  "item_config",
   "item_labels",
   "item_choice_set_refs",
   "item_scale_refs",
@@ -15,9 +197,14 @@ sframe_validation_checks <- c(
   "decision_item_shape",
   "comparison_scale",
   "scale_membership",
+  "scale_parameters",
+  "reverse_item_membership",
   "branching_refs",
   "branching_values",
   "check_refs",
+  "duplicate_check_ids",
+  "branch_targets",
+  "analysis_plan_blocks",
   "analysis_plan_models",
   "analysis_plan_variables",
   "decision_scale_compatibility",
@@ -37,12 +224,18 @@ sframe_validation_checks <- c(
 #' - Invalid item IDs
 #' - Duplicate choice-set IDs
 #' - Duplicate scale IDs
+#' - Item IDs, scale IDs and response columns that share a name, or take a
+#'   reserved metadata name such as `submitted_at`. A scale's score is stored
+#'   in a column named by its ID, so a shared name would overwrite data
 #' - Items with missing labels
 #' - Items referencing a missing `choice_set` in the instrument
 #' - Items referencing a missing `scale_id` in the instrument
 #' - Items marked `reverse = TRUE` without a `scale_id`
 #' - Choice sets referenced by items but not present in the instrument
 #' - Scale `items` vectors containing IDs not present in the instrument
+#' - Scale scoring parameters: repeated items, a `min_valid` outside 1 to the
+#'   number of items, and weights that are not positive finite numbers
+#' - Reverse coding declared for an item outside the scale that declares it
 #' - Branching rules referencing item IDs not present in the instrument
 #' - `%in%` branching rules whose `value` no evaluator can consume
 #' - Attention checks referencing item IDs not present in the instrument
@@ -99,6 +292,46 @@ validate_sframe <- function(instrument, strict = TRUE) {
   log <- sframe_new_problem_log()
   add <- function(check, messages) sframe_log_problem(log, check, messages)
 
+  # The one exit every path takes. It aborts under strict mode, sets the
+  # validated stamp from this run, and builds the diagnostic. The shape gate
+  # below used to return on its own, which skipped both the strict abort and
+  # the stamp: a malformed field gave a diagnostic while strict = TRUE carried
+  # on, and the instrument it returned still said it had been validated, so
+  # write_sframe() wrote it.
+  finish <- function() {
+    if (strict && length(log$problems) > 0) {
+      sframe_abort_validation(
+        paste0(
+          "Instrument validation failed with ",
+          length(log$problems),
+          " problem(s):\n",
+          paste0("  - ", log$problems, collapse = "\n")
+        ),
+        instrument_title = sframe_meta_display(instrument$meta$title,
+                                               "(untitled)")
+      )
+    }
+    instrument$meta$validated <- length(log$problems) == 0
+    sframe_new_validation(
+      log,
+      roster  = sframe_validation_checks,
+      subject = "instrument",
+      title   = sframe_meta_display(instrument$meta$title, "(untitled)"),
+      version = sframe_meta_display(instrument$meta$version, "(unversioned)"),
+      object  = instrument
+    )
+  }
+
+  # Shape gate. Every check below reads an id as a length-1 string, so a
+  # malformed field has to become a problem here. Reaching vapply() with one
+  # raised an ordinary R error and the diagnostic was never built, which broke
+  # the promise that strict = FALSE reports problems and returns.
+  shape <- sframe_field_shape_problems(instrument)
+  if (length(shape) > 0) {
+    add("field_shapes", shape)
+    return(finish())
+  }
+
   item_ids    <- vapply(instrument$items,    function(x) x$id, character(1))
   choice_ids  <- vapply(instrument$choices,  function(x) x$id, character(1))
   scale_ids   <- vapply(instrument$scales,   function(x) x$id, character(1))
@@ -142,6 +375,43 @@ validate_sframe <- function(instrument, strict = TRUE) {
     )
   }
 
+  # Per-type item configuration, shared with the constructor. Checking it at
+  # construction alone let a mutated item revalidate clean.
+  item_config <- unlist(lapply(instrument$items, sframe_item_config_problems),
+                        use.names = FALSE)
+  if (length(item_config) > 0) add("item_config", item_config)
+
+  # A choice set's contents, which validation used to read past entirely.
+  choice_content <- unlist(lapply(instrument$choices %||% list(), function(cs) {
+    p <- sframe_choice_content_problems(cs$values, cs$labels)
+    if (length(p) == 0) return(character(0))
+    paste0("Choice set '", as.character(cs$id %||% "(unnamed)")[1], "': ", p)
+  }), use.names = FALSE)
+  if (length(choice_content) > 0) add("choice_set_contents", choice_content)
+
+  # A check's results are keyed by its id, so a repeat overwrote the first.
+  check_ids <- vapply(instrument$checks %||% list(),
+                      function(k) as.character(k$id %||% "")[1], character(1))
+  dup_checks <- unique(check_ids[nzchar(check_ids) & duplicated(check_ids)])
+  if (length(dup_checks) > 0) {
+    add("duplicate_check_ids", paste0(
+      "Duplicate check IDs: ", paste(dup_checks, collapse = ", "),
+      ". Results are keyed by the ID, so the later check replaces the first."))
+  }
+
+  # One branching rule per target item, which is what names a branch.
+  branch_targets <- vapply(instrument$branching %||% list(),
+                           function(b) as.character(b$item_id %||% "")[1],
+                           character(1))
+  dup_targets <- unique(branch_targets[nzchar(branch_targets) &
+                                         duplicated(branch_targets)])
+  if (length(dup_targets) > 0) {
+    add("branch_targets", paste0(
+      "More than one branching rule controls item(s): ",
+      paste(dup_targets, collapse = ", "),
+      ". A rule is identified by the item it controls, so declare one each."))
+  }
+
   dup_choice_ids <- choice_ids[duplicated(choice_ids)]
   if (length(dup_choice_ids) > 0) {
     add(
@@ -156,6 +426,31 @@ validate_sframe <- function(instrument, strict = TRUE) {
       "duplicate_scale_ids",
       paste0("Duplicate scale IDs: ", paste(unique(dup_scale_ids), collapse = ", "))
     )
+  }
+
+  # One namespace for everything that becomes a column in response data.
+  # Duplicates within items or within scales are reported above, so this looks
+  # for names claimed by more than one kind, and for reserved metadata names.
+  expansion_cols <- sframe_item_expansion_columns(instrument)
+  claims <- unique(data.frame(
+    name = c(item_ids, scale_ids, expansion_cols),
+    kind = c(rep("an item ID", length(item_ids)),
+             rep("a scale ID", length(scale_ids)),
+             rep("a response column of another item", length(expansion_cols))),
+    stringsAsFactors = FALSE
+  ))
+  for (nm in unique(claims$name[duplicated(claims$name)])) {
+    add("id_namespace",
+      paste0("'", nm, "' is used as ",
+             paste(claims$kind[claims$name == nm], collapse = " and as "),
+             ". Each becomes a column in response data, and a scale's score ",
+             "would overwrite the other. Rename one of them."))
+  }
+  for (nm in intersect(unique(c(item_ids, scale_ids)),
+                       sframe_reserved_response_columns)) {
+    add("id_namespace",
+      paste0("'", nm, "' is reserved for response metadata, so an item or ",
+             "scale cannot use it as an ID."))
   }
 
   for (item in instrument$items) {
@@ -230,6 +525,19 @@ validate_sframe <- function(instrument, strict = TRUE) {
         paste0("Scale '", scale$id, "' references unknown item(s): ",
                paste(missing_items, collapse = ", ")))
     }
+    add("scale_parameters", sframe_scale_parameter_problems(scale))
+    add("reverse_item_membership", sframe_scale_reverse_problems(scale))
+  }
+  # An item reversed at item level is reversed within the scale its scale_id
+  # names, so that scale must list it.
+  for (item in instrument$items) {
+    if (!isTRUE(item$reverse) || is.null(item$scale_id)) next
+    owner <- Filter(function(s) identical(s$id, item$scale_id), instrument$scales)
+    if (length(owner) == 1 && !item$id %in% owner[[1]]$items) {
+      add("reverse_item_membership",
+        paste0("Item '", item$id, "' is reverse = TRUE within scale '",
+               item$scale_id, "', which does not list it among its items."))
+    }
   }
 
   # Branching rule integrity
@@ -273,8 +581,12 @@ validate_sframe <- function(instrument, strict = TRUE) {
              paste(missing_check_items, collapse = ", ")))
   }
 
+  plan_problems <- sframe_plan_block_problems(
+    instrument$analysis_plan %||% list(), sframe_dispatch_methods())
+  if (length(plan_problems) > 0) add("analysis_plan_blocks", plan_problems)
+
   # Analysis plan references. Old plans use `variables`; v0.3 plans use
-  # role-based assignments, but both formats must remain valid.
+  # role-based assignments, and both formats stay valid.
   for (block in instrument$analysis_plan %||% list()) {
     block_id <- block$id %||% "(unnamed)"
     block_method <- as.character(block$method %||% block$test %||% "")
@@ -392,30 +704,8 @@ validate_sframe <- function(instrument, strict = TRUE) {
     }
   }
 
-  if (strict && length(log$problems) > 0) {
-    sframe_abort_validation(
-      paste0(
-        "Instrument validation failed with ",
-        length(log$problems),
-        " problem(s):\n",
-        paste0("  - ", log$problems, collapse = "\n")
-      ),
-      instrument_title = instrument$meta$title
-    )
-  }
-
   # The validated stamp travels on the instrument carried by the result, so
-  # as_sframe() hands back an instrument that records it passed.
-  if (length(log$problems) == 0) {
-    instrument$meta$validated <- TRUE
-  }
-
-  sframe_new_validation(
-    log,
-    roster  = sframe_validation_checks,
-    subject = "instrument",
-    title   = instrument$meta$title,
-    version = instrument$meta$version,
-    object  = instrument
-  )
+  # as_sframe() hands back an instrument that records the outcome, and strict
+  # mode aborts. Both happen in finish(), which every exit shares.
+  finish()
 }

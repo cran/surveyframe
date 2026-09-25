@@ -1,13 +1,18 @@
-year <- if (!is.null(meta$Date) && nzchar(meta$Date)) {
-  format(as.Date(meta$Date), "%Y")
-} else {
-  format(Sys.Date(), "%Y")
+# The release year: CRAN's publication date, else the date the tarball was
+# built, else today for a source checkout.
+year <- format(Sys.Date(), "%Y")
+for (field in c("Date/Publication", "Packaged", "Date")) {
+  value <- meta[[field]]
+  if (!is.null(value) && !is.na(value) && grepl("^[0-9]{4}-", value)) {
+    year <- substr(value, 1L, 4L)
+    break
+  }
 }
 
 bibentry(
   bibtype  = "Manual",
   title    = "surveyframe: Survey Instrument Workflows",
-  author   = person("Mohammed Ali", "Sharafuddin",
+  author   = person(c("Mohammed", "Ali"), "Sharafuddin",
                     email = "mohammedali.page@gmail.com",
                     role  = c("aut", "cre"),
                     comment = c(ORCID = "0000-0001-5247-2964")),

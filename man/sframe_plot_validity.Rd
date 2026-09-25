@@ -17,6 +17,18 @@ A ggplot2 object.
 \description{
 Validity report plot: composite reliability and AVE by construct
 }
+\examples{
+\donttest{
+if (requireNamespace("ggplot2", quietly = TRUE)) {
+  loadings <- list(
+    sq  = c(sq_1 = 0.80, sq_2 = 0.75, sq_3 = 0.78),
+    sat = c(sat_1 = 0.85, sat_2 = 0.82)
+  )
+  vr <- validity_report(loadings)
+  sframe_plot_validity(vr)
+}
+}
+}
 \seealso{
 \code{\link[=validity_report]{validity_report()}}
 }

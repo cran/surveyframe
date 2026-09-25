@@ -11,7 +11,7 @@ launch_studio(
   submitted_at = NULL,
   meta_cols = NULL,
   strict = TRUE,
-  screen = c("auto", "build", "preview", "data", "quality", "analysis", "dashboard"),
+  screen = "auto",
   port = NULL,
   host = "127.0.0.1",
   launch.browser = interactive()
@@ -34,8 +34,10 @@ is a CSV path.}
 \item{strict}{Logical. Passed to \code{\link[=read_responses]{read_responses()}} when \code{responses} is a
 CSV path.}
 
-\item{screen}{Initial studio screen. One of \code{"auto"}, \code{"build"},
-\code{"preview"}, \code{"data"}, \code{"quality"}, \code{"analysis"}, or \code{"dashboard"}.}
+\item{screen}{The screen to open on. One of \code{"auto"}, which picks by what
+you supply, or a screen name: \code{"open"}, \code{"amendments"}, \code{"preview"},
+\code{"responses"}, \code{"quality"}, \code{"reliability"}, \code{"analysis"},
+\code{"dashboard"} or \code{"export"}. \code{"data"} is accepted for \code{"responses"}.}
 
 \item{port}{TCP port for the Shiny server.}
 
@@ -47,10 +49,15 @@ CSV path.}
 Called for its side effect.
 }
 \description{
-Opens the SurveyStudio Shiny application, a visual interface for the
-complete surveyframe workflow. The studio includes screens to build a survey
-draft, open an existing instrument, preview the survey, upload responses,
-review data quality, inspect reliability, plan analyses, and export outputs.
+Opens the SurveyStudio Shiny application, the visual interface for working
+with an instrument that already exists. Its screens open an instrument,
+record and read amendments, preview the survey, upload responses, review
+data quality, inspect reliability, work on the analysis plan, read the
+dashboard, and export.
+}
+\details{
+Studio reads and analyses an instrument. To author one, question by
+question, use \code{\link[=launch_builder]{launch_builder()}}, and open the result here.
 }
 \examples{
 \dontrun{

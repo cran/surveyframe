@@ -2,45 +2,35 @@
 % Please edit documentation in R/accessors.R
 \name{sf_report_accessors}
 \alias{sf_report_accessors}
-\alias{sf_apa}
-\alias{sf_flagged}
-\alias{sf_apa.sframe_analysis_results}
-\alias{sf_apa.sframe_descriptives_report}
-\alias{sf_apa.sframe_missing_data_report}
-\alias{sf_apa.sframe_validity_report}
-\alias{sf_apa.sframe_assumption_report}
-\alias{sf_flagged.sframe_quality_report}
 \title{Read the reportable parts of an analysis or quality result}
-\usage{
-sf_apa(x, ...)
-
-sf_flagged(x, ...)
-
-\method{sf_apa}{sframe_analysis_results}(x, ...)
-
-\method{sf_apa}{sframe_descriptives_report}(x, ...)
-
-\method{sf_apa}{sframe_missing_data_report}(x, ...)
-
-\method{sf_apa}{sframe_validity_report}(x, ...)
-
-\method{sf_apa}{sframe_assumption_report}(x, ...)
-
-\method{sf_flagged}{sframe_quality_report}(x, ...)
-}
-\arguments{
-\item{x}{An \code{sframe_analysis_results} object for \code{sf_apa()}, or an
-\code{sframe_quality_report} for \code{sf_flagged()}.}
-
-\item{...}{Passed to methods.}
-}
 \value{
-\code{sf_apa()} returns a named character vector, one element per
-analysis block. \code{sf_flagged()} returns an integer vector of row numbers.
+\code{sf_apa()} returns a character vector: one element per block, named
+by block, for analysis results, and one element for a single report.
+\code{sf_flagged()} returns an integer vector of row positions, sorted, each
+row once.
 }
 \description{
-\code{sf_apa()} returns the APA-formatted sentence for each analysis block.
-\code{sf_flagged()} returns the row numbers a quality report flagged.
+\code{sf_apa()} returns the APA-formatted sentence a result carries.
+\code{sf_flagged()} returns the rows a quality report flagged.
+}
+\details{
+Given analysis results, \code{sf_apa()} answers for every block at once, as a
+character vector named by block. Given one of the standalone reports that
+carry a sentence of their own, an assumption report, a descriptives report,
+a missing-data report or a validity report, it returns that single
+sentence. A result with no sentence gives an empty string, so the shape of
+the answer follows the number of blocks asked about.
+
+The sentence is plain text. APA 7 asks for italic Latin statistical symbols,
+so a manuscript needs \code{t}, \code{F}, \code{p}, \code{r}, \code{d} and the rest italicised after
+pasting: a character vector cannot carry that styling. Numbers are already
+APA-formatted, including no leading zero on \code{p} and a labelled confidence
+interval.
+
+\code{sf_flagged()} returns row positions in the response data, as one sorted
+vector with each row once, pooling every check the quality report ran:
+failed attention checks, straight-lining, excess missingness, timing and
+duplicates. Read the report itself for which check flagged a row.
 }
 \examples{
 demo <- sframe_demo_data()

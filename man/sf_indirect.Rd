@@ -21,3 +21,7 @@ An object of class \code{sf_indirect}.
 \description{
 Define an indirect effect path
 }
+\examples{
+ind <- sf_indirect("sq", through = "sat", to = "bi", label = "mediation")
+ind$through
+}

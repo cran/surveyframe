@@ -20,6 +20,15 @@ Shares its bar-building logic with \code{\link[=sframe_plot_term_frequency]{sfra
 path via the internal \code{.sframe_plot_term_bar()} helper; unlike that
 function, there is no word-cloud mode and no group faceting for this id.
 }
+\examples{
+\donttest{
+if (requireNamespace("ggplot2", quietly = TRUE)) {
+  demo <- sframe_demo("open_text")
+  res <- run_analysis_plan(demo$responses, demo$instrument)
+  sframe_plot_ngram_frequency(res$RQ2)
+}
+}
+}
 \seealso{
 \code{\link[=run_analysis_plan]{run_analysis_plan()}}, \code{\link[=ngram_frequency]{ngram_frequency()}}
 }

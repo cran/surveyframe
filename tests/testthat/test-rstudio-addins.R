@@ -1,8 +1,8 @@
 # tests/testthat/test-rstudio-addins.R
-# The add-in layer is 3 launchers and one text insert. What can be tested
-# without RStudio is that the bindings the menu declares actually exist, that
-# they fail soft when rstudioapi is absent, and that the inserted skeleton
-# really constructs a valid instrument.
+# The add-in layer is 3 launchers and one text insert. With rstudioapi mocked,
+# these tests check that the bindings the menu declares exist, that each one
+# opens the right tool, that every failure inside the IDE becomes one message
+# and NULL, and that the inserted skeleton constructs a valid instrument.
 #
 # That last one is the point of the file. The implementation guide's original
 # skeleton was written against an API that no longer exists: it passed id =
@@ -92,6 +92,192 @@ test_that("the add-ins fail soft when rstudioapi is unavailable", {
     f <- get(fn, envir = asNamespace("surveyframe"))
     expect_null(f(), info = fn)
   }
+})
+
+# --- The interactive contract, with RStudio stood in for -------------------
+
+# Mocks rstudioapi as if RStudio were running, with the given answers.
+local_rstudio <- function(select = function(...) NULL,
+                          context = list(id = "doc1"),
+                          insert = function(...) invisible(NULL),
+                          available = TRUE,
+                          env = parent.frame()) {
+  skip_if_not_installed("rstudioapi")
+  testthat::local_mocked_bindings(
+    isAvailable = function(...) available,
+    selectFile = select,
+    getSourceEditorContext = function(...) context,
+    insertText = insert,
+    .package = "rstudioapi", .env = env
+  )
+}
+
+# Replaces the 3 launchers with recorders. Returns the environment the calls
+# land in.
+local_launchers <- function(env = parent.frame()) {
+  calls <- new.env()
+  record <- function(name) function(...) {
+    calls[[name]] <- list(...)
+    invisible(name)
+  }
+  testthat::local_mocked_bindings(
+    launch_builder = record("builder"),
+    launch_studio = record("studio"),
+    launch_dashboard = record("dashboard"),
+    .package = "surveyframe", .env = env
+  )
+  calls
+}
+
+skeleton_file <- function() {
+  env <- new.env(parent = asNamespace("surveyframe"))
+  eval(parse(text = surveyframe:::sframe_addin_skeleton()), envir = env)
+  path <- tempfile(fileext = ".sframe")
+  write_sframe(get("instrument", envir = env), path)
+  path
+}
+
+test_that("with rstudioapi installed but RStudio absent, each add-in stops with one message", {
+  local_rstudio(available = FALSE)
+  calls <- local_launchers()
+  for (fn in c("addin_launch_builder", "addin_launch_studio",
+               "addin_launch_dashboard", "addin_insert_skeleton")) {
+    f <- get(fn, envir = asNamespace("surveyframe"))
+    msgs <- testthat::capture_messages(res <- f())
+    expect_null(res, info = fn)
+    expect_length(msgs, 1)
+    expect_match(msgs, "run inside RStudio", info = fn)
+  }
+  expect_length(ls(calls), 0)
+})
+
+test_that("the builder and workspace add-ins open the right tool", {
+  local_rstudio()
+  calls <- local_launchers()
+  addin_launch_builder()
+  addin_launch_studio()
+  expect_setequal(ls(calls), c("builder", "studio"))
+  expect_length(calls$studio, 0)
+})
+
+test_that("Analyse an existing instrument opens Studio on the responses screen", {
+  path <- skeleton_file()
+  local_rstudio(select = function(...) path)
+  calls <- local_launchers()
+  addin_launch_dashboard()
+  expect_identical(ls(calls), "studio")
+  expect_identical(calls$studio$screen, "responses")
+  expect_s3_class(calls$studio$instrument, "sframe")
+  expect_identical(calls$studio$instrument$meta$title, "My study")
+})
+
+test_that("cancelling the file dialog does nothing and says nothing", {
+  local_rstudio(select = function(...) NULL)
+  calls <- local_launchers()
+  expect_silent(res <- addin_launch_dashboard())
+  expect_null(res)
+  expect_length(ls(calls), 0)
+})
+
+test_that("an error from the file dialog becomes one message", {
+  local_rstudio(select = function(...) stop("dialog unavailable"))
+  calls <- local_launchers()
+  msgs <- testthat::capture_messages(res <- addin_launch_dashboard())
+  expect_null(res)
+  expect_identical(msgs, "surveyframe add-in: dialog unavailable\n")
+  expect_length(ls(calls), 0)
+})
+
+test_that("an .sframe that will not load becomes one message, before any launch", {
+  bad <- tempfile(fileext = ".sframe")
+  writeLines("{ not an instrument", bad)
+  local_rstudio(select = function(...) bad)
+  calls <- local_launchers()
+  msgs <- testthat::capture_messages(res <- addin_launch_dashboard())
+  expect_null(res)
+  expect_length(msgs, 1)
+  expect_match(msgs, "^surveyframe add-in: ")
+  expect_length(ls(calls), 0)
+})
+
+test_that("a launcher's error becomes one message and NULL", {
+  local_rstudio()
+  testthat::local_mocked_bindings(
+    launch_builder = function(...) stop("port in use"),
+    launch_studio = function(...) stop("shiny missing"),
+    .package = "surveyframe"
+  )
+  for (fn in c("addin_launch_builder", "addin_launch_studio")) {
+    f <- get(fn, envir = asNamespace("surveyframe"))
+    msgs <- testthat::capture_messages(res <- f())
+    expect_null(res, info = fn)
+    expect_length(msgs, 1)
+    expect_match(msgs, "^surveyframe add-in: (port in use|shiny missing)")
+  }
+})
+
+test_that("the exported launchers still raise their own errors", {
+  # sframe_run_addin() is for the menu only. Programmatic calls keep erroring.
+  expect_error(launch_studio(screen = "no-such-screen"))
+})
+
+test_that("inserting with no source document open explains itself", {
+  inserted <- FALSE
+  local_rstudio(context = NULL, insert = function(...) inserted <<- TRUE)
+  msgs <- testthat::capture_messages(res <- addin_insert_skeleton())
+  expect_null(res)
+  expect_length(msgs, 1)
+  expect_match(msgs, "open an R script")
+  expect_false(inserted)
+})
+
+test_that("the starter instrument is inserted into the active document", {
+  got <- NULL
+  local_rstudio(context = list(id = "doc42"),
+                insert = function(...) got <<- list(...))
+  expect_null(addin_insert_skeleton())
+  expect_identical(got$id, "doc42")
+  expect_identical(got$text, surveyframe:::sframe_addin_skeleton())
+})
+
+test_that("an insertion error becomes one message", {
+  local_rstudio(insert = function(...) stop("document is read-only"))
+  msgs <- testthat::capture_messages(res <- addin_insert_skeleton())
+  expect_null(res)
+  expect_identical(msgs, "surveyframe add-in: document is read-only\n")
+})
+
+test_that("the menu copy names what each add-in does", {
+  dcf <- system.file("rstudio", "addins.dcf", package = "surveyframe")
+  skip_if(!nzchar(dcf) || !file.exists(dcf), "addins.dcf not installed")
+  entries <- read.dcf(dcf)
+  copy <- stats::setNames(as.list(as.data.frame(t(entries[, c("Name", "Description")]),
+                                                stringsAsFactors = FALSE)),
+                          entries[, "Binding"])
+  expect_identical(copy$addin_launch_builder, c(
+    "surveyframe: Design an instrument",
+    "Open the client-side SurveyBuilder to design a questionnaire and analysis plan."))
+  expect_identical(copy$addin_launch_studio, c(
+    "surveyframe: Open analysis workspace",
+    "Open SurveyStudio to preview an instrument, load responses, run analyses, and export reports."))
+  expect_identical(copy$addin_launch_dashboard, c(
+    "surveyframe: Analyse an existing instrument",
+    "Choose an .sframe file and open SurveyStudio at the response-loading step."))
+  expect_identical(copy$addin_insert_skeleton, c(
+    "surveyframe: Insert starter instrument",
+    "Insert a valid questionnaire, scale, and reliability-plan template in the active R script."))
+  # SurveyBuilder is a client-side HTML page, not a Shiny app.
+  expect_false(any(grepl("Shiny HTML", entries[, "Description"], fixed = TRUE)))
+  expect_true(all(startsWith(entries[, "Name"], "surveyframe: ")))
+})
+
+test_that("the starter instrument shows the next steps without taking them", {
+  sk <- surveyframe:::sframe_addin_skeleton()
+  expect_match(sk, "validation <- validate_sframe(instrument)", fixed = TRUE)
+  expect_match(sk, "# write_sframe(instrument, \"my-study.sframe\")", fixed = TRUE)
+  # Commented out, so running the inserted script writes no file.
+  expect_no_match(sk, "^write_sframe", perl = TRUE)
+  expect_no_match(sk, "\nwrite_sframe")
 })
 
 test_that("no file outside R/rstudio_addins.R calls rstudioapi", {

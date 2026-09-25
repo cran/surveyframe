@@ -113,7 +113,7 @@ dematel$plot
 
 ## ----summary, echo = FALSE----------------------------------------------------
 # as.data.frame() flattens the results to one row per block, so the whole
-# summary is a column selection rather than a loop over internals.
+# summary is a column selection, with no loop over internals.
 results_df <- as.data.frame(results)
 summary_df <- data.frame(
   RQ = results_df$block_id,

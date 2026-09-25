@@ -22,3 +22,10 @@ Opens the dashboard with the bundled input-types questionnaire and 120
 simulated responses already loaded. The browser is opened automatically by
 default.
 }
+\examples{
+demo <- sframe_input_types_demo_data()
+nrow(demo$responses)
+\dontrun{
+launch_dashboard_demo()
+}
+}

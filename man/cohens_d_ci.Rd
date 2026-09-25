@@ -16,7 +16,11 @@ cohens_d_ci(x, y, R = 2000, conf.level = 0.95, seed = NULL)
 \item{seed}{Integer or NULL. When supplied, sets the random seed.}
 }
 \value{
-A named numeric vector: \code{estimate}, \code{lower}, \code{upper}. The bounds
+A named numeric vector: \code{estimate}, \code{lower}, \code{upper}, with
+attributes \code{resamples}, \code{valid_resamples} and, when the interval is
+withheld, \code{reason}. The bounds are \code{NA} when fewer than 90\% of resamples
+give a value, or when every resample gives the same value, since neither
+leaves a sampling distribution to read. The bounds
 are \code{NA} when either group has fewer than 3 finite values.
 }
 \description{

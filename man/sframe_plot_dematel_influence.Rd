@@ -25,6 +25,15 @@ deliberately a different shape from \code{\link[=sframe_plot_decision_ranking]{s
 DEMATEL classifies criteria on two axes rather than producing a single
 ranked score, so a ranking bar chart would misrepresent it.
 }
+\examples{
+\donttest{
+if (requireNamespace("ggplot2", quietly = TRUE)) {
+  demo <- sframe_demo("mcdm_choice")
+  res <- run_analysis_plan(demo$responses, demo$instrument)
+  sframe_plot_dematel_influence(res$RQ3)
+}
+}
+}
 \seealso{
 \code{\link[=sframe_plot_decision_ranking]{sframe_plot_decision_ranking()}}
 }

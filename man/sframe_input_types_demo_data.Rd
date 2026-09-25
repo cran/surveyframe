@@ -20,6 +20,11 @@ SurveyStudio support in a single instrument, and is what backs
 \code{\link[=launch_builder_demo]{launch_builder_demo()}}, \code{\link[=launch_studio_demo]{launch_studio_demo()}}, and
 \code{\link[=launch_dashboard_demo]{launch_dashboard_demo()}}.
 }
+\examples{
+demo <- sframe_input_types_demo_data()
+sf_meta(demo$instrument)$title
+nrow(demo$responses)
+}
 \seealso{
 \code{\link[=sframe_demo]{sframe_demo()}} for the 22-item teaching library instead.
 }

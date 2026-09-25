@@ -1,4 +1,29 @@
 # sf_choices.R
+# What a choice set has to carry before it can be answered. A duplicate code
+# gives 2 answers the same stored value, and an empty set gives a respondent
+# nothing to pick, both of which used to reach a collection engine unchecked.
+sframe_choice_content_problems <- function(values, labels) {
+  out <- character(0)
+  vals <- as.character(values)
+  labs <- as.character(labels)
+  if (length(vals) == 0) {
+    out <- c(out, "it declares no options.")
+    return(out)
+  }
+  if (anyNA(values) || any(!nzchar(trimws(vals)))) {
+    out <- c(out, "every value has to be a non-empty code.")
+  }
+  if (anyNA(labels) || any(!nzchar(trimws(labs)))) {
+    out <- c(out, "every option has to carry a label.")
+  }
+  dup <- unique(vals[duplicated(vals)])
+  if (length(dup) > 0) {
+    out <- c(out, paste0("the value(s) ", paste(dup, collapse = ", "),
+                         " appear more than once, so 2 options share a code."))
+  }
+  out
+}
+
 
 #' Define a reusable choice set
 #'
@@ -47,6 +72,14 @@ sf_choices <- function(
   if (length(values) != length(labels)) {
     rlang::abort(
       "`values` and `labels` must have the same length.",
+      class = c("sframe_validation_error", "sframe_error")
+    )
+  }
+  problems <- sframe_choice_content_problems(values, labels)
+  if (length(problems) > 0) {
+    rlang::abort(
+      paste0("Choice set '", as.character(id)[1], "': ",
+             paste(problems, collapse = " ")),
       class = c("sframe_validation_error", "sframe_error")
     )
   }

@@ -65,11 +65,10 @@ sframe_check_dematel_input <- function(x) {
 #' above it are considered significant enough to draw in an influence
 #' diagram.
 #'
-#' `solve()` fails outright if `I - N` is exactly singular, which does not
-#' arise for a matrix normalised this way in ordinary use. No fallback series
-#' truncation is implemented, unlike the harvested source, because a singular
-#' `I - N` here would signal a malformed matrix rather than a case to work
-#' around silently.
+#' The series converges only when the spectral radius of `N` is below 1.
+#' Normalisation keeps the radius at or below 1, and it equals 1 when criteria
+#' influence each other in a closed group with equal totals. That case returns
+#' an `error` explaining it, and no truncated series is substituted.
 #'
 #' @param x A square numeric matrix of direct influence, zero diagonal.
 #' @return A list with `normalised` (N), `total_relation` (T), `D`, `R`,
@@ -80,6 +79,18 @@ sframe_dematel_compute <- function(x) {
   n <- nrow(x)
   max_sum <- max(max(rowSums(x)), max(colSums(x)))
   normalised <- if (max_sum > 0) x / max_sum else x
+  # The total relation N + N^2 + ... exists only when the spectral radius of N
+  # is below 1. Dividing by the largest row or column sum keeps it at or below
+  # 1, and it reaches 1 whenever a group of criteria influence each other with
+  # equal row sums, as rows (0, 1) and (1, 0) do. Checked before inverting.
+  radius <- max(Mod(eigen(normalised, only.values = TRUE)$values))
+  if (radius >= 1 - 1e-9) {
+    return(list(error = sprintf(paste0(
+      "DEMATEL's total relation is undefined for this matrix: after ",
+      "normalisation its spectral radius is %.3f, so the influence series ",
+      "N + N^2 + ... does not converge. This happens when criteria influence ",
+      "each other in a closed group with equal totals."), radius)))
+  }
   total_relation <- normalised %*% solve(diag(n) - normalised)
   dimnames(total_relation) <- dimnames(x)
 
@@ -87,6 +98,9 @@ sframe_dematel_compute <- function(x) {
   R <- colSums(total_relation)
   prominence <- D + R
   relation <- D - R
+  # Relations within rounding of 0 are exactly 0, so a symmetric system has no
+  # causes, where floating-point residue once made one.
+  relation[abs(relation) < 1e-9 * max(1, max(abs(D)))] <- 0
   threshold <- mean(total_relation)
   role <- ifelse(relation > 0, "cause", "effect")
   names(role) <- rownames(x)
@@ -203,6 +217,9 @@ sframe_run_dematel <- function(data, roles, options, instrument) {
     return(list(test = "dematel", error = checked$error))
   }
   fit <- sframe_dematel_compute(checked$matrix)
+  if (!is.null(fit$error)) {
+    return(list(test = "dematel", error = fit$error))
+  }
 
   criteria <- rownames(checked$matrix)
   order_by_prominence <- order(fit$prominence, decreasing = TRUE)
@@ -217,24 +234,30 @@ sframe_run_dematel <- function(data, roles, options, instrument) {
   )
 
   causes <- criteria[fit$role == "cause"]
-  top_cause <- criteria[which.max(fit$relation)]
   notes <- c(resolved$notes, checked$note)
+  # The strongest cause is named only when one exists, and every criterion
+  # tied at the top is named. which.max() picked the first criterion even
+  # when every net relation was 0.
+  cause_sentence <- if (length(causes) == 0) {
+    "No criterion had a net causal role, since no D - R was above 0."
+  } else {
+    top <- criteria[fit$relation == max(fit$relation)]
+    sprintf("%s had the strongest net causal role (D - R = %.3f), and %d of %d criteria were net causes overall.",
+            paste(top, collapse = " and "), max(fit$relation), length(causes),
+            length(criteria))
+  }
 
   list(
     test           = "dematel",
-    apa            = sprintf(
-      paste0("DEMATEL classified %d criteria by total relation. %s had the ",
-             "strongest net causal role (D - R = %.3f), and %d of %d ",
-             "criteria were net causes overall."),
-      length(criteria), top_cause, max(fit$relation), length(causes),
-      length(criteria)
-    ),
+    apa            = sprintf("DEMATEL classified %d criteria by total relation. %s",
+                             length(criteria), cause_sentence),
     prompt         = paste0(
       "Report cause and effect roles together, not prominence alone: a ",
       "criterion can be central to the system (high D + R) while being a ",
       "net effect (D - R <= 0) driven by the others. Relations at or above ",
-      "the mean threshold are the ones worth drawing in an influence ",
-      "diagram; weaker ones are noise in the judgement data."
+      "the mean threshold are the ones drawn in an influence diagram. The ",
+      "threshold is a display convention, the mean of the total relation ",
+      "matrix, and it carries no test of which relations are real."
     ),
     table          = table,
     criteria       = criteria,
@@ -272,6 +295,14 @@ sframe_run_dematel <- function(data, roles, options, instrument) {
 #'   fields to plot.
 #' @export
 #' @seealso [sframe_plot_decision_ranking()]
+#' @examples
+#' \donttest{
+#' if (requireNamespace("ggplot2", quietly = TRUE)) {
+#'   demo <- sframe_demo("mcdm_choice")
+#'   res <- run_analysis_plan(demo$responses, demo$instrument)
+#'   sframe_plot_dematel_influence(res$RQ3)
+#' }
+#' }
 sframe_plot_dematel_influence <- function(result, palette = c("web", "print")) {
   rlang::check_installed("ggplot2", reason = "to plot DEMATEL influence.")
   palette <- match.arg(palette)

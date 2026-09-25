@@ -2,7 +2,7 @@
 % Please edit documentation in R/plots.R
 \name{sframe_plot_item_chart}
 \alias{sframe_plot_item_chart}
-\title{Item distribution chart, ggplot2 equivalent of the dashboard/studio panel}
+\title{Plot an item response distribution}
 \usage{
 sframe_plot_item_chart(
   item,
@@ -25,10 +25,25 @@ set), or \code{NULL} if the item has none.}
 A ggplot2 object, or \code{NULL} if this item type/data is unsupported.
 }
 \description{
+Draws how one item was answered, as the dashboard and SurveyStudio panels
+show it. It returns \code{NULL} where it has nothing to draw, so a caller can
+fall back to its own chart.
+}
+\details{
 Shared by \code{launch_dashboard()} (\code{inst/shiny/dashboard/app.R}) and the
 SurveyStudio dashboard tab (\code{inst/shiny/app.R}), which otherwise
 duplicated this base-graphics chart. Callers fall back to their own base
 graphics when this returns \code{NULL} (ggplot2 not installed, unsupported
 item type, or no data), so the dashboard keeps working without ggplot2.
+}
+\examples{
+\donttest{
+if (requireNamespace("ggplot2", quietly = TRUE)) {
+  demo <- sframe_demo_data()
+  item <- Filter(function(i) i$id == "sat_1", demo$instrument$items)[[1]]
+  cs   <- Filter(function(c) c$id == item$choice_set, demo$instrument$choices)[[1]]
+  sframe_plot_item_chart(item, demo$responses$sat_1, cs)
+}
+}
 }
 \keyword{internal}

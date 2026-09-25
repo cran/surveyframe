@@ -33,7 +33,7 @@ expansion_instrument <- function(plan) {
 test_that("a matrix sub-item column validates as a known variable", {
   inst <- expansion_instrument(list(list(
     id = "RQ1", research_question = "Does service rating vary?",
-    family = "descriptive", method = "frequencies",
+    family = "descriptive", method = "frequency",
     roles = list(variables = "rate_service__Alpha")
   )))
 
@@ -45,7 +45,7 @@ test_that("a matrix sub-item column validates as a known variable", {
 test_that("decision expansion columns validate as known variables", {
   inst <- expansion_instrument(list(list(
     id = "RQ2", research_question = "How do the pair judgements look?",
-    family = "descriptive", method = "frequencies",
+    family = "descriptive", method = "frequency",
     roles = list(variables = c("crit_pairs__service__vs__price",
                                "crit_points__service"))
   )))
@@ -58,7 +58,7 @@ test_that("decision expansion columns validate as known variables", {
 test_that("a genuinely unknown variable is still rejected", {
   inst <- expansion_instrument(list(list(
     id = "RQ3", research_question = "Nonsense reference",
-    family = "descriptive", method = "frequencies",
+    family = "descriptive", method = "frequency",
     roles = list(variables = "rate_service__NotAVendor")
   )))
 

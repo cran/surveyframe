@@ -367,7 +367,7 @@ Thailand digital marketing study (Sharafuddin, Madhavan, and Wangtueai
 2024). The reliability and item reports read scale definitions from an
 instrument, so they are shown on the bundled tourism demo, a synthetic
 companion to the study. The validity summary runs on the loadings the
-paper reported, which needs no raw data.</p>
+paper reported, which is all it needs.</p>
 <div id="reliability-from-the-instrument" class="section level2">
 <h2>Reliability from the instrument</h2>
 <p><code>reliability_report()</code> reads the scale definitions and
@@ -538,11 +538,11 @@ Bartlett’s test as a screening step before a confirmatory model.</p>
 </div>
 <div id="convergent-validity-from-the-published-loadings" class="section level2">
 <h2>Convergent validity from the published loadings</h2>
-<p>This step needs no raw data. <code>validity_report()</code> computes
-composite reliability and average variance extracted from standardised
-loadings. Feeding the outer loadings reported in the paper reproduces
-its convergent validity, which is a direct check of the measurement
-model.</p>
+<p>This step runs on the loadings alone. <code>validity_report()</code>
+computes composite reliability and average variance extracted from
+standardised loadings. Feeding the outer loadings reported in the paper
+reproduces its convergent validity, which is a direct check of the
+measurement model.</p>
 <div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a>published_loadings <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
 <span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>  <span class="at">DMRE =</span> <span class="fu">c</span>(<span class="at">dmre_1 =</span> .<span class="dv">815</span>, <span class="at">dmre_2 =</span> .<span class="dv">899</span>, <span class="at">dmre_3 =</span> .<span class="dv">668</span>, <span class="at">dmre_4 =</span> .<span class="dv">838</span>),</span>
 <span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>  <span class="at">DMAU =</span> <span class="fu">c</span>(<span class="at">dmau_1 =</span> .<span class="dv">843</span>, <span class="at">dmau_2 =</span> .<span class="dv">915</span>, <span class="at">dmau_3 =</span> .<span class="dv">920</span>),</span>
@@ -652,14 +652,44 @@ behavioural intention, each exceeded the off-diagonal correlations. The
 Heterotrait-Monotrait ratios were all below the 0.90 threshold, the
 highest being 0.766 between ease of use and accessibility. Both results
 support discriminant validity.</p>
-<p>When construct scores are available, <code>validity_report()</code>
-returns the Fornell-Larcker matrix and the HTMT matrix directly.</p>
-<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a><span class="fu">validity_report</span>(published_loadings, <span class="at">construct_scores =</span> scored_constructs)</span></code></pre></div>
+<p><code>validity_report()</code> computes both, and which one you get
+depends on what you give it. Construct scores give the Fornell-Larcker
+matrix, and the <code>htmt</code> element then holds the absolute
+inter-construct correlations, which is a different quantity from the
+Henseler ratio. Item-level responses per construct give the real
+heterotrait-monotrait ratio. The report records which it computed in
+<code>htmt_method</code>, so a write-up can name the quantity it
+reports.</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a>demo <span class="ot">&lt;-</span> <span class="fu">sframe_demo_data</span>()</span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a>scored <span class="ot">&lt;-</span> <span class="fu">score_scales</span>(demo<span class="sc">$</span>responses, demo<span class="sc">$</span>instrument)</span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a>scale_ids <span class="ot">&lt;-</span> <span class="fu">vapply</span>(<span class="fu">sf_scales</span>(demo<span class="sc">$</span>instrument), sf_id, <span class="fu">character</span>(<span class="dv">1</span>))</span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a>construct_scores <span class="ot">&lt;-</span> scored[, scale_ids, drop <span class="ot">=</span> <span class="cn">FALSE</span>]</span>
+<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a></span>
+<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a>loadings <span class="ot">&lt;-</span> <span class="fu">lapply</span>(<span class="fu">sf_scales</span>(demo<span class="sc">$</span>instrument), <span class="cf">function</span>(s) {</span>
+<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a>  stats<span class="sc">::</span><span class="fu">setNames</span>(<span class="fu">rep</span>(<span class="fl">0.8</span>, <span class="fu">length</span>(s<span class="sc">$</span>items)), s<span class="sc">$</span>items)</span>
+<span id="cb5-8"><a href="#cb5-8" tabindex="-1"></a>})</span>
+<span id="cb5-9"><a href="#cb5-9" tabindex="-1"></a><span class="fu">names</span>(loadings) <span class="ot">&lt;-</span> scale_ids</span>
+<span id="cb5-10"><a href="#cb5-10" tabindex="-1"></a></span>
+<span id="cb5-11"><a href="#cb5-11" tabindex="-1"></a>from_scores <span class="ot">&lt;-</span> <span class="fu">validity_report</span>(loadings, <span class="at">construct_scores =</span> construct_scores)</span>
+<span id="cb5-12"><a href="#cb5-12" tabindex="-1"></a>from_scores<span class="sc">$</span>htmt_method</span>
+<span id="cb5-13"><a href="#cb5-13" tabindex="-1"></a><span class="co">#&gt; [1] &quot;correlation_fallback&quot;</span></span></code></pre></div>
+<p>Passing the items themselves is what asks for the Henseler ratio:</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a>items_by_construct <span class="ot">&lt;-</span> <span class="fu">lapply</span>(<span class="fu">sf_scales</span>(demo<span class="sc">$</span>instrument), <span class="cf">function</span>(s) {</span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a>  scored[, s<span class="sc">$</span>items, drop <span class="ot">=</span> <span class="cn">FALSE</span>]</span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a>})</span>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a><span class="fu">names</span>(items_by_construct) <span class="ot">&lt;-</span> scale_ids</span>
+<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a></span>
+<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a>real_htmt <span class="ot">&lt;-</span> <span class="fu">validity_report</span>(loadings, <span class="at">construct_scores =</span> construct_scores,</span>
+<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a>                             <span class="at">items_by_construct =</span> items_by_construct)</span>
+<span id="cb6-8"><a href="#cb6-8" tabindex="-1"></a>real_htmt<span class="sc">$</span>htmt_method</span>
+<span id="cb6-9"><a href="#cb6-9" tabindex="-1"></a><span class="co">#&gt; [1] &quot;henseler&quot;</span></span></code></pre></div>
+<p>A construct with a single item has no monotrait correlations, so its
+HTMT entries come back <code>NA</code>.</p>
 </div>
 <div id="collinearity" class="section level2">
 <h2>Collinearity</h2>
 <p>The study reported variance inflation factors below 5 for every
-indicator, which indicates no severe multicollinearity.
+indicator, which indicates multicollinearity mild enough to proceed.
 <code>assumption_report()</code> returns variance inflation factors when
 a regression is specified, which is shown in the “Analysing survey
 responses” vignette.</p>

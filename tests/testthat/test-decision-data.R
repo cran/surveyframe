@@ -393,8 +393,10 @@ test_that("a list of rows is rebuilt as a labelled matrix", {
   expect_equal(dimnames(opts$matrix),
                list(c("Alpha", "Basilica", "Coral"), crits))
   expect_equal(opts$matrix["Coral", "price"], 260)
-  expect_equal(opts$criteria_types,
+  # criterion types now carry their criterion names, so they can be aligned
+  expect_equal(unname(opts$criteria_types),
                c("benefit", "benefit", "cost", "cost"))
+  expect_identical(names(opts$criteria_types), crits)
 })
 
 test_that("labels are generated when none are declared", {

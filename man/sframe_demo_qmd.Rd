@@ -19,8 +19,11 @@ The path written, invisibly.
 \description{
 The code route through a demo is a notebook that renders to a report, which
 is what a research workflow looks like. This writes one for the named demo:
-load the instrument, read the responses, run the pre-declared plan, render
-the report, and export the data for checking elsewhere.
+load and validate the instrument and responses, inspect the complete ordered
+analysis plan, screen data quality, run the plan with status and plots,
+inspect each result and its reproducible syntax, compare the bundled expected
+results, render analysis and full reports, and export the data for checking
+elsewhere.
 }
 \examples{
 out <- sframe_demo_qmd("two_group", dir = tempdir())

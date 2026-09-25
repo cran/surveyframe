@@ -29,3 +29,7 @@ A character string with R syntax.
 \description{
 Generate EFA planning syntax
 }
+\examples{
+syntax <- efa_syntax(c("sq_1", "sq_2", "sq_3"), nfactors = 1)
+cat(syntax)
+}

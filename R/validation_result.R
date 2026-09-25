@@ -66,8 +66,6 @@ sframe_new_validation <- function(log, roster, subject, title = NULL,
 #' the full check roster, and [as_sframe()] to recover the validated
 #' instrument.
 #'
-#' @param x,object An `sframe_validation` object.
-#' @param ... Ignored. Present for S3 consistency.
 #'
 #' @return `print()` returns `x` invisibly. `format()` returns a single
 #'   character string. `summary()` returns the check table as a data frame.
@@ -93,7 +91,7 @@ sframe_new_validation <- function(log, roster, subject, title = NULL,
 #' summary(v)
 NULL
 
-#' @rdname sframe_validation
+#' @noRd
 #' @exportS3Method print sframe_validation
 print.sframe_validation <- function(x, ...) {
   cat("<sframe validation>\n")
@@ -124,7 +122,7 @@ print.sframe_validation <- function(x, ...) {
   invisible(x)
 }
 
-#' @rdname sframe_validation
+#' @noRd
 #' @exportS3Method format sframe_validation
 format.sframe_validation <- function(x, ...) {
   sprintf(
@@ -136,15 +134,22 @@ format.sframe_validation <- function(x, ...) {
   )
 }
 
-#' @rdname sframe_validation
+#' @noRd
 #' @exportS3Method summary sframe_validation
 summary.sframe_validation <- function(object, ...) {
   object$checks
 }
 
-#' @rdname sframe_validation
+#' Coerce validation problems to a data frame
+#'
+#' @param x An [sframe_validation] object.
 #' @param row.names Passed to [base::as.data.frame()].
 #' @param optional Passed to [base::as.data.frame()].
+#' @param ... Ignored. Present for S3 consistency.
+#'
+#' @return A data frame with one row per validation problem and columns
+#'   `check` and `problem`.
+#' @seealso [sframe_validation], [sf_problems()]
 #' @exportS3Method as.data.frame sframe_validation
 as.data.frame.sframe_validation <- function(x, row.names = NULL,
                                             optional = FALSE, ...) {

@@ -107,6 +107,7 @@ test_that("the demo instruments wire each syntax block to a fitting model", {
 })
 
 test_that("every syntax block in the demo plan actually generates syntax", {
+  skip_on_cran()  # runs every block of the demo plan: slow on CRAN's machines
   demo <- sframe_demo_data()
   res <- run_analysis_plan(demo$responses, demo$instrument, scored = FALSE)
   for (t in c("cfa_lavaan_syntax", "sem_lavaan_syntax", "seminr_syntax")) {

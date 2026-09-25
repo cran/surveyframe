@@ -88,10 +88,13 @@ its rank.
 2. Click Extensions, then Apps Script.
 3. Paste the contents of `surveyframe_collector.gs`, replacing any existing
    code, and save.
-4. Click Deploy, then New deployment. Set the type to Web app.
-5. Set "Who has access" to Anyone.
-6. Authorise the script when Google prompts you.
-7. Copy the Web App URL. It ends in `/exec`.
+4. In the Apps Script editor, click **Services**, add **Google Sheets API**, and
+   keep its identifier as `Sheets`. The collector refuses a response rather
+   than risk changing its values when this service is unavailable.
+5. Click Deploy, then New deployment. Set the type to Web app.
+6. Set "Who has access" to Anyone.
+7. Authorise the script when Google prompts you.
+8. Copy the Web App URL. It ends in `/exec`.
 
 This URL is your collection endpoint. Keep it for the next step.
 
@@ -116,9 +119,14 @@ export_static_survey(
 )
 ```
 
-The result is a single HTML file. Each respondent who submits gets a CSV copy
-downloaded to their own device, and the same row is posted to the Google Sheet.
-The two paths are independent, so a failed post never loses a response.
+The result is a single HTML file. When an endpoint is configured, the browser
+sends the row to Google Sheets. Because this is a cross-origin `no-cors`
+request, the page can confirm only that it sent the request. Google's
+acceptance stays unconfirmed from the page's side. Depending on the
+instrument's thank-you settings, the page also offers the respondent a CSV
+download, which becomes a real backup once the respondent actually saves it.
+Pilot the complete route and check the stored row before inviting
+participants.
 
 Name the file `index.html` if you plan to host it at the root of a site, because
 most hosts serve `index.html` as the default page.
@@ -180,19 +188,28 @@ The returned data frame is validated against the instrument and is ready for
 
 ## Updating a live survey
 
-Editing the instrument changes the questions, so the column set can change too.
-When you add, remove, or rename questions:
+Editing the instrument changes what respondents see and may change the column
+set. Keep one instrument version per study: record the change with
+`amend_sframe()`, retain the earlier instrument, and identify which version each
+respondent received. Prefer a new response tab or Sheet for a materially changed
+instrument. When you add, remove, or rename questions:
 
 1. Re-export and re-deploy the collector so the headers match.
 2. Re-export the survey HTML and upload it over the hosted file.
 
-Existing rows in the Sheet stay in place. New submissions use the new columns.
+Existing rows remain, but they were collected under the earlier instrument, so
+treat a comparison across the change as needing its own justification. Pilot
+the revised survey and confirm its headers and stored values before reopening
+it.
 
 ## Checklist
 
 * Sheet created and collector deployed as a web app set to Anyone.
+* Google Sheets API advanced service enabled with the identifier `Sheets`.
 * Web App URL copied and stored on the instrument.
 * Survey exported with the endpoint embedded.
 * HTML uploaded to a static host and confirmed live.
 * A test submission appears as a new row in the Sheet.
+* The stored test values match what was entered, including values beginning
+  with `=`, `+`, `-`, or `@`.
 * `read_sheet_responses()` returns that row in R.

@@ -29,9 +29,10 @@ change this call discloses.}
 be non-empty regardless of \code{reason_code}.}
 
 \item{tier}{\code{"pipeline"} or \code{"design"}. When \code{NULL} (the default), inferred
-from \code{reason_code}: \code{data_correction}/\code{bot_removal} default to
-\code{"pipeline"}; everything else defaults to \code{"design"}. Pass explicitly to
-override the default in either direction.}
+from \code{reason_code}: \code{data_correction} and \code{bot_removal} default to
+\code{"pipeline"}, and everything else to \code{"design"}. A change to the
+analysis plan, a model or a conjoint design is always \code{"design"}, and
+asking for \code{"pipeline"} on one is an error.}
 
 \item{author}{Character or \code{NULL}. Who made the change.}
 
@@ -50,35 +51,35 @@ amendment log. Call \code{\link[=write_sframe]{write_sframe()}} to persist it.
 \description{
 Appends a structured, disclosed-revision entry to an instrument's
 amendment log, comparing \code{previous} against \code{instrument} to record what
-changed and why. This is the path around \code{\link[=read_sframe]{read_sframe()}}'s hash check for
-\emph{legitimate} revision: a data-entry correction, bot-response removal, or a
-documented model respecification. It does not weaken that check --
-\code{\link[=read_sframe]{read_sframe()}} still hard-aborts on any edit that never went through
-\code{amend_sframe()}. What it adds is a place for a disclosed change to be
-recorded inside the file itself, alongside the content it explains,
-rather than only in an email or a lab notebook.
+changed and why: a data-entry correction, bot-response removal, or a
+documented model respecification. The record is kept inside the file,
+beside the content it explains.
 }
 \details{
-Amendments come in two tiers. A \code{"pipeline"} amendment (data corrections,
-bot removal) is expected researcher behaviour and needs only a reason. A
-\code{"design"} amendment (anything touching the analysis plan or a measurement
-or structural model) is exactly the kind of post-hoc change the
-design-time analysis plan exists to guard against, so it additionally
-requires a \code{deviation_report} describing what changed in the research
-question, method, or model and why. \code{second_signoff} is optional at
-either tier; when omitted, the log entry records \code{signoff = "none"}
-rather than leaving the field blank, so the absence of independent
-review is visible to anyone auditing the log later.
+\code{\link[=write_sframe]{write_sframe()}} refuses to write an instrument read from a file whose
+content has changed with no amendment recorded, one that changed after its
+last amendment, and one whose amendment log was shortened or reordered.
+\code{\link[=read_sframe]{read_sframe()}} refuses a file edited on disk without its hash being
+recomputed. These checks are local and the hashes are unsigned: someone
+who rewrites both a file and its log, and recomputes the hashes, is not
+detected, and nothing here establishes who made a change or when.
 
-\code{previous_hash} and \code{new_hash} on each entry are a \strong{content} fingerprint
-(a SHA-256 over the instrument's substantive fields -- items, choices,
-scales, branching, checks, analysis plan, models, designs -- with the
-\code{hash} and \code{amendments} fields themselves excluded), not the \code{.sframe}
-file's own integrity hash from \code{\link[=write_sframe]{write_sframe()}}. The two serve different
-purposes: the file hash (via \code{\link[=read_sframe]{read_sframe()}}) proves the file on disk is
-byte-identical to what was written; an amendment's content hash proves
-what the instrument's substance was immediately before and after this
-specific, disclosed change.
+Amendments come in two tiers. A \code{"pipeline"} amendment (data corrections,
+bot removal) needs only a reason. A \code{"design"} amendment also requires a
+\code{deviation_report} describing what changed in the research question,
+method or model, and why. The tier follows the change itself: an amendment
+that changes the analysis plan, a model or a conjoint design is always
+design tier, whatever \code{reason_code} or \code{tier} says. \code{second_signoff} is
+optional. When omitted, the entry records \code{signoff = "none"}, so the
+absence of a named reviewer is visible. The tier, report and signoff are
+what the author records. None of them is independent approval.
+
+\code{previous_hash} and \code{new_hash} on each entry are a content fingerprint: a
+SHA-256 over a canonical serialisation of the instrument, with the \code{hash}
+and \code{amendments} fields excluded, taken after validation, so \code{new_hash} is
+the content that is written. It is distinct from the file's own integrity
+hash from \code{\link[=write_sframe]{write_sframe()}}, which also covers the amendment log. Both
+identify content. Neither is byte identity.
 }
 \examples{
 item  <- sf_item("q1", "How satisfied are you?", type = "text")

@@ -55,6 +55,9 @@ test_that("cramers_v_ci and eta_sq_ci return sane intervals", {
   expect_true(is.na(one_group["lower"]))
 })
 
+# 0.4.2 labels the interval with its level, which APA asks for, so the sentence
+# reads "d = 0.32, 95% CI [0.02, 0.84]" where it used to read "d = 0.32 [0.02,
+# 0.84]". These patterns pin the labelled form.
 test_that("runners attach CI keys and the apa string carries the interval", {
   set.seed(3)
   dat <- data.frame(
@@ -70,16 +73,16 @@ test_that("runners attach CI keys and the apa string carries the interval", {
 
   tt <- surveyframe:::sframe_run_t_test(dat, c("g", "o"))
   ci_shape(tt$d_ci)
-  expect_match(tt$apa, "d = -?\\d+\\.\\d+ \\[")
+  expect_match(tt$apa, "d = -?\\d+\\.\\d+, 95% CI \\[")
   expect_match(tt$prompt, "\\[")
 
   mw <- surveyframe:::sframe_run_mann_whitney(dat, c("g", "o"))
   ci_shape(mw$r_ci)
-  expect_match(mw$apa, "r = \\d+\\.\\d+ \\[")
+  expect_match(mw$apa, "r = \\d+\\.\\d+, 95% CI \\[")
 
   av <- surveyframe:::sframe_run_anova_one(dat, c("g", "o"))
   ci_shape(av$eta_ci)
-  expect_match(av$apa, "η² = \\d+\\.\\d+ \\[")
+  expect_match(av$apa, "η² = \\d+\\.\\d+, 95% CI \\[")
 
   kw <- surveyframe:::sframe_run_kruskal(dat, c("g", "o"))
   ci_shape(kw$eta_ci)
@@ -87,7 +90,7 @@ test_that("runners attach CI keys and the apa string carries the interval", {
 
   pe <- surveyframe:::sframe_run_correlation(dat, c("x1", "x2"))
   ci_shape(pe$ci)
-  expect_match(pe$apa, "r\\(\\d+\\) = -?\\d+\\.\\d+ \\[")
+  expect_match(pe$apa, "r\\(\\d+\\) = -?\\d+\\.\\d+, 95% CI \\[")
   # The Pearson interval is the analytic Fisher-z one
   analytic <- surveyframe:::sframe_fisher_z_ci(pe$r, pe$n)
   expect_equal(pe$ci, analytic)
@@ -97,7 +100,7 @@ test_that("runners attach CI keys and the apa string carries the interval", {
 
   pr <- surveyframe:::sframe_run_t_test_pair(dat, c("x1", "x2"))
   ci_shape(pr$d_ci)
-  expect_match(pr$apa, "d_z = -?\\d+\\.\\d+ \\[")
+  expect_match(pr$apa, "d_z = -?\\d+\\.\\d+, 95% CI \\[")
 
   wx <- surveyframe:::sframe_run_wilcoxon_pair(dat, c("x1", "x2"))
   ci_shape(wx$r_ci)

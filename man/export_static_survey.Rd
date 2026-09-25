@@ -9,7 +9,8 @@ export_static_survey(
   output_path = NULL,
   open = interactive(),
   endpoint_url = NULL,
-  overwrite = FALSE
+  overwrite = FALSE,
+  preview = FALSE
 )
 }
 \arguments{
@@ -27,31 +28,48 @@ collection mechanism.}
 
 \item{overwrite}{Logical. Whether to overwrite an existing file at
 \code{output_path}. Defaults to \code{FALSE}.}
+
+\item{preview}{Logical. \code{TRUE} exports a survey that collects nothing: the
+collector endpoint and the completion redirect are both removed, and the
+thank-you screen says the response went nowhere. This is what SurveyStudio's
+preview uses, so a test answer cannot reach a live study's collector.
+Supplying \code{endpoint_url} alongside it is an error. Defaults to \code{FALSE}.}
 }
 \value{
 The output path, invisibly.
 }
 \description{
 Generates a single HTML file that presents the survey instrument in a
-browser without requiring a Shiny server or any internet connection. All
-thirteen item types, branching logic, required-field validation, and
-multi-page navigation are handled entirely in client-side JavaScript.
+browser, with no Shiny server and no internet connection. Every item type,
+branching, required-item checks and multi-page navigation run in the
+browser's own JavaScript.
 }
 \details{
 When \code{output_path} is \code{NULL}, the file is written to \code{\link[=tempdir]{tempdir()}}. Supply
 an explicit \code{output_path} for any production export that should be kept.
+}
+\section{How a response reaches you}{
+On submission the survey builds a one-row CSV in the browser's memory and
+shows the thank-you screen. When \code{endpoint_url} is supplied, it also sends
+the response as a POST request to that URL, for example a Google Apps
+Script web app. The browser reports nothing back from that request, so the
+survey treats it as sent and the respondent sees the thank-you screen
+either way.
 
-When a respondent clicks the submit button, the browser downloads a
-one-row CSV file named \verb{<survey_title>_response_<id>.csv}. If
-\code{endpoint_url} is supplied, the same payload is also sent as a JSON
-POST request to that URL (for example a Google Apps Script web app or a
-serverless function). The two mechanisms are independent: the download
-happens regardless, so responses are never lost if the POST fails.
+The thank-you screen offers the CSV as a download button, which the
+respondent chooses to use. It appears when the instrument's thank-you
+settings ask for it, and whenever there is no \code{endpoint_url}, where that
+file is the only copy of the response.
+
+Plan for both parts. Test the endpoint with a pilot submission and confirm
+the row arrives before collecting, and treat the download as a route a
+respondent may decline.
 
 The exported file works offline. It can be hosted on GitHub Pages,
 Netlify, any static file server, or e-mailed as an attachment for
 opening directly from disk.
 }
+
 \examples{
 cs    <- sf_choices("ag5", 1:5,
            c("Strongly disagree", "Disagree", "Neutral",

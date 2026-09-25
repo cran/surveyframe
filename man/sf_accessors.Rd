@@ -2,83 +2,11 @@
 % Please edit documentation in R/accessors.R
 \name{sf_accessors}
 \alias{sf_accessors}
-\alias{sf_meta}
-\alias{sf_items}
-\alias{sf_scales}
-\alias{sf_choice_sets}
-\alias{sf_branches}
-\alias{sf_checks}
-\alias{sf_models}
-\alias{sf_plan}
-\alias{sf_meta.sframe}
-\alias{sf_items.sframe}
-\alias{sf_scales.sframe}
-\alias{sf_choice_sets.sframe}
-\alias{sf_branches.sframe}
-\alias{sf_checks.sframe}
-\alias{sf_models.sframe}
-\alias{sf_plan.sframe}
-\alias{sf_meta.sframe_codebook}
-\alias{sf_items.sframe_codebook}
-\alias{sf_scales.sframe_codebook}
-\alias{sf_choice_sets.sframe_codebook}
-\alias{sf_models.sframe_codebook}
-\alias{sf_plan.sframe_codebook}
 \title{Explore a surveyframe object}
-\usage{
-sf_meta(x, ...)
-
-sf_items(x, ...)
-
-sf_scales(x, ...)
-
-sf_choice_sets(x, ...)
-
-sf_branches(x, ...)
-
-sf_checks(x, ...)
-
-sf_models(x, ...)
-
-sf_plan(x, ...)
-
-\method{sf_meta}{sframe}(x, ...)
-
-\method{sf_items}{sframe}(x, ...)
-
-\method{sf_scales}{sframe}(x, ...)
-
-\method{sf_choice_sets}{sframe}(x, ...)
-
-\method{sf_branches}{sframe}(x, ...)
-
-\method{sf_checks}{sframe}(x, ...)
-
-\method{sf_models}{sframe}(x, ...)
-
-\method{sf_plan}{sframe}(x, ...)
-
-\method{sf_meta}{sframe_codebook}(x, ...)
-
-\method{sf_items}{sframe_codebook}(x, ...)
-
-\method{sf_scales}{sframe_codebook}(x, ...)
-
-\method{sf_choice_sets}{sframe_codebook}(x, ...)
-
-\method{sf_models}{sframe_codebook}(x, ...)
-
-\method{sf_plan}{sframe_codebook}(x, ...)
-}
-\arguments{
-\item{x}{A surveyframe object.}
-
-\item{...}{Passed to methods.}
-}
 \value{
-\code{sf_items()}, \code{sf_scales()}, \code{sf_choice_sets()}, \code{sf_branches()},
-\code{sf_checks()} and \code{sf_models()} return an \link{sf_component_list}.
-\code{sf_meta()} and \code{sf_plan()} return lists.
+A list for \code{sf_meta()} and \code{sf_plan()} on an instrument, an
+\link{sf_component_list} for the component accessors on an instrument, and a
+data frame for any of them on a codebook. See the table above.
 }
 \description{
 Accessors for the parts of an instrument, a codebook, or a report. They
@@ -86,11 +14,27 @@ replace reaching into the object with \code{$}, which ties user code to the
 internal layout.
 }
 \details{
-\code{sf_items()}, \code{sf_scales()}, \code{sf_choice_sets()}, \code{sf_branches()},
-\code{sf_checks()} and \code{sf_models()} return the component objects as an
-\link{sf_component_list}. \code{sf_meta()} returns the metadata as a list and
-\code{sf_plan()} returns the pre-declared analysis plan. For a flat table of the
-same content, call \code{as.data.frame()} on the object instead.
+What each one gives back depends on what it is asked. Given an instrument,
+the component accessors return the component objects as an
+\link{sf_component_list}, which prints as a list and is subset with \code{[} and
+\code{[[}. Given a codebook, the same verbs return the table the codebook
+already holds, a plain data frame with one row per item, scale, choice set,
+model or plan block.\tabular{lll}{
+   Accessor \tab On an \code{sframe} \tab On an \code{sframe_codebook} \cr
+   \code{sf_meta()} \tab list of metadata \tab list of metadata \cr
+   \code{sf_items()} \tab \code{sf_component_list} of items \tab data frame of items \cr
+   \code{sf_scales()} \tab \code{sf_component_list} of scales \tab data frame of scales \cr
+   \code{sf_choice_sets()} \tab \code{sf_component_list} of choice sets \tab data frame of choice sets \cr
+   \code{sf_branches()} \tab \code{sf_component_list} of branching rules \tab not available \cr
+   \code{sf_checks()} \tab \code{sf_component_list} of checks \tab not available \cr
+   \code{sf_models()} \tab \code{sf_component_list} of models \tab data frame of models \cr
+   \code{sf_plan()} \tab list of plan blocks \tab data frame of plan blocks \cr
+}
+
+
+\code{as.data.frame()} on an instrument gives its items as a table, which is one
+part of it, and a component list has no coercion of its own. For every
+table an instrument can produce, use \code{\link[=codebook_report]{codebook_report()}}.
 }
 \examples{
 cs    <- sf_choices("ag5", 1:5,

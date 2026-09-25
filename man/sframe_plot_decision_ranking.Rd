@@ -24,6 +24,15 @@ column is whatever the method reports as its headline quantity (a
 closeness coefficient, a net flow, a priority weight), so the axis is
 labelled from the result rather than hard-coded.
 }
+\examples{
+\donttest{
+if (requireNamespace("ggplot2", quietly = TRUE)) {
+  demo <- sframe_demo("mcdm_choice")
+  res <- run_analysis_plan(demo$responses, demo$instrument)
+  sframe_plot_decision_ranking(res$RQ4)
+}
+}
+}
 \seealso{
 \code{\link[=run_analysis_plan]{run_analysis_plan()}}
 }

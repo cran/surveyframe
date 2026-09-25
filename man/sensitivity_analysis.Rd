@@ -43,8 +43,13 @@ before renormalisation.}
 An object of class \code{sframe_sensitivity}, a list with \verb{$table} (one
 row per criterion and direction, carrying \code{criterion}, \code{direction},
 \code{rho}, \code{rank_changed}, and \code{top_changed}), \verb{$base_ranks}, \verb{$method},
-\verb{$delta}, and \verb{$stable}, a single logical that is \code{TRUE} when no
-perturbation changed the ranking.
+\verb{$delta}, \verb{$stable}, \verb{$degenerate}, \verb{$n_perturbations}, \verb{$n_effective}
+and \verb{$n_failed}. \verb{$stable} is \code{TRUE} when at least one perturbation moved
+the weights and none of those that did changed the ranking. A
+perturbation that leaves the renormalised weights unchanged, as every one
+does for weights such as \code{c(1, 0)}, is not effective and tests nothing.
+\verb{$degenerate} marks a base ranking that places every alternative at the
+same rank, which no perturbation can move.
 }
 \description{
 Perturbs each criterion weight up and down by \code{delta}, renormalises the

@@ -4,16 +4,16 @@
   "title": "surveyframe .sframe file",
   "description": "Schema for the .sframe instrument format written by write_sframe() and read by read_sframe(). Documented so a reviewer or a second tool can read and validate a .sframe file without installing the R package -- the file is plain UTF-8 JSON, not an R-specific or binary format. Every field here corresponds to a key produced by sframe_serialization_payload() in R/read_write_sframe.R and R/amendments.R.",
   "type": "object",
-  "required": ["hash", "version", "meta", "items", "choices", "scales"],
+  "required": ["hash", "meta", "items"],
   "properties": {
     "sframe_format": {
       "type": "string",
-      "description": "The .sframe format version (SFRAME_FORMAT_VERSION in R/read_write_sframe.R), written as the first key of every file. Distinct from `version` below, which is the instrument's own version, and from the surveyframe package version. Absent in files written before 2026-08-22, which remain valid and still verify, since the hash is computed over whatever the file contains. Not listed in `required` for that reason. Conformance profiles key on this value.",
+      "description": "The .sframe format version (SFRAME_FORMAT_VERSION in R/read_write_sframe.R), written as the first key of every file. Distinct from `version` below, which is the instrument's own version, and from the surveyframe package version. Absent in files written before 2026-08-22, which read as legacy files and still verify, since the hash is computed over whatever the file contains. Not listed in `required` for that reason. read_sframe() refuses a file whose major format version is newer than the one it supports. Conformance profiles key on this value.",
       "examples": ["1.0"]
     },
     "hash": {
       "type": "object",
-      "description": "File-level integrity hash. Confirms the file on disk is byte-identical to what write_sframe() produced. Not a proof of methodological validity -- see the `amendments` field below for the disclosed-revision mechanism, and the package's analysis-plan binding (run_analysis_plan()) for the package's separate anti-HARKing safeguard.",
+      "description": "Content integrity hash over a canonical serialisation: object keys are sorted, so whitespace and key order in the file do not affect it. It confirms the content matches what was hashed. It is not byte identity, it does not prove who wrote the file or when, and it is not a proof of methodological validity. See the `amendments` field below for disclosed revisions, and run_analysis_plan() for the plan binding.",
       "required": ["algo", "value"],
       "properties": {
         "algo": { "const": "sha256" },
@@ -25,7 +25,7 @@
     },
     "version": {
       "type": ["string", "null"],
-      "description": "The instrument's own semantic version string (sf_instrument()'s `version` argument), not the surveyframe package version."
+      "description": "The instrument's own semantic version string (sf_instrument()'s `version` argument), not the surveyframe package version. Optional."
     },
     "meta": {
       "type": "object",
@@ -33,8 +33,8 @@
       "required": ["title"]
     },
     "items": { "type": "array", "description": "Question items (sf_item())." },
-    "choices": { "type": "array", "description": "Response option sets (sf_choices())." },
-    "scales": { "type": "array", "description": "Scale definitions (sf_scale())." },
+    "choices": { "type": "array", "description": "Response option sets (sf_choices()). Optional. `values` and `labels` are always arrays, a one-member set included." },
+    "scales": { "type": "array", "description": "Scale definitions (sf_scale()). Optional. `items`, `reverse_items` and `weights` are always arrays, a one-member collection included." },
     "branching": { "type": "array", "description": "Branching rules (sf_branch())." },
     "checks": { "type": "array", "description": "Data quality checks (sf_check())." },
     "analysis_plan": {
@@ -42,7 +42,7 @@
       "description": "Pre-declared analysis-plan blocks, bound to the instrument at design time and executed in one pass by run_analysis_plan(). This binding, not the hash, is the package's defence against HARKing and p-hacking; the hash only proves file identity."
     },
     "models": { "type": "array", "description": "Measurement/structural model specifications (sf_model())." },
-    "render": { "type": "object", "description": "Optional rendering hints for render_survey()." },
+    "render": { "type": ["object", "array", "null"], "description": "Optional rendering hints for render_survey(). An instrument with no hints may carry an empty array." },
     "designs": {
       "type": "array",
       "description": "Optional conjoint designs. Present only when the instrument declares at least one, so instruments that don't use this feature hash identically to files written before it existed."

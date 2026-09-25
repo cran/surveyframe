@@ -4,29 +4,36 @@
 \alias{link_git_commit}
 \title{Link an instrument to its current Git commit}
 \usage{
-link_git_commit(instrument, repo_path = ".")
+link_git_commit(instrument, repo_path = ".", path = NULL)
 }
 \arguments{
 \item{instrument}{An \code{sframe} object.}
 
 \item{repo_path}{Character. Path to check for a Git repository. Defaults
 to the current working directory.}
+
+\item{path}{Character or \code{NULL}. The instrument's \code{.sframe} file, relative
+to \code{repo_path}. When given, the instrument is compared with the file as
+committed at HEAD.}
 }
 \value{
 A list with \code{linked} (logical), and when \code{linked} is \code{TRUE},
-\code{commit} (the full commit SHA) and \code{message} (the commit's subject
-line); when \code{linked} is \code{FALSE}, \code{reason} (a human-readable explanation:
-\code{"git not found"} or \code{"not a git repository"}).
+\code{commit} (the full commit SHA), \code{message} (the commit's subject line),
+\code{path}, and \code{verified} (logical). \code{reason} explains an unlinked result
+(\code{"git not found"} or \code{"not a git repository"}) or an unverified one.
 }
 \description{
-Records the current Git commit SHA and subject line for \code{repo_path}
-alongside the instrument. This does not replace Git history -- it is a
-pointer into it. The SHA-256 hash \code{\link[=write_sframe]{write_sframe()}} embeds in the
-\code{.sframe} file confirms the file on disk matches what this specific,
-already-explained commit produced; a reviewer reads the commit itself
-for the "what changed and why."
+Records the current Git commit SHA and subject line for \code{repo_path}. It is
+a pointer into Git history, where a reviewer reads what changed and why.
 }
 \details{
+Given \code{path}, the tracked \code{.sframe} file, it also compares the instrument
+with that file as committed at HEAD, and sets \code{verified = TRUE} only when
+their content hashes match. Without \code{path}, nothing is compared and
+\code{verified} is \code{FALSE}. A verified link shows the instrument matches a
+committed file. It does not show who wrote the instrument or when, beyond
+what the commit itself records.
+
 Git is entirely optional. When \code{repo_path} is not inside a Git
 repository, or the \code{git} executable is not on the \code{PATH}, this returns a
 clear, non-error result with \code{linked = FALSE} rather than aborting --

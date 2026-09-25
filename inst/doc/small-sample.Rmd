@@ -62,19 +62,21 @@ pre.sourceCode a:empty { display: none; }
 
 ## When is a sample "small"?
 
-Survey research often works with far fewer than the 30-or-more cases that
-justify asymptotic approximations: pilot studies, specialised populations,
-classroom studies, and early-stage organisational diagnostics routinely land
-at n = 10 to 25. Below that conventional threshold, p-values from tests that
-assume large-sample normality can be unreliable, and point estimates carry
-wide, often asymmetric uncertainty that a single p-value does not convey.
+Survey research often works with few observations: pilot studies, specialised
+populations, classroom studies, and early-stage organisational diagnostics may
+land at n = 10 to 25. Adequacy depends jointly on the design, group balance,
+outcome distribution, model, effect size, and estimand, so a single word count
+answers little on its own. With limited data, estimates are often imprecise
+and assumptions are harder to assess, so an isolated p-value carries limited
+information.
 
-surveyframe's small-sample tools do three things: flag when a sample has
-crossed below the n = 30 threshold, prefer exact or distribution-free
-alternatives to the asymptotic default where one exists, and pair every
-affected estimate with a confidence interval rather than a point value
-alone. Together they surface the cases where design judgement matters most,
-leaving that judgement itself to the researcher.
+surveyframe uses n = 30 as a visible advisory heuristic that flags where
+assumptions deserve a closer look. Its small-sample tools surface exact or
+alternative procedures where available and pair estimates with uncertainty.
+Choosing one changes the question asked: a rank-based test may target a
+different quantity from a test about means, and “distribution-free” carries
+its own assumptions. Choose the method from the study design and estimand,
+and report the limited precision.
 
 ## Planning a small-sample study
 
@@ -135,7 +137,7 @@ is.null(ar_large$advisory)
 
 The Mann-Whitney runner now reports the Hodges-Lehmann shift estimate
 alongside the rank-biserial effect size, with a confidence interval on the
-shift rather than a point estimate alone.
+shift, which a point estimate alone leaves out.
 
 ```{r mann-whitney}
 pilot <- data.frame(
@@ -162,7 +164,7 @@ mw_results[[1]]$hl_conf_int
 ## Paired Wilcoxon with the pseudomedian CI
 
 The paired runner reports a Hodges-Lehmann pseudomedian for the within-pair
-shift, again with an interval rather than a point value.
+shift, again with an interval in place of a point value.
 
 ```{r wilcoxon-pair}
 before <- rnorm(8, 50, 6)
@@ -245,8 +247,8 @@ cat("logistf is not installed in this build environment, so the Firth",
 
 `cohens_d_ci()` pairs Cohen's d with a bootstrap interval, which is
 informative precisely where it matters most: interval width grows visibly
-as n falls, making the extra uncertainty at small n explicit rather than
-implicit in a single point estimate.
+as n falls, making the extra uncertainty at small n explicit, where a single
+point estimate leaves it implicit.
 
 ```{r cohens-d}
 cohens_d_ci(pilot$outcome[pilot$group == "treatment"],

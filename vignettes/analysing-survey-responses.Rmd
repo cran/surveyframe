@@ -80,7 +80,9 @@ dim(responses)
 ## Import responses
 
 Response data uses instrument item IDs as column names. Metadata columns are
-declared explicitly. Use `strict = TRUE` to keep only known columns.
+declared explicitly. With `strict = TRUE`, an undeclared column is an error.
+With `strict = FALSE`, it is retained with a warning. Strict mode therefore
+catches an unexpected export instead of silently discarding columns.
 
 ```{r import}
 responses <- read_responses(
@@ -245,3 +247,9 @@ launch_studio(
   launch.browser = FALSE
 )
 ```
+
+## Next step
+
+You now have imported, screened, scored, and analysed responses. Continue with
+the scale reliability and validity vignette for measurement evidence, or copy
+an editable worked notebook with `sframe_demo_qmd("two_group")`.

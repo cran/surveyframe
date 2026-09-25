@@ -2,7 +2,7 @@
   "sframe_format": "1.0",
   "hash": {
     "algo": "sha256",
-    "value": "76790808c0f7f2af6fe9e71af8cc6b5f95bb0a0ee62cbc65b26e722be55575ff"
+    "value": "cf0b7acfce9040c87066c65a63d3e7340f26d90e523863f109ddfc39ceb8eeba"
   },
   "version": "1.0.0",
   "meta": {
@@ -68,7 +68,7 @@
       "items": ["org_1", "org_2", "org_3", "org_4"],
       "method": "mean",
       "min_valid": null,
-      "reverse_items": "org_4"
+      "reverse_items": ["org_4"]
     }
   ],
   "branching": [],

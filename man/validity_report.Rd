@@ -30,3 +30,11 @@ An object of class \code{sframe_validity_report}.
 \description{
 Validity report for construct models
 }
+\examples{
+loadings <- list(
+  sq  = c(sq_1 = 0.80, sq_2 = 0.75, sq_3 = 0.78),
+  sat = c(sat_1 = 0.85, sat_2 = 0.82)
+)
+vr <- validity_report(loadings)
+vr$reliability
+}

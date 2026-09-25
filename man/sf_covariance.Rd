@@ -19,3 +19,8 @@ An object of class \code{sf_covariance}.
 \description{
 Define a covariance between constructs
 }
+\examples{
+cov <- sf_covariance("sq", "sus", label = "cov1")
+cov$from
+cov$to
+}

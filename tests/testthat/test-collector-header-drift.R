@@ -45,16 +45,37 @@ Sheet.prototype.getRange = function(row, col, nRows, nCols){
       }
       return this;
     },
+    setNumberFormat: function(){ return this; },
     setFontWeight: function(){ return this; },
     setBackground: function(){ return this; },
     setFontColor:  function(){ return this; }
   };
 };
+Sheet.prototype.getName = function(){ return this.name; };
+Sheet.prototype.getParent = function(){ return __ss; };
 function Spreadsheet(){ this.sheets = {}; }
 Spreadsheet.prototype.getSheetByName = function(n){ return this.sheets[n] || null; };
-Spreadsheet.prototype.insertSheet = function(n){ this.sheets[n] = new Sheet(); return this.sheets[n]; };
+Spreadsheet.prototype.insertSheet = function(n){
+  var sh = new Sheet(); sh.name = n; this.sheets[n] = sh; return sh;
+};
+Spreadsheet.prototype.getId = function(){ return 'mock-spreadsheet-id'; };
 var __ss = new Spreadsheet();
 var SpreadsheetApp = { getActiveSpreadsheet: function(){ return __ss; } };
+// The Sheets advanced service. A response row is only ever written through the
+// documented RAW option, so without this stub doPost() refuses the write and
+// every assertion below reads an absent row. See helper-apps-script.R, which
+// carries a second mock of the same collector: they should be one.
+var Sheets = {
+  Spreadsheets: { Values: { update: function(body, id, rangeA1){
+    var m = /^(.*)!A([0-9]+)$/.exec(rangeA1);
+    var sheet = __ss.getSheetByName(m[1]);
+    var t = parseInt(m[2], 10) - 1;
+    while (sheet.rows.length <= t) sheet.rows.push([]);
+    sheet.rows[t] = body.values[0].slice();
+    return { updatedCells: body.values[0].length };
+  } } }
+};
+var LockService = { getScriptLock: function(){ return { waitLock: function(){}, releaseLock: function(){} }; } };
 var ContentService = {
   createTextOutput: function(t){ return { setMimeType: function(){ return t; } }; },
   MimeType: { JSON: 'json' }

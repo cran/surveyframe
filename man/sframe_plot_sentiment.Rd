@@ -35,6 +35,16 @@ often it occurred, using the internal \code{tidy_sentiment} runner's
 question from the diverging bar: not "how many responses leaned
 positive," but "which \emph{words} drove that."
 }
+\examples{
+\donttest{
+if (requireNamespace("ggplot2", quietly = TRUE) &&
+    requireNamespace("tidytext", quietly = TRUE)) {
+  demo <- sframe_demo("open_text")
+  res <- run_analysis_plan(demo$responses, demo$instrument)
+  sframe_plot_sentiment(res$RQ7)
+}
+}
+}
 \seealso{
 \code{\link[=run_analysis_plan]{run_analysis_plan()}}, \code{\link[=sframe_draw_likert_diverging]{sframe_draw_likert_diverging()}}
 }

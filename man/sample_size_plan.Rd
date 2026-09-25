@@ -5,7 +5,8 @@
 \title{Sample-size and power planning helper}
 \usage{
 sample_size_plan(
-  type = c("proportion", "mean", "correlation", "t_test", "anova", "regression", "sem"),
+  type = c("proportion", "mean", "correlation", "t_test", "anova",
+    "regression", "sem"),
   margin_error = NULL,
   sd = NULL,
   p = 0.5,
@@ -13,7 +14,10 @@ sample_size_plan(
   alpha = 0.05,
   power = 0.8,
   groups = 2L,
-  predictors = NULL
+  predictors = NULL,
+  d = NULL,
+  f = NULL,
+  f2 = NULL
 )
 }
 \arguments{
@@ -26,19 +30,58 @@ sample_size_plan(
 
 \item{p}{Expected proportion.}
 
-\item{r}{Expected correlation.}
+\item{r}{Expected correlation. Defaults to 0.30 with a warning.}
 
 \item{alpha}{Significance level.}
 
-\item{power}{Desired power.}
+\item{power}{Desired power, for the power calculations.}
 
-\item{groups}{Number of groups for ANOVA/t-test planning.}
+\item{groups}{Number of groups for ANOVA planning. A t test has 2.}
 
 \item{predictors}{Number of predictors for regression planning.}
+
+\item{d}{Expected Cohen's d for a t test. Defaults to 0.5 with a warning.}
+
+\item{f}{Expected Cohen's f for ANOVA. Defaults to 0.25 with a warning.}
+
+\item{f2}{Expected Cohen's f squared for regression. When \code{NULL}, a rule of
+thumb is returned in place of a power calculation.}
 }
 \value{
-A list of planning estimates and warnings.
+An \code{sframe_sample_size_plan} list holding \code{type}, \code{estimated_n}
+(total sample size), \code{method} (\code{"power"}, \code{"precision"},
+\code{"rule_of_thumb"} or \code{"none"}), \code{alpha}, \code{power}, \code{effect_size},
+\code{warnings}, \code{advisory} and \code{prompt}.
 }
 \description{
-Sample-size and power planning helper
+Estimates a total sample size for a planned analysis. The targets use 3
+different methods, and the result says which one applied.
+}
+\section{Power calculations}{
+\code{"t_test"}, \code{"anova"} and \code{"correlation"} are power calculations, so
+\code{alpha}, \code{power} and the expected effect size all change the result. The
+t test uses \code{\link[stats:power.t.test]{stats::power.t.test()}} for 2 independent groups with Cohen's
+\code{d}. ANOVA uses \code{\link[stats:power.anova.test]{stats::power.anova.test()}} with Cohen's \code{f}. Correlation
+uses the Fisher z approximation with \code{r}. \code{"regression"} is a power
+calculation when \code{f2} is supplied, from the noncentral F distribution for
+the overall test of \code{predictors} predictors.
+
+When the effect size is left \code{NULL}, a conventional medium effect is
+assumed (\code{d} 0.5, \code{f} 0.25, \code{r} 0.30) and a warning names it. An
+assumed effect is a placeholder. Supply the effect you expect from prior
+studies or a pilot.
+}
+
+\section{Precision targets and rules of thumb}{
+\code{"proportion"} and \code{"mean"} size a confidence interval to a margin of
+error, and use \code{alpha} for its confidence level. \code{power} has no bearing on
+them. \code{"regression"} without \code{f2} returns the larger of 2 published rules
+of thumb, \verb{50 + 8k} and \code{104 + k}, which ignore \code{alpha} and \code{power}.
+\code{"sem"} returns no estimate. Both say so in the returned warnings.
+}
+
+\examples{
+plan <- sample_size_plan("t_test", d = 0.5, power = 0.80)
+plan$estimated_n
+plan$method
 }

@@ -20,7 +20,7 @@ fresh_instrument <- function() {
     ),
     analysis_plan = list(list(
       id = "RQ1", research_question = "R?", family = "descriptive",
-      method = "frequencies", roles = list(variables = "q1")
+      method = "frequency", roles = list(variables = "q1")
     ))
   )
 }

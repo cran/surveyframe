@@ -2,7 +2,7 @@
 % Please edit documentation in R/psychometrics.R
 \name{reliability_report}
 \alias{reliability_report}
-\title{Compute reliability statistics for scored scales}
+\title{Estimate scale reliability from item responses}
 \usage{
 reliability_report(data, instrument, scales = NULL, alpha = TRUE, omega = TRUE)
 }

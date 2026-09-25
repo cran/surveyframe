@@ -376,8 +376,8 @@ for an instrument and response data that already exist.</li>
 <h2>Input-types demo</h2>
 <p>The input-types demo covers the main controls available in
 SurveyBuilder and SurveyStudio. The two decision item types,
-<code>pairwise_comparison</code> and <code>criteria_weight</code>, are
-not part of this demo. They get their own worked example in the MCDM
+<code>pairwise_comparison</code> and <code>criteria_weight</code>, sit
+outside this demo. They get their own worked example in the MCDM
 vignette, because they only make sense alongside a declared decision
 method and a set of alternatives.</p>
 <div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a>demo      <span class="ot">&lt;-</span> <span class="fu">sframe_input_types_demo_data</span>()</span>
@@ -416,10 +416,10 @@ The statistics are produced later, either in an R session with
 on the right shows counts, such as the number of plans, the number of
 data-dependent run items, and the number of saved models.</p>
 <p>The model builder, also on the right, creates constructs from the
-scales, adds structural paths, and writes lavaan or seminr syntax along
-with the model JSON into the <code>.sframe</code> file. The Google Sheet
-panel does not collect data on its own. It explains that, after saving
-the <code>.sframe</code> file, you run
+scales and adds structural paths. The <code>.sframe</code> stores that
+model specification, and surveyframe can generate lavaan or seminr
+syntax from it. The Google Sheet panel does not collect data on its own.
+It explains that, after saving the <code>.sframe</code> file, you run
 <code>export_google_sheet(instr, sheet_url = &quot;...&quot;)</code> in R to
 generate the Apps Script collector.</p>
 </div>
@@ -434,9 +434,10 @@ in the SurveyBuilder, and the studio opens the resulting
 <p>The Amendments screen discloses a change to the open instrument:
 upload a revised <code>.sframe</code>, give a reason and an explanation,
 and <code>amend_sframe()</code> appends the change to the instrument’s
-amendment log rather than replacing its history. Exporting the amended
-instrument keeps that log inside the <code>.sframe</code> file, readable
-later with <code>amendment_log()</code>.</p>
+amendment log, where every earlier entry stays as it was written.
+Exporting the amended instrument keeps that log inside the
+<code>.sframe</code> file, readable later with
+<code>amendment_log()</code>.</p>
 <p>The Preview Survey screen renders the exact deployable survey,
 identical to the exported HTML.</p>
 <p>The Analysis Plan screen does two jobs. It edits the plan, with the
@@ -472,13 +473,65 @@ export the report.</li>
 exploration.</li>
 </ol>
 </div>
+<div id="rstudio-addins" class="section level2">
+<h2>RStudio Addins</h2>
+<p>In RStudio, the same tools open from the <strong>Addins</strong> menu
+in the toolbar. The 4 commands are listed under
+<strong>surveyframe:</strong> and are searchable by that prefix in the
+command palette. Each one needs the rstudioapi package.</p>
+<table>
+<colgroup>
+<col width="33%" />
+<col width="33%" />
+<col width="33%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Command</th>
+<th>What opens</th>
+<th>What it needs</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>surveyframe: Design an instrument</td>
+<td>SurveyBuilder in the browser</td>
+<td>RStudio alone</td>
+</tr>
+<tr class="even">
+<td>surveyframe: Open analysis workspace</td>
+<td>SurveyStudio, on Open Instrument</td>
+<td>RStudio alone, open a <code>.sframe</code> there</td>
+</tr>
+<tr class="odd">
+<td>surveyframe: Analyse an existing instrument</td>
+<td>SurveyStudio, on Upload Responses, with the instrument loaded</td>
+<td>a <code>.sframe</code> file, chosen in a dialog</td>
+</tr>
+<tr class="even">
+<td>surveyframe: Insert starter instrument</td>
+<td>a template in the active R script, at the cursor</td>
+<td>an open R script</td>
+</tr>
+</tbody>
+</table>
+<p>The commands follow the workflow above:</p>
+<pre class="text"><code>Design an instrument -&gt; save .sframe -&gt; Analyse an existing instrument -&gt;
+upload responses -&gt; run the plan -&gt; export the report</code></pre>
+<p>The starter instrument holds a 5-point choice set, 3 items, one
+scale, and a reliability plan, and it validates as inserted. It ends
+with a commented <code>write_sframe()</code> line for saving it. When a
+command has to stop, because RStudio is closed, the console has focus,
+or a file fails to load, it prints one message saying why and what to do
+next.</p>
+</div>
 <div id="demo-launchers" class="section level2">
 <h2>Demo launchers</h2>
 <p>This vignette leaves the demo launchers unevaluated, because CRAN
-examples and vignettes should not open browsers.</p>
-<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="fu">launch_builder_demo</span>()</span>
-<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a><span class="fu">launch_studio_demo</span>()</span>
-<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a><span class="fu">launch_dashboard_demo</span>()</span></code></pre></div>
+examples and vignettes leave browsers closed.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="fu">launch_builder_demo</span>()</span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a><span class="fu">launch_studio_demo</span>()</span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a><span class="fu">launch_dashboard_demo</span>()</span></code></pre></div>
 <p><code>launch_builder_demo()</code> injects the demo state into a
 temporary copy of <code>survey_builder.html</code> and opens it, so the
 demo questions, scales, and analysis plan are visible at once.
@@ -488,32 +541,34 @@ opens the dashboard with the same demo data.</p>
 </div>
 <div id="standalone-builder" class="section level2">
 <h2>Standalone builder</h2>
-<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a>builder_file <span class="ot">&lt;-</span> <span class="fu">launch_builder</span>(<span class="at">open =</span> <span class="cn">FALSE</span>)</span>
-<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a>builder_file</span></code></pre></div>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a>builder_file <span class="ot">&lt;-</span> <span class="fu">launch_builder</span>(<span class="at">open =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>builder_file</span></code></pre></div>
 <p>Use SurveyBuilder for questionnaire, plan, and model authoring.
 Response exploration and plan execution belong in SurveyStudio or the
 dashboard.</p>
 </div>
 <div id="studio-workflow-hub" class="section level2">
 <h2>Studio workflow hub</h2>
-<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="fu">launch_studio</span>(</span>
-<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>  <span class="at">instrument     =</span> instr,</span>
-<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>  <span class="at">responses      =</span> responses,</span>
-<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a>  <span class="at">screen         =</span> <span class="st">&quot;analysis&quot;</span>,</span>
-<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a>  <span class="at">launch.browser =</span> <span class="cn">FALSE</span></span>
-<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a>)</span></code></pre></div>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a><span class="fu">launch_studio</span>(</span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a>  <span class="at">instrument     =</span> instr,</span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a>  <span class="at">responses      =</span> responses,</span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a>  <span class="at">screen         =</span> <span class="st">&quot;analysis&quot;</span>,</span>
+<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a>  <span class="at">launch.browser =</span> <span class="cn">FALSE</span></span>
+<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a>)</span></code></pre></div>
 <p>SurveyStudio reads the objects passed by
 <code>launch_studio()</code>. With response data present,
-<code>screen = &quot;auto&quot;</code> opens the Upload Responses screen, and
-<code>screen = &quot;analysis&quot;</code> opens the Analysis Plan screen.</p>
+<code>screen = &quot;auto&quot;</code> opens the Dashboard. With an instrument
+alone it opens Preview Survey, and with neither it opens Open
+Instrument. <code>screen = &quot;analysis&quot;</code> opens the Analysis Plan
+screen explicitly.</p>
 </div>
 <div id="dashboard" class="section level2">
 <h2>Dashboard</h2>
-<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a><span class="fu">launch_dashboard</span>(</span>
-<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a>  <span class="at">instrument     =</span> instr,</span>
-<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a>  <span class="at">responses      =</span> responses,</span>
-<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a>  <span class="at">launch.browser =</span> <span class="cn">FALSE</span></span>
-<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a>)</span></code></pre></div>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a><span class="fu">launch_dashboard</span>(</span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a>  <span class="at">instrument     =</span> instr,</span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a>  <span class="at">responses      =</span> responses,</span>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a>  <span class="at">launch.browser =</span> <span class="cn">FALSE</span></span>
+<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a>)</span></code></pre></div>
 <p>Use the dashboard after data collection for read-only
 exploration.</p>
 </div>

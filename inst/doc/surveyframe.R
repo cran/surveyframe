@@ -591,7 +591,7 @@ results_p <- run_analysis_plan(scored, study, plots = TRUE)
 first_plot <- Filter(function(r) !is.null(r$plot), results_p)[[1]]
 first_plot$plot
 
-## ----render-results-----------------------------------------------------------
+## ----render-results, eval = identical(Sys.getenv("NOT_CRAN"), "true")---------
 results_path <- render_results(
   results,
   study,
@@ -600,7 +600,7 @@ results_path <- render_results(
 cat("Results report written:", results_path, "\n")
 cat("Size:", round(file.size(results_path) / 1024, 1), "KB\n")
 
-## ----render-report------------------------------------------------------------
+## ----render-report, eval = identical(Sys.getenv("NOT_CRAN"), "true")----------
 render_report(
   study,
   data             = scored,

@@ -39,3 +39,9 @@ and optional number stripping. Blank and missing responses are dropped
 rather than kept as empty strings, since they carry no term-frequency
 signal and would otherwise inflate downstream response counts.
 }
+\examples{
+demo <- sframe_demo_data()
+cleaned <- clean_text_responses(demo$responses, "comments")
+head(cleaned)
+attr(cleaned, "respondent")[1:5]
+}

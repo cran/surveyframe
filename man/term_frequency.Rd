@@ -26,3 +26,8 @@ small built-in English stop-word list so this works with zero optional
 packages; pass \code{stop_words = character(0)} to disable filtering, or a
 custom vector to override it.
 }
+\examples{
+demo <- sframe_demo_data()
+cleaned <- clean_text_responses(demo$responses, "comments")
+head(term_frequency(cleaned, top_n = 10))
+}

@@ -17,3 +17,8 @@ A character string.
 \description{
 Create a model reporting template
 }
+\examples{
+m <- sf_model("cb1", type = "cb_sem",
+              constructs = list(sf_construct("sat", items = c("sat_1", "sat_2"))))
+cat(model_report_template(m, include_json = FALSE))
+}

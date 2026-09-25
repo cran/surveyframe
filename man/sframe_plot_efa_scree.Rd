@@ -19,6 +19,16 @@ Plots the parallel-analysis eigenvalues from \code{\link[=efa_report]{efa_report
 observed factor-analysis eigenvalues and the simulated comparison line),
 with the suggested factor count marked.
 }
+\examples{
+\donttest{
+if (requireNamespace("ggplot2", quietly = TRUE) &&
+    requireNamespace("psych", quietly = TRUE)) {
+  demo <- sframe_demo_data()
+  er <- efa_report(demo$responses, demo$instrument)
+  sframe_plot_efa_scree(er)
+}
+}
+}
 \seealso{
 \code{\link[=efa_report]{efa_report()}}
 }

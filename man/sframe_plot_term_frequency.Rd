@@ -20,6 +20,15 @@ cloud when \code{result$options$wordcloud} is \code{TRUE} (opt-in, default
 \code{FALSE}). Facets by group when the result carries a \code{group} role
 (todo_text_analysis.md section 1a).
 }
+\examples{
+\donttest{
+if (requireNamespace("ggplot2", quietly = TRUE)) {
+  demo <- sframe_demo("open_text")
+  res <- run_analysis_plan(demo$responses, demo$instrument)
+  sframe_plot_term_frequency(res$RQ1)
+}
+}
+}
 \seealso{
 \code{\link[=run_analysis_plan]{run_analysis_plan()}}, \code{\link[=term_frequency]{term_frequency()}}
 }

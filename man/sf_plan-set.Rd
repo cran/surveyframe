@@ -2,12 +2,9 @@
 % Please edit documentation in R/accessors.R
 \name{sf_plan<-}
 \alias{sf_plan<-}
-\alias{sf_plan<-.sframe}
 \title{Set the pre-declared analysis plan}
 \usage{
 sf_plan(x) <- value
-
-\method{sf_plan}{sframe}(x) <- value
 }
 \arguments{
 \item{x}{An \code{sframe} object.}

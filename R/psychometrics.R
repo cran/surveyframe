@@ -1,6 +1,6 @@
 # reliability_report.R
 
-#' Compute reliability statistics for scored scales
+#' Estimate scale reliability from item responses
 #'
 #' Produces Cronbach's alpha and McDonald's omega for each scale defined in
 #' the instrument, along with the number of items and sample size.
@@ -46,8 +46,6 @@ reliability_report <- function(
   if (!is.null(scales)) {
     target_scales <- Filter(function(s) s$id %in% scales, target_scales)
   }
-  reverse_context <- sframe_reverse_context(instrument)
-
   results <- lapply(target_scales, function(scale) {
     cols <- intersect(scale$items, colnames(data))
     if (length(cols) < 2) {
@@ -58,7 +56,7 @@ reliability_report <- function(
       )
       return(NULL)
     }
-    scale_data <- sframe_numeric_scale_data(data, cols, reverse_context)
+    scale_data <- sframe_scale_matrix(data, instrument, scale, cols)
     scale_data <- scale_data[complete.cases(scale_data), , drop = FALSE]
 
     result <- list(
@@ -138,16 +136,32 @@ print.sframe_reliability_report <- function(x, ...) {
 
 #' Generate item-level diagnostics
 #'
-#' Produces item-total correlations, floor and ceiling effect proportions,
-#' and item means and standard deviations for each item within each scale.
+#' Produces, for each item within each scale, the item-rest correlation,
+#' floor and ceiling proportions, and the item mean and standard deviation.
+#'
+#' Diagnostics use the scale's scoring orientation, so an item the scale
+#' reverse-codes is reversed first, as in [score_scales()] and
+#' [reliability_report()]. The item-rest correlation is the correlation
+#' between an item and the sum of the scale's other items. It is computed
+#' on respondents who answered every item in the scale, the same rows
+#' [reliability_report()] uses, and `n_missing` counts the item's own missing
+#' values in `data`.
+#'
+#' Floor and ceiling are the proportions at the item's declared lowest and
+#' highest response, taken from its choice set, slider limits or rating
+#' maximum. They are `NA` for an item that declares no bounds, since the
+#' sample's own extremes say nothing about a floor or ceiling effect.
 #'
 #' @param data A `tibble` or `data.frame` of responses.
 #' @param instrument An `sframe` object.
 #' @param scales Character vector or NULL. A subset of scale IDs to analyse.
 #'   When NULL (default), all scales are included.
 #'
-#' @return An object of class `sframe_item_report`, a list with one data.frame
-#'   per scale.
+#' @return An object of class `sframe_item_report`: a named list with one
+#'   element per scale, each a list holding `scale_id`, `label` and
+#'   `diagnostics`, a data frame with one row per item and columns `item_id`,
+#'   `mean`, `sd`, `item_rest_r`, `floor_pct`, `ceiling_pct` and `n_missing`.
+#'   `as.data.frame()` stacks every scale's diagnostics into one table.
 #' @export
 #' @seealso [reliability_report()], [sf_scale()]
 #'
@@ -156,6 +170,10 @@ print.sframe_reliability_report <- function(x, ...) {
 #' demo <- sframe_demo_data()
 #' ir <- item_report(demo$responses, demo$instrument)
 #' print(ir)
+#' # one scale's diagnostics
+#' ir[[1]]$diagnostics
+#' # every scale in one table
+#' as.data.frame(ir)
 #' }
 item_report <- function(data, instrument, scales = NULL) {
   sframe_check_instrument(instrument)
@@ -170,28 +188,28 @@ item_report <- function(data, instrument, scales = NULL) {
     cols <- intersect(scale$items, colnames(data))
     if (length(cols) < 2) return(NULL)
 
-    scale_data <- as.data.frame(lapply(data[, cols, drop = FALSE],
-                                       function(x) suppressWarnings(as.numeric(x))))
+    # The scale's scoring orientation, on respondents who answered every
+    # item. Raw columns gave a reverse-keyed item a strongly negative
+    # correlation beside a high alpha, and a row sum with na.rm = TRUE counted
+    # a missing rest item as 0.
+    oriented   <- sframe_scale_matrix(data, instrument, scale, cols)
+    scale_data <- oriented[stats::complete.cases(oriented), , drop = FALSE]
 
     diagnostics <- lapply(cols, function(col) {
       vals      <- scale_data[[col]]
-      # Item-rest correlation is the item against the SUM of the other items.
-      # Subtracting the item from a rowMeans() total instead leaves roughly
-      # noise carrying the item negatively, which returns strong negative
-      # values on a highly reliable scale. Matches psych::alpha()$item.stats$r.drop.
-      rest      <- rowSums(scale_data[, setdiff(cols, col), drop = FALSE],
-                           na.rm = TRUE)
-      item_rest <- stats::cor(vals, rest, use = "complete.obs")
-      col_min   <- min(vals, na.rm = TRUE)
-      col_max   <- max(vals, na.rm = TRUE)
+      # Item-rest correlation is the item against the SUM of the other items,
+      # matching psych::alpha()$item.stats$r.drop.
+      rest      <- rowSums(scale_data[, setdiff(cols, col), drop = FALSE])
+      item_rest <- if (nrow(scale_data) > 2) stats::cor(vals, rest) else NA_real_
+      bounds    <- sframe_item_bounds(instrument, col)
       list(
         item_id      = col,
-        mean         = mean(vals, na.rm = TRUE),
-        sd           = stats::sd(vals, na.rm = TRUE),
+        mean         = mean(vals),
+        sd           = stats::sd(vals),
         item_rest_r  = item_rest,
-        floor_pct    = mean(vals == col_min, na.rm = TRUE),
-        ceiling_pct  = mean(vals == col_max, na.rm = TRUE),
-        n_missing    = sum(is.na(vals))
+        floor_pct    = if (is.null(bounds)) NA_real_ else mean(vals == bounds[1]),
+        ceiling_pct  = if (is.null(bounds)) NA_real_ else mean(vals == bounds[2]),
+        n_missing    = sum(is.na(oriented[[col]]))
       )
     })
 
@@ -243,8 +261,13 @@ print.sframe_item_report <- function(x, ...) {
 #'
 #' @return An object of class `sframe_efa_report` with elements `kmo`,
 #'   `bartlett`, `parallel`, and `suggested_nfactors`.
+#' @section Fitting the solution:
+#' This report says whether the data suit a factor analysis and how many
+#' factors to extract. [efa_solution()] then fits that solution and returns
+#' the loadings, so the whole route stays in surveyframe. Take the result to
+#' another package when you want a method surveyframe leaves out.
 #' @export
-#' @seealso [reliability_report()], [cfa_syntax()]
+#' @seealso [efa_solution()], [reliability_report()], [cfa_syntax()]
 #'
 #' @examples
 #' \donttest{
@@ -339,8 +362,15 @@ print.sframe_efa_report <- function(x, ...) {
 #'   in the output comment header. Defaults to `TRUE`.
 #'
 #' @return A character string of `lavaan` CFA model syntax.
+#' @section Which of the two to use:
+#' This is the instrument-only convenience wrapper: one call, constructs taken
+#' from the instrument's scales. [cfa_lavaan_syntax()] is the general entry
+#' point, and takes those same arguments plus a declared [sf_model()],
+#' correlated residuals and latent covariances. Reach for it where the
+#' constructs differ from the scales. This wrapper stays supported, so a script
+#' calling it keeps working.
 #' @export
-#' @seealso [efa_report()], [reliability_report()]
+#' @seealso [cfa_lavaan_syntax()], [efa_report()], [reliability_report()]
 #'
 #' @examples
 #' cs    <- sf_choices("ag5", 1:5,

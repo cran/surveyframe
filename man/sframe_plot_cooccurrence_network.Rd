@@ -30,6 +30,16 @@ single "Other" bucket rather than cycling or interpolating a new hue,
 per the dataviz skill's categorical-colour guidance; see
 \code{.sframe_cluster_palette()}.
 }
+\examples{
+\donttest{
+if (requireNamespace("ggplot2", quietly = TRUE) &&
+    requireNamespace("igraph", quietly = TRUE)) {
+  demo <- sframe_demo("open_text")
+  res <- run_analysis_plan(demo$responses, demo$instrument)
+  sframe_plot_cooccurrence_network(res$RQ6)
+}
+}
+}
 \seealso{
 \code{\link[=run_analysis_plan]{run_analysis_plan()}}
 }

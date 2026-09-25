@@ -24,7 +24,15 @@ sframe_conjoint_full_factorial <- function(attributes) {
 # strongly its attributes move together. Lower is better on both counts.
 # This is a transparent heuristic, not a catalogued orthogonal array, and the
 # documentation says so.
-sframe_conjoint_imbalance <- function(df) {
+# Every declared level is counted, absent ones as 0. Counting only the levels
+# present scored a design that never showed an attribute's second level as
+# perfectly balanced, though it offers no contrast on that attribute.
+sframe_conjoint_imbalance <- function(df, attributes = NULL) {
+  declared <- function(nm, col) {
+    factor(col, levels = attributes[[nm]] %||% sort(unique(col)))
+  }
+  df <- as.data.frame(lapply(stats::setNames(names(df), names(df)),
+                             function(nm) declared(nm, df[[nm]])))
   level_penalty <- sum(vapply(df, function(col) {
     counts <- table(col)
     sum((counts - mean(counts))^2)
@@ -43,7 +51,8 @@ sframe_conjoint_imbalance <- function(df) {
   level_penalty + pair_penalty
 }
 
-sframe_conjoint_select <- function(full, n_profiles, method, tries = 200L) {
+sframe_conjoint_select <- function(full, n_profiles, method, tries = 200L,
+                                   attributes = NULL) {
   n_full <- nrow(full)
   if (identical(method, "full") || n_profiles >= n_full) {
     return(full)
@@ -60,7 +69,7 @@ sframe_conjoint_select <- function(full, n_profiles, method, tries = 200L) {
   for (i in seq_len(tries)) {
     idx <- sort(sample.int(n_full, n_profiles))
     cand <- full[idx, , drop = FALSE]
-    score <- sframe_conjoint_imbalance(cand)
+    score <- sframe_conjoint_imbalance(cand, attributes)
     if (score < best_score) {
       best_score <- score
       best <- cand
@@ -237,7 +246,8 @@ sf_conjoint_design <- function(id,
         ))
       }
     }
-    profiles <- sframe_conjoint_select(full, n_profiles %||% nrow(full), method)
+    profiles <- sframe_conjoint_select(full, n_profiles %||% nrow(full), method,
+                                       attributes = attributes)
   }
 
   rownames(profiles) <- NULL
@@ -281,12 +291,18 @@ sf_conjoint_design <- function(id,
   tasks <- do.call(rbind, task_rows)
   rownames(tasks) <- NULL
 
+  level_counts <- lapply(stats::setNames(names(attributes), names(attributes)), function(a) {
+    counts <- table(factor(profiles[[a]], levels = attributes[[a]]))
+    stats::setNames(as.list(as.integer(counts)), names(counts))
+  })
+  absent <- lapply(level_counts, function(cnt) names(cnt)[unlist(cnt) == 0L])
+  absent <- absent[lengths(absent) > 0]
   balance <- list(
-    level_counts = lapply(profiles[, names(attributes), drop = FALSE], function(col) {
-      as.list(table(col))
-    }),
+    level_counts = level_counts,
+    absent_levels = absent,
     imbalance = round(
-      sframe_conjoint_imbalance(profiles[, names(attributes), drop = FALSE]), 6
+      sframe_conjoint_imbalance(profiles[, names(attributes), drop = FALSE],
+                                attributes), 6
     ),
     n_full_factorial = prod(vapply(attributes, length, integer(1)))
   )

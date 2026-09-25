@@ -31,6 +31,9 @@ sframe_check_decision_input <- function(x, weights, criteria_types) {
   if (anyNA(x)) {
     return(list(error = "The decision matrix contains missing values."))
   }
+  if (!all(is.finite(x))) {
+    return(list(error = "The decision matrix contains infinite values."))
+  }
   weights <- suppressWarnings(as.numeric(weights))
   if (length(weights) != ncol(x)) {
     return(list(error = sprintf(
@@ -67,6 +70,51 @@ sframe_check_decision_input <- function(x, weights, criteria_types) {
   }
   list(matrix = x, weights = weights, criteria_types = criteria_types,
        note = note)
+}
+
+# Bounds for the tuning values the ranking methods read. Returns an error
+# string, or NULL. Used by the runners and by sensitivity analysis, so a value
+# outside a method's range is refused wherever it arrives. Before this, a v or
+# lambda above 1 turned a blend into an extrapolation, and PROMETHEE and
+# ELECTRE thresholds were used whatever their sign or order.
+sframe_check_decision_tuning <- function(method, options, n_criteria) {
+  options <- options %||% list()
+  in_unit <- function(x) is.numeric(x) && length(x) == 1 && is.finite(x) && x >= 0 && x <= 1
+  if (identical(method, "vikor") && !is.null(options[["v"]]) && !in_unit(options[["v"]])) {
+    return("VIKOR's v must be a single number from 0 to 1.")
+  }
+  if (identical(method, "waspas") && !is.null(options[["lambda"]]) && !in_unit(options[["lambda"]])) {
+    return("WASPAS's lambda must be a single number from 0 to 1.")
+  }
+  if (identical(method, "electre")) {
+    for (key in c("concordance_threshold", "discordance_threshold")) {
+      if (!is.null(options[[key]]) && !in_unit(options[[key]])) {
+        return(sprintf("ELECTRE's %s must be a single number from 0 to 1.", key))
+      }
+    }
+  }
+  if (identical(method, "promethee")) {
+    fn <- options[["preference_function"]] %||% "usual"
+    if (!fn %in% c("usual", "linear", "level")) {
+      return(sprintf("PROMETHEE's preference_function must be usual, linear or level, not '%s'.", fn))
+    }
+    thr <- options[["thresholds"]]
+    if (!is.null(thr)) {
+      if (!is.list(thr) || length(thr) != n_criteria) {
+        return(sprintf("PROMETHEE needs one threshold set per criterion, %d in all.", n_criteria))
+      }
+      for (j in seq_along(thr)) {
+        p <- thr[[j]][["preference"]]; q <- thr[[j]][["indifference"]] %||% 0
+        ok <- is.numeric(p) && length(p) == 1 && is.finite(p) && p > 0 &&
+          is.numeric(q) && length(q) == 1 && is.finite(q) && q >= 0 && q < p
+        if (!ok) {
+          return(sprintf(paste0("PROMETHEE threshold %d must have a positive preference ",
+                                "threshold above a non-negative indifference threshold."), j))
+        }
+      }
+    }
+  }
+  NULL
 }
 
 # ---------------------------------------------------------------------------
@@ -117,6 +165,9 @@ sframe_topsis_compute <- function(x, weights, criteria_types) {
 # for both inputs so the report can say where the numbers came from.
 sframe_resolve_decision_inputs <- function(data, roles, options, instrument,
                                            method = "this method") {
+  # Whether a supplied matrix names its criteria, before defaults fill them.
+  named_matrix <- !is.null((options %||% list())[["criteria"]]) ||
+    !is.null(colnames((options %||% list())[["matrix"]]))
   options <- sframe_decision_options(options)
   out <- list(notes = character(0))
 
@@ -171,7 +222,32 @@ sframe_resolve_decision_inputs <- function(data, roles, options, instrument,
         weights_item[1], length(collected$weights), ncol(out$matrix)
       )))
     }
-    out$weights <- collected$weights
+    # Weights follow the matrix by criterion name. A matrix supplied with no
+    # criterion names takes the item's criteria in the item's order.
+    if (identical(out$matrix_source, "supplied") && !named_matrix) {
+      colnames(out$matrix) <- names(collected$weights)
+      criteria <- colnames(out$matrix)
+      out$notes <- c(out$notes, sprintf(
+        "The supplied matrix names no criteria, so its columns take item '%s' criteria in order.",
+        weights_item[1]))
+    } else if (setequal(names(collected$weights), criteria)) {
+      # aligned by name below
+    } else if (identical(out$matrix_source, "collected")) {
+      # Rated items are declared one per criterion in criterion order, and
+      # their ids need not match the weight item's criterion names. They pair
+      # in declared order, and every pairing is written into the notes.
+      out$notes <- c(out$notes, sprintf(
+        "The rated items pair with item '%s' criteria in declared order: %s.",
+        weights_item[1],
+        paste(paste(criteria, "with", names(collected$weights)), collapse = ", ")))
+      names(collected$weights) <- criteria
+    } else {
+      return(list(error = sprintf(
+        "Item '%s' weights %s, but the performance matrix criteria are %s.",
+        weights_item[1], paste(names(collected$weights), collapse = ", "),
+        paste(criteria, collapse = ", "))))
+    }
+    out$weights <- collected$weights[criteria]
     out$weights_source <- "collected"
     out$collected_weights <- collected
     out$notes <- c(out$notes, sprintf(
@@ -183,13 +259,30 @@ sframe_resolve_decision_inputs <- function(data, roles, options, instrument,
       } else ""
     ))
   }
-  if (is.null(names(out$weights)) && length(criteria) == length(out$weights)) {
+  # Align by name against the criteria the resolved matrix actually has.
+  # sframe_decision_options() aligns whatever it can, but a collected
+  # performance matrix is built here, after options were normalised, so at that
+  # point there were no criterion names to align against. Named weights were
+  # then carried through and applied by position, which is how a matrix ordered
+  # price, quality took weights supplied as quality, price the wrong way round.
+  if (length(criteria) > 0 && length(out$weights) == length(criteria)) {
+    out$weights <- sframe_align_to_criteria(
+      out$weights, names(out$weights), criteria, "`options$weights`")
+  } else if (is.null(names(out$weights)) &&
+             length(criteria) == length(out$weights)) {
     names(out$weights) <- criteria
   }
 
-  # 3. Criterion directions. All benefit unless declared otherwise.
+  # 3. Criterion directions. All benefit unless declared otherwise, and aligned
+  # by name for the same reason as the weights.
   out$criteria_types <- options[["criteria_types"]] %||%
     rep("benefit", ncol(out$matrix))
+  if (length(criteria) > 0 && length(out$criteria_types) == length(criteria) &&
+      !is.null(names(out$criteria_types))) {
+    out$criteria_types <- sframe_align_to_criteria(
+      out$criteria_types, names(out$criteria_types), criteria,
+      "`options$criteria_types`")
+  }
   out$alternatives <- rownames(out$matrix)
   out$criteria <- criteria
   out$options <- options
@@ -304,6 +397,20 @@ sframe_ahp_compute <- function(m) {
   if (anyNA(m)) {
     return(list(error = "The AHP judgement matrix contains missing values."))
   }
+  # A judgement matrix must be positive, finite, unit-diagonal and reciprocal.
+  # Without these checks a matrix such as rows (1, 9) and (9, 1) received a
+  # consistency ratio of 0 and equal weights.
+  if (!all(is.finite(m)) || any(m <= 0)) {
+    return(list(error = "The AHP judgement matrix must hold positive finite numbers."))
+  }
+  if (max(abs(diag(m) - 1)) > 1e-6) {
+    return(list(error = "The AHP judgement matrix must have 1 on its diagonal."))
+  }
+  if (max(abs(m * t(m) - 1)) > 1e-6) {
+    return(list(error = paste0(
+      "The AHP judgement matrix must be reciprocal, with m[a, b] equal to ",
+      "1 / m[b, a] for every pair.")))
+  }
   cr_result <- sframe_ahp_cr(m)
   if (!is.null(cr_result$error)) {
     return(list(error = cr_result$error))
@@ -336,7 +443,13 @@ sframe_resolve_pairwise_matrix <- function(data, roles, options, instrument,
 
   if (!is.null(options[["matrix"]])) {
     raw <- options[["matrix"]]
-    if (is.list(raw)) {
+    # A data frame is a list of columns, so it must be converted before the
+    # list-of-rows branch, which read it transposed and reversed every
+    # judgement while keeping perfect consistency.
+    if (is.data.frame(raw)) {
+      raw <- as.matrix(raw)
+      storage.mode(raw) <- "double"
+    } else if (is.list(raw)) {
       widths <- vapply(raw, length, integer(1))
       if (length(unique(widths)) > 1) {
         return(list(error = sprintf(
@@ -538,6 +651,39 @@ sframe_anp_compute <- function(m, max_iter = 1000, tol = 1e-8) {
     normalised[, j] <- if (col_sums[j] > 0) m[, j] / col_sums[j] else 1 / n
   }
 
+  # The limit of the supermatrix powers exists only for a primitive network.
+  # A uniform starting vector that stops moving proves nothing on its own: the
+  # periodic network rows (0, 1), (1, 0) and the reducible identity both leave
+  # it unchanged while their powers never settle. So the structure is checked
+  # first. An irreducible network has one stationary priority vector. When it
+  # is also aperiodic, power iteration reaches it. When it is periodic, it is
+  # the Cesaro limit of the powers (Saaty 2004). A reducible network has no
+  # single answer, since its limit depends on the starting node.
+  reach <- normalised > 0
+  closure <- reach | diag(n) > 0
+  for (step in seq_len(n)) closure <- (closure %*% closure) > 0
+  if (!all(closure)) {
+    return(list(error = paste0(
+      "The ANP network is reducible: some nodes cannot reach others through ",
+      "the supermatrix, so its limiting priorities depend on where the chain ",
+      "starts. Check that every node is connected.")))
+  }
+  power <- reach
+  primitive <- FALSE
+  for (step in seq_len((n - 1)^2 + 1)) {
+    if (all(power)) { primitive <- TRUE; break }
+    power <- (power %*% reach) > 0
+  }
+  if (!primitive) {
+    ev <- eigen(normalised)
+    idx <- which.min(Mod(ev$values - 1))
+    vec <- abs(Re(ev$vectors[, idx]))
+    priorities <- vec / sum(vec)
+    names(priorities) <- rownames(m) %||% colnames(m)
+    return(list(weights = priorities, normalised = normalised,
+                iterations = 0L, converged = TRUE, limit_method = "cesaro"))
+  }
+
   priorities <- rep(1 / n, n)
   converged <- FALSE
   iterations <- 0L
@@ -564,10 +710,11 @@ sframe_anp_compute <- function(m, max_iter = 1000, tol = 1e-8) {
   names(priorities) <- rownames(m) %||% colnames(m)
 
   list(
-    weights    = priorities,
-    normalised = normalised,
-    iterations = iterations,
-    converged  = converged
+    weights      = priorities,
+    normalised   = normalised,
+    iterations   = iterations,
+    converged    = converged,
+    limit_method = "power"
   )
 }
 

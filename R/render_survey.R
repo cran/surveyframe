@@ -15,9 +15,17 @@ sframe_choices_lookup <- function(instrument) {
   )
 }
 
+# Every rule that controls an item, keyed by that item. Holding a single rule
+# per item meant a second rule on the same item replaced the first, so a
+# 2-condition gate ran on one condition. The static survey already kept them
+# all and combined them with AND; this is the same contract on the R side.
 sframe_branch_lookup <- function(instrument) {
   bl <- list()
-  for (rule in instrument$branching) bl[[rule$item_id]] <- rule
+  for (rule in instrument$branching %||% list()) {
+    id <- as.character(rule$item_id %||% "")[1]
+    if (!nzchar(id)) next
+    bl[[id]] <- c(bl[[id]] %||% list(), list(rule))
+  }
   bl
 }
 
@@ -36,6 +44,8 @@ sframe_theme_colour <- function(instrument, theme = NULL) {
   result <- switch(rule$operator,
     "=="   = any(dep_chr %in% rule_chr),
     "!="   = all(!dep_chr %in% rule_chr),
+    # A multi-select answer is itself a set, so any selected value the rule
+    # allows satisfies it.
     "%in%" = any(trimws(dep_chr) %in% sframe_branch_in_values(rule$value)),
     ">"    = any(!is.na(dep_num) & !is.na(rule_num) & dep_num > rule_num),
     ">="   = any(!is.na(dep_num) & !is.na(rule_num) & dep_num >= rule_num),
@@ -46,19 +56,48 @@ sframe_theme_colour <- function(instrument, theme = NULL) {
   if (rule$action == "show") result else !result
 }
 
-sframe_item_visible <- function(item, input_values, branch_lookup) {
-  rule <- branch_lookup[[item$id]]
-  if (is.null(rule)) return(TRUE)
-  .evaluate_branch(rule, input_values[[rule$depends_on]])
+# Whether an item is on screen. Rules on one item combine with AND, and a
+# controlling item that is itself hidden counts as unanswered, so visibility
+# cascades down a chain and a stale answer behind a closed branch cannot
+# reveal anything. `seen` stops a declared cycle recursing, matching the
+# static evaluator, which treats a repeat as visible so the walk terminates.
+sframe_item_visible <- function(item, input_values, branch_lookup,
+                                seen = character(0)) {
+  id <- as.character(item$id %||% "")[1]
+  rules <- branch_lookup[[id]]
+  if (is.null(rules) || length(rules) == 0) return(TRUE)
+  if (id %in% seen) return(TRUE)
+  seen <- c(seen, id)
+
+  for (rule in rules) {
+    dep <- as.character(rule$depends_on %||% "")[1]
+    dep_visible <- TRUE
+    if (nzchar(dep) && !is.null(branch_lookup[[dep]])) {
+      dep_visible <- sframe_item_visible(list(id = dep), input_values,
+                                         branch_lookup, seen)
+    }
+    dep_val <- if (dep_visible) input_values[[dep]] else NULL
+    if (!.evaluate_branch(rule, dep_val)) return(FALSE)
+  }
+  TRUE
+}
+
+# The items a conversational survey walks, in order, leaving out the ones
+# branching excludes. Navigation used to iterate every answerable item, so a
+# participant could be required to answer a question the contract excludes,
+# which serialisation then blanked.
+sframe_visible_sequence <- function(instrument, input_values, branch_lookup,
+                                    items = NULL) {
+  items <- items %||% (instrument$items %||% list())
+  Filter(function(i) sframe_item_visible(i, input_values, branch_lookup), items)
 }
 
 sframe_missing_value <- function(item, value) {
   if (item$type %in% c("section_break", "text_block")) return(FALSE)
   if (item$type %in% sframe_expanded_comparison_types) {
     if (is.null(value) || length(value) == 0) return(TRUE)
-    unanswered <- vapply(value, function(cell) {
-      is.null(cell) || length(cell) == 0 || all(is.na(cell))
-    }, logical(1))
+    unanswered <- vapply(value, function(cell) !sframe_has_answer(cell),
+                         logical(1))
     if (any(unanswered)) return(TRUE)
     # A constant-sum allocation that does not total 100 is not a complete
     # answer, the same rule validatePage() enforces on the static survey.
@@ -76,7 +115,7 @@ sframe_missing_value <- function(item, value) {
   }
   if (is.null(value) || length(value) == 0) return(TRUE)
   if (all(is.na(value))) return(TRUE)
-  if (item$type %in% c("text", "textarea"))
+  if (item$type %in% c("text", "textarea", "ranking"))
     return(!any(nzchar(trimws(as.character(value)))))
   if (item$type == "numeric")
     return(all(is.na(suppressWarnings(as.numeric(value)))))
@@ -84,6 +123,12 @@ sframe_missing_value <- function(item, value) {
 }
 
 sframe_item_input_value <- function(item, input_values) {
+  # A slider always shows a position, so its value is an answer only once the
+  # participant has moved it.
+  if (identical(item$type, "slider") &&
+      !isTRUE(input_values[[paste0(item$id, "__touched")]])) {
+    return(NULL)
+  }
   if (item$type == "matrix" && !is.null(item$matrix_items)) {
     return(lapply(seq_along(item$matrix_items), function(r) {
       input_values[[paste0(item$id, "__", r)]]
@@ -162,8 +207,19 @@ sframe_expansion_values <- function(item, instrument, input_values) {
   }), cols)
 }
 
+# A per-response identifier, in the shape the static survey already writes:
+# "R" and 8 upper-case base36 characters. The static template generated one from
+# the first release and the Shiny path generated none, so the 2 collection
+# routes produced different column sets for the same instrument, and neither a
+# duplicate check nor an idempotent retry had a key to work from.
+sframe_new_response_id <- function() {
+  alphabet <- c(0:9, LETTERS)
+  paste0("R", paste(sample(alphabet, 8, replace = TRUE), collapse = ""))
+}
+
 sframe_response_row <- function(instrument, input_values, branch_lookup,
-                                 started_at, submitted_at = Sys.time()) {
+                                 started_at, submitted_at = Sys.time(),
+                                 response_id = sframe_new_response_id()) {
   # Multi-column items expand to one column per sub-item, option, pair, or
   # criterion rather than to a single joined column, matching the static
   # template and the Google Sheets collector. Before 0.4.0 the Shiny path
@@ -181,7 +237,7 @@ sframe_response_row <- function(instrument, input_values, branch_lookup,
   item_values <- lapply(plain_items, function(item) {
     if (!sframe_item_visible(item, input_values, branch_lookup))
       return(NA_character_)
-    sframe_serialise_response_value(input_values[[item$id]])
+    sframe_serialise_response_value(sframe_item_input_value(item, input_values))
   })
   names(item_values) <- vapply(plain_items, function(i) i$id, character(1))
 
@@ -205,6 +261,7 @@ sframe_response_row <- function(instrument, input_values, branch_lookup,
 
   sframe_as_data_frame(as.data.frame(c(
     list(
+      respondent_id = response_id,
       started_at   = format(as.POSIXct(started_at,   tz = "UTC"), "%Y-%m-%dT%H:%M:%SZ"),
       submitted_at = format(as.POSIXct(submitted_at, tz = "UTC"), "%Y-%m-%dT%H:%M:%SZ")
     ),
@@ -212,13 +269,116 @@ sframe_response_row <- function(instrument, input_values, branch_lookup,
   ), stringsAsFactors = FALSE, check.names = FALSE))
 }
 
+# Submission has 2 steps that fail independently: writing the response, and
+# handing it to on_submit. They shared one error handler, so a callback failure
+# after a successful write told the participant nothing was saved and left them
+# on the form. Submitting again appended the same answers a second time.
+#
+# The state records what has already succeeded for this submission, so a retry
+# repeats only what is left. It is per session and per submission, which is
+# what makes a retry idempotent without changing the collected columns.
+sframe_new_submission_state <- function() {
+  list(saved = FALSE, notified = FALSE)
+}
+
+# Runs the outstanding steps and returns the state, whether the submission is
+# complete, and a message where a step failed.
+sframe_persist_response <- function(row, output_path, on_submit, state) {
+  state <- state %||% sframe_new_submission_state()
+
+  if (!isTRUE(state$saved)) {
+    if (is.null(output_path)) {
+      state$saved <- TRUE
+    } else {
+      err <- tryCatch({
+        sframe_append_response_csv(output_path, row)
+        NULL
+      }, error = function(e) e)
+      if (!is.null(err)) {
+        return(list(
+          state = state, saved = FALSE, notified = FALSE,
+          message = paste0("Your answers could not be saved: ",
+                           conditionMessage(err),
+                           " Your answers are still on this page, so you can ",
+                           "try again.")))
+      }
+      state$saved <- TRUE
+    }
+  }
+
+  if (!isTRUE(state$notified) && is.function(on_submit)) {
+    err <- tryCatch({
+      on_submit(row)
+      NULL
+    }, error = function(e) e)
+    if (!is.null(err)) {
+      return(list(
+        state = state, saved = TRUE, notified = FALSE,
+        message = paste0("Your answers are saved. A follow-up step failed: ",
+                         conditionMessage(err),
+                         " Trying again repeats that step alone, and will not ",
+                         "record your answers twice.")))
+    }
+  }
+  state$notified <- TRUE
+  list(state = state, saved = TRUE, notified = TRUE, message = NULL)
+}
+
+# The header of an existing response file, or NULL when there is none yet.
+sframe_response_file_header <- function(path) {
+  if (!file.exists(path) || file.size(path) == 0) return(NULL)
+  names(utils::read.csv(path, nrows = 0, check.names = FALSE))
+}
+
+# Refuses a response file whose columns differ from the ones about to be
+# written. Same columns in another order are compatible, and are aligned by
+# name when appending.
+sframe_check_response_header <- function(path, header, columns) {
+  if (is.null(header) || setequal(header, columns)) return(invisible(TRUE))
+  missing <- setdiff(header, columns)
+  extra <- setdiff(columns, header)
+  # A file written before this version had no respondent_id column. Every
+  # question column still matches, so the file is compatible and a study
+  # collecting today keeps collecting: the row is aligned to the header it
+  # finds and the id is left out of that file, rather than refusing the append
+  # or writing answers under the wrong headings.
+  if (identical(extra, "respondent_id") && length(missing) == 0) {
+    rlang::inform(
+      paste0("'", path, "' was written before responses carried a ",
+             "respondent_id, so this response is appended without one. Collect ",
+             "into a new file to record an identifier for every response."),
+      class = "sframe_response_id_absent"
+    )
+    return(invisible(TRUE))
+  }
+  rlang::abort(
+    c(
+      paste0("The response file '", path, "' was written for a different ",
+             "set of questions, so appending would put answers under the ",
+             "wrong headings."),
+      if (length(missing))
+        c(i = paste0("In the file only: ", paste(missing, collapse = ", "))),
+      if (length(extra))
+        c(i = paste0("In this instrument only: ", paste(extra, collapse = ", "))),
+      i = "Collect this version of the instrument into a new output_path."
+    ),
+    class = "sframe_error"
+  )
+}
+
+# Appends one response row. The file header is read first: a row is written
+# in the file's own column order, and refused when its columns differ. A
+# positional append wrote a changed instrument's values under the previous
+# instrument's headings, and nothing reported it.
 sframe_append_response_csv <- function(path, row) {
   dir_path <- dirname(path)
   if (!dir.exists(dir_path))
     dir.create(dir_path, recursive = TRUE, showWarnings = FALSE)
-  exists <- file.exists(path)
+  header <- sframe_response_file_header(path)
+  sframe_check_response_header(path, header, names(row))
+  if (!is.null(header)) row <- row[, header, drop = FALSE]
   utils::write.table(row, file = path, sep = ",", row.names = FALSE,
-                     col.names = !exists, append = exists,
+                     col.names = is.null(header), append = !is.null(header),
                      qmethod = "double", na = "")
   invisible(path)
 }
@@ -241,7 +401,35 @@ sframe_label_tag <- function(item) {
   )
 }
 
-sframe_render_input <- function(item, choices_lookup) {
+# A value the participant has given, as opposed to a control's empty state.
+sframe_has_answer <- function(value) {
+  !is.null(value) && length(value) > 0 && !all(is.na(value)) &&
+    any(nzchar(trimws(as.character(value))))
+}
+
+# A JavaScript string literal, for embedding an id in an inline handler.
+sframe_js_string <- function(x) {
+  as.character(jsonlite::toJSON(as.character(x), auto_unbox = TRUE))
+}
+
+# A Shiny date input that starts empty. Shiny's date binding fills a missing
+# initial date with today, so a question such as a date of birth arrived
+# pre-answered. An empty initial-date attribute leaves the field blank.
+sframe_blank_date_input <- function(tag) {
+  for (k in seq_along(tag$children)) {
+    child <- tag$children[[k]]
+    if (inherits(child, "shiny.tag") && identical(child$name, "input")) {
+      tag$children[[k]]$attribs[["data-initial-date"]] <- ""
+    }
+  }
+  tag
+}
+
+# Renders one item's control. `values` holds the answers given so far, and
+# every control is drawn with its answer restored. A control drawn at its
+# default reports that default to the server when it binds, so drawing a
+# page again without restoring would erase what the participant entered.
+sframe_render_input <- function(item, choices_lookup, values = list()) {
   tags <- shiny::tags
   radioButtons <- shiny::radioButtons
   checkboxGroupInput <- shiny::checkboxGroupInput
@@ -252,8 +440,13 @@ sframe_render_input <- function(item, choices_lookup) {
   sliderInput <- shiny::sliderInput
   actionButton <- shiny::actionButton
   selectInput <- shiny::selectInput
+  # choices_lookup maps each choice set to codes named by their labels
   cs  <- choices_lookup[[item$choice_set %||% ""]]
+  codes  <- unname(cs %||% character(0))
+  labels <- names(cs %||% character(0))
   lbl <- sframe_label_tag(item)
+  current <- values[[item$id]]
+  answered <- sframe_has_answer(current)
 
   switch(item$type,
 
@@ -270,77 +463,139 @@ sframe_render_input <- function(item, choices_lookup) {
     ),
 
     likert = radioButtons(item$id, lbl,
-      choices = cs %||% character(0), inline = TRUE, selected = character(0)),
+      choices = cs %||% character(0), inline = TRUE,
+      selected = if (answered) as.character(current)[1] else character(0)),
 
     single_choice = radioButtons(item$id, lbl,
-      choices = cs %||% character(0), selected = character(0)),
+      choices = cs %||% character(0),
+      selected = if (answered) as.character(current)[1] else character(0)),
 
     multiple_choice = checkboxGroupInput(item$id, lbl,
-      choices = cs %||% character(0)),
+      choices = cs %||% character(0),
+      selected = if (answered) as.character(current) else NULL),
 
-    numeric = numericInput(item$id, lbl, value = NA),
+    numeric = numericInput(item$id, lbl,
+      value = if (answered) current else NA),
 
     text = textInput(item$id, lbl,
+      value = if (answered) as.character(current) else "",
       placeholder = item$placeholder %||% ""),
 
     textarea = textAreaInput(item$id, lbl,
+      value = if (answered) as.character(current) else "",
       placeholder = item$placeholder %||% "", rows = 4),
 
-    date = dateInput(item$id, lbl, value = NULL,
-                     min = item$date_min %||% NULL,
-                     max = item$date_max %||% NULL),
+    date = {
+      date_tag <- dateInput(item$id, lbl,
+        value = if (answered) as.character(current)[1] else NULL,
+        min = item$date_min %||% NULL,
+        max = item$date_max %||% NULL)
+      if (answered) date_tag else sframe_blank_date_input(date_tag)
+    },
 
-    slider = tags$div(
-      lbl,
-      sliderInput(item$id, label = NULL,
-        min   = item$slider_min  %||% 0,
-        max   = item$slider_max  %||% 100,
-        value = item$slider_min  %||% 0,
-        step  = item$slider_step %||% 1)
-    ),
-
-    rating = tags$div(
-      class = "sf-rating-block",
-      lbl,
+    # A slider always shows a position, so its position alone is not an
+    # answer. It counts once the participant moves it, which the page reports
+    # as <id>__touched.
+    slider = {
+      touched <- isTRUE(values[[paste0(item$id, "__touched")]])
       tags$div(
-        class = "sf-stars",
-        lapply(seq_len(item$rating_max %||% 5), function(i) {
-          actionButton(
-            inputId = paste0(item$id, "_star_", i),
-            label   = if ((item$rating_icon %||% "star") == "heart") "\u2665" else "\u2605",
-            class   = "sf-star-btn",
-            onclick = sprintf(
-              "sfSetRating('%s', %d, %d); return false;",
-              item$id, i, item$rating_max %||% 5
+        class = "sf-slider-block",
+        `data-sf-slider` = item$id,
+        lbl,
+        sliderInput(item$id, label = NULL,
+          min   = item$slider_min  %||% 0,
+          max   = item$slider_max  %||% 100,
+          value = if (answered) current else item$slider_min %||% 0,
+          step  = item$slider_step %||% 1),
+        tags$p(class = "sf-slider-hint", role = "status",
+               if (touched) "Your answer is recorded."
+               else "Move the slider to give your answer.")
+      )
+    },
+
+    rating = {
+      stars <- item$rating_max %||% 5
+      given <- if (answered) suppressWarnings(as.numeric(current)[1]) else 0
+      tags$div(
+        class = "sf-rating-block",
+        lbl,
+        tags$div(
+          class = "sf-stars",
+          lapply(seq_len(stars), function(i) {
+            actionButton(
+              inputId = paste0(item$id, "_star_", i),
+              label   = if ((item$rating_icon %||% "star") == "heart") "\u2665" else "\u2605",
+              class   = paste("sf-star-btn", if (isTRUE(i <= given)) "active"),
+              `aria-label` = paste(i, "of", stars),
+              onclick = sprintf(
+                "sfSetRating(%s, %d, %d); return false;",
+                sframe_js_string(item$id), i, stars
+              )
             )
-          )
-        }),
-        # Hidden numeric input carries the actual value
-        numericInput(item$id, label = NULL, value = NA,
-                     min = 1, max = item$rating_max %||% 5)
+          }),
+          # Hidden numeric input carries the actual value
+          numericInput(item$id, label = NULL,
+                       value = if (answered) current else NA,
+                       min = 1, max = stars)
+        )
       )
-    ),
+    },
 
-    ranking = tags$div(
-      class = "sf-ranking-block",
-      lbl,
+    # The list holds codes in data-value and shows labels. Order is changed by
+    # dragging, by the move buttons from the keyboard, or confirmed as shown,
+    # and every route records the order through sfRankRecord(). An untouched
+    # ranking records nothing.
+    ranking = {
+      order <- codes
+      if (answered) {
+        given <- unlist(strsplit(paste(as.character(current), collapse = "|"),
+                                 "|", fixed = TRUE))
+        given <- given[given %in% codes]
+        order <- c(unique(given), setdiff(codes, given))
+      }
+      list_id <- paste0("rank_", item$id)
       tags$div(
-        class = "sf-rank-list",
-        id    = paste0("rank_", item$id),
-        lapply(seq_along(cs), function(i) {
-          tags$div(
-            class         = "sf-rank-item",
-            `data-value`  = names(cs)[i],
-            tags$span(class = "sf-rank-handle", "\u283f"),
-            tags$span(unname(cs)[i])
-          )
-        })
-      ),
-      tags$div(
-        class = "sf-rank-input",
-        textInput(item$id, label = NULL, value = paste(names(cs), collapse = "|"))
+        class = "sf-ranking-block",
+        lbl,
+        tags$div(
+          class = "sf-rank-list",
+          id    = list_id,
+          `data-input` = item$id,
+          lapply(order, function(code) {
+            label <- labels[match(code, codes)]
+            tags$div(
+              class        = "sf-rank-item",
+              `data-value` = code,
+              tags$span(class = "sf-rank-handle", `aria-hidden` = "true", "\u283f"),
+              tags$span(class = "sf-rank-label", label),
+              tags$span(
+                class = "sf-rank-moves",
+                tags$button(type = "button", class = "sf-rank-move",
+                            `aria-label` = paste("Move", label, "up"),
+                            onclick = "sfRankMove(this, -1)", "\u25b2"),
+                tags$button(type = "button", class = "sf-rank-move",
+                            `aria-label` = paste("Move", label, "down"),
+                            onclick = "sfRankMove(this, 1)", "\u25bc")
+              )
+            )
+          })
+        ),
+        tags$div(
+          class = "sf-rank-confirm",
+          tags$button(type = "button", class = "btn-secondary sf-rank-keep",
+                      onclick = "sfRankConfirm(this)", "Keep this order"),
+          tags$span(class = "sf-rank-status", role = "status",
+                    `aria-live` = "polite",
+                    if (answered) "Your order is recorded."
+                    else "Drag the options or use the arrows, or keep the order shown.")
+        ),
+        tags$div(
+          class = "sf-rank-input",
+          textInput(item$id, label = NULL,
+                    value = if (answered) paste(order, collapse = "|") else "")
+        )
       )
-    ),
+    },
 
     matrix = {
       rows <- item$matrix_items %||% character(0)
@@ -357,25 +612,29 @@ sframe_render_input <- function(item, choices_lookup) {
               tags$thead(
                 tags$tr(
                   tags$th(""),
-                  lapply(unname(cs), function(lbl) tags$th(lbl))
+                  lapply(labels, function(l) tags$th(l))
                 )
               ),
               tags$tbody(
                 lapply(seq_along(rows), function(r) {
                   input_id <- paste0(item$id, "__", r)
+                  given <- values[[input_id]]
                   tags$tr(
                     tags$td(class = "sf-matrix-row-label", rows[r]),
-                    lapply(names(cs), function(v) {
+                    lapply(seq_along(codes), function(k) {
                       tags$td(
                         class = "sf-matrix-cell",
                         tags$input(
                           type  = "radio",
                           name  = input_id,
-                          value = v,
-                          id    = paste0(input_id, "_", v),
+                          value = codes[k],
+                          id    = paste0(input_id, "_", k),
+                          `aria-label` = paste0(rows[r], ": ", labels[k]),
+                          checked = if (sframe_has_answer(given) &&
+                                        identical(as.character(given)[1], codes[k])) NA,
                           onclick = sprintf(
-                            "Shiny.setInputValue('%s', '%s', {priority:'event'})",
-                            input_id, v
+                            "Shiny.setInputValue(%s, this.value, {priority:'event'})",
+                            sframe_js_string(input_id)
                           )
                         )
                       )
@@ -389,14 +648,11 @@ sframe_render_input <- function(item, choices_lookup) {
       }
     },
 
-    # Decision-family items. Both render one input per expansion column, using
-    # the same ids the static template and the export contract use
-    # (item__a__vs__b, item__a__to__b, item__crit), so a survey run in Shiny
-    # produces data that sframe_assemble_pairwise() and
-    # sframe_collected_weights() can read. The matrix type above pipe-joins
-    # its cells into a single column instead, which is why matrix data
-    # collected through Shiny does not match that contract. Decision items
-    # deliberately do not copy that.
+    # Decision-family items render one input per expansion column, using the
+    # ids the static template and the export contract use (item__a__vs__b,
+    # item__a__to__b, item__crit). Each starts unanswered: a judgement of
+    # "Equally important" or "No influence" is a substantive answer, and
+    # pre-selecting it recorded that answer for anyone who moved past.
     pairwise_comparison = {
       cmp_items <- item$comparison_items %||% character(0)
       cmp_scale <- item$comparison_scale %||% "saaty"
@@ -445,13 +701,16 @@ sframe_render_input <- function(item, choices_lookup) {
               } else {
                 sprintf("%s compared with %s", pairs$a[k], pairs$b[k])
               }
+              given <- values[[cols[k]]]
               tags$div(
                 class = "sf-decision-row",
                 tags$label(`for` = cols[k], class = "sf-decision-label",
                            prompt),
                 selectInput(
-                  cols[k], label = NULL, choices = opts,
-                  selected = if (identical(cmp_scale, "influence")) "0" else "1",
+                  cols[k], label = NULL,
+                  choices = c(stats::setNames("", "Choose a judgement"), opts),
+                  selected = if (sframe_has_answer(given)) as.character(given)[1] else "",
+                  selectize = FALSE,
                   width = "100%"
                 )
               )
@@ -476,11 +735,13 @@ sframe_render_input <- function(item, choices_lookup) {
           tags$div(
             class = "sf-decision-rows",
             lapply(seq_along(cmp_items), function(k) {
+              given <- values[[cols[k]]]
               tags$div(
                 class = "sf-decision-row",
                 tags$label(`for` = cols[k], class = "sf-decision-label",
                            cmp_items[k]),
-                numericInput(cols[k], label = NULL, value = 0,
+                numericInput(cols[k], label = NULL,
+                             value = if (sframe_has_answer(given)) given else NA,
                              min = 0, max = 100, step = 1, width = "120px")
               )
             })
@@ -489,8 +750,99 @@ sframe_render_input <- function(item, choices_lookup) {
       }
     },
 
-    textInput(item$id, lbl)  # fallback
+    textInput(item$id, lbl,
+              value = if (answered) as.character(current) else "")  # fallback
   )
+}
+
+# The respondent-side JavaScript for render_survey(): ranking by drag, by
+# keyboard and by confirmation, slider touch tracking, star ratings, and
+# branching visibility sent from the server.
+sframe_survey_js <- function() {
+  "
+  function sfRankRecord(list, announce) {
+    var inputId = list.getAttribute('data-input');
+    var items = Array.prototype.slice.call(list.querySelectorAll('.sf-rank-item'));
+    var codes = items.map(function(i) { return i.getAttribute('data-value'); });
+    var field = document.getElementById(inputId);
+    if (field) field.value = codes.join('|');
+    Shiny.setInputValue(inputId, codes.join('|'), {priority: 'event'});
+    var block = list.closest('.sf-ranking-block');
+    var status = block && block.querySelector('.sf-rank-status');
+    if (status) status.textContent = (announce ? announce + ' ' : '') + 'Your order is recorded.';
+  }
+  function sfRankMove(btn, dir) {
+    var item = btn.closest('.sf-rank-item');
+    var list = item.parentNode;
+    var target = dir < 0 ? item.previousElementSibling : item.nextElementSibling;
+    if (!target) return;
+    if (dir < 0) list.insertBefore(item, target); else list.insertBefore(target, item);
+    var items = Array.prototype.slice.call(list.querySelectorAll('.sf-rank-item'));
+    var label = item.querySelector('.sf-rank-label').textContent;
+    sfRankRecord(list, label + ' moved to position ' + (items.indexOf(item) + 1) +
+                 ' of ' + items.length + '.');
+    btn.focus();
+  }
+  function sfRankConfirm(btn) {
+    sfRankRecord(btn.closest('.sf-ranking-block').querySelector('.sf-rank-list'), '');
+  }
+  function initRanking(listId) {
+    var list = document.getElementById(listId);
+    if (!list || list.getAttribute('data-sf-init')) return;
+    list.setAttribute('data-sf-init', '1');
+    var dragging = null;
+    list.querySelectorAll('.sf-rank-item').forEach(function(item) {
+      item.setAttribute('draggable', 'true');
+      item.addEventListener('dragstart', function() { dragging = item; item.style.opacity = '.5'; });
+      item.addEventListener('dragend', function() {
+        item.style.opacity = '1';
+        if (dragging) sfRankRecord(list, '');
+        dragging = null;
+      });
+      item.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        if (!dragging || dragging === item) return;
+        var r = item.getBoundingClientRect();
+        if (e.clientY < r.top + r.height / 2) list.insertBefore(dragging, item);
+        else list.insertBefore(dragging, item.nextSibling);
+      });
+    });
+  }
+  var sfSliderKeys = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown',
+                      'Home', 'End', 'PageUp', 'PageDown'];
+  function sfSliderTouched(e) {
+    if (e.type === 'keydown' && sfSliderKeys.indexOf(e.key) < 0) return;
+    var wrap = e.target.closest && e.target.closest('[data-sf-slider]');
+    if (!wrap) return;
+    Shiny.setInputValue(wrap.getAttribute('data-sf-slider') + '__touched', true);
+    var hint = wrap.querySelector('.sf-slider-hint');
+    if (hint) hint.textContent = 'Your answer is recorded.';
+  }
+  // Listeners and the message handler are registered once per page, even when
+  // the script is included by more than one survey module.
+  if (!window.sfSurveyListeners) {
+    window.sfSurveyListeners = true;
+    document.addEventListener('pointerdown', sfSliderTouched, true);
+    document.addEventListener('keydown', sfSliderTouched, true);
+  }
+  function sfSetRating(id, val, max) {
+    var btns = document.querySelectorAll('[id^=\"' + id + '_star_\"]');
+    btns.forEach(function(b, i) { b.classList.toggle('active', i < val); });
+    Shiny.setInputValue(id, val, {priority: 'event'});
+  }
+  if (!window.sfVisibilityHandler) $(function() {
+    if (window.sfVisibilityHandler) return;
+    window.sfVisibilityHandler = true;
+    Shiny.addCustomMessageHandler('sf-visibility', function(msg) {
+      (msg.show || []).forEach(function(id) {
+        var el = document.getElementById('sf_item_' + id); if (el) el.style.display = '';
+      });
+      (msg.hide || []).forEach(function(id) {
+        var el = document.getElementById('sf_item_' + id); if (el) el.style.display = 'none';
+      });
+    });
+  });
+  "
 }
 
 # ---------------------------------------------------------------------------
@@ -599,9 +951,20 @@ render_survey <- function(
   choices_lookup  <- sframe_choices_lookup(instrument)
   branch_lookup   <- sframe_branch_lookup(instrument)
 
+  # Check an existing response file before any participant arrives, so an
+  # incompatible file stops the researcher at launch.
+  if (identical(save_responses, "csv")) {
+    expected <- names(sframe_response_row(instrument, list(), branch_lookup,
+                                          started_at = Sys.time()))
+    sframe_check_response_header(output_path,
+                                 sframe_response_file_header(output_path),
+                                 expected)
+  }
+
   # Collect answerable items (not section_break or text_block)
   answerable_types <- c("likert","single_choice","multiple_choice","numeric",
-                        "text","textarea","date","slider","rating","ranking","matrix")
+                        "text","textarea","date","slider","rating","ranking","matrix",
+                        sframe_expanded_comparison_types)
 
   css <- sprintf("
     body{font-family:'Helvetica Neue',Arial,sans-serif;background:#f4f5f8;
@@ -650,6 +1013,13 @@ render_survey <- function(
                    cursor:grab;font-size:14px;border:1px solid #eee}
     .sf-rank-handle{color:#bbb;font-size:18px}
     .sf-rank-input{display:none}
+    .sf-rank-label{flex:1}
+    .sf-rank-moves{display:flex;gap:4px}
+    .sf-rank-move{width:32px;height:32px;border:1px solid #dde;border-radius:6px;
+                  background:#fff;cursor:pointer;font-size:12px}
+    .sf-rank-move:focus-visible,.sf-rank-keep:focus-visible{outline:3px solid %s;outline-offset:2px}
+    .sf-rank-confirm{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:8px}
+    .sf-rank-status,.sf-slider-hint{font-size:13px;color:#555;margin:4px 0 0}
     .sf-item-wrap{margin-bottom:24px;animation:fadeIn .2s ease}
     @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
     .sf-conv-nav{display:flex;gap:10px;margin-top:20px}
@@ -667,7 +1037,7 @@ render_survey <- function(
     .sf-thankyou-icon{font-size:56px;margin-bottom:16px}
     .sf-thankyou-title{font-size:24px;font-weight:700;margin-bottom:10px}
     .sf-thankyou-msg{color:#555;font-size:15px;line-height:1.6}
-  ", colour, colour, colour, colour, colour, colour)
+  ", colour, colour, colour, colour, colour, colour, colour)
   tags <- shiny::tags
 
   # -------------------------------------------------------------------------
@@ -687,31 +1057,7 @@ render_survey <- function(
           }
         });
       ")) else NULL,
-      # Drag-to-rank JS for ranking items
-      tags$script(shiny::HTML("
-        function initRanking(listId, inputId) {
-          var list = document.getElementById(listId);
-          if (!list) return;
-          var dragging = null;
-          list.querySelectorAll('.sf-rank-item').forEach(function(item) {
-            item.setAttribute('draggable', 'true');
-            item.addEventListener('dragstart', function() { dragging = item; item.style.opacity='.5'; });
-            item.addEventListener('dragend',   function() { item.style.opacity='1'; updateRankInput(listId, inputId); });
-            item.addEventListener('dragover',  function(e) { e.preventDefault(); var r=item.getBoundingClientRect(); var mid=r.top+r.height/2; if(e.clientY<mid) list.insertBefore(dragging,item); else list.insertBefore(dragging,item.nextSibling); });
-          });
-          function updateRankInput(listId, inputId) {
-            var items = document.querySelectorAll('#'+listId+' .sf-rank-item');
-            var vals = Array.from(items).map(function(i){return i.getAttribute('data-value');});
-            Shiny.setInputValue(inputId, vals.join('|'), {priority:'event'});
-          }
-        }
-        // Rating star handler
-        function sfSetRating(id, val, max) {
-          var btns = document.querySelectorAll('[id^=\"'+id+'_star_\"]');
-          btns.forEach(function(b, i) { b.classList.toggle('active', i < val); });
-          Shiny.setInputValue(id, val, {priority:'event'});
-        }
-      "))
+      tags$script(shiny::HTML(sframe_survey_js()))
     ),
     shiny::uiOutput("survey_ui")
   )
@@ -724,6 +1070,9 @@ render_survey <- function(
     page_state  <- shiny::reactiveVal("welcome")   # welcome | survey | thankyou
     conv_idx    <- shiny::reactiveVal(1L)
     submitted_row <- shiny::reactiveVal(NULL)
+    # What this submission has already done, so a retry after a failure
+    # repeats only the step that failed.
+    submission_state <- shiny::reactiveVal(sframe_new_submission_state())
 
     input_values <- shiny::reactive({ shiny::reactiveValuesToList(input) })
 
@@ -741,7 +1090,12 @@ render_survey <- function(
     shiny::observeEvent(input$conv_nav, {
       parts  <- strsplit(input$conv_nav, "_")[[1]]
       dir    <- parts[1]
-      items  <- Filter(function(i) i$type %in% answerable_types, instrument$items)
+      # Branching decides the sequence, so a question the contract excludes
+      # is never navigated to. Walking every answerable item could require an
+      # answer to a hidden question, which serialisation then blanked.
+      items  <- sframe_visible_sequence(
+        instrument, input_values(), branch_lookup,
+        Filter(function(i) i$type %in% answerable_types, instrument$items))
       n      <- length(items)
       cur    <- conv_idx()
       item   <- items[[cur]]
@@ -776,20 +1130,21 @@ render_survey <- function(
           type = "error", duration = 6)
         return()
       }
-      row <- sframe_response_row(instrument, iv, bl, started_at)
-      err <- tryCatch({
-        if (identical(save_responses, "csv"))
-          sframe_append_response_csv(output_path, row)
-        if (is.function(on_submit)) on_submit(row)
-        NULL
-      }, error = function(e) e)
-      if (!is.null(err)) {
-        shiny::showNotification(
-          paste("Could not save response:", conditionMessage(err)),
-          type = "error", duration = 8)
+      row <- submitted_row() %||% sframe_response_row(instrument, iv, bl,
+                                                      started_at)
+      res <- sframe_persist_response(
+        row,
+        if (identical(save_responses, "csv")) output_path else NULL,
+        on_submit,
+        submission_state())
+      submission_state(res$state)
+      # The row is held so a retry writes the same answers, rather than
+      # rebuilding them from inputs that may have moved.
+      submitted_row(row)
+      if (!is.null(res$message)) {
+        shiny::showNotification(res$message, type = "error", duration = 10)
         return()
       }
-      submitted_row(row)
       page_state("thankyou")
     })
 
@@ -859,30 +1214,32 @@ render_survey <- function(
       }
 
       # ---- SURVEY PAGE ----
-      iv         <- input_values()
+      # The page is drawn from the answers held so far, read without taking a
+      # dependency on them. Reading them reactively re-drew every control on
+      # each answer, and a re-drawn control reports its default to the server,
+      # which erased the answer just given. Progress and branching visibility
+      # move with answers through their own output and observer below.
+      iv         <- shiny::isolate(input_values())
       all_items  <- instrument$items
       ans_items  <- Filter(function(i) i$type %in% answerable_types, all_items)
-      answered   <- sum(vapply(ans_items, function(i) {
-        sframe_item_visible(i, iv, branch_lookup) &&
-          !sframe_missing_value(i, sframe_item_input_value(i, iv))
-      }, logical(1)))
-      n_visible  <- sum(vapply(ans_items, function(i) {
-        sframe_item_visible(i, iv, branch_lookup)
-      }, logical(1)))
+      # Conversational mode shows one of these at a time, and it has to be the
+      # same sequence navigation walks or the index points at another question.
+      conv_items <- sframe_visible_sequence(instrument, iv, branch_lookup,
+                                            ans_items)
 
-      progress_ui <- if (show_progress && n_visible > 0)
-        sframe_progress_ui(answered, n_visible, colour)
+      progress_ui <- if (show_progress) shiny::uiOutput("sf_progress")
 
       # ---- CONVERSATIONAL MODE ----
       if (conv_mode) {
+        if (length(conv_items) == 0) return(NULL)
         cur  <- conv_idx()
-        cur  <- min(cur, length(ans_items))
-        item <- ans_items[[cur]]
-        n    <- length(ans_items)
+        cur  <- min(max(cur, 1), length(conv_items))
+        item <- conv_items[[cur]]
+        n    <- length(conv_items)
 
         item_ui <- tags$div(
           class = "sf-item-wrap",
-          sframe_render_input(item, choices_lookup),
+          sframe_render_input(item, choices_lookup, iv),
           tags$div(class = "sf-conv-hint",
             if (n > 1)
               sprintf("Question %d of %d", cur, n)
@@ -917,10 +1274,13 @@ render_survey <- function(
       }
 
       # ---- STANDARD MODE ----
+      # Every item is drawn once, and hidden items are hidden in place, so
+      # showing an item never re-draws the others.
       items_ui <- lapply(all_items, function(item) {
-        if (!sframe_item_visible(item, iv, branch_lookup)) return(NULL)
         tags$div(class = "sf-item-wrap",
-          sframe_render_input(item, choices_lookup))
+          id = paste0("sf_item_", item$id),
+          style = if (!sframe_item_visible(item, iv, branch_lookup)) "display:none",
+          sframe_render_input(item, choices_lookup, iv))
       })
 
       # Initialise ranking JS after render
@@ -928,8 +1288,8 @@ render_survey <- function(
         Filter(function(i) i$type == "ranking", all_items),
         function(item) {
           tags$script(sprintf(
-            "setTimeout(function(){initRanking('rank_%s','%s');},200);",
-            item$id, item$id))
+            "setTimeout(function(){initRanking(%s);},200);",
+            sframe_js_string(paste0("rank_", item$id))))
         }
       )
 
@@ -949,6 +1309,31 @@ render_survey <- function(
             style = paste0("background:", colour, ";border:none;display:block"))
         )
       )
+    })
+
+    output$sf_progress <- shiny::renderUI({
+      iv <- input_values()
+      ans_items <- Filter(function(i) i$type %in% answerable_types,
+                          instrument$items)
+      visible <- Filter(function(i) sframe_item_visible(i, iv, branch_lookup),
+                        ans_items)
+      if (length(visible) == 0) return(NULL)
+      answered <- sum(vapply(visible, function(i) {
+        !sframe_missing_value(i, sframe_item_input_value(i, iv))
+      }, logical(1)))
+      sframe_progress_ui(answered, length(visible), colour)
+    })
+
+    # Branching shows and hides items in place, without drawing the page again.
+    shiny::observe({
+      if (!identical(page_state(), "survey") || conv_mode) return()
+      iv <- input_values()
+      ids <- vapply(instrument$items, function(i) i$id, character(1))
+      shown <- vapply(instrument$items, function(i) {
+        sframe_item_visible(i, iv, branch_lookup)
+      }, logical(1))
+      session$sendCustomMessage("sf-visibility",
+        list(show = as.list(ids[shown]), hide = as.list(ids[!shown])))
     })
 
     # Download handler for thank-you page response download

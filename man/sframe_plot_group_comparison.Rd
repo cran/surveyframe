@@ -27,6 +27,15 @@ four, since the underlying comparison (an outcome split by a grouping
 factor) and the data shape needed to plot it are identical across all
 four tests, and only the inferential statistic differs.
 }
+\examples{
+\donttest{
+if (requireNamespace("ggplot2", quietly = TRUE)) {
+  demo <- sframe_demo_data()
+  res <- run_analysis_plan(demo$responses, demo$instrument)
+  sframe_plot_group_comparison(res$rq_visit_bi, demo$responses)
+}
+}
+}
 \seealso{
 \code{\link[=run_analysis_plan]{run_analysis_plan()}}
 }

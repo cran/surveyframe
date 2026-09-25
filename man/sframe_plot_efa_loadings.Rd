@@ -20,6 +20,17 @@ A ggplot2 object.
 \description{
 Loadings heatmap from a fitted EFA solution
 }
+\examples{
+\donttest{
+if (requireNamespace("ggplot2", quietly = TRUE) &&
+    requireNamespace("psych", quietly = TRUE)) {
+  demo <- sframe_demo_data()
+  fit <- efa_solution(demo$responses, demo$instrument,
+                       scales = "service_quality", nfactors = 1)
+  sframe_plot_efa_loadings(fit)
+}
+}
+}
 \seealso{
 \code{\link[=efa_solution]{efa_solution()}}
 }

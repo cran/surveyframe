@@ -52,7 +52,7 @@ mapping onto a part of the research-design workflow.
 
 The input-types demo covers the main controls available in SurveyBuilder and
 SurveyStudio. The two decision item types, `pairwise_comparison` and
-`criteria_weight`, are not part of this demo. They get their own worked
+`criteria_weight`, sit outside this demo. They get their own worked
 example in the MCDM vignette, because they only make sense alongside a
 declared decision method and a set of alternatives.
 
@@ -86,9 +86,9 @@ SurveyStudio. The output preview on the right shows counts, such as the number
 of plans, the number of data-dependent run items, and the number of saved
 models.
 
-The model builder, also on the right, creates constructs from the scales,
-adds structural paths, and writes lavaan or seminr syntax along with the model
-JSON into the `.sframe` file. The Google Sheet panel does not collect data on
+The model builder, also on the right, creates constructs from the scales and
+adds structural paths. The `.sframe` stores that model specification, and
+surveyframe can generate lavaan or seminr syntax from it. The Google Sheet panel does not collect data on
 its own. It explains that, after saving the `.sframe` file, you run
 `export_google_sheet(instr, sheet_url = "...")` in R to generate the Apps Script
 collector.
@@ -103,8 +103,8 @@ resulting `.sframe`.
 
 The Amendments screen discloses a change to the open instrument: upload a
 revised `.sframe`, give a reason and an explanation, and `amend_sframe()`
-appends the change to the instrument's amendment log rather than replacing
-its history. Exporting the amended instrument keeps that log inside the
+appends the change to the instrument's amendment log, where every earlier
+entry stays as it was written. Exporting the amended instrument keeps that log inside the
 `.sframe` file, readable later with `amendment_log()`.
 
 The Preview Survey screen renders the exact deployable survey, identical to the
@@ -137,10 +137,36 @@ run and edited outside SurveyStudio.
    run the plan on the Analysis Plan screen, and to export the report.
 6. Use `launch_dashboard()` for read-only response exploration.
 
+## RStudio Addins
+
+In RStudio, the same tools open from the **Addins** menu in the toolbar. The
+4 commands are listed under **surveyframe:** and are searchable by that
+prefix in the command palette. Each one needs the rstudioapi package.
+
+| Command | What opens | What it needs |
+|---|---|---|
+| surveyframe: Design an instrument | SurveyBuilder in the browser | RStudio alone |
+| surveyframe: Open analysis workspace | SurveyStudio, on Open Instrument | RStudio alone, open a `.sframe` there |
+| surveyframe: Analyse an existing instrument | SurveyStudio, on Upload Responses, with the instrument loaded | a `.sframe` file, chosen in a dialog |
+| surveyframe: Insert starter instrument | a template in the active R script, at the cursor | an open R script |
+
+The commands follow the workflow above:
+
+```text
+Design an instrument -> save .sframe -> Analyse an existing instrument ->
+upload responses -> run the plan -> export the report
+```
+
+The starter instrument holds a 5-point choice set, 3 items, one scale, and a
+reliability plan, and it validates as inserted. It ends with a commented
+`write_sframe()` line for saving it. When a command has to stop, because
+RStudio is closed, the console has focus, or a file fails to load, it prints
+one message saying why and what to do next.
+
 ## Demo launchers
 
 This vignette leaves the demo launchers unevaluated, because CRAN examples and
-vignettes should not open browsers.
+vignettes leave browsers closed.
 
 ```{r gui-demo, eval = FALSE}
 launch_builder_demo()
@@ -176,8 +202,9 @@ launch_studio(
 ```
 
 SurveyStudio reads the objects passed by `launch_studio()`. With response data
-present, `screen = "auto"` opens the Upload Responses screen, and
-`screen = "analysis"` opens the Analysis Plan screen.
+present, `screen = "auto"` opens the Dashboard. With an instrument alone it
+opens Preview Survey, and with neither it opens Open Instrument.
+`screen = "analysis"` opens the Analysis Plan screen explicitly.
 
 ## Dashboard
 

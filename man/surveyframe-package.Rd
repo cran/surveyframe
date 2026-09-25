@@ -6,6 +6,7 @@
 \alias{surveyframe-package}
 \title{surveyframe: Survey Instrument Workflows for R}
 \description{
+\if{latex}{\out{\global\emergencystretch=3em\global\tolerance=3000\global\hbadness=10000}}
 surveyframe defines a survey instrument as a first-class R object and
 supports a complete workflow from questionnaire design through data
 collection, quality checking, scoring, psychometric diagnostics, and
@@ -40,12 +41,44 @@ runs any decision-analysis blocks in the plan.
 
 \subsection{The instrument object}{
 
-Every function in the package operates on an \code{sframe} object. The object
-is the single source of truth for item definitions, scale structure,
-reverse-coding keys, branching rules, check specifications, analysis plans,
-and optional model specifications. Accessors such as \code{\link[=sf_meta]{sf_meta()}},
-\code{\link[=sf_items]{sf_items()}}, \code{\link[=sf_scales]{sf_scales()}}, \code{\link[=sf_plan]{sf_plan()}}, and \code{\link[=sf_models]{sf_models()}} read its parts
-without reaching into the object directly.
+The workflow runs on an \code{sframe} object. It is the single source of truth
+for item definitions, scale structure, reverse-coding keys, branching
+rules, check specifications, analysis plans, and optional model
+specifications. Accessors such as \code{\link[=sf_meta]{sf_meta()}}, \code{\link[=sf_items]{sf_items()}}, \code{\link[=sf_scales]{sf_scales()}},
+\code{\link[=sf_plan]{sf_plan()}}, and \code{\link[=sf_models]{sf_models()}} read its parts without reaching into the
+object directly.
+
+Some helpers work on plain vectors, for use beside that workflow or on
+their own: the text helpers such as \code{\link[=term_frequency]{term_frequency()}}, and the interval
+helpers \code{\link[=bootstrap_ci]{bootstrap_ci()}}, \code{\link[=cohens_d_ci]{cohens_d_ci()}}, \code{\link[=cramers_v_ci]{cramers_v_ci()}} and
+\code{\link[=eta_sq_ci]{eta_sq_ci()}}.
+}
+
+\subsection{A first session}{
+
+\code{\link[=sframe_demos]{sframe_demos()}} lists 22 worked demos, each one instrument, its responses
+and the results surveyframe produced. \code{sframe_demo("two_group")} loads one,
+and \code{sframe_demo_qmd("two_group")} writes a notebook to edit.
+\code{vignette("learn-by-example")} teaches from the same library.
+}
+
+\subsection{How functions are named}{
+
+Three families, which the prefix tells apart.
+\itemize{
+\item \code{sf_} builds or reads the instrument object model: the constructors
+\code{\link[=sf_item]{sf_item()}} and \code{\link[=sf_scale]{sf_scale()}}, the accessors \code{\link[=sf_items]{sf_items()}} and \code{\link[=sf_plan]{sf_plan()}},
+and the replacement forms such as \verb{sf_plan<-}.
+\item \code{sframe_} covers everything the package adds around that object: the
+plots such as \code{\link[=sframe_plot_reliability]{sframe_plot_reliability()}}, the demo library through
+\code{\link[=sframe_demos]{sframe_demos()}}, the decision helpers, and the builder's own state.
+\item The workflow verbs carry no prefix, because they name the step a
+researcher is taking: \code{\link[=validate_sframe]{validate_sframe()}}, \code{\link[=score_scales]{score_scales()}},
+\code{\link[=run_analysis_plan]{run_analysis_plan()}}, \code{\link[=render_report]{render_report()}}, and the \verb{_report()} family.
+}
+
+The prefixes group functions; they do not pair them. No name stem appears
+under both, so there is no \code{sframe_} twin of an \code{sf_} function to look for.
 }
 
 \subsection{File format}{
@@ -72,4 +105,3 @@ Authors:
 }
 
 }
-\keyword{internal}

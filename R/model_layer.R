@@ -150,6 +150,11 @@ sframe_lavaan_safe_label <- function(label) {
 #'
 #' @return An object of class `sf_construct`.
 #' @export
+#' @examples
+#' sq <- sf_construct("sq", "Service Quality",
+#'                     items = c("sq_1", "sq_2", "sq_3"))
+#' sq$mode
+#' sq$items
 sf_construct <- function(
     id,
     label = NULL,
@@ -181,6 +186,10 @@ sf_construct <- function(
 #'
 #' @return An object of class `sf_path`.
 #' @export
+#' @examples
+#' p <- sf_path("sq", "sat", label = "H1")
+#' p$from
+#' p$to
 sf_path <- function(from, to, label = NULL) {
   sframe_model_check_id(from, "from")
   sframe_model_check_id(to, "to")
@@ -198,6 +207,10 @@ sf_path <- function(from, to, label = NULL) {
 #'
 #' @return An object of class `sf_covariance`.
 #' @export
+#' @examples
+#' cov <- sf_covariance("sq", "sus", label = "cov1")
+#' cov$from
+#' cov$to
 sf_covariance <- function(from, to, label = NULL) {
   sframe_model_check_id(from, "from")
   sframe_model_check_id(to, "to")
@@ -216,6 +229,9 @@ sf_covariance <- function(from, to, label = NULL) {
 #'
 #' @return An object of class `sf_indirect`.
 #' @export
+#' @examples
+#' ind <- sf_indirect("sq", through = "sat", to = "bi", label = "mediation")
+#' ind$through
 sf_indirect <- function(from, through, to, label = NULL) {
   sframe_model_check_id(from, "from")
   through <- as.character(through)
@@ -244,6 +260,19 @@ sf_indirect <- function(from, through, to, label = NULL) {
 #'
 #' @return An object of class `sf_model`.
 #' @export
+#' @examples
+#' m <- sf_model(
+#'   "cb1", "Quality drives intention", type = "cb_sem",
+#'   constructs = list(
+#'     sf_construct("sq", "Service Quality", items = c("sq_1", "sq_2", "sq_3")),
+#'     sf_construct("sat", "Satisfaction", items = c("sat_1", "sat_2")),
+#'     sf_construct("bi", "Behavioural Intention", items = c("bi_1", "bi_2"))
+#'   ),
+#'   paths = list(sf_path("sq", "sat"), sf_path("sat", "bi")),
+#'   indirect = list(sf_indirect("sq", through = "sat", to = "bi"))
+#' )
+#' m$type
+#' m$engine
 sf_model <- function(
     id,
     label = NULL,
@@ -304,6 +333,18 @@ sf_model <- function(
 #'   can be recovered with [sf_object()].
 #' @export
 #' @seealso [sframe_validation], [sf_problems()], [sf_is_valid()]
+#' @examples
+#' demo <- sframe_demo_data()
+#' m <- sf_model(
+#'   "cb1", type = "cb_sem",
+#'   constructs = list(
+#'     sf_construct("sq", items = c("sq_1", "sq_2", "sq_3")),
+#'     sf_construct("sat", items = c("sat_1", "sat_2"))
+#'   ),
+#'   paths = list(sf_path("sq", "sat"))
+#' )
+#' diag <- validate_model(m, instrument = demo$instrument)
+#' diag
 validate_model <- function(model, instrument = NULL, strict = TRUE) {
   model <- sframe_model_as_list(model)
   log <- sframe_new_problem_log()
@@ -428,6 +469,21 @@ validate_model <- function(model, instrument = NULL, strict = TRUE) {
         paste0("Indirect effect from '", ind$from, "' to '", ind$to,
                "' must include at least one mediator."))
     }
+    # Every step along the route must be a declared path, or the effect
+    # multiplies a parameter the model never estimates.
+    route <- c(ind$from, ind$through, ind$to)
+    declared <- vapply(sframe_model_paths(model), function(path) {
+      paste(path$from, path$to, sep = " -> ")
+    }, character(1))
+    if (length(route) > 1) {
+      steps <- paste(utils::head(route, -1), utils::tail(route, -1), sep = " -> ")
+      for (step in setdiff(steps, declared)) {
+        add("indirect_effects",
+          paste0("Indirect effect from '", ind$from, "' to '", ind$to,
+                 "' needs a declared path '", step, "'. Declare it with ",
+                 "sf_path(), or remove the indirect effect."))
+      }
+    }
   }
 
   if ((model$type %||% "") == "pls_sem" && !(model$engine %||% "") %in% c("seminr", "plspm")) {
@@ -477,6 +533,10 @@ sframe_model_validation_checks <- c(
 #'
 #' @return A JSON string.
 #' @export
+#' @examples
+#' m <- sf_model("cb1", type = "cb_sem",
+#'               constructs = list(sf_construct("sq", items = c("sq_1", "sq_2"))))
+#' cat(model_json(m))
 model_json <- function(model, pretty = TRUE) {
   model <- sframe_model_as_list(model)
   model <- sframe_model_plain(model)
@@ -494,6 +554,12 @@ model_json <- function(model, pretty = TRUE) {
 #'
 #' @return The updated `sframe` object.
 #' @export
+#' @examples
+#' demo <- sframe_demo_data()
+#' m <- sf_model("cb1", type = "cb_sem",
+#'               constructs = list(sf_construct("sat", items = c("sat_1", "sat_2"))))
+#' instr <- add_model(demo$instrument, m)
+#' length(instr$models)
 add_model <- function(instrument, model, validate = TRUE, replace = TRUE) {
   sframe_check_instrument(instrument)
   if (isTRUE(validate)) {
@@ -542,6 +608,15 @@ add_model <- function(instrument, model, validate = TRUE, replace = TRUE) {
 #'   `variance_table` (factor, ss_loadings, proportion_var,
 #'   cumulative_var).
 #' @export
+#' @examples
+#' \donttest{
+#' if (requireNamespace("psych", quietly = TRUE)) {
+#'   demo <- sframe_demo_data()
+#'   fit <- efa_solution(demo$responses, demo$instrument,
+#'                        scales = "service_quality", nfactors = 1)
+#'   fit$loadings
+#' }
+#' }
 efa_solution <- function(
     data,
     instrument,
@@ -693,6 +768,9 @@ print.sframe_efa_solution <- function(x, ...) {
 #'
 #' @return A character string with R syntax.
 #' @export
+#' @examples
+#' syntax <- efa_syntax(c("sq_1", "sq_2", "sq_3"), nfactors = 1)
+#' cat(syntax)
 efa_syntax <- function(
     items,
     nfactors = 1L,
@@ -713,7 +791,20 @@ efa_syntax <- function(
   )
 }
 
-#' Generate lavaan CFA syntax
+#' Generate lavaan CFA syntax from an instrument or a declared model
+#'
+#' The general entry point for CFA syntax. It takes an instrument, and derives
+#' the constructs from its scales, or an [sf_model()] declaring constructs that
+#' cut across them, and it accepts correlated residuals and latent
+#' covariances.
+#'
+#' [cfa_syntax()] is the instrument-only convenience wrapper, kept for the
+#' scripts that call it. Start here when a model is declared, when residual
+#' covariances are needed, or when the constructs differ from the scales.
+#'
+#' Each generator emits the language its engine reads, so they stay separate:
+#' this one and [sem_lavaan_syntax()] write lavaan, [seminr_syntax()] writes
+#' seminr, and [efa_syntax()] writes an exploratory plan.
 #'
 #' @param instrument Optional `sframe` object used to derive constructs from
 #'   scales when `model` is not supplied.
@@ -728,6 +819,11 @@ efa_syntax <- function(
 #'
 #' @return A lavaan syntax string.
 #' @export
+#' @examples
+#' demo <- sframe_demo_data()
+#' syntax <- cfa_lavaan_syntax(demo$instrument,
+#'                              scales = c("satisfaction", "behavioural_intention"))
+#' cat(syntax)
 cfa_lavaan_syntax <- function(
     instrument = NULL,
     model = NULL,
@@ -762,12 +858,18 @@ cfa_lavaan_syntax <- function(
   }
 
   constructs <- sframe_model_constructs(model)
+  # Every item reversed anywhere in the instrument, on the item or in a
+  # scale's reverse_items. Reading the item flag alone left a scale's reversed
+  # indicators unmarked in the syntax comment.
   reverse_items <- character(0)
   if (!is.null(instrument) && inherits(instrument, "sframe")) {
-    reverse_items <- vapply(instrument$items, function(i) {
+    item_level <- vapply(instrument$items, function(i) {
       if (isTRUE(i$reverse)) i$id else NA_character_
     }, character(1))
-    reverse_items <- reverse_items[!is.na(reverse_items)]
+    scale_level <- unlist(lapply(instrument$scales %||% list(), function(s) {
+      sframe_scale_reverse_ids(instrument, s)
+    }), use.names = FALSE)
+    reverse_items <- unique(c(item_level[!is.na(item_level)], scale_level))
   }
 
   lines <- c(
@@ -810,6 +912,18 @@ cfa_lavaan_syntax <- function(
 #'
 #' @return A lavaan syntax string.
 #' @export
+#' @examples
+#' m <- sf_model(
+#'   "cb1", type = "cb_sem",
+#'   constructs = list(
+#'     sf_construct("sq", items = c("sq_1", "sq_2", "sq_3")),
+#'     sf_construct("sat", items = c("sat_1", "sat_2")),
+#'     sf_construct("bi", items = c("bi_1", "bi_2"))
+#'   ),
+#'   paths = list(sf_path("sq", "sat"), sf_path("sat", "bi")),
+#'   indirect = list(sf_indirect("sq", through = "sat", to = "bi"))
+#' )
+#' cat(sem_lavaan_syntax(m))
 sem_lavaan_syntax <- function(model, instrument = NULL, standardised = TRUE) {
   sframe_check_model_type(model, c("cfa", "cb_sem"), "sem_lavaan_syntax()",
                           "covariance-based")
@@ -884,6 +998,11 @@ sem_lavaan_syntax <- function(model, instrument = NULL, standardised = TRUE) {
 
   if (length(indirect) > 0) {
     lines <- c(lines, "# Indirect and total effects")
+    # One total per origin and outcome, written after every indirect effect,
+    # holding the direct path and all the indirect effects between the pair.
+    # Writing a total inside this loop gave parallel mediators a duplicated
+    # total, each copy holding only one indirect effect.
+    totals <- list()
     for (ind in indirect) {
       nodes <- c(ind$from, ind$through, ind$to)
       edges <- paste(utils::head(nodes, -1), utils::tail(nodes, -1), sep = "->")
@@ -905,10 +1024,12 @@ sem_lavaan_syntax <- function(model, instrument = NULL, standardised = TRUE) {
       }, logical(1))]
       direct_label <- if (length(direct)) sframe_path_label(direct[[1]]) else NULL
       if (!is.null(direct_label)) {
-        lines <- c(lines,
-          paste0("total_", ind$from, "_", ind$to, " := ",
-                 direct_label, " + ", effect_name))
+        key <- paste0("total_", ind$from, "_", ind$to)
+        totals[[key]] <- c(totals[[key]] %||% direct_label, effect_name)
       }
+    }
+    for (key in names(totals)) {
+      lines <- c(lines, paste0(key, " := ", paste(totals[[key]], collapse = " + ")))
     }
   }
 
@@ -924,6 +1045,16 @@ sem_lavaan_syntax <- function(model, instrument = NULL, standardised = TRUE) {
 #'
 #' @return An R syntax string for `seminr`.
 #' @export
+#' @examples
+#' m <- sf_model(
+#'   "pls1", type = "pls_sem",
+#'   constructs = list(
+#'     sf_construct("sq", items = c("sq_1", "sq_2", "sq_3")),
+#'     sf_construct("sat", items = c("sat_1", "sat_2"))
+#'   ),
+#'   paths = list(sf_path("sq", "sat"))
+#' )
+#' cat(seminr_syntax(m))
 seminr_syntax <- function(model, data_name = "data", nboot = NULL, seed = 123) {
   sframe_check_model_type(model, "pls_sem", "seminr_syntax()",
                           "partial-least-squares")
@@ -937,9 +1068,14 @@ seminr_syntax <- function(model, data_name = "data", nboot = NULL, seed = 123) {
     if (length(items) == 1L || identical(con$mode, "single_item")) {
       sprintf('  composite("%s", single_item("%s"))', con$id, items[[1]])
     } else {
+      # A range is written only when it names exactly the declared indicators,
+      # in order. Checking that each name was a prefix plus a number let
+      # c("Q1", "Q3") become multi_items("Q", 1:3), adding Q2 to the model.
       prefix <- sub("[0-9]+$", "", items[[1]])
       suffixes <- suppressWarnings(as.integer(sub(paste0("^", prefix), "", items)))
-      if (all(!is.na(suffixes)) && identical(items, paste0(prefix, suffixes))) {
+      if (nzchar(prefix) && all(!is.na(suffixes)) &&
+          identical(as.character(items),
+                    paste0(prefix, seq(min(suffixes), max(suffixes))))) {
         sprintf('  composite("%s", multi_items("%s", %s))',
                 con$id, prefix, paste(range(suffixes), collapse = ":"))
       } else {
@@ -1001,6 +1137,10 @@ seminr_syntax <- function(model, data_name = "data", nboot = NULL, seed = 123) {
 #'
 #' @return A character string.
 #' @export
+#' @examples
+#' m <- sf_model("cb1", type = "cb_sem",
+#'               constructs = list(sf_construct("sat", items = c("sat_1", "sat_2"))))
+#' cat(model_report_template(m, include_json = FALSE))
 model_report_template <- function(model, include_json = TRUE) {
   validate_model(model, strict = TRUE)
   constructs <- sframe_model_constructs(model)

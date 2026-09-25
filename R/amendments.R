@@ -49,11 +49,116 @@ sframe_amendment_default_tier <- function(reason_code) {
 # amend_sframe()'s and amendment_log()'s roxygen so the two are never
 # confused: `previous_hash`/`new_hash` in an amendment entry are a content
 # fingerprint, not the .sframe file's own integrity hash.
-sframe_content_hash <- function(instrument) {
-  payload <- sframe_serialization_payload(instrument)
+# A canonical fingerprint of one amendment entry, over every field it records.
+# The boundary used to compare each entry's new_hash alone, which covers the
+# content the amendment produced and says nothing about the disclosure itself,
+# so an entry's author, reason, tier or sign-off could be rewritten afterwards
+# and the log still passed as intact.
+sframe_amendment_entry_hash <- function(entry) {
+  if (!is.list(entry)) return("")
+  entry <- entry[order(names(entry))]
+  as.character(openssl::sha256(sframe_hash_json(entry, canonical = TRUE)))
+}
+
+sframe_amendment_entry_hashes <- function(amendments) {
+  vapply(amendments %||% list(), sframe_amendment_entry_hash, character(1))
+}
+
+sframe_content_hash <- function(instrument, box = TRUE) {
+  payload <- sframe_serialization_payload(instrument, box = box)
   payload$hash <- NULL
   payload$amendments <- NULL
   as.character(openssl::sha256(sframe_hash_json(payload, canonical = TRUE)))
+}
+
+# The content fingerprints an earlier version could have recorded for the same
+# content: before 0.4.2 one-member collections were serialised as scalars, and
+# a fingerprint could be taken before validation set meta$validated. Used only
+# to recognise an existing log, so older files are not refused.
+sframe_content_hash_candidates <- function(instrument) {
+  out <- character(0)
+  for (box in c(TRUE, FALSE)) {
+    for (v in list("keep", "absent", FALSE, TRUE)) {
+      ins <- instrument
+      if (identical(v, "absent")) ins$meta$validated <- NULL
+      else if (!identical(v, "keep")) ins$meta$validated <- v
+      out <- c(out, sframe_content_hash(ins, box = box))
+    }
+  }
+  unique(out)
+}
+
+# The amendment checks write_sframe() applies. An amendment log is only worth
+# something if it cannot be quietly bypassed, shortened or reordered, so:
+# entries must follow one another, the content must match the last entry, and
+# an instrument read from a file must keep that file's entries and record any
+# change to its content. Writing changed content as a new instrument is an
+# explicit declaration.
+sframe_check_amendment_boundary <- function(instrument, new_instrument = FALSE) {
+  abort <- function(msg) rlang::abort(msg, class = c("sframe_validation_error", "sframe_error"))
+  am <- instrument$amendments %||% list()
+  origin <- attr(instrument, "sframe_origin")
+
+  if (length(am) > 1) {
+    for (i in 2:length(am)) {
+      if (!identical(am[[i]]$previous_hash, am[[i - 1]]$new_hash)) {
+        abort(sprintf(paste0(
+          "The amendment log is out of sequence at entry %d: it records a ",
+          "previous state that entry %d did not produce. Entries may have been ",
+          "removed or reordered."), i, i - 1))
+      }
+      if (isTRUE(am[[i]]$timestamp < am[[i - 1]]$timestamp)) {
+        abort(sprintf("The amendment log timestamps run backwards at entry %d.", i))
+      }
+    }
+  }
+
+  if (isTRUE(new_instrument)) {
+    if (length(am) > 0) {
+      abort(paste0(
+        "new_instrument = TRUE declares a new instrument, which cannot carry ",
+        "another instrument's amendment log. Clear it first with ",
+        "instrument$amendments <- list()."))
+    }
+    return(invisible(TRUE))
+  }
+
+  current <- sframe_content_hash(instrument)
+  if (length(am) > 0) {
+    last <- am[[length(am)]]$new_hash %||% ""
+    if (!identical(last, current) && !last %in% sframe_content_hash_candidates(instrument)) {
+      abort(paste0(
+        "The instrument has changed since its last recorded amendment. Record ",
+        "the change with amend_sframe(), or write it as a new instrument with ",
+        "new_instrument = TRUE."))
+    }
+  }
+
+  if (!is.null(origin)) {
+    # Compared over whole entries, so editing an existing amendment's author,
+    # reason, tier or sign-off is caught. Comparing new_hash alone left every
+    # field of the disclosure rewritable after the fact.
+    loaded <- origin$amendment_entry_hashes %||%
+      (origin$amendment_new_hashes %||% character(0))
+    now <- if (is.null(origin$amendment_entry_hashes)) {
+      vapply(am, function(a) a$new_hash %||% "", character(1))
+    } else {
+      sframe_amendment_entry_hashes(am)
+    }
+    if (length(now) < length(loaded) || !identical(now[seq_along(loaded)], loaded)) {
+      abort(sprintf(paste0(
+        "The amendment log read from '%s' has been shortened or altered. ",
+        "An amendment log only grows, and a recorded entry stays as it was ",
+        "written."), origin$path))
+    }
+    if (!identical(current, origin$content_hash) && length(now) == length(loaded)) {
+      abort(sprintf(paste0(
+        "This instrument was read from '%s' and its content has changed with ",
+        "no amendment recorded. Record the change with amend_sframe(), or write ",
+        "it as a new instrument with new_instrument = TRUE."), origin$path))
+    }
+  }
+  invisible(TRUE)
 }
 
 sframe_restore_amendment <- function(a) {
@@ -84,34 +189,34 @@ sframe_amendment_plain <- function(a) {
 #'
 #' Appends a structured, disclosed-revision entry to an instrument's
 #' amendment log, comparing `previous` against `instrument` to record what
-#' changed and why. This is the path around [read_sframe()]'s hash check for
-#' *legitimate* revision: a data-entry correction, bot-response removal, or a
-#' documented model respecification. It does not weaken that check --
-#' [read_sframe()] still hard-aborts on any edit that never went through
-#' `amend_sframe()`. What it adds is a place for a disclosed change to be
-#' recorded inside the file itself, alongside the content it explains,
-#' rather than only in an email or a lab notebook.
+#' changed and why: a data-entry correction, bot-response removal, or a
+#' documented model respecification. The record is kept inside the file,
+#' beside the content it explains.
+#'
+#' [write_sframe()] refuses to write an instrument read from a file whose
+#' content has changed with no amendment recorded, one that changed after its
+#' last amendment, and one whose amendment log was shortened or reordered.
+#' [read_sframe()] refuses a file edited on disk without its hash being
+#' recomputed. These checks are local and the hashes are unsigned: someone
+#' who rewrites both a file and its log, and recomputes the hashes, is not
+#' detected, and nothing here establishes who made a change or when.
 #'
 #' Amendments come in two tiers. A `"pipeline"` amendment (data corrections,
-#' bot removal) is expected researcher behaviour and needs only a reason. A
-#' `"design"` amendment (anything touching the analysis plan or a measurement
-#' or structural model) is exactly the kind of post-hoc change the
-#' design-time analysis plan exists to guard against, so it additionally
-#' requires a `deviation_report` describing what changed in the research
-#' question, method, or model and why. `second_signoff` is optional at
-#' either tier; when omitted, the log entry records `signoff = "none"`
-#' rather than leaving the field blank, so the absence of independent
-#' review is visible to anyone auditing the log later.
+#' bot removal) needs only a reason. A `"design"` amendment also requires a
+#' `deviation_report` describing what changed in the research question,
+#' method or model, and why. The tier follows the change itself: an amendment
+#' that changes the analysis plan, a model or a conjoint design is always
+#' design tier, whatever `reason_code` or `tier` says. `second_signoff` is
+#' optional. When omitted, the entry records `signoff = "none"`, so the
+#' absence of a named reviewer is visible. The tier, report and signoff are
+#' what the author records. None of them is independent approval.
 #'
-#' `previous_hash` and `new_hash` on each entry are a **content** fingerprint
-#' (a SHA-256 over the instrument's substantive fields -- items, choices,
-#' scales, branching, checks, analysis plan, models, designs -- with the
-#' `hash` and `amendments` fields themselves excluded), not the `.sframe`
-#' file's own integrity hash from [write_sframe()]. The two serve different
-#' purposes: the file hash (via [read_sframe()]) proves the file on disk is
-#' byte-identical to what was written; an amendment's content hash proves
-#' what the instrument's substance was immediately before and after this
-#' specific, disclosed change.
+#' `previous_hash` and `new_hash` on each entry are a content fingerprint: a
+#' SHA-256 over a canonical serialisation of the instrument, with the `hash`
+#' and `amendments` fields excluded, taken after validation, so `new_hash` is
+#' the content that is written. It is distinct from the file's own integrity
+#' hash from [write_sframe()], which also covers the amendment log. Both
+#' identify content. Neither is byte identity.
 #'
 #' @param previous An `sframe` object: the instrument's state before this
 #'   amendment.
@@ -122,9 +227,10 @@ sframe_amendment_plain <- function(a) {
 #' @param reason_text Character. A free-text explanation. Required and must
 #'   be non-empty regardless of `reason_code`.
 #' @param tier `"pipeline"` or `"design"`. When `NULL` (the default), inferred
-#'   from `reason_code`: `data_correction`/`bot_removal` default to
-#'   `"pipeline"`; everything else defaults to `"design"`. Pass explicitly to
-#'   override the default in either direction.
+#'   from `reason_code`: `data_correction` and `bot_removal` default to
+#'   `"pipeline"`, and everything else to `"design"`. A change to the
+#'   analysis plan, a model or a conjoint design is always `"design"`, and
+#'   asking for `"pipeline"` on one is an error.
 #' @param author Character or `NULL`. Who made the change.
 #' @param deviation_report Character or `NULL`. Required when `tier` is
 #'   `"design"`: what changed in the research question, method, or model, and
@@ -166,10 +272,40 @@ amend_sframe <- function(previous, instrument, reason_code, reason_text,
     )
   }
 
+  tier_requested <- !is.null(tier)
   if (is.null(tier)) {
     tier <- sframe_amendment_default_tier(reason_code)
   } else {
     tier <- rlang::arg_match(tier, sframe_amendment_tiers)
+  }
+
+  # Fingerprints and the diff are taken on validated states, since validation
+  # sets meta$validated and write_sframe() writes the validated state. Taken
+  # before validation, new_hash described content that was never written.
+  previous_v <- as_sframe(validate_sframe(previous, strict = TRUE))
+  instrument_v <- as_sframe(validate_sframe(instrument, strict = TRUE))
+  prev_payload <- sframe_serialization_payload(previous_v)
+  new_payload  <- sframe_serialization_payload(instrument_v)
+  compare_keys <- setdiff(union(names(prev_payload), names(new_payload)),
+                          c("hash", "amendments"))
+  changed_fields <- Filter(
+    function(k) !identical(prev_payload[[k]], new_payload[[k]]),
+    compare_keys
+  )
+
+  # The tier follows what changed. A plan, model or design change is design
+  # tier, whatever the caller asked for, since that is the change the
+  # declared-before-collection contract exists to expose.
+  design_changes <- intersect(unlist(changed_fields), c("analysis_plan", "models", "designs"))
+  if (length(design_changes) > 0) {
+    if (tier_requested && identical(tier, "pipeline")) {
+      rlang::abort(
+        sprintf(paste0("This amendment changes %s, which makes it a design-tier ",
+                       "amendment. It cannot be recorded as \"pipeline\"."),
+                paste(design_changes, collapse = " and ")),
+        class = c("sframe_validation_error", "sframe_error"))
+    }
+    tier <- "design"
   }
 
   if (identical(tier, "design") &&
@@ -184,15 +320,6 @@ amend_sframe <- function(previous, instrument, reason_code, reason_text,
       class = c("sframe_validation_error", "sframe_error")
     )
   }
-
-  prev_payload <- sframe_serialization_payload(previous)
-  new_payload  <- sframe_serialization_payload(instrument)
-  compare_keys <- setdiff(union(names(prev_payload), names(new_payload)),
-                          c("hash", "amendments"))
-  changed_fields <- Filter(
-    function(k) !identical(prev_payload[[k]], new_payload[[k]]),
-    compare_keys
-  )
 
   signoff <- if (!is.null(second_signoff) && nzchar(trimws(second_signoff))) {
     trimws(second_signoff)
@@ -209,8 +336,8 @@ amend_sframe <- function(previous, instrument, reason_code, reason_text,
       author = author,
       deviation_report = deviation_report,
       signoff = signoff,
-      previous_hash = sframe_content_hash(previous),
-      new_hash = sframe_content_hash(instrument),
+      previous_hash = sframe_content_hash(previous_v),
+      new_hash = sframe_content_hash(instrument_v),
       changed_fields = as.character(changed_fields)
     ),
     class = "sf_amendment"

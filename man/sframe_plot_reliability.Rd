@@ -17,6 +17,16 @@ A ggplot2 object.
 \description{
 Reliability plot: alpha and omega by scale
 }
+\examples{
+\donttest{
+if (requireNamespace("ggplot2", quietly = TRUE) &&
+    requireNamespace("psych", quietly = TRUE)) {
+  demo <- sframe_demo_data()
+  rr <- reliability_report(demo$responses, demo$instrument, omega = FALSE)
+  sframe_plot_reliability(rr)
+}
+}
+}
 \seealso{
 \code{\link[=reliability_report]{reliability_report()}}
 }

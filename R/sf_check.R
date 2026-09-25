@@ -56,6 +56,20 @@ sf_check <- function(
   type        <- rlang::arg_match(type)
   fail_action <- rlang::arg_match(fail_action)
 
+  # An attention or instructional check tests membership of pass_values, so
+  # leaving them empty failed every respondent. A trap declares the value that
+  # marks a failure, and so needs one just as much.
+  usable <- as.character(pass_values %||% character(0))
+  usable <- usable[!is.na(usable) & nzchar(trimws(usable))]
+  if (length(usable) == 0) {
+    rlang::abort(
+      paste0("Check '", as.character(id)[1], "' of type '", type,
+             "' needs at least one value in `pass_values`. Every response is ",
+             "measured against them."),
+      class = c("sframe_validation_error", "sframe_error")
+    )
+  }
+
   structure(
     list(
       id          = id,

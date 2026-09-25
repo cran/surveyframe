@@ -39,6 +39,11 @@ ts_3 <- sf_item("ts_3", "I felt comfortable at the destination.",
 visitor_type <- sf_item("visitor_type", "I am a",
   type = "single_choice", required = TRUE, choice_set = "visitor")
 
+repeat_change <- sf_item(
+  "repeat_change", "What changed most since your previous visit?",
+  type = "textarea", required = FALSE
+)
+
 attention <- sf_item("attention", "For quality control, please select Agree.",
   type = "single_choice", required = TRUE, choice_set = "likert5")
 
@@ -57,7 +62,7 @@ attention_check <- sf_check(
 
 ## ----branch-------------------------------------------------------------------
 repeat_branch <- sf_branch(
-  item_id    = "ts_3",
+  item_id    = "repeat_change",
   depends_on = "visitor_type",
   operator   = "==",
   value      = "repeat",
@@ -85,7 +90,8 @@ instr <- sf_instrument(
   components  = list(
     likert5, visitor,
     intro, dmpv_1, dmpv_2, dmpv_3, dmpv_4, ts_1, ts_2, ts_3,
-    visitor_type, attention, dmpv, ts, attention_check, repeat_branch
+    visitor_type, repeat_change, attention, dmpv, ts, attention_check,
+    repeat_branch
   ),
   analysis_plan = analysis_plan
 )

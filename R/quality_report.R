@@ -272,20 +272,49 @@ quality_report <- function(
   # because none of its columns were counted at all. Expansion columns now
   # count as item data, which also brings matrix, ranking, and multi-select
   # items into the missingness figures for the first time.
-  item_cols <- intersect(
-    unique(c(item_ids, sframe_item_expansion_columns(instrument))),
-    colnames(data)
-  )
-  item_data     <- data[, item_cols, drop = FALSE]
-  item_miss     <- colMeans(is.na(item_data))
-  resp_miss     <- rowMeans(is.na(item_data))
+  # What each item is expected to post. An item that expands posts its
+  # expansion columns and never its bare id, so counting the bare id as a
+  # dropped column would inflate the denominator for every respondent.
+  expected_cols <- unique(unlist(lapply(instrument$items, function(it) {
+    expanded <- sframe_item_expansion_columns(instrument, list(it))
+    if (length(expanded) > 0) expanded else as.character(it$id %||% "")[1]
+  }), use.names = FALSE))
+  expected_cols <- expected_cols[nzchar(expected_cols)]
+  # A display-only item collects nothing, so it belongs in neither total.
+  display_only <- vapply(instrument$items, function(it) {
+    as.character(it$type %||% "")[1] %in% c("section_break", "text_block")
+  }, logical(1))
+  if (any(display_only)) {
+    expected_cols <- setdiff(expected_cols, item_ids[display_only])
+  }
+  item_cols     <- intersect(expected_cols, colnames(data))
+  # A column the export left out entirely used to leave the numerator and the
+  # denominator together, so an export carrying 3 of 4 declared items read as
+  # 0 percent missing. An absent column counts as missing for every respondent,
+  # which is what it is, and is listed separately so the cause is clear.
+  absent_cols   <- setdiff(expected_cols, colnames(data))
+
+  item_data <- data[, item_cols, drop = FALSE]
+  observed  <- colMeans(is.na(item_data))
+  item_miss <- c(observed, stats::setNames(rep(1, length(absent_cols)),
+                                           absent_cols))
+  item_miss <- item_miss[expected_cols[expected_cols %in% names(item_miss)]]
+
+  n_expected <- length(expected_cols)
+  resp_miss <- if (n_expected == 0) {
+    rep(0, nrow(data))
+  } else {
+    (rowSums(is.na(item_data)) + length(absent_cols)) / n_expected
+  }
   flagged_resp  <- which(resp_miss > missing_threshold)
 
   missing_result <- list(
     item_miss_rate    = item_miss,
     respondent_miss   = resp_miss,
     flagged_threshold = missing_threshold,
-    flagged_rows      = flagged_resp
+    flagged_rows      = flagged_resp,
+    expected_columns  = expected_cols,
+    missing_columns   = absent_cols
   )
 
   # --- Straight-lining ---
@@ -313,28 +342,47 @@ quality_report <- function(
         next
       }
       scale_data <- data[, scale_cols, drop = FALSE]
+      # straightline_min_items is the evidence the flag rests on, so it governs
+      # how many answers a respondent has to have given as well as how many
+      # items the scale has. Requiring 2 answers whatever the setting said let
+      # c(3, 3, NA, NA) be called inattentive in a 4-item scale.
+      min_answers <- max(2, straightline_min_items)
       row_vars <- apply(scale_data, 1, function(row) {
         vals <- suppressWarnings(as.numeric(row))
-        if (sum(!is.na(vals)) < 2) return(NA)
+        if (sum(!is.na(vals)) < min_answers) return(NA)
         stats::var(vals, na.rm = TRUE)
       })
+      eligible <- !is.na(row_vars)
+      flagged  <- which(eligible & row_vars == 0)
       sl_results[[scale$id]] <- list(
         scale_id      = scale$id,
         n_items       = length(scale_cols),
         checked       = TRUE,
-        flagged_rows  = which(!is.na(row_vars) & row_vars == 0),
-        flag_rate     = mean(!is.na(row_vars) & row_vars == 0)
+        n_eligible    = sum(eligible),
+        min_answers   = min_answers,
+        flagged_rows  = flagged,
+        # the rate is out of the rows that could be judged, so rows with too
+        # few answers no longer dilute it
+        flag_rate     = if (any(eligible)) {
+          length(flagged) / sum(eligible)
+        } else {
+          NA_real_
+        }
       )
     }
   }
 
   # --- Duplicates ---
-  dup_result <- list(flagged_rows = integer(0), n_duplicates = 0L)
+  # checked = FALSE when there is no respondent id column, so a check that
+  # never ran is never reported as 0 duplicates.
+  dup_result <- list(flagged_rows = integer(0), n_duplicates = NA_integer_,
+                     checked = FALSE)
   if (!is.null(respondent_id) && respondent_id %in% colnames(data)) {
     ids <- data[[respondent_id]]
     dup_result <- list(
       flagged_rows = which(duplicated(ids) | duplicated(ids, fromLast = TRUE)),
-      n_duplicates = sum(duplicated(ids))
+      n_duplicates = sum(duplicated(ids)),
+      checked = TRUE
     )
   }
 

@@ -1,22 +1,43 @@
 # R/rstudio_addins.R
-# RStudio Addins menu bindings. Thin launchers plus one text insert, and
-# nothing else.
+# RStudio Addins menu bindings. 3 launchers and one text insert, and nothing
+# else.
 #
 # Two rules hold this file apart from the rest of the package. No other file
 # in R/ may call an rstudioapi:: function, so surveyframe behaves identically
-# outside RStudio. And every binding here fails soft with a message() and an
-# invisible NULL rather than an error, because these are interactive
+# outside RStudio. And every binding here fails soft with one message() and an
+# invisible NULL, through sframe_run_addin(), because these are interactive
 # conveniences rather than part of the API contract: an add-in that throws
 # inside the IDE is worse than one that explains itself and stops.
 #
 # rstudioapi stays in Suggests. Nothing here is a hard dependency.
 
+# Runs one add-in's action. Any error becomes a single message() naming the
+# add-in and an invisible NULL, so a failure inside the IDE explains itself.
+# Only the bindings use this. The exported functions they call keep raising
+# their errors for programmatic use.
+sframe_run_addin <- function(action) {
+  tryCatch(
+    action(),
+    error = function(e) {
+      message("surveyframe add-in: ", conditionMessage(e))
+      invisible(NULL)
+    }
+  )
+}
+
+# TRUE where rstudioapi is installed and RStudio is running, with a message
+# saying which is missing otherwise.
 sframe_addin_ready <- function() {
   if (!requireNamespace("rstudioapi", quietly = TRUE)) {
     message(
-      "rstudioapi is required for the surveyframe add-ins. ",
+      "surveyframe add-in: rstudioapi is required. ",
       "Install it with: install.packages(\"rstudioapi\")"
     )
+    return(FALSE)
+  }
+  if (!isTRUE(rstudioapi::isAvailable())) {
+    message("surveyframe add-in: the add-ins run inside RStudio. ",
+            "Outside it, call launch_builder() or launch_studio() directly.")
     return(FALSE)
   }
   TRUE
@@ -26,21 +47,61 @@ sframe_addin_ready <- function() {
 #' @noRd
 addin_launch_builder <- function() {
   if (!sframe_addin_ready()) return(invisible(NULL))
-  launch_builder()
+  sframe_run_addin(function() launch_builder())
 }
 
 #' @keywords internal
 #' @noRd
 addin_launch_studio <- function() {
   if (!sframe_addin_ready()) return(invisible(NULL))
-  launch_studio()
+  sframe_run_addin(function() launch_studio())
 }
 
+# Asks the researcher for a .sframe file, and returns NULL where the dialog is
+# cancelled. An error from the dialog itself propagates to sframe_run_addin(),
+# which reports it. Its own function so a test can drive each answer.
+sframe_addin_choose_sframe <- function(
+    caption = "Choose an instrument (.sframe)") {
+  path <- rstudioapi::selectFile(caption = caption,
+                                 filter = "sframe files (*.sframe)",
+                                 existing = TRUE)
+  if (is.null(path) || !length(path) || is.na(path[1]) || !nzchar(path[1])) {
+    return(NULL)
+  }
+  path[1]
+}
+
+# The menu entry "Analyse an existing instrument". It opens SurveyStudio on
+# the responses screen with the chosen instrument loaded, where the
+# researcher uploads a response file. It used to open the dashboard with no
+# responses, which showed an empty results page, and the dashboard has no
+# upload screen of its own. The binding keeps its old name so existing
+# keyboard shortcuts still work.
 #' @keywords internal
 #' @noRd
 addin_launch_dashboard <- function() {
   if (!sframe_addin_ready()) return(invisible(NULL))
-  launch_dashboard()
+  sframe_run_addin(function() {
+    path <- sframe_addin_choose_sframe()
+    if (is.null(path)) return(invisible(NULL))
+    # Read first, so a file that will not load reports itself here with its
+    # own error, before a browser opens.
+    instrument <- read_sframe(path)
+    launch_studio(instrument = instrument, screen = "responses")
+  })
+}
+
+# The id of the open source document, or NULL with a message where there is
+# none to insert into (the console has focus, or no file is open).
+sframe_addin_editor <- function() {
+  context <- tryCatch(rstudioapi::getSourceEditorContext(),
+                      error = function(e) NULL)
+  if (is.null(context) || is.null(context$id) || !nzchar(context$id)) {
+    message("surveyframe add-in: open an R script in the editor, place the ",
+            "cursor where the instrument should go, and run the add-in again.")
+    return(NULL)
+  }
+  context$id
 }
 
 # The skeleton is checked against the shipped constructors by
@@ -90,7 +151,12 @@ sframe_addin_skeleton <- function() {
     '  )',
     ')',
     '',
-    'validate_sframe(instrument)',
+    '# Check the instrument. The result lists any problems found.',
+    'validation <- validate_sframe(instrument)',
+    'validation',
+    '',
+    '# Save it for SurveyBuilder, SurveyStudio, or deployment:',
+    '# write_sframe(instrument, "my-study.sframe")',
     sep = "\n"
   )
 }
@@ -99,5 +165,10 @@ sframe_addin_skeleton <- function() {
 #' @noRd
 addin_insert_skeleton <- function() {
   if (!sframe_addin_ready()) return(invisible(NULL))
-  rstudioapi::insertText(sframe_addin_skeleton())
+  sframe_run_addin(function() {
+    id <- sframe_addin_editor()
+    if (is.null(id)) return(invisible(NULL))
+    rstudioapi::insertText(text = sframe_addin_skeleton(), id = id)
+    invisible(NULL)
+  })
 }

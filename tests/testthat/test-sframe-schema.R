@@ -15,8 +15,10 @@ test_that("the schema file is installed and parses as JSON", {
   skip_if(!nzchar(path), "schema not found via system.file(); run devtools::load_all() first")
   schema <- jsonlite::fromJSON(path, simplifyVector = FALSE)
   expect_equal(schema$type, "object")
-  expect_true(all(c("hash", "version", "meta", "items", "choices", "scales")
-                  %in% schema$required))
+  # The core every profile shares. version, choices and scales are optional
+  # and default when absent, matching read_sframe().
+  expect_setequal(unlist(schema$required), c("hash", "meta", "items"))
+  expect_true(all(c("version", "choices", "scales") %in% names(schema$properties)))
 })
 
 test_that("a freshly written .sframe file's top-level keys match the schema's properties", {

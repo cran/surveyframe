@@ -32,8 +32,9 @@ A list with \code{qmd}, \code{sframe}, and \code{csv} paths, invisibly.
 \description{
 Unlike \code{\link[=sframe_demo_qmd]{sframe_demo_qmd()}}, which only works for one of the bundled demo
 instruments (it looks \code{name} up in \code{\link[=sframe_demos]{sframe_demos()}}), this writes a
-runnable Quarto notebook for any instrument, using its own responses. The
-notebook reads the instrument and its responses back from 2 companion
+runnable Quarto notebook for any instrument, using its own responses. It
+exposes the complete ordered plan, screening, run status, detailed results,
+plots and reports. The notebook reads the instrument and its responses back from 2 companion
 files written alongside it, so all 3 files must stay together.
 }
 \examples{

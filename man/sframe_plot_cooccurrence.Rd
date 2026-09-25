@@ -22,6 +22,15 @@ each pair's tile appears twice, once on either side of the diagonal, the
 way the other tile heatmaps in this file (\code{sframe_plot_correlation_matrix()},
 \code{sframe_plot_efa_loadings()}) read as a full grid rather than a triangle.
 }
+\examples{
+\donttest{
+if (requireNamespace("ggplot2", quietly = TRUE)) {
+  demo <- sframe_demo("open_text")
+  res <- run_analysis_plan(demo$responses, demo$instrument)
+  sframe_plot_cooccurrence(res$RQ4)
+}
+}
+}
 \seealso{
 \code{\link[=run_analysis_plan]{run_analysis_plan()}}, \code{\link[=term_frequency]{term_frequency()}}
 }

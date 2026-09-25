@@ -4,12 +4,16 @@
 # documents and what serialises to a JSON array, or as one comma-separated
 # string from a hand-written file. All 3 evaluators share this so they agree.
 sframe_branch_in_values <- function(value) {
+  # I() marks a value as literal, which is how a choice code containing a
+  # comma is declared. Without it a code like "Food, drink" became 2 values
+  # and matched no answer at all.
+  literal <- inherits(value, "AsIs")
   chr <- as.character(value)
   chr <- chr[!is.na(chr)]
   if (length(chr) == 0L) {
     return(character(0))
   }
-  if (length(chr) == 1L) {
+  if (length(chr) == 1L && !literal) {
     chr <- strsplit(chr, ",", fixed = TRUE)[[1]]
   }
   trimws(chr)

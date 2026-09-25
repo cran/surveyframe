@@ -458,8 +458,7 @@ test_that("Firth logistic runner returns penalised odds ratios on a small sample
 })
 
 test_that("Firth logistic runner degrades gracefully when logistf is absent", {
-  skip_if(requireNamespace("logistf", quietly = TRUE),
-          "logistf is installed, so the missing-package branch cannot run.")
+  local_mocked_bindings(sframe_has_package = function(package) FALSE)
   dat <- data.frame(y = rep(c(0L, 1L), each = 5), x1 = rnorm(10))
   res <- sframe_run_firth_logistic(dat, list(dependent = "y", predictors = "x1"))
   expect_identical(res$test, "firth_logistic")

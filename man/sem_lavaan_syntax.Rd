@@ -19,3 +19,16 @@ A lavaan syntax string.
 \description{
 Generate lavaan CB-SEM syntax
 }
+\examples{
+m <- sf_model(
+  "cb1", type = "cb_sem",
+  constructs = list(
+    sf_construct("sq", items = c("sq_1", "sq_2", "sq_3")),
+    sf_construct("sat", items = c("sat_1", "sat_2")),
+    sf_construct("bi", items = c("bi_1", "bi_2"))
+  ),
+  paths = list(sf_path("sq", "sat"), sf_path("sat", "bi")),
+  indirect = list(sf_indirect("sq", through = "sat", to = "bi"))
+)
+cat(sem_lavaan_syntax(m))
+}

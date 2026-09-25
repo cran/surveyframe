@@ -35,16 +35,13 @@ test_that("sframe_branch_in_values() accepts both shapes a file can carry", {
                    character(0))
 })
 
-test_that("both R evaluators match every value of a multi-value %in% rule", {
-  # This is the regression. Before the fix sframe_module_eval_op() returned
-  # TRUE only for "a", the vector's first element, and .evaluate_branch()
-  # returned FALSE for every value of the comma-separated form.
+test_that("the R evaluator matches every value of a multi-value %in% rule", {
+  # This is the regression. Before the fix .evaluate_branch() returned FALSE
+  # for every value of the comma-separated form, and the survey module's
+  # own evaluator matched only the first element of a vector. The module now
+  # uses .evaluate_branch() too, so this covers both Shiny routes.
   for (value in list(c("a", "b", "c"), "a,b,c")) {
     for (actual in c("a", "b", "c")) {
-      expect_true(
-        surveyframe:::sframe_module_eval_op("%in%", actual, as.character(value)),
-        info = paste("survey_module:", actual)
-      )
       expect_true(
         surveyframe:::.evaluate_branch(
           list(operator = "%in%", value = value, action = "show"), actual
@@ -53,9 +50,6 @@ test_that("both R evaluators match every value of a multi-value %in% rule", {
       )
     }
     # a value outside the set still does not match
-    expect_false(
-      surveyframe:::sframe_module_eval_op("%in%", "d", as.character(value))
-    )
     expect_false(
       surveyframe:::.evaluate_branch(
         list(operator = "%in%", value = value, action = "show"), "d"

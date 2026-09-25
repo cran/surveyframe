@@ -22,3 +22,8 @@ Reports item-wise missingness, respondent-wise missingness, missing-data
 patterns, listwise and pairwise deletion counts, and scale scoring missing
 rules. No imputation is performed.
 }
+\examples{
+demo <- sframe_demo_data()
+mr <- missing_data_report(demo$responses, demo$instrument)
+mr$item_missing
+}

@@ -32,3 +32,9 @@ Computes survey descriptives for numeric, Likert, and scale-score columns,
 including missingness, mean, standard deviation, median, IQR, range,
 skewness, kurtosis, standard error, and confidence intervals.
 }
+\examples{
+demo <- sframe_demo_data()
+dr <- descriptives_report(demo$responses, variables = c("sat_1", "sat_2"),
+                           split_by = "visit_type")
+dr$table
+}

@@ -46,6 +46,11 @@ alone" regardless of palette. In print mode, the two poles are further
 distinguished by a diagonal hatch on the "disagree" side, not colour tone
 alone.
 }
+\examples{
+counts <- c("Strongly disagree" = 5, "Disagree" = 10, "Neutral" = 15,
+            "Agree" = 40, "Strongly agree" = 30)
+sframe_draw_likert_diverging(counts)
+}
 \seealso{
 \code{\link[=sframe_plot_item_chart]{sframe_plot_item_chart()}}
 }

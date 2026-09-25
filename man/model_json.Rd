@@ -17,3 +17,8 @@ A JSON string.
 \description{
 Serialise a model specification to JSON
 }
+\examples{
+m <- sf_model("cb1", type = "cb_sem",
+              constructs = list(sf_construct("sq", items = c("sq_1", "sq_2"))))
+cat(model_json(m))
+}

@@ -2,15 +2,9 @@
 % Please edit documentation in R/accessors.R
 \name{as_sframe}
 \alias{as_sframe}
-\alias{as_sframe.sframe}
-\alias{as_sframe.sframe_validation}
 \title{Coerce to an instrument}
 \usage{
 as_sframe(x, ...)
-
-\method{as_sframe}{sframe}(x, ...)
-
-\method{as_sframe}{sframe_validation}(x, ...)
 }
 \arguments{
 \item{x}{An \link{sframe_validation} object or an \code{sframe}.}

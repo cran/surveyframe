@@ -19,3 +19,8 @@ An object of class \code{sf_path}.
 \description{
 Define a structural path between constructs
 }
+\examples{
+p <- sf_path("sq", "sat", label = "H1")
+p$from
+p$to
+}

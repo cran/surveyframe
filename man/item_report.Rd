@@ -15,18 +15,39 @@ item_report(data, instrument, scales = NULL)
 When NULL (default), all scales are included.}
 }
 \value{
-An object of class \code{sframe_item_report}, a list with one data.frame
-per scale.
+An object of class \code{sframe_item_report}: a named list with one
+element per scale, each a list holding \code{scale_id}, \code{label} and
+\code{diagnostics}, a data frame with one row per item and columns \code{item_id},
+\code{mean}, \code{sd}, \code{item_rest_r}, \code{floor_pct}, \code{ceiling_pct} and \code{n_missing}.
+\code{as.data.frame()} stacks every scale's diagnostics into one table.
 }
 \description{
-Produces item-total correlations, floor and ceiling effect proportions,
-and item means and standard deviations for each item within each scale.
+Produces, for each item within each scale, the item-rest correlation,
+floor and ceiling proportions, and the item mean and standard deviation.
+}
+\details{
+Diagnostics use the scale's scoring orientation, so an item the scale
+reverse-codes is reversed first, as in \code{\link[=score_scales]{score_scales()}} and
+\code{\link[=reliability_report]{reliability_report()}}. The item-rest correlation is the correlation
+between an item and the sum of the scale's other items. It is computed
+on respondents who answered every item in the scale, the same rows
+\code{\link[=reliability_report]{reliability_report()}} uses, and \code{n_missing} counts the item's own missing
+values in \code{data}.
+
+Floor and ceiling are the proportions at the item's declared lowest and
+highest response, taken from its choice set, slider limits or rating
+maximum. They are \code{NA} for an item that declares no bounds, since the
+sample's own extremes say nothing about a floor or ceiling effect.
 }
 \examples{
 \donttest{
 demo <- sframe_demo_data()
 ir <- item_report(demo$responses, demo$instrument)
 print(ir)
+# one scale's diagnostics
+ir[[1]]$diagnostics
+# every scale in one table
+as.data.frame(ir)
 }
 }
 \seealso{

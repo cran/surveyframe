@@ -12,6 +12,38 @@ execute:
 ```{r setup}
 #| include: false
 library(surveyframe)
+
+`%||%` <- function(x, y) if (is.null(x)) y else x
+
+show_value <- function(x) {
+  if (is.null(x) || length(x) == 0) return("")
+  if (is.list(x)) {
+    return(paste(sprintf("%s: %s", names(x),
+                         vapply(x, show_value, character(1))), collapse = "; "))
+  }
+  paste(as.character(x), collapse = ", ")
+}
+
+plan_table <- function(instrument) {
+  plan <- sf_plan(instrument)
+  if (!length(plan)) return(data.frame())
+  do.call(rbind, lapply(seq_along(plan), function(i) {
+    b <- plan[[i]]
+    data.frame(
+      order = i,
+      id = b$id,
+      question = b$research_question,
+      family = b$family %||% "",
+      method = b$method %||% b$test %||% "",
+      roles = show_value(b$roles %||% b$variables),
+      options = show_value(b$options),
+      decision_rule = b$decision_rule %||% b$interpretation %||% "",
+      needs_data = !isFALSE(b$requires_data),
+      stringsAsFactors = FALSE,
+      check.names = FALSE
+    )
+  }))
+}
 ```
 
 ## The study
@@ -30,6 +62,20 @@ instrument
 
 `{{DEMO_TEACHES}}`
 
+The demo contains four auditable artifacts. Presentation and provenance demos
+may reuse the response data from their matching analysis demo.
+
+```{r artifacts}
+data.frame(
+  artifact = c("Instrument", "Responses", "Codebook", "Expected results"),
+  file = basename(unlist(demo[c(
+    "instrument_path", "responses_path", "codebook_path", "results_path"
+  )])),
+  stringsAsFactors = FALSE
+) |>
+  knitr::kable()
+```
+
 ## The questions
 
 ```{r items}
@@ -43,27 +89,179 @@ This is what makes the analysis a contract rather than a search. The blocks
 below were written into the instrument at design time.
 
 ```{r plan}
-knitr::kable(do.call(rbind, lapply(sf_plan(instrument), function(b) {
-  data.frame(id = b$id, question = b$research_question, method = b$method)
-})))
+knitr::kable(plan_table(instrument))
 ```
 
-## The results
+The first column is the run and report sequence. `run_analysis_plan()` executes
+the plan from top to bottom, and the report keeps the same order. In
+SurveyBuilder, drag the plan cards into their final order on the Plan or Run
+Preview tab before examining results.
+
+The equivalent R operation is shown below but is deliberately not run here.
+Reorder by stable block ID, validate the result, and save it before data
+collection. A change after collection begins should retain the earlier
+instrument and be disclosed with `amend_sframe()`.
+
+```{r reorder, eval = FALSE}
+plan <- sf_plan(instrument)
+ids <- vapply(plan, `[[`, character(1), "id")
+wanted_order <- rev(ids)             # replace with the order you planned
+stopifnot(setequal(wanted_order, ids))
+sf_plan(instrument) <- plan[match(wanted_order, ids)]
+instrument <- as_sframe(validate_sframe(instrument, strict = TRUE))
+```
+
+## Validate and screen the inputs
+
+`sframe_demo()` has already read the CSV through `read_responses()`. With your
+own files, perform that import explicitly so unexpected columns or values are
+caught before analysis.
+
+```{r validate}
+validation <- validate_sframe(instrument, strict = FALSE)
+validation
+
+dim(responses)
+head(responses, 3)
+```
+
+```{r real-import, eval = FALSE}
+responses <- read_responses(
+  demo$responses_path,
+  instrument,
+  respondent_id = "respondent_id",
+  meta_cols = c("started_at", "submitted_at"),
+  strict = TRUE
+)
+```
+
+Screen missingness and response quality before interpreting an analysis. Some
+demos contain no scales or attention checks. Read an empty or
+not-applicable section as information about the demo, not a reason to skip
+the step.
+
+```{r screen}
+missing <- missing_data_report(responses, instrument)
+knitr::kable(as.data.frame(missing))
+
+quality <- quality_report(responses, instrument)
+knitr::kable(as.data.frame(quality))
+```
+
+```{r reliability}
+if (length(sf_scales(instrument)) > 0 &&
+    requireNamespace("psych", quietly = TRUE)) {
+  reliability <- reliability_report(
+    responses, instrument,
+    omega = TRUE
+  )
+  knitr::kable(as.data.frame(reliability))
+} else if (length(sf_scales(instrument)) == 0) {
+  cat("This instrument has no scored scales, so reliability is not applicable.\n")
+} else {
+  cat("Install the optional psych package to compute reliability.\n")
+}
+
+## Run the plan once
 
 ```{r run}
-results <- run_analysis_plan(responses, instrument)
+results <- run_analysis_plan(
+  responses,
+  instrument,
+  plots = requireNamespace("ggplot2", quietly = TRUE),
+  seed = 20260828L,
+  strict = FALSE
+)
+status <- attr(results, "status")
+status
+attr(results, "seed")
+knitr::kable(as.data.frame(results))
+```
+
+A normal non-strict return may contain failed blocks, for example when an
+optional method package is unavailable, so always inspect `status`. For a
+verification or release run, rerun with `strict = TRUE` so any failed block
+stops the workflow.
+
+```{r strict-run, eval = FALSE}
+results <- run_analysis_plan(
+  responses, instrument, plots = TRUE, seed = 20260828L, strict = TRUE
+)
+```
+
+## Read the complete results
+
+Each result stays paired with the plan block that produced it. The display
+below keeps the planned method and decision rule beside the statistic, table,
+plot, reproducible syntax where supported, interpretation prompt, and
+references.
+
+```{r result-details, results = "asis"}
+plan <- sf_plan(instrument)
 for (b in results) {
+  planned <- plan[[match(b$block_id, vapply(plan, `[[`, character(1), "id"))]]
   cat("\n###", b$block_id, b$research_question, "\n\n")
+  cat("**Planned method:**", planned$method %||% planned$test, "\n\n")
+  cat("**Roles:**", show_value(planned$roles %||% planned$variables), "\n\n")
+  if (nzchar(planned$decision_rule %||% planned$interpretation %||% "")) {
+    cat("**Planned decision rule:**",
+        planned$decision_rule %||% planned$interpretation, "\n\n")
+  }
+  if (!is.null(b$error)) {
+    cat("**This analysis failed.** ", b$error, "\n\n", sep = "")
+    next
+  }
   if (!is.null(b$apa)) cat(b$apa, "\n\n")
+  if (!is.null(b$effect_label)) cat("**Effect:**", b$effect_label, "\n\n")
   if (is.data.frame(b$table)) print(knitr::kable(b$table))
+  if (!is.null(b$syntax)) cat("\n```r\n", b$syntax, "\n```\n", sep = "")
+  if (!is.null(b$plot)) print(b$plot)
+  if (length(b$diagnostic_plots %||% list())) {
+    for (p in b$diagnostic_plots) print(p)
+  }
+  resolved <- analysis_syntax(b)
+  if (length(resolved)) cat("\n**Resolved R call**\n\n```r\n",
+                            paste(resolved, collapse = "\n"), "\n```\n", sep = "")
+  if (nzchar(b$prompt %||% "")) cat("\n**Interpretation prompt:**", b$prompt, "\n\n")
+  refs <- unlist(b$citations %||% character(0), use.names = FALSE)
+  if (length(refs)) cat("**References:**", paste(refs, collapse = "; "), "\n\n")
+}
+if (!is.null(status) && status$failed > 0) {
+  cat("\n", status$failed, " of ", status$blocks, " analyses failed: ",
+      paste(status$failed_blocks, collapse = ", "), ".\n", sep = "")
 }
 ```
 
-## A report you can hand to somebody
+## Check the bundled expected results
+
+The expected-results artifact is a compact, long-format reference generated
+for this demo. Display it beside the live run when checking another package or
+investigating a changed number. Numerical comparison needs method-appropriate
+tolerances, and compare the numeric values, not formatted strings, since not
+every quantity is exact.
+
+```{r expected}
+expected <- utils::read.csv(demo$results_path, stringsAsFactors = FALSE,
+                            check.names = FALSE)
+knitr::kable(expected)
+```
+
+## Reports you can hand to somebody
+
+`render_results()` writes the already-computed analysis results. It does not
+rerun the plan. `render_report()` builds the complete research report, including
+the codebook, screening, measurement sections, analysis, models, and
+reproducibility metadata.
 
 ```{r report}
-#| eval: false
-render_report(instrument, responses, output_path = "report.html")
+# The report is rendered only when at least one analysis succeeded.
+if (!is.null(attr(results, "status")) && attr(results, "status")$succeeded > 0) {
+  render_results(results, instrument, output_file = "analysis-results.html")
+  render_report(instrument, responses, output_file = "full-report.html",
+                show_code = TRUE)
+} else {
+  cat("Every analysis failed, so no reports were rendered. See the errors above.\n")
+}
 ```
 
 ## Checking these numbers against other software

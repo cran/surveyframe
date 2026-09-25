@@ -1,11 +1,42 @@
 # launch_studio.R
 
+# The screens SurveyStudio has, in navigation order, matching the tabs in
+# inst/shiny/app.R.
+sframe_studio_screens <- function() {
+  c("open", "amendments", "preview", "responses", "quality", "reliability",
+    "analysis", "dashboard", "export")
+}
+
+# Resolves the `screen` argument to a screen Studio has. "build" used to be
+# offered and quietly opened another screen, since Studio authors nothing.
+sframe_studio_screen <- function(screen) {
+  screen <- as.character(screen %||% "auto")[1]
+  if (identical(screen, "data")) screen <- "responses"
+  if (identical(screen, "build")) {
+    rlang::abort(
+      paste0("SurveyStudio has no screen for building a survey. Author an ",
+             "instrument with launch_builder(), then open it here."),
+      class = "sframe_error")
+  }
+  if (!screen %in% c("auto", sframe_studio_screens())) {
+    rlang::abort(
+      paste0("Unknown Studio screen '", screen, "'. Use \"auto\", or one of: ",
+             paste(sframe_studio_screens(), collapse = ", "), "."),
+      class = "sframe_error")
+  }
+  screen
+}
+
 #' Launch the SurveyStudio interface
 #'
-#' Opens the SurveyStudio Shiny application, a visual interface for the
-#' complete surveyframe workflow. The studio includes screens to build a survey
-#' draft, open an existing instrument, preview the survey, upload responses,
-#' review data quality, inspect reliability, plan analyses, and export outputs.
+#' Opens the SurveyStudio Shiny application, the visual interface for working
+#' with an instrument that already exists. Its screens open an instrument,
+#' record and read amendments, preview the survey, upload responses, review
+#' data quality, inspect reliability, work on the analysis plan, read the
+#' dashboard, and export.
+#'
+#' Studio reads and analyses an instrument. To author one, question by
+#' question, use [launch_builder()], and open the result here.
 #'
 #' @param instrument An `sframe` object or NULL.
 #' @param responses A data.frame, tibble, CSV file path, or NULL.
@@ -17,8 +48,10 @@
 #'   is a CSV path.
 #' @param strict Logical. Passed to [read_responses()] when `responses` is a
 #'   CSV path.
-#' @param screen Initial studio screen. One of `"auto"`, `"build"`,
-#'   `"preview"`, `"data"`, `"quality"`, `"analysis"`, or `"dashboard"`.
+#' @param screen The screen to open on. One of `"auto"`, which picks by what
+#'   you supply, or a screen name: `"open"`, `"amendments"`, `"preview"`,
+#'   `"responses"`, `"quality"`, `"reliability"`, `"analysis"`,
+#'   `"dashboard"` or `"export"`. `"data"` is accepted for `"responses"`.
 #' @param port TCP port for the Shiny server.
 #' @param host Host address passed to [shiny::runApp()].
 #' @param launch.browser Whether to open the browser automatically.
@@ -49,14 +82,14 @@ launch_studio <- function(
     submitted_at = NULL,
     meta_cols = NULL,
     strict = TRUE,
-    screen = c("auto", "build", "preview", "data", "quality", "analysis", "dashboard"),
+    screen = "auto",
     port = NULL,
     host = "127.0.0.1",
     launch.browser = interactive()
 ) {
   sframe_require_shiny("to launch SurveyStudio")
 
-  screen <- match.arg(screen)
+  screen <- sframe_studio_screen(screen)
 
   if (!is.null(instrument)) {
     sframe_check_instrument(instrument)

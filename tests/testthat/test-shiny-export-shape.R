@@ -77,10 +77,26 @@ test_that("read_responses() accepts a Shiny-collected row", {
   inst <- shape_instrument()
   row <- shape_row(inst)
 
+  # No meta_cols: the columns surveyframe's own collectors write are
+  # recognised, so a collected file reads back without the researcher naming
+  # respondent_id, started_at or submitted_at.
+  expect_no_error(read_responses(row, inst, strict = TRUE))
+
+  # and declaring them explicitly still works, which is what existing callers do
   expect_no_error(
     read_responses(row, inst, strict = TRUE,
                    meta_cols = c("started_at", "submitted_at"))
   )
+})
+
+test_that("a column surveyframe did not write is still undeclared", {
+  inst <- shape_instrument()
+  row <- shape_row(inst)
+  row$something_of_mine <- "x"
+  expect_error(read_responses(row, inst, strict = TRUE),
+               class = "sframe_import_error")
+  expect_no_error(read_responses(row, inst, strict = TRUE,
+                                 meta_cols = "something_of_mine"))
 })
 
 test_that("every declared expansion column appears in the row", {

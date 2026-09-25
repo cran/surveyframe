@@ -80,25 +80,41 @@ test_that("report-level results (quality, reliability, EFA) gain a plot via run_
   demo <- sframe_demo_data()
   res <- run_analysis_plan(demo$responses, demo$instrument, plots = TRUE)
   by_test <- function(t) Filter(function(r) identical(r$test, t), res)
-  for (t in c("quality", "reliability_alpha", "reliability_omega",
+  for (t in c("reliability_alpha", "reliability_omega",
               "efa_readiness", "efa_solution")) {
     blocks <- by_test(t)
     skip_if(length(blocks) == 0, paste("no", t, "block in demo plan"))
-    if (identical(t, "quality")) {
-      # The bundled demo instrument's 5 scales are all 2 or 3 items, below
-      # straightline_min_items = 4 (see quality_report(), fixed
-      # 2026-08-26), so no scale is checked and the quality plot has
-      # nothing to draw: sframe_plot_quality() returns NULL, correctly,
-      # rather than a ggplot object. run_analysis_plan()'s "quality" case
-      # has no options path to lower the threshold per plan block, so this
-      # is skipped rather than asserted false, since a NULL plot here is
-      # the honest, expected result for this specific instrument, not a
-      # defect in plot dispatch.
-      skip_if(is.null(blocks[[1]]$plot),
-              "quality plot is NULL: no scale in the demo instrument meets straightline_min_items")
-    }
     expect_s3_class(blocks[[1]]$plot, "ggplot")
   }
+})
+
+test_that("run_analysis_plan attaches a quality plot for an eligible scale", {
+  skip_on_cran()
+  skip_if_not_installed("ggplot2")
+  item_ids <- paste0("q", 1:4)
+  items <- lapply(item_ids, function(id) {
+    sf_item(id, id, type = "likert", choice_set = "ag5", scale_id = "sc")
+  })
+  instr <- sf_instrument(
+    "Quality plot dispatch",
+    components = c(
+      list(ag5_choices), items,
+      list(sf_scale("sc", "Scale", items = item_ids))
+    ),
+    analysis_plan = list(list(
+      id = "RQ1", research_question = "Do responses meet quality thresholds?",
+      family = "data_quality", method = "quality", roles = list()
+    ))
+  )
+  dat <- as.data.frame(matrix(rep(1:5, length.out = 80), ncol = 4))
+  names(dat) <- item_ids
+  dat[1, ] <- 3
+
+  res <- run_analysis_plan(dat, instr, plots = TRUE)
+
+  expect_length(res, 1)
+  expect_identical(res[[1]]$test, "quality")
+  expect_s3_class(res[[1]]$plot, "ggplot")
 })
 
 test_that("sframe_plot_correlation_matrix builds a heatmap from real response data", {
@@ -525,8 +541,22 @@ test_that("friedman, partial_correlation, and mediation tables are populated", {
 
   med <- by_test("mediation")
   skip_if(length(med) == 0, "demo plan has no mediation block")
-  expect_identical(med[[1]]$table$Effect,
-                   c("Direct (c')", "Indirect (a×b)", "Total (c)"))
+  # 0.4.2 reports the a and b paths and names the predictor, mediator and
+  # outcome in each label, so a reader can see which model produced the
+  # effects and whether a and b share a sign. It used to give the 3 effects
+  # alone, with no variable named.
+  effects <- med[[1]]$table$Effect
+  expect_length(effects, 5)
+  expect_true(any(grepl("^a ", effects)))
+  expect_true(any(grepl("^b ", effects)))
+  expect_true(any(grepl("Direct", effects, fixed = TRUE)))
+  expect_true(any(grepl("Indirect", effects, fixed = TRUE)))
+  expect_true(any(grepl("Total", effects, fixed = TRUE)))
+  # the variables are named, so the label is more than a Greek letter
+  vars <- med[[1]]$vars
+  expect_true(all(vapply(vars, function(v) {
+    any(grepl(v, effects, fixed = TRUE))
+  }, logical(1))))
 })
 
 test_that("moderation, logistic, and repeated-measures plots draw", {

@@ -1,8 +1,100 @@
 # statistics_reports.R
 # Core survey statistics and structured reporting helpers.
 
+# A column as numbers. A factor is read through its labels: as.numeric() on a
+# factor gives level positions, so a factor holding 10 and 20 became 1 and 2.
+# A factor whose labels are not numbers is an error. Character values that are
+# not numbers become NA, as before.
 sframe_num <- function(x) {
+  if (is.factor(x)) return(sframe_as_measure(x, "a factor column"))
   suppressWarnings(as.numeric(x))
+}
+
+# Regression predictors: numeric columns, and text or factor columns whose
+# values all read as numbers, enter as numbers. Any other text or factor column
+# enters as a categorical predictor, where it had been forced to numbers.
+sframe_predictor_frame <- function(data, predictors) {
+  out <- lapply(predictors, function(col) {
+    x <- data[[col]]
+    if (is.numeric(x)) return(x)
+    labels <- as.character(x)
+    as_num <- suppressWarnings(as.numeric(labels))
+    if (all(is.na(labels) | !is.na(as_num))) return(as_num)
+    factor(labels)
+  })
+  stats::setNames(as.data.frame(out, stringsAsFactors = FALSE), predictors)
+}
+
+# The scales a psychometric block selects: scale ids named in its roles, and
+# scales holding any item it names. NULL, meaning every scale, when it names
+# neither.
+sframe_block_scales <- function(roles, instrument) {
+  named <- unique(as.character(unlist(
+    roles[intersect(names(roles), c("scales", "scale", "items", "variables"))])))
+  if (length(named) == 0) return(NULL)
+  ids <- vapply(instrument$scales, function(s) s$id, character(1))
+  holding <- vapply(instrument$scales, function(s) any(s$items %in% named),
+                    logical(1))
+  selected <- unique(c(intersect(named, ids), ids[holding]))
+  if (length(selected) == 0) NULL else selected
+}
+
+# The quality block, with its configuration. The respondent id and timestamp
+# columns come from the block, or the standard collected column names when
+# present, so the duplicate and timing checks run on collected data.
+sframe_run_quality <- function(data, instrument, roles, options) {
+  pick <- function(role, default) {
+    given <- sframe_role_values(roles, role)
+    given <- as.character(options[[role]] %||% given)
+    if (length(given) > 0 && nzchar(given[1])) return(given[1])
+    if (default %in% colnames(data)) default else NULL
+  }
+  args <- list(
+    data = data, instrument = instrument,
+    respondent_id = pick("respondent_id", "respondent_id"),
+    submitted_at = pick("submitted_at", "submitted_at"),
+    started_at = pick("started_at", "started_at")
+  )
+  for (key in c("time_min", "missing_threshold", "straightline_min_items")) {
+    if (!is.null(options[[key]])) args[[key]] <- options[[key]]
+  }
+  do.call(quality_report, args)
+}
+
+# Option keys each method reads. A key outside its method's list, and outside
+# the keys every block may carry, is reported as ignored, so a setting that
+# changed nothing does not look as if it applied. Methods absent from this map
+# are not checked.
+sframe_method_option_keys <- list(
+  frequency = character(0), descriptives = "conf_level",
+  missing_data = character(0),
+  quality = c("respondent_id", "submitted_at", "started_at", "time_min",
+              "missing_threshold", "straightline_min_items"),
+  reliability_alpha = character(0), reliability_omega = character(0),
+  item_diagnostics = character(0), efa_readiness = "nfactors",
+  efa_solution = "nfactors", cfa_lavaan_syntax = "ordered",
+  crosstab = "simulate_p_value", chi_square = "simulate_p_value",
+  fisher_exact = "simulate_p_value", mcnemar = "correct",
+  cochran_q = character(0), mann_whitney = character(0),
+  t_test_ind = "var_equal", t_test_pair = character(0),
+  kruskal_wallis = character(0), anova_one = character(0),
+  anova_two = character(0), ancova = character(0),
+  repeated_anova = character(0), friedman = character(0),
+  wilcoxon_pair = character(0), correlation_pearson = character(0),
+  correlation_spearman = character(0), correlation_kendall = character(0),
+  partial_correlation = "method", regression_linear = character(0),
+  regression_logistic_binary = character(0),
+  regression_logistic_ordinal = character(0),
+  regression_logistic_multinomial = character(0),
+  firth_logistic = c("conf.level", "conf_level"), moderation = character(0),
+  mediation = "bootstrap"
+)
+
+sframe_ignored_options <- function(method, options) {
+  known <- sframe_method_option_keys[[method]]
+  if (is.null(known) || length(options) == 0) return(NULL)
+  ignored <- setdiff(names(options), c(known, "alpha", "weights", "seed"))
+  if (length(ignored) == 0) NULL else ignored
 }
 
 sframe_nonmissing <- function(x) {
@@ -176,6 +268,11 @@ sframe_require_columns <- function(data, cols, method) {
 #'
 #' @return An object of class `sframe_descriptives_report`.
 #' @export
+#' @examples
+#' demo <- sframe_demo_data()
+#' dr <- descriptives_report(demo$responses, variables = c("sat_1", "sat_2"),
+#'                            split_by = "visit_type")
+#' dr$table
 descriptives_report <- function(
     data,
     variables = NULL,
@@ -260,6 +357,10 @@ descriptives_report <- function(
 #'
 #' @return An object of class `sframe_missing_data_report`.
 #' @export
+#' @examples
+#' demo <- sframe_demo_data()
+#' mr <- missing_data_report(demo$responses, demo$instrument)
+#' mr$item_missing
 missing_data_report <- function(data, instrument = NULL, variables = NULL) {
   stopifnot(is.data.frame(data))
   if (is.null(variables)) {
@@ -545,6 +646,11 @@ sframe_small_sample_advisory <- function(n, test) {
 #'
 #' @return An object of class `sframe_assumption_report`.
 #' @export
+#' @examples
+#' demo <- sframe_demo_data()
+#' ar <- assumption_report(demo$responses, variables = c("sat_1", "sat_2"),
+#'                          group = "visit_type")
+#' print(ar)
 assumption_report <- function(
     data,
     variables = NULL,
@@ -719,6 +825,11 @@ print.sframe_assumption_report <- function(x, ...) {
 #'
 #' @return An object of class `sframe_posthoc_report`.
 #' @export
+#' @examples
+#' demo <- sframe_demo_data()
+#' pr <- posthoc_report(demo$responses, method = "kruskal_wallis",
+#'                       outcome = "sat_1", group = "visit_type")
+#' pr$tables$pairwise_wilcox
 posthoc_report <- function(
     data,
     method = c("anova", "kruskal_wallis", "chi_square", "cochran_q"),
@@ -800,9 +911,35 @@ posthoc_report <- function(
   )
 }
 
+# Reads 1/0, TRUE/FALSE and yes/no, in any case, as 1 and 0, keeping missing
+# values missing. Anything else is reported. Testing membership of a list of
+# positive codes turned NA into 0 before complete-case filtering, so a missing
+# response counted as an observed failure, and so did a code such as 2.
+sframe_binary_columns <- function(df) {
+  df <- as.data.frame(df, stringsAsFactors = FALSE)
+  out <- list()
+  for (col in names(df)) {
+    raw <- trimws(tolower(as.character(df[[col]])))
+    raw[!is.na(raw) & raw == ""] <- NA
+    vals <- rep(NA_integer_, length(raw))
+    vals[raw %in% c("1", "true", "yes")] <- 1L
+    vals[raw %in% c("0", "false", "no")] <- 0L
+    bad <- unique(as.character(df[[col]])[!is.na(raw) & is.na(vals)])
+    if (length(bad) > 0) {
+      return(list(error = paste0(
+        "Cochran's Q needs binary responses coded 1/0, TRUE/FALSE or yes/no. ",
+        "Column '", col, "' holds ", paste(utils::head(bad, 5), collapse = ", "),
+        ".")))
+    }
+    out[[col]] <- vals
+  }
+  list(matrix = do.call(cbind, out))
+}
+
 sframe_cochran_q <- function(mat) {
-  mat <- as.matrix(mat)
-  mat <- apply(mat, 2, function(x) as.integer(as.character(x) %in% c("1", "TRUE", "true", "yes", "Yes")))
+  coded <- sframe_binary_columns(mat)
+  if (!is.null(coded$error)) return(list(error = coded$error))
+  mat <- coded$matrix
   mat <- mat[stats::complete.cases(mat), , drop = FALSE]
   n <- nrow(mat)
   k <- ncol(mat)
@@ -813,6 +950,12 @@ sframe_cochran_q <- function(mat) {
   row_sum <- rowSums(mat)
   numerator <- (k - 1) * (k * sum(col_sum^2) - sum(col_sum)^2)
   denominator <- k * sum(row_sum) - sum(row_sum^2)
+  if (denominator == 0) {
+    return(list(error = paste0(
+      "Cochran's Q is undefined for these data: every complete respondent ",
+      "gave the same answer to all measures, so there is no within-respondent ",
+      "variation to test.")))
+  }
   q <- numerator / denominator
   p <- stats::pchisq(q, df = k - 1, lower.tail = FALSE)
   list(statistic = q, df = k - 1, p = p, n = n)
@@ -964,6 +1107,18 @@ sframe_run_repeated_anova <- function(data, roles) {
   err <- sframe_require_columns(data, vars, "Repeated-measures ANOVA")
   if (!is.null(err)) return(list(test = "repeated_anova", error = err))
   mat <- as.data.frame(lapply(data[, vars, drop = FALSE], sframe_num))
+  complete_subject <- stats::complete.cases(mat[, vars, drop = FALSE])
+  n_excluded_incomplete <- sum(!complete_subject)
+  mat <- mat[complete_subject, , drop = FALSE]
+  if (nrow(mat) < 2L) {
+    return(list(
+      test = "repeated_anova",
+      error = paste0("Repeated-measures ANOVA needs at least 2 respondents ",
+                     "with complete measurements."),
+      vars = vars, n = nrow(mat),
+      n_excluded_incomplete = n_excluded_incomplete
+    ))
+  }
   # .subject must be a factor. Left as an integer, aov() treats it as a
   # continuous covariate, the Error(.subject / condition) stratification
   # collapses to a single residual df, and the condition effect is tested
@@ -1010,6 +1165,7 @@ sframe_run_repeated_anova <- function(data, roles) {
   if (is.null(stat_row)) {
     return(list(
       test = "repeated_anova", vars = vars, n = length(unique(long$.subject)),
+      n_excluded_incomplete = n_excluded_incomplete,
       fit_summary = fit_summary,
       apa = "Repeated-measures ANOVA was estimated; inspect `fit_summary` for the within-subject effect.",
       prompt = "Report the within-subject effect, degrees of freedom, p value, effect size where available, and sphericity limitations."
@@ -1026,6 +1182,7 @@ sframe_run_repeated_anova <- function(data, roles) {
     test = "repeated_anova",
     vars = vars,
     n = length(unique(long$.subject)),
+    n_excluded_incomplete = n_excluded_incomplete,
     df1 = df1, df2 = df2, F_stat = F_stat, p = p, eta2 = partial_eta2,
     table = data.frame(
       Statistic = "F", df1 = df1, df2 = df2,
@@ -1050,6 +1207,11 @@ sframe_run_partial_correlation <- function(data, roles, options = list()) {
   y <- sframe_role_values(roles, c("y", "outcome", "dependent"))[1]
   controls <- sframe_role_values(roles, c("controls", "covariates", "control"))
   method <- options$method %||% "pearson"
+  if (!method %in% c("pearson", "spearman")) {
+    return(list(test = "partial_correlation",
+                error = paste0("Partial correlation supports method 'pearson' or ",
+                               "'spearman', not '", method, "'.")))
+  }
   vars <- c(x, y, controls)
   err <- sframe_require_columns(data, vars, "Partial correlation")
   if (!is.null(err)) return(list(test = "partial_correlation", error = err))
@@ -1059,30 +1221,41 @@ sframe_run_partial_correlation <- function(data, roles, options = list()) {
     return(list(test = "partial_correlation",
                 error = "Partial correlation requires more complete rows."))
   }
+  # Spearman ranks every variable first, then partials the ranks. Ranking the
+  # residuals, as before, is a different statistic.
+  if (method == "spearman") df <- as.data.frame(lapply(df, rank))
   if (length(controls) > 0) {
-    rx <- stats::residuals(stats::lm(stats::as.formula(paste(x, "~", paste(controls, collapse = " + "))), data = df))
-    ry <- stats::residuals(stats::lm(stats::as.formula(paste(y, "~", paste(controls, collapse = " + "))), data = df))
+    z <- as.matrix(df[controls])
+    if (qr(cbind(1, z))$rank < ncol(z) + 1) {
+      return(list(test = "partial_correlation",
+                  error = "The control variables are collinear, so they cannot all be partialled out."))
+    }
+    rx <- stats::residuals(stats::lm(df[[x]] ~ z))
+    ry <- stats::residuals(stats::lm(df[[y]] ~ z))
   } else {
     rx <- df[[x]]
     ry <- df[[y]]
   }
-  if (method == "spearman") {
-    rx <- rank(rx)
-    ry <- rank(ry)
-  }
-  ct <- tryCatch(stats::cor.test(rx, ry, method = "pearson"), error = function(e) NULL)
-  if (is.null(ct)) return(list(test = "partial_correlation", error = "Partial correlation failed."))
-  r <- unname(ct$estimate)
+  r <- stats::cor(rx, ry)
+  if (!is.finite(r)) return(list(test = "partial_correlation", error = "Partial correlation failed."))
+  # Inference on n - 2 - k degrees of freedom, k being the number of controls.
+  # The p value was taken from an ordinary correlation test on n - 2 while the
+  # printed degrees of freedom said n - 2 - k.
+  df_resid <- nrow(df) - 2L - length(controls)
+  t_stat <- r * sqrt(df_resid / (1 - r^2))
+  p_val <- 2 * stats::pt(-abs(t_stat), df_resid)
   list(
     test = "partial_correlation",
     vars = vars,
     method = method,
     n = nrow(df),
     r = r,
-    p = ct$p.value,
+    df = df_resid,
+    t = t_stat,
+    p = p_val,
     controls = controls,
     apa = sprintf("partial r(%d) = %.2f, p %s",
-                  nrow(df) - length(controls) - 2, r, sframe_p_string(ct$p.value)),
+                  df_resid, r, sframe_p_string(p_val)),
     prompt = "Interpret the partial correlation after accounting for the specified control variables."
   )
 }
@@ -1131,8 +1304,10 @@ sframe_run_anova_two <- function(data, roles) {
   tab <- summary(fit)[[1]]
   ss_error <- tab[["Sum Sq"]][nrow(tab)]
   partial_eta <- tab[["Sum Sq"]] / (tab[["Sum Sq"]] + ss_error)
+  # The residual row is not a tested effect, and its formula gave 0.5.
+  partial_eta[nrow(tab)] <- NA_real_
   table <- data.frame(
-    effect = rownames(tab),
+    effect = trimws(rownames(tab)),
     df = tab[["Df"]],
     sum_sq = tab[["Sum Sq"]],
     mean_sq = tab[["Mean Sq"]],
@@ -1146,7 +1321,10 @@ sframe_run_anova_two <- function(data, roles) {
     test = "anova_two",
     vars = vars,
     table = table,
-    apa = "Two-way ANOVA estimated main effects and the interaction term.",
+    ss_type = "sequential (Type I)",
+    apa = paste0("Two-way ANOVA estimated main effects and the interaction term, ",
+                 "with sequential (Type I) sums of squares, so in an unbalanced ",
+                 "design the first factor is tested before the second."),
     prompt = "Report both main effects and the interaction before interpreting simple effects."
   )
 }
@@ -1167,27 +1345,49 @@ sframe_run_ancova <- function(data, roles) {
   for (cov in covariates) df[[cov]] <- sframe_num(df[[cov]])
   df <- df[stats::complete.cases(df), , drop = FALSE]
   formula <- stats::as.formula(paste(outcome, "~", group, "+", paste(covariates, collapse = " + ")))
-  fit <- tryCatch(stats::aov(formula, data = df), error = function(e) NULL)
+  fit <- tryCatch(stats::lm(formula, data = df), error = function(e) NULL)
   if (is.null(fit)) return(list(test = "ancova", error = "ANCOVA failed."))
+  # Each term is tested after every other term, by comparing the full model
+  # with the model dropping that term. A sequential aov() table with group
+  # first tested the group difference before the covariates, which is an
+  # unadjusted test labelled as adjusted.
+  adj <- tryCatch(stats::drop1(fit, test = "F"), error = function(e) NULL)
+  if (is.null(adj)) return(list(test = "ancova", error = "ANCOVA failed."))
+  terms <- trimws(rownames(adj))[-1]
+  res_df <- stats::df.residual(fit)
+  res_ss <- sum(stats::residuals(fit)^2)
+  table <- data.frame(
+    effect  = c(terms, "Residuals"),
+    df      = c(adj$Df[-1], res_df),
+    sum_sq  = c(adj$`Sum of Sq`[-1], res_ss),
+    mean_sq = c(adj$`Sum of Sq`[-1] / adj$Df[-1], res_ss / res_df),
+    F       = c(adj$`F value`[-1], NA_real_),
+    p       = c(adj$`Pr(>F)`[-1], NA_real_),
+    stringsAsFactors = FALSE,
+    check.names = FALSE
+  )
   slope_warning <- character(0)
-  if (length(covariates) > 0) {
-    slope_fit <- tryCatch(
-      stats::aov(stats::as.formula(paste(outcome, "~", group, "*", paste(covariates, collapse = " + "))),
-                 data = df),
-      error = function(e) NULL
-    )
-    if (!is.null(slope_fit)) {
-      slope_warning <- "Check homogeneity of regression slopes using the interaction model stored in `slope_model_summary`."
-    }
+  slope_fit <- tryCatch(
+    stats::aov(stats::as.formula(paste0(outcome, " ~ ", group, " * (",
+                                        paste(covariates, collapse = " + "), ")")),
+               data = df),
+    error = function(e) NULL
+  )
+  if (!is.null(slope_fit)) {
+    slope_warning <- "Check homogeneity of regression slopes using the interaction model stored in `slope_model_summary`."
   }
-  tab <- summary(fit)[[1]]
+  g <- table[table$effect == group, ]
   list(
     test = "ancova",
     vars = vars,
-    table = data.frame(effect = rownames(tab), tab, row.names = NULL, check.names = FALSE),
+    n = nrow(df),
+    table = table,
+    ss_type = "adjusted (each term tested after all others)",
     slope_warning = slope_warning,
-    slope_model_summary = if (exists("slope_fit") && !is.null(slope_fit)) utils::capture.output(summary(slope_fit)) else NULL,
-    apa = "ANCOVA estimated group differences adjusted for covariates.",
+    slope_model_summary = if (!is.null(slope_fit)) utils::capture.output(summary(slope_fit)) else NULL,
+    apa = sprintf("Adjusted for %s, the group effect was F(%d, %d) = %.2f, p %s.",
+                  paste(covariates, collapse = " and "), as.integer(g$df), as.integer(res_df),
+                  g$F, sframe_p_string(g$p)),
     prompt = "Report adjusted group effects and state whether homogeneity of regression slopes was checked."
   )
 }
@@ -1268,7 +1468,7 @@ sframe_run_firth_logistic <- function(data, roles, options = list()) {
     return(list(test = "firth_logistic",
                 error = "Firth logistic regression requires at least one predictor."))
   }
-  if (!requireNamespace("logistf", quietly = TRUE)) {
+  if (!sframe_has_package("logistf")) {
     return(list(
       test = "firth_logistic",
       error = "Package 'logistf' needed. Install with: install.packages('logistf')"
@@ -1315,11 +1515,15 @@ sframe_run_firth_logistic <- function(data, roles, options = list()) {
     row.names = terms,
     stringsAsFactors = FALSE
   )
-  # logistf returns the log-likelihood of the full and the null model in
-  # $loglik. Take the absolute difference so the statistic is unaffected by
-  # the order the two elements are stored in.
-  loglik <- as.numeric(fit$loglik)
-  lr <- if (length(loglik) >= 2) abs(loglik[2] - loglik[1]) else NA_real_
+  # The likelihood-ratio statistic is twice the log-likelihood gain of the
+  # full model over the null model, read by name from $loglik. The difference
+  # alone was half the statistic.
+  loglik <- fit$loglik
+  lr <- if (all(c("full", "null") %in% names(loglik))) {
+    unname(2 * (loglik[["full"]] - loglik[["null"]]))
+  } else {
+    NA_real_
+  }
 
   list(
     test = "firth_logistic",
@@ -1421,7 +1625,8 @@ sframe_run_moderation <- function(data, roles) {
   )
 }
 
-sframe_boot_indirect <- function(df, predictor, mediator, outcome, nboot = 1000L) {
+sframe_boot_indirect <- function(df, predictor, mediator, outcome, nboot = 1000L,
+                                 observed = NA_real_) {
   n <- nrow(df)
   reps <- numeric(nboot)
   for (i in seq_len(nboot)) {
@@ -1433,7 +1638,11 @@ sframe_boot_indirect <- function(df, predictor, mediator, outcome, nboot = 1000L
       a * b
     }, error = function(e) NA_real_)
   }
-  stats::quantile(reps, c(.025, .975), na.rm = TRUE)
+  ci <- sframe_percentile_ci(reps, observed, 0.95)
+  structure(c(lower = ci[["lower"]], upper = ci[["upper"]]),
+            resamples = attr(ci, "resamples"),
+            valid_resamples = attr(ci, "valid_resamples"),
+            reason = attr(ci, "reason"))
 }
 
 sframe_run_mediation <- function(data, roles, options = list()) {
@@ -1455,7 +1664,8 @@ sframe_run_mediation <- function(data, roles, options = list()) {
   total <- stats::coef(total_fit)[[predictor]]
   indirect <- a * b
   nboot <- as.integer(options$bootstrap %||% 1000L)
-  ci <- sframe_boot_indirect(df, predictor, mediator, outcome, nboot = nboot)
+  ci <- sframe_boot_indirect(df, predictor, mediator, outcome, nboot = nboot,
+                             observed = indirect)
   list(
     test = "mediation",
     vars = vars,
@@ -1467,8 +1677,14 @@ sframe_run_mediation <- function(data, roles, options = list()) {
     b_path = b,
     indirect_ci = ci,
     bootstrap = nboot,
-    apa = sprintf("Indirect effect = %.3f, 95%% bootstrap CI [%.3f, %.3f].",
-                  indirect, ci[[1]], ci[[2]]),
+    apa = if (is.null(attr(ci, "reason"))) {
+      sprintf("Indirect effect = %.3f, 95%% bootstrap CI [%.3f, %.3f], from %d of %d resamples.",
+              indirect, ci[["lower"]], ci[["upper"]],
+              attr(ci, "valid_resamples"), attr(ci, "resamples"))
+    } else {
+      sprintf("Indirect effect = %.3f, with no bootstrap interval: %s.",
+              indirect, attr(ci, "reason"))
+    },
     prompt = "Report direct, indirect, and total effects with bootstrap confidence intervals."
   )
 }
@@ -1492,6 +1708,13 @@ sframe_run_mediation <- function(data, roles, options = list()) {
 #'
 #' @return An object of class `sframe_validity_report`.
 #' @export
+#' @examples
+#' loadings <- list(
+#'   sq  = c(sq_1 = 0.80, sq_2 = 0.75, sq_3 = 0.78),
+#'   sat = c(sat_1 = 0.85, sat_2 = 0.82)
+#' )
+#' vr <- validity_report(loadings)
+#' vr$reliability
 validity_report <- function(loadings, construct_scores = NULL,
                             items_by_construct = NULL) {
   if (is.list(loadings) && !is.data.frame(loadings)) {
@@ -1637,19 +1860,72 @@ sframe_henseler_htmt <- function(items_by_construct) {
 
 #' Sample-size and power planning helper
 #'
+#' Estimates a total sample size for a planned analysis. The targets use 3
+#' different methods, and the result says which one applied.
+#'
+#' # Power calculations
+#'
+#' `"t_test"`, `"anova"` and `"correlation"` are power calculations, so
+#' `alpha`, `power` and the expected effect size all change the result. The
+#' t test uses [stats::power.t.test()] for 2 independent groups with Cohen's
+#' `d`. ANOVA uses [stats::power.anova.test()] with Cohen's `f`. Correlation
+#' uses the Fisher z approximation with `r`. `"regression"` is a power
+#' calculation when `f2` is supplied, from the noncentral F distribution for
+#' the overall test of `predictors` predictors.
+#'
+#' When the effect size is left `NULL`, a conventional medium effect is
+#' assumed (`d` 0.5, `f` 0.25, `r` 0.30) and a warning names it. An
+#' assumed effect is a placeholder. Supply the effect you expect from prior
+#' studies or a pilot.
+#'
+#' # Precision targets and rules of thumb
+#'
+#' `"proportion"` and `"mean"` size a confidence interval to a margin of
+#' error, and use `alpha` for its confidence level. `power` has no bearing on
+#' them. `"regression"` without `f2` returns the larger of 2 published rules
+#' of thumb, `50 + 8k` and `104 + k`, which ignore `alpha` and `power`.
+#' `"sem"` returns no estimate. Both say so in the returned warnings.
+#'
 #' @param type Planning target: `"proportion"`, `"mean"`, `"correlation"`,
 #'   `"t_test"`, `"anova"`, `"regression"`, or `"sem"`.
 #' @param margin_error Margin of error for mean/proportion planning.
 #' @param sd Standard deviation for mean planning.
 #' @param p Expected proportion.
-#' @param r Expected correlation.
+#' @param r Expected correlation. Defaults to 0.30 with a warning.
 #' @param alpha Significance level.
-#' @param power Desired power.
-#' @param groups Number of groups for ANOVA/t-test planning.
+#' @param power Desired power, for the power calculations.
+#' @param groups Number of groups for ANOVA planning. A t test has 2.
 #' @param predictors Number of predictors for regression planning.
+#' @param d Expected Cohen's d for a t test. Defaults to 0.5 with a warning.
+#' @param f Expected Cohen's f for ANOVA. Defaults to 0.25 with a warning.
+#' @param f2 Expected Cohen's f squared for regression. When `NULL`, a rule of
+#'   thumb is returned in place of a power calculation.
 #'
-#' @return A list of planning estimates and warnings.
+#' @return An `sframe_sample_size_plan` list holding `type`, `estimated_n`
+#'   (total sample size), `method` (`"power"`, `"precision"`,
+#'   `"rule_of_thumb"` or `"none"`), `alpha`, `power`, `effect_size`,
+#'   `warnings`, `advisory` and `prompt`.
+#' @usage
+#' sample_size_plan(
+#'   type = c("proportion", "mean", "correlation", "t_test", "anova",
+#'     "regression", "sem"),
+#'   margin_error = NULL,
+#'   sd = NULL,
+#'   p = 0.5,
+#'   r = NULL,
+#'   alpha = 0.05,
+#'   power = 0.8,
+#'   groups = 2L,
+#'   predictors = NULL,
+#'   d = NULL,
+#'   f = NULL,
+#'   f2 = NULL
+#' )
 #' @export
+#' @examples
+#' plan <- sample_size_plan("t_test", d = 0.5, power = 0.80)
+#' plan$estimated_n
+#' plan$method
 sample_size_plan <- function(
     type = c("proportion", "mean", "correlation", "t_test", "anova", "regression", "sem"),
     margin_error = NULL,
@@ -1659,10 +1935,25 @@ sample_size_plan <- function(
     alpha = 0.05,
     power = 0.80,
     groups = 2L,
-    predictors = NULL
+    predictors = NULL,
+    d = NULL,
+    f = NULL,
+    f2 = NULL
 ) {
   type <- rlang::arg_match(type)
   z <- stats::qnorm(1 - alpha / 2)
+  assumed <- character(0)
+  if (type == "t_test" && is.null(d)) {
+    d <- 0.5
+    assumed <- "Assumed a medium effect, d = 0.5. Supply d for the effect you expect."
+  }
+  if (type == "anova" && is.null(f)) {
+    f <- 0.25
+    assumed <- "Assumed a medium effect, f = 0.25. Supply f for the effect you expect."
+  }
+  if (type == "correlation" && is.null(r)) {
+    assumed <- "Assumed a medium correlation, r = 0.30. Supply r for the effect you expect."
+  }
   estimate <- switch(
     type,
     proportion = {
@@ -1679,17 +1970,46 @@ sample_size_plan <- function(
       ceiling(((stats::qnorm(1 - alpha / 2) + stats::qnorm(power)) /
                  (0.5 * log((1 + rr) / (1 - rr))))^2 + 3)
     },
-    t_test = ceiling(64 * groups),
-    anova = ceiling(50 * groups),
+    # These returned 64 and 50 per group whatever alpha, power and effect were
+    # requested, while the result printed the requested alpha and power.
+    t_test = 2 * ceiling(stats::power.t.test(delta = abs(d), sd = 1,
+                                             sig.level = alpha,
+                                             power = power)$n),
+    anova = {
+      k <- as.integer(groups)
+      k * ceiling(stats::power.anova.test(groups = k,
+                                          between.var = f^2 * k / (k - 1),
+                                          within.var = 1, sig.level = alpha,
+                                          power = power)$n)
+    },
     regression = {
       pnum <- predictors %||% 5L
-      max(50 + 8 * pnum, 104 + pnum)
+      if (is.null(f2)) {
+        max(50 + 8 * pnum, 104 + pnum)
+      } else {
+        achieved <- function(n) {
+          v <- n - pnum - 1
+          1 - stats::pf(stats::qf(1 - alpha, pnum, v), pnum, v, ncp = f2 * n)
+        }
+        n <- pnum + 3
+        while (achieved(n) < power && n < 1e6) n <- n + 1
+        n
+      }
     },
     sem = NA_integer_
   )
+  method <- switch(type,
+    proportion = "precision", mean = "precision",
+    regression = if (is.null(f2)) "rule_of_thumb" else "power",
+    sem = "none",
+    "power")
+  effect_size <- switch(type,
+    t_test = c(d = d), anova = c(f = f), correlation = c(r = r %||% 0.30),
+    regression = if (is.null(f2)) NULL else c(f2 = f2),
+    NULL)
   warnings <- switch(
     type,
-    regression = "Regression rule-of-thumb only; use a dedicated power analysis for final planning.",
+    regression = if (is.null(f2)) "Regression rule of thumb only, which ignores alpha and power. Supply f2 for a power calculation." else character(0),
     sem = "SEM sample-size planning is design-dependent; use at least 200 cases or 10-20 cases per free parameter as a preliminary warning only.",
     character(0)
   )
@@ -1701,9 +2021,11 @@ sample_size_plan <- function(
     list(
       type = type,
       estimated_n = estimate,
+      method = method,
       alpha = alpha,
       power = power,
-      warnings = warnings,
+      effect_size = effect_size,
+      warnings = c(assumed, warnings),
       advisory = advisory,
       prompt = "Document assumptions, expected effect size, attrition allowance, and the final sample-size decision."
     ),
@@ -1717,7 +2039,15 @@ print.sframe_sample_size_plan <- function(x, ...) {
   cat(sprintf("  Target:      %s\n", x$type))
   cat(sprintf("  Estimated n: %s\n",
               if (is.na(x$estimated_n)) "not available" else format(x$estimated_n)))
-  cat(sprintf("  Alpha:       %.3f   Power: %.2f\n", x$alpha, x$power))
+  cat(sprintf("  Method:      %s\n", gsub("_", " ", x$method %||% "power", fixed = TRUE)))
+  if (identical(x$method, "power")) {
+    cat(sprintf("  Alpha:       %.3f   Power: %.2f\n", x$alpha, x$power))
+  } else if (identical(x$method, "precision")) {
+    cat(sprintf("  Confidence:  %.0f%%\n", 100 * (1 - x$alpha)))
+  }
+  if (length(x$effect_size)) {
+    cat(sprintf("  Effect size: %s = %s\n", names(x$effect_size), format(x$effect_size)))
+  }
   for (w in x$warnings) cat(sprintf("\nWarning: %s\n", w))
   if (!is.null(x$advisory)) cat(sprintf("\nNote: %s\n", x$advisory))
   invisible(x)

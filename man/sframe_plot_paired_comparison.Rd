@@ -24,6 +24,15 @@ One line per respondent connecting their two paired values, shared by
 design: it shows the direction and consistency of individual change,
 which a plain bar-of-means would hide.
 }
+\examples{
+\donttest{
+if (requireNamespace("ggplot2", quietly = TRUE)) {
+  demo <- sframe_demo_data()
+  res <- run_analysis_plan(demo$responses, demo$instrument)
+  sframe_plot_paired_comparison(res$rq_ttest_pair, demo$responses)
+}
+}
+}
 \seealso{
 \code{\link[=run_analysis_plan]{run_analysis_plan()}}
 }

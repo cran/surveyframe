@@ -34,3 +34,19 @@ topic-document probability using \code{stm::findThoughts()}, then maps each
 one back to its original respondent row via the mapping
 \code{\link[=sframe_run_stm_topics]{sframe_run_stm_topics()}} stored on \code{result$fit}.
 }
+\examples{
+\donttest{
+if (requireNamespace("stm", quietly = TRUE) &&
+    requireNamespace("tidytext", quietly = TRUE)) {
+  demo <- sframe_demo_data()
+  sf_plan(demo$instrument) <- list(list(
+    id = "RQ1", research_question = "What themes appear in the comments?",
+    family = "text_analysis", method = "stm_topics",
+    roles = list(item = "comments"), options = list(k = 3, seed = 42)
+  ))
+  res <- run_analysis_plan(demo$responses, demo$instrument)
+  quotes <- extract_quotes(res$RQ1, demo$responses$comments, n_quotes = 2)
+  quotes
+}
+}
+}
